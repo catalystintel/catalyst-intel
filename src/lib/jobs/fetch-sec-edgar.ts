@@ -44,7 +44,7 @@ async function fetchFeedXml(userAgent: string): Promise<string> {
   return res.text();
 }
 
-function stripHtml(html: string): string {
+export function stripHtml(html: string): string {
   return html
     .replace(/<[^>]+>/g, " ")
     .replace(/\s+/g, " ")
@@ -52,14 +52,14 @@ function stripHtml(html: string): string {
 }
 
 /** Parses titles like "8-K - PEDEVCO CORP (0001141197) (Filer)". */
-function parseFilingTitle(title: string) {
+export function parseFilingTitle(title: string) {
   const match = title.match(/^(.+?) - (.+) \((\d+)\) \((?:Filer|Filed by|Subject)\)$/);
   if (!match) return null;
   const [, formType, companyName, cik] = match;
   return { formType, companyName: companyName.trim(), cik: Number(cik) };
 }
 
-function extractFiledDate(summaryText: string): string | null {
+export function extractFiledDate(summaryText: string): string | null {
   const match = summaryText.match(/Filed:\s*([\d]{4}-[\d]{2}-[\d]{2})/);
   return match ? match[1] : null;
 }
