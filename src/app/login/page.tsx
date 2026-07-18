@@ -6,6 +6,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { isSupabaseConfigured } from "@/lib/supabase/env";
 
 import { signInWithGoogle } from "./actions";
 
@@ -38,6 +39,7 @@ export default async function LoginPage({
   searchParams: Promise<{ error?: string; message?: string; next?: string }>;
 }) {
   const { error, message, next } = await searchParams;
+  const configured = isSupabaseConfigured();
 
   return (
     <div className="flex flex-1 items-center justify-center px-4">
@@ -49,12 +51,30 @@ export default async function LoginPage({
             automatically on first use - no password, ever.
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="flex flex-col gap-4">
+          {!configured ? (
+            <div className="rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
+              <p className="font-medium">Supabase Auth is not configured</p>
+              <p className="mt-1 text-destructive/90">
+                Put your real project URL and anon key in{" "}
+                <code className="text-xs">.env.local</code>, enable Google under
+                Authentication → Providers, add{" "}
+                <code className="text-xs">http://localhost:3000/auth/callback</code>{" "}
+                to Redirect URLs, then restart the dev server.
+              </p>
+            </div>
+          ) : null}
+
           <form action={signInWithGoogle} className="flex flex-col gap-4">
             <input type="hidden" name="next" value={next ?? "/dashboard"} />
             {message ? <p className="text-sm text-muted-foreground">{message}</p> : null}
             {error ? <p className="text-sm text-destructive">{error}</p> : null}
-            <Button type="submit" variant="outline" className="w-full gap-2">
+            <Button
+              type="submit"
+              variant="outline"
+              className="w-full gap-2"
+              disabled={!configured}
+            >
               <GoogleIcon />
               Continue with Google
             </Button>

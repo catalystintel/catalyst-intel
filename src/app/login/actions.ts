@@ -3,6 +3,8 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
+import { getRequestOrigin, safeNextPath } from "@/lib/http/origin";
+import { isSupabaseConfigured, SUPABASE_SETUP_HINT } from "@/lib/supabase/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 /**
@@ -12,10 +14,21 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
  * subscription tier (see src/db/schema.ts) - never a credential.
  */
 export async function signInWithGoogle(formData: FormData) {
-  const next = (formData.get("next") as string) || "/dashboard";
+  if (!isSupabaseConfigured()) {
+    redirect(`/login?error=${encodeURIComponent(SUPABASE_SETUP_HINT)}`);
+  }
+
+  const next = safeNextPath(formData.get("next") as string | null);
 
   const headerList = await headers();
-  const origin = headerList.get("origin") ?? `https://${headerList.get("host")}`;
+  let origin: string;
+  try {
+    origin = getRequestOrigin(headerList);
+  } catch {
+    redirect(
+      `/login?error=${encodeURIComponent("Could not determine app URL for Google sign-in.")}`,
+    );
+  }
 
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase.auth.signInWithOAuth({
