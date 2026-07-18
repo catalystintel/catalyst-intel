@@ -1,0 +1,27 @@
+---
+description: Git branching workflow - feature branches, PRs to dev, manual promotion to main
+alwaysApply: true
+---
+
+# Git branching workflow
+
+This repo uses a strict three-tier flow. Never commit directly to `main` or `dev`.
+
+1. **All work happens on a feature branch** cut from `dev` (e.g. `feat/google-auth`,
+   `fix/cron-retry`). Never commit directly to `main` or `dev`.
+2. **Open a PR into `dev`** when the change is ready (use `gh pr create --base dev`).
+   `dev` is the branch wired to CI/CD - merging here should trigger a deploy to the
+   dev/staging environment.
+3. **`dev` -> `main` only happens on the user's explicit command.** Never open or merge a
+   PR into `main` proactively, even if `dev` is green and stable. Wait to be asked
+   (e.g. "promote dev to main" / "ship to prod").
+
+## Practical notes
+
+- Before starting new work, check out `dev` and pull latest, then branch from there:
+  `git checkout dev && git pull && git checkout -b <type>/<short-name>`.
+- Use conventional prefixes: `feat/`, `fix/`, `chore/`, `docs/`.
+- Push the feature branch and open the PR with `gh pr create --base dev` rather than
+  merging locally.
+- If the user asks for a quick local-only experiment with no PR intended, confirm that's
+  the intent before skipping the branch/PR flow.

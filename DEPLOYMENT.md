@@ -12,8 +12,8 @@ whenever you're ready to go live.
   app already speaks this driver (`@libsql/client` / `drizzle-orm/libsql`), so going to production
   is just swapping which URL/token it points at. No schema rewrite, no new query syntax.
 - **Hosting: Vercel.** Matches the original product blueprint, has zero-config Next.js support,
-  and its GitHub integration *is* your CD pipeline - every push to `main` auto-deploys, no custom
-  deploy workflow needed.
+  and its GitHub integration *is* your CD pipeline - every push to `main` deploys to production and
+  every push to `dev` gets its own preview deployment, no custom deploy workflow needed.
 - **Production cron cadence: GitHub Actions, every 5 minutes.** The product goal is "every 1-2
   minutes," but no free option hits that reliably: Vercel's Hobby plan only allows one cron run
   *per day*; Vercel Pro gets you per-minute cron but costs $20/mo; GitHub Actions' scheduled
@@ -57,18 +57,31 @@ npm run db:migrate
 This creates the `users`, `companies`, `raw_sources`, and `catalysts` tables on Turso, identical to
 your local schema.
 
-## 2. Create a Vercel project
+## 2. Branch strategy: dev and main
+
+This repo uses `dev` as the staging/CI-CD branch and `main` as production:
+
+- Feature branches are cut from `dev` and merged back into `dev` via PR.
+- `dev` -> `main` only happens on explicit request - it's a separate, deliberate promotion step
+  (`git checkout main && git merge dev && git push`, or a PR from `dev` into `main`), never automatic.
+- `.github/workflows/ci.yml` runs lint + build on pushes to both `main` and `dev`, and on every PR.
+
+## 3. Create a Vercel project
 
 1. Go to [vercel.com](https://vercel.com) and sign up (free Hobby plan is fine).
 2. **Import Project** -> select the `zhbar10/catalyst-intel` GitHub repo.
 3. Framework preset should auto-detect as Next.js. Leave build settings as default.
-4. Don't deploy yet - add the environment variables first (next section), then deploy.
+4. In **Settings -> Git**, set the **Production Branch** to `main`. Vercel automatically creates a
+   preview deployment for every other branch (including `dev`) with its own URL - that preview
+   deployment *is* your dev/staging environment; you don't need to configure anything extra for it.
+5. Don't deploy yet - add the environment variables first (next section), then deploy.
 
-Once imported, **this alone is your CD pipeline**: every push to `main` triggers a new Vercel
-deployment automatically. No GitHub Actions deploy workflow is needed (`.github/workflows/ci.yml`
-only runs lint/build *checks*, it does not deploy anything).
+Once imported, **this alone is your CD pipeline**: every push to `main` deploys to production,
+every push to `dev` (or any other branch) gets its own preview deployment. No GitHub Actions deploy
+workflow is needed (`.github/workflows/ci.yml` only runs lint/build *checks*, it does not deploy
+anything).
 
-## 3. Set environment variables in Vercel
+## 4. Set environment variables in Vercel
 
 In the Vercel project -> **Settings -> Environment Variables**, add:
 
@@ -87,9 +100,11 @@ Generate a `CRON_SECRET` value:
 node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 ```
 
-Deploy (or redeploy) after adding these.
+Deploy (or redeploy) after adding these. Note these apply to the Production environment (`main`);
+add them again for the Preview environment (or mark them "all environments") if you also want the
+`dev` preview deployment to have working Auth/DB/ingestion.
 
-## 4. Add GitHub repo secrets (for the cron workflow)
+## 5. Add GitHub repo secrets (for the cron workflow)
 
 The already-committed [.github/workflows/fetch-sec-edgar-cron.yml](.github/workflows/fetch-sec-edgar-cron.yml)
 needs two repo secrets to actually do anything - until they're set, it runs every 5 minutes and
@@ -103,7 +118,7 @@ gh secret set CRON_SECRET --body "<same value you put in Vercel>"
 Find your Vercel domain in the Vercel dashboard (Settings -> Domains), or use the
 `*.vercel.app` domain Vercel assigns automatically on first deploy.
 
-## 5. Verify everything works
+## 6. Verify everything works
 
 1. Push to `main` (or just wait if you just deployed) - confirm the deployment succeeds in the
    Vercel dashboard.
