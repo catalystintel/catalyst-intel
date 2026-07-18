@@ -24,10 +24,14 @@ filings flowing into a dashboard, gated behind Supabase-backed auth.
 npm install
 ```
 
-### 2. Create a free Supabase project (for Auth)
+### 2. Create a free Supabase project (for Auth) and enable Google sign-in
 
 1. Go to [supabase.com](https://supabase.com) and create a new project (free tier).
-2. In **Authentication -> Providers**, make sure **Email** is enabled.
+2. In **Authentication -> Providers**, enable **Google** (this is the *only* sign-in method - no
+   passwords are ever collected or stored by this app). Follow Supabase's
+   [Google OAuth guide](https://supabase.com/docs/guides/auth/social-login/auth-google) to create a
+   Google Cloud OAuth Client ID/Secret and paste them in. The redirect URI Google needs is shown on
+   that Supabase provider settings page (`https://<your-project-ref>.supabase.co/auth/v1/callback`).
 3. In **Project Settings -> API**, copy the **Project URL** and **anon public** key.
 
 ### 3. Configure environment variables
@@ -67,9 +71,9 @@ Visit [http://localhost:3000](http://localhost:3000).
 
 ### 6. Create an account and promote yourself to admin
 
-1. Sign up at `/signup` with your email and password (check your email if Supabase requires
-   confirmation - this depends on your project's auth settings).
-2. Log in once - this creates your row in the local `users` table.
+1. Go to `/login` and click **Continue with Google** - this creates your account automatically
+   (no separate signup step, no password).
+2. That first sign-in creates your row in the local `users` table.
 3. Promote yourself to admin so you can trigger data ingestion:
 
    ```bash

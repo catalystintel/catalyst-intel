@@ -1,36 +1,37 @@
 "use server";
 
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
-export async function login(formData: FormData) {
-  const email = formData.get("email") as string;
-  const password = formData.get("password") as string;
+/**
+ * Google is the only sign-in method - no passwords are ever collected or
+ * stored anywhere in this app. Supabase handles the OAuth exchange; our own
+ * `users` table only ever stores a Supabase user id, email, role, and
+ * subscription tier (see src/db/schema.ts) - never a credential.
+ */
+export async function signInWithGoogle(formData: FormData) {
   const next = (formData.get("next") as string) || "/dashboard";
 
-  const supabase = await createSupabaseServerClient();
-  const { error } = await supabase.auth.signInWithPassword({ email, password });
-
-  if (error) {
-    redirect(`/login?error=${encodeURIComponent(error.message)}`);
-  }
-
-  redirect(next);
-}
-
-export async function signup(formData: FormData) {
-  const email = formData.get("email") as string;
-  const password = formData.get("password") as string;
+  const headerList = await headers();
+  const origin = headerList.get("origin") ?? `https://${headerList.get("host")}`;
 
   const supabase = await createSupabaseServerClient();
-  const { error } = await supabase.auth.signUp({ email, password });
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: "google",
+    options: {
+      redirectTo: `${origin}/auth/callback?next=${encodeURIComponent(next)}`,
+    },
+  });
 
-  if (error) {
-    redirect(`/signup?error=${encodeURIComponent(error.message)}`);
+  if (error || !data?.url) {
+    redirect(
+      `/login?error=${encodeURIComponent(error?.message ?? "Could not start Google sign-in.")}`,
+    );
   }
 
-  redirect("/login?message=Check your email to confirm your account, then log in.");
+  redirect(data.url);
 }
 
 export async function logout() {
