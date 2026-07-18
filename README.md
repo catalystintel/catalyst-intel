@@ -9,7 +9,9 @@ filings flowing into a dashboard, gated behind Supabase-backed auth.
 ## Stack (this phase)
 
 - **Next.js 16 + TypeScript** (App Router), **Tailwind CSS**, **shadcn/ui** (dark theme default)
-- **SQLite** (via Drizzle ORM) for all app data - companies, catalysts, raw sources, local users
+- **SQLite-compatible (libSQL) via Drizzle ORM** for all app data - companies, catalysts, raw
+  sources, local users. Locally this is a plain file (`local.db`); in production it's a hosted
+  Turso database - same driver, same schema, no code changes (see [DEPLOYMENT.md](DEPLOYMENT.md))
 - **Supabase Cloud** for Auth only (its own Postgres database is *not* used for app data)
 - **SEC EDGAR** (free, no API key) as the first data vendor
 - AI classification/scoring (Groq hosting Qwen3-32B) is planned for a later phase - not wired up yet
@@ -80,6 +82,24 @@ Go to `/admin` and click **"Fetch SEC EDGAR now"**. This pulls the latest 8-K fi
 EDGAR's free feed, resolves tickers where possible, and stores them. Then check `/dashboard` to
 see them listed.
 
+### 8. (Optional) Keep data flowing continuously while developing
+
+Instead of manually clicking the admin button, run the local cron in its own terminal:
+
+```bash
+npm run cron
+```
+
+This fetches immediately, then re-fetches every `CRON_INTERVAL_MINUTES` (default `2`). Leave it
+running while you develop and `/dashboard` stays up to date. Stop with `Ctrl+C`.
+
+## Going to production
+
+Local dev never requires any paid service or cloud account. When you're ready to deploy for real
+(hosted database + live URL + an automated cron that keeps running without your laptop open),
+follow [DEPLOYMENT.md](DEPLOYMENT.md) - it covers Turso, Vercel, environment variables, and the
+GitHub Actions cron that replaces `npm run cron` in production.
+
 ## Useful scripts
 
 | Command | Purpose |
@@ -90,16 +110,21 @@ see them listed.
 | `npm run db:migrate` | Apply pending migrations to `local.db` |
 | `npm run db:studio` | Open Drizzle Studio to browse `local.db` |
 | `npm run make-admin -- <email>` | Promote a logged-in user to admin |
+| `npm run cron` | Continuously re-fetch SEC EDGAR every `CRON_INTERVAL_MINUTES` (local dev) |
 
 ## Architecture notes
 
-- **SQLite holds all app data.** Supabase Cloud is used only for Auth; its Postgres database is
-  not touched by the app.
+- **libSQL (SQLite-compatible) holds all app data**, via `@libsql/client` + `drizzle-orm/libsql`.
+  Locally it opens a plain file; in production it points at a hosted Turso database instead - no
+  driver or schema changes needed, just different env vars (`LIBSQL_URL`/`LIBSQL_AUTH_TOKEN`).
+  Supabase Cloud is used only for Auth; its Postgres database is not touched by the app.
 - **`src/proxy.ts`** (Next.js 16's replacement for `middleware.ts`) refreshes the Supabase session
   cookie and does a cheap, optimistic redirect for signed-out visitors. The real authorization
   check lives in `getCurrentAppUser()`, called directly from `/dashboard` and `/admin`.
-- **Data ingestion is manually triggered** for now via `/admin` -> `POST /api/admin/fetch/sec-edgar`.
-  Wiring this into a real scheduler (GitHub Actions cron, Supabase Edge Functions) is a later step.
+- **Data ingestion** can be triggered three ways, all calling the same
+  [src/lib/jobs/fetch-sec-edgar.ts](src/lib/jobs/fetch-sec-edgar.ts): the `/admin` page button
+  (session auth), `npm run cron` (local, continuous), or a scheduled GitHub Actions workflow in
+  production (`x-cron-secret` header auth) - see [DEPLOYMENT.md](DEPLOYMENT.md).
 - **`src/lib/jobs/fetch-sec-edgar.ts`** dedupes by SEC accession number, so re-running the fetch is
   always safe.
 
@@ -108,5 +133,4 @@ see them listed.
 - AI classification/scoring/summarization via Groq (Qwen3-32B)
 - Additional vendors: FDA openFDA, ClinicalTrials.gov
 - Watchlists and alerts
-- Real scheduler for the fetch job
-- Deciding if/when to migrate SQLite app-data tables to Supabase Postgres for production
+- Deciding if/when to migrate app data to Supabase Postgres instead of Turso
