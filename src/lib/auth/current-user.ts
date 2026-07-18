@@ -13,5 +13,5 @@ export async function getCurrentAppUser() {
     return null;
   }
 
-  return syncSupabaseUser(user) ?? null;
+  return (await syncSupabaseUser(user)) ?? null;
 }

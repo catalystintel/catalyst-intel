@@ -22,7 +22,7 @@ export default async function DashboardPage() {
     redirect("/login?next=/dashboard");
   }
 
-  const recentCatalysts = db
+  const recentCatalysts = await db
     .select()
     .from(catalysts)
     .orderBy(desc(catalysts.timestamp))

@@ -8,13 +8,13 @@ import { users } from "@/db/schema";
  * Ensures a Supabase-authenticated user has a matching row in the local
  * SQLite `users` table. Safe to call on every request - it's a cheap upsert.
  */
-export function syncSupabaseUser(supabaseUser: User) {
+export async function syncSupabaseUser(supabaseUser: User) {
   const email = supabaseUser.email;
   if (!email) {
     throw new Error("Supabase user has no email; cannot sync to local users table.");
   }
 
-  const existing = db
+  const existing = await db
     .select()
     .from(users)
     .where(eq(users.supabaseUserId, supabaseUser.id))
@@ -24,7 +24,8 @@ export function syncSupabaseUser(supabaseUser: User) {
     return existing;
   }
 
-  db.insert(users)
+  await db
+    .insert(users)
     .values({ supabaseUserId: supabaseUser.id, email })
     .onConflictDoNothing()
     .run();

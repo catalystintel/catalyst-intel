@@ -17,7 +17,7 @@ async function main() {
     process.exit(1);
   }
 
-  const existing = db.select().from(users).where(eq(users.email, email)).get();
+  const existing = await db.select().from(users).where(eq(users.email, email)).get();
 
   if (!existing) {
     console.error(
@@ -26,7 +26,7 @@ async function main() {
     process.exit(1);
   }
 
-  db.update(users).set({ role: "admin" }).where(eq(users.email, email)).run();
+  await db.update(users).set({ role: "admin" }).where(eq(users.email, email)).run();
 
   console.log(`"${email}" is now an admin.`);
 }

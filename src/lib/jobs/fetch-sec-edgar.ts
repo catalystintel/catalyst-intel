@@ -99,7 +99,7 @@ export async function fetchSecEdgar(): Promise<FetchSecEdgarResult> {
       }
 
       const externalId = `sec-edgar:${accessionNumber}`;
-      const alreadyStored = db
+      const alreadyStored = await db
         .select({ id: rawSources.id })
         .from(rawSources)
         .where(eq(rawSources.externalId, externalId))
@@ -128,7 +128,7 @@ export async function fetchSecEdgar(): Promise<FetchSecEdgarResult> {
       const companyName = parsedTitle?.companyName ?? rawTitle;
       const ticker = parsedTitle ? tickerByCik.get(parsedTitle.cik) ?? null : null;
 
-      const rawRow = db
+      const rawRow = await db
         .insert(rawSources)
         .values({
           provider: "sec-edgar",
@@ -146,22 +146,26 @@ export async function fetchSecEdgar(): Promise<FetchSecEdgarResult> {
 
       let companyId: number | null = null;
       if (ticker) {
-        const existingCompany = db
+        const existingCompany = await db
           .select({ id: companies.id })
           .from(companies)
           .where(eq(companies.ticker, ticker))
           .get();
 
-        companyId = existingCompany
-          ? existingCompany.id
-          : db
-              .insert(companies)
-              .values({ name: companyName, ticker })
-              .returning({ id: companies.id })
-              .get().id;
+        if (existingCompany) {
+          companyId = existingCompany.id;
+        } else {
+          const insertedCompany = await db
+            .insert(companies)
+            .values({ name: companyName, ticker })
+            .returning({ id: companies.id })
+            .get();
+          companyId = insertedCompany.id;
+        }
       }
 
-      db.insert(catalysts)
+      await db
+        .insert(catalysts)
         .values({
           companyId,
           ticker,
