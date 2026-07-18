@@ -20,6 +20,9 @@
 *.db-wal
 local.db
 
+# job caches
+/.cache
+
 # misc
 .DS_Store
 *.pem
