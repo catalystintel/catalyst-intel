@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { safeNextPath } from "@/lib/http/origin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 /**
@@ -10,14 +11,31 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
-  const next = searchParams.get("next") ?? "/dashboard";
+  const next = safeNextPath(searchParams.get("next"));
+  const oauthError = searchParams.get("error_description") ?? searchParams.get("error");
+
+  if (oauthError) {
+    return NextResponse.redirect(
+      `${origin}/login?error=${encodeURIComponent(oauthError)}`,
+    );
+  }
 
   if (code) {
     const supabase = await createSupabaseServerClient();
     const { error } = await supabase.auth.exchangeCodeForSession(code);
     if (!error) {
+      // Prefer the load-balancer-facing host in production (Vercel).
+      const forwardedHost = request.headers.get("x-forwarded-host");
+      const isLocal = process.env.NODE_ENV === "development";
+      if (!isLocal && forwardedHost) {
+        return NextResponse.redirect(`https://${forwardedHost}${next}`);
+      }
       return NextResponse.redirect(`${origin}${next}`);
     }
+
+    return NextResponse.redirect(
+      `${origin}/login?error=${encodeURIComponent(error.message)}`,
+    );
   }
 
   return NextResponse.redirect(
