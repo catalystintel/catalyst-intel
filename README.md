@@ -97,12 +97,11 @@ npm run cron
 This fetches immediately, then re-fetches every `CRON_INTERVAL_MINUTES` (default `2`). Leave it
 running while you develop and `/dashboard` stays up to date. Stop with `Ctrl+C`.
 
-## Going to production
+## Staging & production
 
-Local dev never requires any paid service or cloud account. When you're ready to deploy for real
-(hosted database + live URL + an automated cron that keeps running without your laptop open),
-follow [DEPLOYMENT.md](DEPLOYMENT.md) - it covers Turso, Vercel, environment variables, and the
-GitHub Actions cron that replaces `npm run cron` in production.
+Local machines always use SQLite (`DATABASE_URL=file:./local.db`). Staging is the `dev` branch on
+Vercel; production is `main`. Env vars for each environment (and CI/CD triggers) are documented in
+[DEPLOYMENT.md](DEPLOYMENT.md).
 
 ## Useful scripts
 

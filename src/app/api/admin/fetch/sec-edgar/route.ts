@@ -1,23 +1,8 @@
-import { timingSafeEqual } from "node:crypto";
-
 import { NextResponse, type NextRequest } from "next/server";
 
 import { getCurrentAppUser } from "@/lib/auth/current-user";
+import { isValidCronSecret } from "@/lib/auth/cron-secret";
 import { fetchSecEdgar } from "@/lib/jobs/fetch-sec-edgar";
-
-function isValidCronSecret(request: NextRequest): boolean {
-  const expected = process.env.CRON_SECRET;
-  if (!expected) return false;
-
-  const provided = request.headers.get("x-cron-secret");
-  if (!provided) return false;
-
-  const expectedBuf = Buffer.from(expected);
-  const providedBuf = Buffer.from(provided);
-  if (expectedBuf.length !== providedBuf.length) return false;
-
-  return timingSafeEqual(expectedBuf, providedBuf);
-}
 
 /**
  * Triggers the SEC EDGAR ingestion job. Accepts either:
@@ -26,7 +11,9 @@ function isValidCronSecret(request: NextRequest): boolean {
  *    see DEPLOYMENT.md), since that caller has no browser session/cookie.
  */
 export async function POST(request: NextRequest) {
-  if (!isValidCronSecret(request)) {
+  const providedSecret = request.headers.get("x-cron-secret");
+
+  if (!isValidCronSecret(process.env.CRON_SECRET, providedSecret)) {
     const user = await getCurrentAppUser();
 
     if (!user) {
