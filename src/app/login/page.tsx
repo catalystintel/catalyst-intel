@@ -39,29 +39,34 @@ export default async function LoginPage({
   return (
     <div className="relative flex flex-1 flex-col overflow-hidden">
       <div aria-hidden className="desk-grid pointer-events-none absolute inset-0" />
-      <header className="relative z-10 flex items-center justify-between px-6 py-5">
-        <Link href="/" className="flex items-center gap-2 text-sm font-semibold tracking-tight">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 top-0 h-[40vh] bg-[radial-gradient(ellipse_at_top,oklch(0.45_0.06_250_/0.18),transparent_65%)]"
+      />
+
+      <header className="relative z-10 flex items-center justify-between px-5 py-5 sm:px-8">
+        <Link href="/" className="flex items-center gap-2.5 text-sm font-semibold tracking-tight">
           <span
             aria-hidden
-            className="inline-block size-2 rounded-full bg-amber-400 shadow-[0_0_12px_rgba(251,191,36,0.55)]"
+            className="live-pulse inline-block size-2 rounded-full bg-amber-400"
           />
           Catalyst Intel
         </Link>
       </header>
 
       <main className="page-enter relative z-10 flex flex-1 items-center justify-center px-4 pb-16">
-        <div className="w-full max-w-sm rounded-xl border border-border/80 bg-card/50 p-6 backdrop-blur-sm">
+        <div className="w-full max-w-sm border border-border/70 bg-[oklch(0.175_0.016_255_/0.95)] p-6 backdrop-blur-sm">
           <p className="font-mono text-[0.65rem] uppercase tracking-[0.18em] text-amber-400/90">
-            Access
+            Desk access
           </p>
           <h1 className="mt-2 text-xl font-semibold tracking-tight">Sign in</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Continue with Google to open the Live catalyst feed. No password — ever.
+            Continue with Google to open the Live catalyst feed.
           </p>
 
           <div className="mt-6 flex flex-col gap-4">
             {!configured ? (
-              <div className="rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
+              <div className="border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
                 <p className="font-medium">Supabase Auth is not configured</p>
                 <p className="mt-1 text-destructive/90">
                   Put your real project URL and anon key in{" "}

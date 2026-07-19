@@ -19,7 +19,8 @@ const plexMono = IBM_Plex_Mono({
 
 export const metadata: Metadata = {
   title: "Catalyst Intel",
-  description: "Real-time market catalyst intelligence for traders.",
+  description:
+    "Live SEC catalysts for day traders — on-spot filings on a trading-desk feed.",
 };
 
 export default function RootLayout({

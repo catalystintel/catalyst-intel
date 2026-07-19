@@ -1,9 +1,9 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { desc } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 
 import { LIBSQL_SETUP_HINT, isLibsqlConfigured } from "@/db/env";
 import { db } from "@/db/client";
-import { catalysts } from "@/db/schema";
+import { catalysts, rawSources } from "@/db/schema";
 import { getCurrentAppUser } from "@/lib/auth/current-user";
 import { getClientIp } from "@/lib/http/client-ip";
 import { RATE_LIMITS, checkRateLimit } from "@/lib/http/rate-limit";
@@ -51,8 +51,12 @@ export async function GET(request: NextRequest) {
       type: catalysts.type,
       title: catalysts.title,
       timestamp: catalysts.timestamp,
+      summary: catalysts.summary,
+      impactScore: catalysts.impactScore,
+      sourceUrl: rawSources.url,
     })
     .from(catalysts)
+    .leftJoin(rawSources, eq(catalysts.rawSourceId, rawSources.id))
     .orderBy(desc(catalysts.timestamp))
     .limit(limit)
     .all();

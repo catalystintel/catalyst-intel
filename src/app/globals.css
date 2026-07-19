@@ -77,7 +77,7 @@
   --chart-3: oklch(0.45 0.04 250);
   --chart-4: oklch(0.35 0.03 250);
   --chart-5: oklch(0.28 0.02 250);
-  --radius: 0.5rem;
+  --radius: 0.375rem;
   --sidebar: oklch(0.97 0.01 250);
   --sidebar-foreground: oklch(0.18 0.02 250);
   --sidebar-primary: oklch(0.55 0.08 250);
@@ -90,38 +90,38 @@
 
 .dark {
   /* Trading desk: charcoal base, steel blue secondary, amber urgency. */
-  --background: oklch(0.16 0.015 255);
+  --background: oklch(0.145 0.014 255);
   --foreground: oklch(0.93 0.01 250);
-  --card: oklch(0.2 0.018 255);
+  --card: oklch(0.185 0.016 255);
   --card-foreground: oklch(0.93 0.01 250);
-  --popover: oklch(0.2 0.018 255);
+  --popover: oklch(0.185 0.016 255);
   --popover-foreground: oklch(0.93 0.01 250);
   --primary: oklch(0.78 0.14 78);
   --primary-foreground: oklch(0.18 0.02 80);
-  --secondary: oklch(0.24 0.02 255);
+  --secondary: oklch(0.22 0.02 255);
   --secondary-foreground: oklch(0.9 0.015 250);
-  --muted: oklch(0.24 0.018 255);
-  --muted-foreground: oklch(0.68 0.025 250);
-  --accent: oklch(0.28 0.035 250);
+  --muted: oklch(0.22 0.016 255);
+  --muted-foreground: oklch(0.66 0.025 250);
+  --accent: oklch(0.26 0.03 250);
   --accent-foreground: oklch(0.93 0.01 250);
   --destructive: oklch(0.65 0.18 25);
-  --border: oklch(0.32 0.02 255);
-  --input: oklch(0.28 0.02 255);
+  --border: oklch(0.3 0.02 255);
+  --input: oklch(0.26 0.02 255);
   --ring: oklch(0.62 0.07 250);
   --steel: oklch(0.62 0.08 250);
-  --steel-foreground: oklch(0.82 0.04 250);
+  --steel-foreground: oklch(0.84 0.04 250);
   --chart-1: oklch(0.78 0.14 78);
   --chart-2: oklch(0.62 0.08 250);
   --chart-3: oklch(0.5 0.04 250);
   --chart-4: oklch(0.4 0.03 250);
   --chart-5: oklch(0.32 0.02 250);
-  --sidebar: oklch(0.18 0.018 255);
+  --sidebar: oklch(0.16 0.016 255);
   --sidebar-foreground: oklch(0.93 0.01 250);
   --sidebar-primary: oklch(0.62 0.08 250);
   --sidebar-primary-foreground: oklch(0.98 0.01 250);
-  --sidebar-accent: oklch(0.24 0.02 255);
+  --sidebar-accent: oklch(0.22 0.02 255);
   --sidebar-accent-foreground: oklch(0.93 0.01 250);
-  --sidebar-border: oklch(0.32 0.02 255);
+  --sidebar-border: oklch(0.3 0.02 255);
   --sidebar-ring: oklch(0.62 0.07 250);
 }
 
@@ -138,13 +138,21 @@
 }
 
 @layer utilities {
+  .desk-shell {
+    background-image:
+      linear-gradient(oklch(0.7 0.04 250 / 0.03) 1px, transparent 1px),
+      linear-gradient(90deg, oklch(0.7 0.04 250 / 0.03) 1px, transparent 1px);
+    background-size: 56px 56px;
+    background-attachment: fixed;
+  }
+
   .desk-grid {
     background-color: var(--background);
     background-image:
-      linear-gradient(oklch(0.7 0.04 250 / 0.04) 1px, transparent 1px),
-      linear-gradient(90deg, oklch(0.7 0.04 250 / 0.04) 1px, transparent 1px);
-    background-size: 48px 48px;
-    mask-image: radial-gradient(ellipse at center, black 20%, transparent 75%);
+      linear-gradient(oklch(0.7 0.04 250 / 0.045) 1px, transparent 1px),
+      linear-gradient(90deg, oklch(0.7 0.04 250 / 0.045) 1px, transparent 1px);
+    background-size: 40px 40px;
+    mask-image: radial-gradient(ellipse at 40% 30%, black 15%, transparent 72%);
   }
 
   .page-enter {
@@ -153,6 +161,20 @@
 
   .feed-row {
     animation: feed-row-in 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  .row-flash {
+    animation: row-flash 1.5s ease-out both;
+  }
+
+  .live-pulse {
+    animation: live-pulse 1.6s ease-in-out infinite;
+    box-shadow: 0 0 0 0 oklch(0.78 0.14 78 / 0.55);
+  }
+
+  .landing-feed {
+    animation: landing-feed-in 560ms cubic-bezier(0.22, 1, 0.36, 1) both;
+    animation-delay: 120ms;
   }
 
   .btn-press {
@@ -187,7 +209,7 @@
 @keyframes feed-row-in {
   from {
     opacity: 0;
-    transform: translateY(6px);
+    transform: translateY(7px);
   }
   to {
     opacity: 1;
@@ -195,10 +217,46 @@
   }
 }
 
+@keyframes row-flash {
+  0% {
+    background-color: oklch(0.78 0.14 78 / 0.22);
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+
+@keyframes live-pulse {
+  0%,
+  100% {
+    opacity: 1;
+    box-shadow: 0 0 0 0 oklch(0.78 0.14 78 / 0.45);
+  }
+  50% {
+    opacity: 0.75;
+    box-shadow: 0 0 0 6px oklch(0.78 0.14 78 / 0);
+  }
+}
+
+@keyframes landing-feed-in {
+  from {
+    opacity: 0;
+    transform: translateY(18px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .page-enter,
   .feed-row,
-  .btn-press {
+  .row-flash,
+  .live-pulse,
+  .landing-feed,
+  .btn-press,
+  .drawer-panel {
     animation: none !important;
     transition: none !important;
   }

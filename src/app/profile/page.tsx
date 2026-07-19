@@ -33,7 +33,7 @@ export default async function ProfilePage() {
   const initial = (user.displayName?.trim()?.[0] || user.email[0] || "?").toUpperCase();
 
   return (
-    <div className="flex flex-1 flex-col">
+    <div className="desk-shell flex flex-1 flex-col">
       <AppHeader
         email={user.email}
         isAdmin={user.isAdmin}
@@ -41,28 +41,28 @@ export default async function ProfilePage() {
         avatarUrl={user.avatarUrl}
         active="profile"
       />
-      <PageEnter className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-8 px-4 py-8 sm:px-6">
-        <div>
-          <p className="font-mono text-[0.65rem] uppercase tracking-[0.18em] text-amber-400/90">
+      <PageEnter className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-6 px-3 py-5 sm:px-5 sm:py-6">
+        <div className="border-b border-border/50 pb-4">
+          <p className="font-mono text-[0.65rem] uppercase tracking-[0.2em] text-amber-400/90">
             Account
           </p>
-          <h1 className="mt-1 text-2xl font-semibold tracking-tight">Profile</h1>
+          <h1 className="mt-1 text-xl font-semibold tracking-tight sm:text-2xl">Profile</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Signed in with Google via Supabase. Disconnect clears your session here.
+            Google via Supabase. Disconnect clears this session only.
           </p>
         </div>
 
-        <section className="flex flex-col gap-6 rounded-xl border border-border/80 bg-card/40 p-6 sm:flex-row sm:items-center">
+        <section className="flex flex-col gap-5 border border-border/70 bg-[oklch(0.175_0.016_255)] p-5 sm:flex-row sm:items-center">
           {user.avatarUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={user.avatarUrl}
               alt=""
-              className="size-16 rounded-full border border-border object-cover"
+              className="size-14 rounded-sm border border-border object-cover"
               referrerPolicy="no-referrer"
             />
           ) : (
-            <span className="flex size-16 items-center justify-center rounded-full border border-border bg-secondary font-mono text-xl text-amber-300">
+            <span className="flex size-14 items-center justify-center rounded-sm border border-border bg-secondary font-mono text-xl text-amber-300">
               {initial}
             </span>
           )}
@@ -77,7 +77,7 @@ export default async function ProfilePage() {
               <dt className="font-mono text-[0.65rem] uppercase tracking-[0.14em] text-muted-foreground">
                 Email
               </dt>
-              <dd className="mt-1 break-all">{user.email}</dd>
+              <dd className="mt-1 break-all font-mono text-xs sm:text-sm">{user.email}</dd>
             </div>
             <div>
               <dt className="font-mono text-[0.65rem] uppercase tracking-[0.14em] text-muted-foreground">
@@ -89,18 +89,20 @@ export default async function ProfilePage() {
               <dt className="font-mono text-[0.65rem] uppercase tracking-[0.14em] text-muted-foreground">
                 Access
               </dt>
-              <dd className="mt-1">{user.isAdmin ? "Admin (allowlist)" : "Member"}</dd>
+              <dd className="mt-1 font-mono text-xs sm:text-sm">
+                {user.isAdmin ? "Admin · allowlist" : "Member"}
+              </dd>
             </div>
           </dl>
         </section>
 
-        <section className="flex flex-col gap-3 rounded-xl border border-border/80 bg-card/40 p-6">
-          <h2 className="text-sm font-medium">Disconnect</h2>
-          <p className="max-w-xl text-sm text-muted-foreground">
+        <section className="border border-border/70 bg-[oklch(0.175_0.016_255)] p-5">
+          <h2 className="font-mono text-sm tracking-wide">Disconnect</h2>
+          <p className="mt-1 max-w-xl text-sm text-muted-foreground">
             Sign out ends your Catalyst Intel session. It does not delete your Google
-            account or permanently unlink the OAuth identity from Supabase.
+            account or permanently unlink OAuth from Supabase.
           </p>
-          <div className="flex flex-wrap gap-3 pt-1">
+          <div className="mt-4 flex flex-wrap gap-3">
             <form action={logout}>
               <Button type="submit" variant="outline" className="btn-press">
                 Sign out
