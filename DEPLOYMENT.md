@@ -194,3 +194,12 @@ same driver and schema as local SQLite; only the URL/token change.
 
 Closest free option to "every 1-2 minutes." Vercel Hobby allows one cron/day; Pro is $20/mo for
 per-minute. Expect occasional schedule drift on GitHub Actions - that is normal.
+
+**Decision: keep it this way while on Vercel Hobby.** GitHub Actions here is a scheduler
+pinging `/api/admin/fetch/sec-edgar` — it never touches Turso directly, the route handler does.
+The ideal end-state is GitHub Actions reserved purely for CI (`ci.yml`) and Vercel's native
+`crons` config (in `vercel.json`) driving ETL, since it removes one moving part and Vercel Cron
+auto-sends `Authorization: Bearer $CRON_SECRET`, matching the secret this project already uses.
+But Vercel Cron on Hobby is capped at once/day with ±59min timing precision — switching now would
+regress data freshness from ~5 minutes to once a day, which defeats the point of a live feed.
+Revisit this the moment the project moves to Vercel Pro.
