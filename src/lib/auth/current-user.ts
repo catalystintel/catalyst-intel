@@ -1,8 +1,13 @@
+import { eq } from "drizzle-orm";
+
+import { db } from "@/db/client";
 import { isLibsqlConfigured } from "@/db/env";
+import { users } from "@/db/schema";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 
-import { isAdminEmail } from "./admin";
+import { adminRoleForEmail, isAdminEmail } from "./admin";
+import { getDevBypassEmail, isDevAuthBypassEnabled } from "./dev-bypass";
 import { syncSupabaseUser } from "./sync-user";
 
 export type AppUser = {
@@ -26,6 +31,10 @@ export type AppUser = {
  * Vercel before Turso env vars are set) so callers can show a setup UI.
  */
 export async function getCurrentAppUser(): Promise<AppUser | null> {
+  if (isDevAuthBypassEnabled()) {
+    return getDevBypassAppUser();
+  }
+
   if (!isSupabaseConfigured()) {
     return null;
   }
@@ -51,10 +60,12 @@ export async function getCurrentAppUser(): Promise<AppUser | null> {
   }
 
   const meta = user.user_metadata ?? {};
-  const displayName =
+  const googleName =
     (typeof meta.full_name === "string" && meta.full_name) ||
     (typeof meta.name === "string" && meta.name) ||
     null;
+  // User-chosen name wins; Google's name is the fallback.
+  const displayName = row.displayName ?? googleName;
   const avatarUrl =
     (typeof meta.avatar_url === "string" && meta.avatar_url) ||
     (typeof meta.picture === "string" && meta.picture) ||
@@ -65,5 +76,47 @@ export async function getCurrentAppUser(): Promise<AppUser | null> {
     isAdmin: isAdminEmail(user.email),
     displayName,
     avatarUrl,
+  };
+}
+
+/**
+ * Builds a DB-backed app user for the local dev bypass, upserting a `users` row
+ * so profile edits and foreign keys behave like a real session.
+ *
+ * @returns The synthetic dev user.
+ * @throws When the local database is not configured (bypass needs a real DB).
+ */
+async function getDevBypassAppUser(): Promise<AppUser> {
+  if (!isLibsqlConfigured()) {
+    throw new Error(
+      "DEV_AUTH_BYPASS is on but the database is not configured. Set DATABASE_URL in .env.local.",
+    );
+  }
+
+  const email = getDevBypassEmail();
+  const supabaseUserId = `dev-bypass:${email}`;
+  const role = adminRoleForEmail(email);
+
+  await db
+    .insert(users)
+    .values({ supabaseUserId, email, role })
+    .onConflictDoNothing()
+    .run();
+
+  const row = await db
+    .select()
+    .from(users)
+    .where(eq(users.supabaseUserId, supabaseUserId))
+    .get();
+
+  if (!row) {
+    throw new Error("Failed to create the dev bypass user.");
+  }
+
+  return {
+    ...row,
+    isAdmin: isAdminEmail(email),
+    displayName: row.displayName ?? "Local Dev",
+    avatarUrl: null,
   };
 }

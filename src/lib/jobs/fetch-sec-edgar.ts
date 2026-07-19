@@ -4,6 +4,7 @@ import { eq } from "drizzle-orm";
 import { db } from "@/db/client";
 import { catalysts, companies, rawSources } from "@/db/schema";
 import { purgeStaleCatalysts } from "./data-retention";
+import { parseFilingSummary } from "./parse-8k-items";
 import { getTickerByCik } from "./ticker-lookup";
 
 const FEED_URL =
@@ -126,11 +127,14 @@ export async function fetchSecEdgar(): Promise<FetchSecEdgarResult> {
           : (entry.summary?.["#text"] ?? "");
       const summaryText = stripHtml(rawSummary);
 
+      // `entry.updated` is the EDGAR acceptance datetime (precise to the second)
+      // and is what makes the Live tape's "age" meaningful; the summary's
+      // "Filed:" value is date-only, so it's only a fallback.
       const filedDate = extractFiledDate(summaryText);
-      const timestamp = filedDate
-        ? new Date(filedDate).toISOString()
-        : entry.updated
-          ? new Date(entry.updated).toISOString()
+      const timestamp = entry.updated
+        ? new Date(entry.updated).toISOString()
+        : filedDate
+          ? new Date(filedDate).toISOString()
           : new Date().toISOString();
 
       const formType =
@@ -139,6 +143,9 @@ export async function fetchSecEdgar(): Promise<FetchSecEdgarResult> {
       const ticker = parsedTitle
         ? (tickerByCik.get(parsedTitle.cik) ?? null)
         : null;
+
+      const { items, primaryCategory, headline } =
+        parseFilingSummary(summaryText);
 
       const rawRow = await db
         .insert(rawSources)
@@ -181,8 +188,12 @@ export async function fetchSecEdgar(): Promise<FetchSecEdgarResult> {
         .values({
           companyId,
           ticker,
+          companyName,
           type: formType,
           title: `${companyName} \u2014 ${formType} filing`,
+          headline,
+          eventCategory: primaryCategory,
+          itemCodes: items,
           timestamp,
           rawSourceId: rawRow.id,
         })

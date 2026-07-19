@@ -10,20 +10,21 @@ import {
 } from "react";
 
 import { CatalystDetailDrawer } from "@/components/catalyst-detail-drawer";
+import { CategoryBadge } from "@/components/category-badge";
 import { Input } from "@/components/ui/input";
-import { formatRelativeAge, isWithinWindow } from "@/lib/format/relative-time";
+import {
+  toFeedCatalyst,
+  type FeedCatalyst,
+} from "@/lib/catalysts/feed-catalyst";
+import {
+  CATEGORY_LABELS,
+  type EventCategoryKey,
+} from "@/lib/jobs/parse-8k-items";
+import { formatClockTime, formatRelativeAge } from "@/lib/format/relative-time";
+import { isWithinWindow } from "@/lib/format/relative-time";
 import { cn } from "@/lib/utils";
 
-export type FeedCatalyst = {
-  id: number;
-  ticker: string | null;
-  type: string;
-  title: string;
-  timestamp: string;
-  summary: string | null;
-  impactScore: number | null;
-  sourceUrl: string | null;
-};
+export type { FeedCatalyst };
 
 const ACTIVE_POLL_MS = 20_000;
 const BLURRED_POLL_MS = 90_000;
@@ -48,10 +49,12 @@ function readPresence(): Presence {
   return "active";
 }
 
-function whyLine(c: FeedCatalyst): string {
-  const summary = c.summary?.trim();
-  if (summary) return summary;
-  return c.title;
+function eventLine(c: FeedCatalyst): string {
+  return c.headline?.trim() || c.summary?.trim() || c.type;
+}
+
+function companyLine(c: FeedCatalyst): string {
+  return c.companyName?.trim() || "—";
 }
 
 export function LiveCatalystFeed({
@@ -68,7 +71,9 @@ export function LiveCatalystFeed({
   const [flashIds, setFlashIds] = useState<Set<number>>(() => new Set());
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [tickerQuery, setTickerQuery] = useState("");
-  const [typeFilter, setTypeFilter] = useState<string | null>(null);
+  const [categoryFilter, setCategoryFilter] = useState<EventCategoryKey | null>(
+    null,
+  );
   const [timeWindow, setTimeWindow] = useState<TimeWindow>("all");
   const [nowTick, setNowTick] = useState(() => Date.now());
   const inFlight = useRef(false);
@@ -91,7 +96,7 @@ export function LiveCatalystFeed({
       if (!res.ok) {
         throw new Error(data.error ?? "Could not refresh feed.");
       }
-      const next: FeedCatalyst[] = data.catalysts ?? [];
+      const next: FeedCatalyst[] = (data.catalysts ?? []).map(toFeedCatalyst);
       const fresh = next
         .filter((c) => !knownIds.current.has(c.id))
         .map((c) => c.id);
@@ -166,14 +171,15 @@ export function LiveCatalystFeed({
     return () => window.clearInterval(id);
   }, []);
 
-  const typeOptions = useMemo(() => {
-    const counts = new Map<string, number>();
+  const categoryOptions = useMemo(() => {
+    const counts = new Map<EventCategoryKey, number>();
     for (const c of catalysts) {
-      counts.set(c.type, (counts.get(c.type) ?? 0) + 1);
+      if (!c.eventCategory) continue;
+      counts.set(c.eventCategory, (counts.get(c.eventCategory) ?? 0) + 1);
     }
     return [...counts.entries()]
       .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
-      .map(([type, count]) => ({ type, count }));
+      .map(([category, count]) => ({ category, count }));
   }, [catalysts]);
 
   const windowHours =
@@ -182,12 +188,12 @@ export function LiveCatalystFeed({
   const filtered = useMemo(() => {
     const q = tickerQuery.trim().toUpperCase();
     return catalysts.filter((c) => {
-      if (typeFilter && c.type !== typeFilter) return false;
+      if (categoryFilter && c.eventCategory !== categoryFilter) return false;
       if (q && !(c.ticker ?? "").toUpperCase().includes(q)) return false;
       if (!isWithinWindow(c.timestamp, windowHours, nowTick)) return false;
       return true;
     });
-  }, [catalysts, typeFilter, tickerQuery, windowHours, nowTick]);
+  }, [catalysts, categoryFilter, tickerQuery, windowHours, nowTick]);
 
   const selected = selectedId
     ? (catalysts.find((c) => c.id === selectedId) ?? null)
@@ -237,9 +243,9 @@ export function LiveCatalystFeed({
       <FeedFilters
         tickerQuery={tickerQuery}
         onTickerQuery={setTickerQuery}
-        typeFilter={typeFilter}
-        onTypeFilter={setTypeFilter}
-        typeOptions={typeOptions}
+        categoryFilter={categoryFilter}
+        onCategoryFilter={setCategoryFilter}
+        categoryOptions={categoryOptions}
         timeWindow={timeWindow}
         onTimeWindow={setTimeWindow}
       />
@@ -281,23 +287,25 @@ export function LiveCatalystFeed({
   );
 }
 
+interface FeedFiltersProps {
+  tickerQuery: string;
+  onTickerQuery: (v: string) => void;
+  categoryFilter: EventCategoryKey | null;
+  onCategoryFilter: (v: EventCategoryKey | null) => void;
+  categoryOptions: { category: EventCategoryKey; count: number }[];
+  timeWindow: TimeWindow;
+  onTimeWindow: (v: TimeWindow) => void;
+}
+
 function FeedFilters({
   tickerQuery,
   onTickerQuery,
-  typeFilter,
-  onTypeFilter,
-  typeOptions,
+  categoryFilter,
+  onCategoryFilter,
+  categoryOptions,
   timeWindow,
   onTimeWindow,
-}: {
-  tickerQuery: string;
-  onTickerQuery: (v: string) => void;
-  typeFilter: string | null;
-  onTypeFilter: (v: string | null) => void;
-  typeOptions: { type: string; count: number }[];
-  timeWindow: TimeWindow;
-  onTimeWindow: (v: TimeWindow) => void;
-}) {
+}: FeedFiltersProps) {
   return (
     <div className="flex flex-col gap-2.5">
       <div className="flex flex-wrap items-center gap-2">
@@ -320,21 +328,23 @@ function FeedFilters({
           ))}
         </div>
       </div>
-      {typeOptions.length > 0 ? (
+      {categoryOptions.length > 0 ? (
         <div className="flex flex-wrap items-center gap-1">
           <FilterChip
-            active={typeFilter === null}
-            onClick={() => onTypeFilter(null)}
+            active={categoryFilter === null}
+            onClick={() => onCategoryFilter(null)}
           >
-            All types
+            All events
           </FilterChip>
-          {typeOptions.map(({ type, count }) => (
+          {categoryOptions.map(({ category, count }) => (
             <FilterChip
-              key={type}
-              active={typeFilter === type}
-              onClick={() => onTypeFilter(typeFilter === type ? null : type)}
+              key={category}
+              active={categoryFilter === category}
+              onClick={() =>
+                onCategoryFilter(categoryFilter === category ? null : category)
+              }
             >
-              {type}
+              {CATEGORY_LABELS[category]}
               <span className="ml-1 opacity-60">{count}</span>
             </FilterChip>
           ))}
@@ -382,14 +392,21 @@ function CatalystFeedList({
   selectedId: number | null;
   onSelect: (id: number) => void;
 }) {
+  const columns =
+    "grid-cols-[3.25rem_4rem_minmax(0,1fr)] sm:grid-cols-[4.5rem_5.5rem_minmax(0,1.1fr)_minmax(0,1.4fr)_3.25rem]";
   return (
     <div className="overflow-hidden border border-border/70 bg-[oklch(0.175_0.016_255)]">
-      <div className="grid grid-cols-[4.5rem_4.25rem_3.5rem_3rem_minmax(0,1fr)] gap-2 border-b border-border/60 bg-[oklch(0.19_0.018_255)] px-3 py-2 font-mono text-[0.62rem] tracking-[0.14em] text-muted-foreground uppercase sm:grid-cols-[5.5rem_5rem_4rem_3.5rem_minmax(0,1fr)] sm:gap-3 sm:px-4">
+      <div
+        className={cn(
+          "grid gap-2 border-b border-border/60 bg-[oklch(0.19_0.018_255)] px-3 py-2 font-mono text-[0.62rem] tracking-[0.14em] text-muted-foreground uppercase sm:gap-3 sm:px-4",
+          columns,
+        )}
+      >
+        <span className="text-right sm:text-left">Age</span>
         <span>Ticker</span>
-        <span>Type</span>
-        <span>Impact</span>
-        <span className="text-right">Age</span>
-        <span>Why</span>
+        <span className="hidden sm:block">Company</span>
+        <span>Event</span>
+        <span className="hidden text-right sm:block">Time</span>
       </div>
       <ul className="divide-y divide-border/40">
         {catalysts.map((catalyst, index) => {
@@ -401,31 +418,40 @@ function CatalystFeedList({
                 type="button"
                 onClick={() => onSelect(catalyst.id)}
                 className={cn(
-                  "feed-row grid w-full grid-cols-[4.5rem_4.25rem_3.5rem_3rem_minmax(0,1fr)] items-center gap-2 px-3 py-2.5 text-left transition-colors sm:grid-cols-[5.5rem_5rem_4rem_3.5rem_minmax(0,1fr)] sm:gap-3 sm:px-4 sm:py-3",
+                  "feed-row grid w-full items-center gap-2 px-3 py-2.5 text-left transition-colors sm:gap-3 sm:px-4 sm:py-3",
+                  columns,
                   "hover:bg-amber-400/[0.05] focus-visible:bg-amber-400/[0.07] focus-visible:outline-none",
                   selected && "bg-steel/15",
                   flashing && "row-flash",
                 )}
                 style={{ animationDelay: `${Math.min(index, 28) * 22}ms` }}
               >
-                <span className="truncate font-mono text-[0.8rem] font-semibold tracking-wide text-steel-foreground">
-                  {catalyst.ticker ?? "—"}
-                </span>
-                <span className="truncate font-mono text-[0.7rem] text-muted-foreground">
-                  {catalyst.type}
-                </span>
-                <span className="font-mono text-[0.7rem] text-muted-foreground/80 tabular-nums">
-                  {catalyst.impactScore != null ? catalyst.impactScore : "—"}
-                </span>
                 <time
                   dateTime={catalyst.timestamp}
-                  className="text-right font-mono text-[0.7rem] text-amber-200/85 tabular-nums"
+                  className="text-right font-mono text-[0.7rem] text-amber-200/85 tabular-nums sm:text-left"
                 >
                   {formatRelativeAge(catalyst.timestamp, nowTick)}
                 </time>
-                <span className="truncate text-[0.8rem] text-foreground/90">
-                  {whyLine(catalyst)}
+                <span className="truncate font-mono text-[0.8rem] font-semibold tracking-wide text-steel-foreground">
+                  {catalyst.ticker ?? "—"}
                 </span>
+                <span className="hidden truncate text-[0.8rem] text-muted-foreground sm:block">
+                  {companyLine(catalyst)}
+                </span>
+                <span className="flex min-w-0 items-center gap-2">
+                  {catalyst.eventCategory ? (
+                    <CategoryBadge category={catalyst.eventCategory} />
+                  ) : null}
+                  <span className="truncate text-[0.8rem] text-foreground/90">
+                    {eventLine(catalyst)}
+                  </span>
+                </span>
+                <time
+                  dateTime={catalyst.timestamp}
+                  className="hidden text-right font-mono text-[0.68rem] text-muted-foreground tabular-nums sm:block"
+                >
+                  {formatClockTime(catalyst.timestamp)}
+                </time>
               </button>
             </li>
           );

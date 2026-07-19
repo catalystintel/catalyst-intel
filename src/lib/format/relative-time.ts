@@ -14,6 +14,16 @@ export function formatRelativeAge(iso: string, now = Date.now()): string {
   });
 }
 
+/** Wall-clock time (HH:MM) in the viewer's locale, for the feed's "Time" cell. */
+export function formatClockTime(iso: string): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return "—";
+  return date.toLocaleTimeString(undefined, {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
 export function isWithinWindow(
   iso: string,
   windowHours: number | null,
