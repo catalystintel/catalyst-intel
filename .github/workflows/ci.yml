@@ -25,9 +25,12 @@ jobs:
       SEC_EDGAR_USER_AGENT: catalyst-intel-ci ci@example.com
       DATABASE_URL: file:./local.db
     steps:
-      - uses: actions/checkout@v4
+      # Pin to v7+: earlier majors run their own action code on the
+      # (now-deprecated) Node 20 Actions runtime. This is unrelated to the
+      # node-version below, which only controls the Node used to run our app.
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: "24"
           cache: "npm"
