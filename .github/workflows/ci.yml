@@ -3,9 +3,11 @@ name: CI
 # CI/CD only runs for the two branches that matter: `dev` (staging) and
 # `main` (production) - see .cursor/rules/git-branching-workflow.mdc and
 # DEPLOYMENT.md. PRs into `dev` also run this so feature branches are
-# checked (lint, unit tests, build - covering both the frontend pages and
-# backend API routes/lib code, since this is a single Next.js app) before
-# merging.
+# checked (format, lint, unit tests, build/type-check - covering both the
+# frontend pages and backend API routes/lib code, since this is a single
+# Next.js app) before merging. This workflow only verifies the code - it does
+# not deploy. Deployment on push to `dev`/`main` is handled separately by
+# Vercel's own GitHub integration (see vercel.json and DEPLOYMENT.md).
 on:
   push:
     branches: [main, dev]
@@ -31,6 +33,9 @@ jobs:
           cache: "npm"
 
       - run: npm ci
+
+      - name: Prettier format check
+        run: npm run format:check
 
       - run: npm run lint
 

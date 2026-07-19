@@ -38,14 +38,20 @@ export default async function LoginPage({
 
   return (
     <div className="relative flex flex-1 flex-col overflow-hidden">
-      <div aria-hidden className="desk-grid pointer-events-none absolute inset-0" />
+      <div
+        aria-hidden
+        className="desk-grid pointer-events-none absolute inset-0"
+      />
       <div
         aria-hidden
         className="pointer-events-none absolute inset-x-0 top-0 h-[40vh] bg-[radial-gradient(ellipse_at_top,oklch(0.45_0.06_250_/0.18),transparent_65%)]"
       />
 
       <header className="relative z-10 flex items-center justify-between px-5 py-5 sm:px-8">
-        <Link href="/" className="flex items-center gap-2.5 text-sm font-semibold tracking-tight">
+        <Link
+          href="/"
+          className="flex items-center gap-2.5 text-sm font-semibold tracking-tight"
+        >
           <span
             aria-hidden
             className="live-pulse inline-block size-2 rounded-full bg-amber-400"
@@ -56,7 +62,7 @@ export default async function LoginPage({
 
       <main className="page-enter relative z-10 flex flex-1 items-center justify-center px-4 pb-16">
         <div className="w-full max-w-sm border border-border/70 bg-[oklch(0.175_0.016_255_/0.95)] p-6 backdrop-blur-sm">
-          <p className="font-mono text-[0.65rem] uppercase tracking-[0.18em] text-amber-400/90">
+          <p className="font-mono text-[0.65rem] tracking-[0.18em] text-amber-400/90 uppercase">
             Desk access
           </p>
           <h1 className="mt-2 text-xl font-semibold tracking-tight">Sign in</h1>
@@ -70,9 +76,11 @@ export default async function LoginPage({
                 <p className="font-medium">Supabase Auth is not configured</p>
                 <p className="mt-1 text-destructive/90">
                   Put your real project URL and anon key in{" "}
-                  <code className="text-xs">.env.local</code>, enable Google under
-                  Authentication → Providers, add{" "}
-                  <code className="text-xs">http://localhost:3000/auth/callback</code>{" "}
+                  <code className="text-xs">.env.local</code>, enable Google
+                  under Authentication → Providers, add{" "}
+                  <code className="text-xs">
+                    http://localhost:3000/auth/callback
+                  </code>{" "}
                   to Redirect URLs, then restart the dev server.
                 </p>
               </div>
@@ -80,8 +88,12 @@ export default async function LoginPage({
 
             <form action={signInWithGoogle} className="flex flex-col gap-4">
               <input type="hidden" name="next" value={next ?? "/dashboard"} />
-              {message ? <p className="text-sm text-muted-foreground">{message}</p> : null}
-              {error ? <p className="text-sm text-destructive">{error}</p> : null}
+              {message ? (
+                <p className="text-sm text-muted-foreground">{message}</p>
+              ) : null}
+              {error ? (
+                <p className="text-sm text-destructive">{error}</p>
+              ) : null}
               <Button
                 type="submit"
                 variant="outline"

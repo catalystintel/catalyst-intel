@@ -52,7 +52,9 @@ export function CatalystDetailDrawer({
       <aside
         role="dialog"
         aria-modal="true"
-        aria-labelledby={catalyst ? `catalyst-drawer-${catalyst.id}` : undefined}
+        aria-labelledby={
+          catalyst ? `catalyst-drawer-${catalyst.id}` : undefined
+        }
         className={cn(
           "drawer-panel absolute inset-y-0 right-0 flex w-full max-w-md flex-col border-l border-border/80 bg-[oklch(0.17_0.018_255)] shadow-[-12px_0_40px_rgba(0,0,0,0.45)] transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]",
           open ? "translate-x-0" : "translate-x-full",
@@ -62,7 +64,7 @@ export function CatalystDetailDrawer({
           <>
             <div className="flex items-start justify-between gap-3 border-b border-border/70 px-5 py-4">
               <div className="min-w-0">
-                <p className="font-mono text-[0.65rem] uppercase tracking-[0.18em] text-amber-400/90">
+                <p className="font-mono text-[0.65rem] tracking-[0.18em] text-amber-400/90 uppercase">
                   Catalyst
                 </p>
                 <h2
@@ -87,17 +89,25 @@ export function CatalystDetailDrawer({
             <div className="flex flex-1 flex-col gap-5 overflow-y-auto px-5 py-5">
               <dl className="grid grid-cols-2 gap-4 font-mono text-xs">
                 <div>
-                  <dt className="uppercase tracking-[0.14em] text-muted-foreground">Type</dt>
-                  <dd className="mt-1 text-sm text-foreground">{catalyst.type}</dd>
+                  <dt className="tracking-[0.14em] text-muted-foreground uppercase">
+                    Type
+                  </dt>
+                  <dd className="mt-1 text-sm text-foreground">
+                    {catalyst.type}
+                  </dd>
                 </div>
                 <div>
-                  <dt className="uppercase tracking-[0.14em] text-muted-foreground">Age</dt>
-                  <dd className="mt-1 text-sm tabular-nums text-foreground">
+                  <dt className="tracking-[0.14em] text-muted-foreground uppercase">
+                    Age
+                  </dt>
+                  <dd className="mt-1 text-sm text-foreground tabular-nums">
                     {formatRelativeAge(catalyst.timestamp)}
                   </dd>
                 </div>
                 <div>
-                  <dt className="uppercase tracking-[0.14em] text-muted-foreground">Impact</dt>
+                  <dt className="tracking-[0.14em] text-muted-foreground uppercase">
+                    Impact
+                  </dt>
                   <dd className="mt-1 text-sm text-muted-foreground">
                     {catalyst.impactScore != null
                       ? String(catalyst.impactScore)
@@ -105,15 +115,17 @@ export function CatalystDetailDrawer({
                   </dd>
                 </div>
                 <div>
-                  <dt className="uppercase tracking-[0.14em] text-muted-foreground">Filed</dt>
-                  <dd className="mt-1 text-sm tabular-nums text-foreground">
+                  <dt className="tracking-[0.14em] text-muted-foreground uppercase">
+                    Filed
+                  </dt>
+                  <dd className="mt-1 text-sm text-foreground tabular-nums">
                     {new Date(catalyst.timestamp).toLocaleString()}
                   </dd>
                 </div>
               </dl>
 
               <div>
-                <p className="font-mono text-[0.65rem] uppercase tracking-[0.14em] text-muted-foreground">
+                <p className="font-mono text-[0.65rem] tracking-[0.14em] text-muted-foreground uppercase">
                   Why it matters
                 </p>
                 <p className="mt-2 text-sm leading-relaxed text-foreground/95">

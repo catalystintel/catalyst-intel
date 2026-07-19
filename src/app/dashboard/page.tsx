@@ -62,8 +62,11 @@ export default async function DashboardPage() {
         <div className="flex flex-wrap items-end justify-between gap-3 border-b border-border/50 pb-4">
           <div>
             <div className="flex items-center gap-2">
-              <span aria-hidden className="live-pulse inline-block size-1.5 rounded-full bg-amber-400" />
-              <p className="font-mono text-[0.65rem] uppercase tracking-[0.2em] text-amber-400/90">
+              <span
+                aria-hidden
+                className="live-pulse inline-block size-1.5 rounded-full bg-amber-400"
+              />
+              <p className="font-mono text-[0.65rem] tracking-[0.2em] text-amber-400/90 uppercase">
                 Live feed
               </p>
             </div>
@@ -71,11 +74,12 @@ export default async function DashboardPage() {
               On-spot catalysts
             </h1>
             <p className="mt-1 max-w-xl text-sm text-muted-foreground">
-              SEC filings as they hit — scan ticker, type, age, and why. Click a row for
-              the filing link. Soft-refreshes while focused; pauses when hidden.
+              SEC filings as they hit — scan ticker, type, age, and why. Click a
+              row for the filing link. Soft-refreshes while focused; pauses when
+              hidden.
             </p>
           </div>
-          <p className="font-mono text-[0.65rem] uppercase tracking-[0.14em] text-muted-foreground">
+          <p className="font-mono text-[0.65rem] tracking-[0.14em] text-muted-foreground uppercase">
             Desk · multi-monitor scan
           </p>
         </div>

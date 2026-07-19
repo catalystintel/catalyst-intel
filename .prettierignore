@@ -1,0 +1,17 @@
+# Same intent as .gitignore, plus generated/lock files we never hand-format.
+node_modules
+.next
+out
+build
+.cache
+.vercel
+
+*.db
+*.db-journal
+*.db-shm
+*.db-wal
+
+package-lock.json
+drizzle/meta
+next-env.d.ts
+*.tsbuildinfo

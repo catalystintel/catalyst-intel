@@ -35,13 +35,18 @@ async function main() {
         `[cron] ${result.ranAt} fetched=${result.fetched} inserted=${result.inserted} skipped=${result.skipped} errors=${result.errors}`,
       );
     } catch (error) {
-      console.error("[cron] run failed:", error instanceof Error ? error.message : error);
+      console.error(
+        "[cron] run failed:",
+        error instanceof Error ? error.message : error,
+      );
     } finally {
       running = false;
     }
   }
 
-  console.log(`[cron] starting - running every ${intervalMinutes} minute(s). Press Ctrl+C to stop.`);
+  console.log(
+    `[cron] starting - running every ${intervalMinutes} minute(s). Press Ctrl+C to stop.`,
+  );
   await runOnce();
   const timer = setInterval(runOnce, intervalMs);
 

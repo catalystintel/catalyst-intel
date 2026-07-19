@@ -15,9 +15,7 @@ function requestWith(headers: Record<string, string>) {
 describe("getClientIp", () => {
   it("uses the first x-forwarded-for hop", () => {
     expect(
-      getClientIp(
-        requestWith({ "x-forwarded-for": "203.0.113.10, 10.0.0.1" }),
-      ),
+      getClientIp(requestWith({ "x-forwarded-for": "203.0.113.10, 10.0.0.1" })),
     ).toBe("203.0.113.10");
   });
 

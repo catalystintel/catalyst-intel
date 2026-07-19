@@ -27,12 +27,17 @@ async function main() {
   const { eq } = await import("drizzle-orm");
   const { db } = await import("@/db/client");
   const { users } = await import("@/db/schema");
-  const { adminRoleForEmail, getAdminEmails } = await import("@/lib/auth/admin");
+  const { adminRoleForEmail, getAdminEmails } =
+    await import("@/lib/auth/admin");
 
   const role = adminRoleForEmail(email);
   const allowlist = getAdminEmails();
 
-  const existing = await db.select().from(users).where(eq(users.email, email)).get();
+  const existing = await db
+    .select()
+    .from(users)
+    .where(eq(users.email, email))
+    .get();
 
   if (!existing) {
     console.error(
