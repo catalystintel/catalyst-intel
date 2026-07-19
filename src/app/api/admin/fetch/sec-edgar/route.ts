@@ -10,6 +10,10 @@ import {
   withRateLimitHeaders,
 } from "@/lib/http/rate-limit-response";
 import { fetchSecEdgar } from "@/lib/jobs/fetch-sec-edgar";
+import {
+  getPostHogClient,
+  isPostHogServerConfigured,
+} from "@/lib/posthog-server";
 
 /**
  * Triggers the SEC EDGAR ingestion job. Accepts either:
@@ -27,6 +31,7 @@ export async function POST(request: NextRequest) {
 
   const providedSecret = request.headers.get("x-cron-secret");
   const isCron = isValidCronSecret(process.env.CRON_SECRET, providedSecret);
+  let triggerDistinctId = "cron";
 
   if (!isCron) {
     const ip = getClientIp(request);
@@ -55,15 +60,20 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    triggerDistinctId = user.supabaseUserId;
+
     try {
       const result = await fetchSecEdgar();
+      await captureIngestionEvent(triggerDistinctId, "completed", { ...result });
       return withRateLimitHeaders(NextResponse.json(result), limitResult);
     } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : "Fetch job failed.";
+      await captureIngestionEvent(triggerDistinctId, "failed", {
+        error_message: errorMessage,
+      });
       return withRateLimitHeaders(
-        NextResponse.json(
-          { error: error instanceof Error ? error.message : "Fetch job failed." },
-          { status: 500 },
-        ),
+        NextResponse.json({ error: errorMessage }, { status: 500 }),
         limitResult,
       );
     }
@@ -71,11 +81,35 @@ export async function POST(request: NextRequest) {
 
   try {
     const result = await fetchSecEdgar();
+    await captureIngestionEvent(triggerDistinctId, "completed", { ...result });
     return NextResponse.json(result);
   } catch (error) {
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Fetch job failed." },
-      { status: 500 },
-    );
+    const errorMessage =
+      error instanceof Error ? error.message : "Fetch job failed.";
+    await captureIngestionEvent(triggerDistinctId, "failed", {
+      error_message: errorMessage,
+    });
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
+}
+
+async function captureIngestionEvent(
+  distinctId: string,
+  outcome: "completed" | "failed",
+  properties: Record<string, unknown>,
+) {
+  if (!isPostHogServerConfigured()) return;
+  const posthog = getPostHogClient();
+  posthog.capture({
+    distinctId,
+    event:
+      outcome === "completed"
+        ? "sec_edgar_ingestion_completed"
+        : "sec_edgar_ingestion_failed",
+    properties: {
+      ...properties,
+      trigger: distinctId === "cron" ? "cron" : "admin_ui",
+    },
+  });
+  await posthog.flush();
 }

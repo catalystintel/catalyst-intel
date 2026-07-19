@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 
 import { safeNextPath } from "@/lib/http/origin";
+import {
+  getPostHogClient,
+  isPostHogServerConfigured,
+} from "@/lib/posthog-server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 /**
@@ -22,8 +26,18 @@ export async function GET(request: Request) {
 
   if (code) {
     const supabase = await createSupabaseServerClient();
-    const { error } = await supabase.auth.exchangeCodeForSession(code);
-    if (!error) {
+    const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+    if (!error && data.user) {
+      if (isPostHogServerConfigured()) {
+        const posthog = getPostHogClient();
+        posthog.capture({
+          distinctId: data.user.id,
+          event: "user_logged_in",
+          properties: { provider: "google" },
+        });
+        await posthog.flush();
+      }
+
       // Prefer the load-balancer-facing host in production (Vercel).
       const forwardedHost = request.headers.get("x-forwarded-host");
       const isLocal = process.env.NODE_ENV === "development";
@@ -33,8 +47,21 @@ export async function GET(request: Request) {
       return NextResponse.redirect(`${origin}${next}`);
     }
 
+    if (isPostHogServerConfigured()) {
+      const posthog = getPostHogClient();
+      posthog.capture({
+        distinctId: "anonymous",
+        event: "login_failed",
+        properties: {
+          provider: "google",
+          error_message: error?.message ?? "Unknown error",
+        },
+      });
+      await posthog.flush();
+    }
+
     return NextResponse.redirect(
-      `${origin}/login?error=${encodeURIComponent(error.message)}`,
+      `${origin}/login?error=${encodeURIComponent(error?.message ?? "Google sign-in failed.")}`,
     );
   }
 

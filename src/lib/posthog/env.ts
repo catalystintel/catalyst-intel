@@ -1,9 +1,19 @@
 /**
+ * Public PostHog project API key. Prefers NEXT_PUBLIC_POSTHOG_KEY; falls back
+ * to NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN (older main / Vercel naming).
+ */
+export function getPostHogKey(): string {
+  const key = process.env.NEXT_PUBLIC_POSTHOG_KEY?.trim();
+  if (key) return key;
+  return process.env.NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN?.trim() ?? "";
+}
+
+/**
  * Returns true when PostHog public env looks like a real project API key
  * (not empty / placeholder). When false, analytics must no-op.
  */
 export function isPostHogConfigured(): boolean {
-  const key = process.env.NEXT_PUBLIC_POSTHOG_KEY ?? "";
+  const key = getPostHogKey();
 
   if (!key) return false;
   if (key.includes("placeholder")) return false;

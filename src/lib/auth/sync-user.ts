@@ -3,6 +3,10 @@ import { eq } from "drizzle-orm";
 
 import { assertDatabaseConfigured, db } from "@/db/client";
 import { users } from "@/db/schema";
+import {
+  getPostHogClient,
+  isPostHogServerConfigured,
+} from "@/lib/posthog-server";
 
 import { adminRoleForEmail } from "./admin";
 
@@ -46,6 +50,16 @@ export async function syncSupabaseUser(supabaseUser: User) {
     .values({ supabaseUserId: supabaseUser.id, email, role })
     .onConflictDoNothing()
     .run();
+
+  if (isPostHogServerConfigured()) {
+    const posthog = getPostHogClient();
+    posthog.capture({
+      distinctId: supabaseUser.id,
+      event: "user_signed_up",
+      properties: { role, subscription: "free" },
+    });
+    await posthog.flush();
+  }
 
   return db
     .select()
