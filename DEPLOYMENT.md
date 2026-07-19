@@ -18,8 +18,10 @@ Three environments, one app:
     (This is a single Next.js app - tests cover both frontend pages and backend API/lib code.)
 - **Vercel CD** (`vercel.json`): deploys **only** on push to `dev` (staging) and `main`
   (production). Feature branches do **not** get Vercel deploys.
-- **Production cron** (`.github/workflows/fetch-sec-edgar-cron.yml`): scheduled GitHub Action
-  hits the production URL with `x-cron-secret`. Inert until secrets are set.
+- **Scheduled ETL** (`.github/workflows/fetch-sec-edgar-cron.yml`): scheduled GitHub Action hits
+  both the production and staging URLs with `x-cron-secret` (matrix job, each side optional). Inert
+  until that environment's secrets are set. See "Why GitHub Actions cron" below for the observed
+  real-world cadence and the in-app self-healing backstop.
 
 ## Env vars cheat sheet
 
@@ -89,16 +91,24 @@ env vars are required today.
 | `ADMIN_EMAILS`                  | No          | Override admin allowlist if needed (same defaults as local) |
 | `CRON_SECRET`                   | Yes         | Must match the GitHub repo secret below                     |
 
-### GitHub repo secrets (for production cron only)
+### GitHub repo secrets (for the scheduled ETL workflow)
 
-| Secret         | Notes                                                                               |
-| -------------- | ----------------------------------------------------------------------------------- |
-| `PROD_APP_URL` | Production Vercel URL, e.g. `https://catalyst-intel.vercel.app` (no trailing slash) |
-| `CRON_SECRET`  | Same value as Vercel Production `CRON_SECRET`                                       |
+`fetch-sec-edgar-cron.yml` runs a matrix job against **both** environments, so staging gets the
+same automated ingestion attempts as production. Each pair below is independent — a missing pair
+just skips that environment's job (logs a message, exits 0) instead of failing the workflow.
+
+| Secret                | Notes                                                                               |
+| --------------------- | ----------------------------------------------------------------------------------- |
+| `PROD_APP_URL`        | Production Vercel URL, e.g. `https://catalyst-intel.vercel.app` (no trailing slash) |
+| `CRON_SECRET`         | Same value as Vercel **Production** `CRON_SECRET`                                   |
+| `STAGING_APP_URL`     | Staging (Preview) Vercel URL for the `dev` branch (no trailing slash)               |
+| `STAGING_CRON_SECRET` | Same value as Vercel **Preview** `CRON_SECRET`                                      |
 
 ```bash
 gh secret set PROD_APP_URL --body "https://<your-production-domain>"
 gh secret set CRON_SECRET --body "<same value as Vercel Production>"
+gh secret set STAGING_APP_URL --body "https://<your-staging-preview-domain>"
+gh secret set STAGING_CRON_SECRET --body "<same value as Vercel Preview>"
 ```
 
 ---
@@ -181,7 +191,8 @@ node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 
 1. Push / merge into `dev` → Vercel staging deploy + GitHub Actions CI.
 2. Promote `dev` → `main` (only when you ask) → Vercel production deploy + CI.
-3. Actions → `Fetch SEC EDGAR (production cron)` → **Run workflow** → expect HTTP 200.
+3. Actions → `Fetch SEC EDGAR (scheduled ETL)` → **Run workflow** → expect HTTP 200 for each
+   environment that has its secrets configured.
 4. Sign in with Google on the live URL using an allowlisted admin email (or set
    `ADMIN_EMAILS` on Vercel), open `/admin`, run a fetch, confirm `/dashboard` shows data.
 
@@ -193,13 +204,38 @@ same driver and schema as local SQLite; only the URL/token change.
 ## Why GitHub Actions cron every 5 minutes
 
 Closest free option to "every 1-2 minutes." Vercel Hobby allows one cron/day; Pro is $20/mo for
-per-minute. Expect occasional schedule drift on GitHub Actions - that is normal.
+per-minute.
 
-**Decision: keep it this way while on Vercel Hobby.** GitHub Actions here is a scheduler
+**Real-world cadence is worse than the configured interval, not just "occasional drift."**
+Pulling actual run history (`gh run list --workflow=fetch-sec-edgar-cron.yml`) shows gaps of
+45 minutes to 3.5+ hours between scheduled runs, averaging ~75 minutes, against a configured
+`*/5 * * * *`. GitHub throttles/coalesces frequent `schedule` triggers under load far more than
+the docs imply — treat this workflow as "best-effort, roughly hourly," not "every 5 minutes."
+
+**Self-healing backstop:** because the scheduler can't be trusted to hit its own interval,
+`GET /api/catalysts` (`src/app/api/catalysts/route.ts`) checks the most recent ingestion timestamp
+on every read and fires a non-blocking `fetchSecEdgar()` itself if the data is stale (>10 min old),
+with a 3-minute cooldown to avoid overlapping runs (`src/lib/jobs/ingestion-freshness.ts`). In
+practice: as long as anyone is using the app, data stays fresh regardless of cron timing. The
+scheduled workflow remains useful for keeping data fresh even with zero traffic.
+
+**Decision: keep GitHub Actions cron while on Vercel Hobby.** GitHub Actions here is a scheduler
 pinging `/api/admin/fetch/sec-edgar` — it never touches Turso directly, the route handler does.
 The ideal end-state is GitHub Actions reserved purely for CI (`ci.yml`) and Vercel's native
 `crons` config (in `vercel.json`) driving ETL, since it removes one moving part and Vercel Cron
 auto-sends `Authorization: Bearer $CRON_SECRET`, matching the secret this project already uses.
 But Vercel Cron on Hobby is capped at once/day with ±59min timing precision — switching now would
-regress data freshness from ~5 minutes to once a day, which defeats the point of a live feed.
-Revisit this the moment the project moves to Vercel Pro.
+regress the scheduled path from ~hourly to once a day. Revisit this the moment the project moves
+to Vercel Pro.
+
+## Testing ETL end-to-end
+
+| Where          | How                                                                                                                                                                                                                                                                                |
+| -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Local**      | `npm run cron` (continuous, every `CRON_INTERVAL_MINUTES`) or `/admin` → "Fetch SEC EDGAR now" once.                                                                                                                                                                               |
+| **Staging**    | Sign in with an allowlisted admin email on the staging Preview URL → `/admin` → run a fetch; or set `STAGING_APP_URL`/`STAGING_CRON_SECRET` (above) so the scheduled workflow covers it too; or `gh workflow run fetch-sec-edgar-cron.yml` to trigger both environments on demand. |
+| **Production** | Same as staging, against the production URL/secrets, or watch the self-healing backstop kick in on real traffic.                                                                                                                                                                   |
+
+To confirm data actually landed, check `/dashboard` (Live feed) or open Drizzle Studio
+(`npm run db:studio` locally; point `LIBSQL_URL`/`LIBSQL_AUTH_TOKEN` at a remote Turso DB to
+inspect staging/production the same way).

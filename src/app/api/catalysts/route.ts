@@ -11,10 +11,20 @@ import {
   rateLimitExceededResponse,
   withRateLimitHeaders,
 } from "@/lib/http/rate-limit-response";
+import { fetchSecEdgar } from "@/lib/jobs/fetch-sec-edgar";
+import {
+  markRefetchTriggered,
+  shouldTriggerBackgroundRefetch,
+} from "@/lib/jobs/ingestion-freshness";
 
 /**
  * Authenticated catalyst list for the Live feed soft-refetch.
  * Rate-limited per IP (loose) so focus-aware polling stays safe.
+ *
+ * Also acts as a self-healing ETL backstop: GitHub Actions cron is
+ * best-effort and can drift far past its configured interval (see
+ * DEPLOYMENT.md), so a stale read here kicks off a non-blocking refetch
+ * instead of waiting on the next lucky cron tick.
  */
 export async function GET(request: NextRequest) {
   if (!isLibsqlConfigured()) {
@@ -61,6 +71,8 @@ export async function GET(request: NextRequest) {
     .limit(limit)
     .all();
 
+  await triggerBackgroundRefetchIfStale();
+
   return withRateLimitHeaders(
     NextResponse.json({
       catalysts: rows,
@@ -68,4 +80,28 @@ export async function GET(request: NextRequest) {
     }),
     limitResult,
   );
+}
+
+/**
+ * Checks the most recent ingestion timestamp and, if stale, fires
+ * `fetchSecEdgar()` in the background. Never throws or blocks the response -
+ * `fetchSecEdgar()` dedupes by SEC accession number, so an overlapping run
+ * (e.g. from concurrent requests) is safe, just wasteful; the cooldown in
+ * `shouldTriggerBackgroundRefetch` keeps that rare.
+ */
+async function triggerBackgroundRefetchIfStale(): Promise<void> {
+  const latestSource = await db
+    .select({ fetchedAt: rawSources.fetchedAt })
+    .from(rawSources)
+    .orderBy(desc(rawSources.fetchedAt))
+    .limit(1)
+    .get();
+
+  const lastFetchedAt = latestSource ? new Date(latestSource.fetchedAt) : null;
+  if (!shouldTriggerBackgroundRefetch({ lastFetchedAt })) return;
+
+  markRefetchTriggered();
+  void fetchSecEdgar().catch((error: unknown) => {
+    console.error("Background SEC EDGAR refetch failed:", error);
+  });
 }

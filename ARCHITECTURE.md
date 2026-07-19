@@ -30,7 +30,7 @@ flowchart LR
     Supabase["Supabase\n(Google OAuth only)"]
     Browser["Browser"]
 
-    GHA -- "POST + x-cron-secret" --> AdminAPI
+    GHA -- "POST + x-cron-secret\n(staging + prod)" --> AdminAPI
     LocalCron -- "direct call" --> Job
     AdminAPI --> Job
     Job -- "fetch filings" --> SEC
@@ -38,6 +38,7 @@ flowchart LR
 
     Browser -- "poll while tab visible" --> CatalystsAPI
     CatalystsAPI -- "read" --> DB
+    CatalystsAPI -- "if stale: trigger\n(self-healing backstop)" --> Job
     Browser -- "every request" --> Proxy
     Proxy -- "verify session" --> Supabase
     Browser --> Dashboard
@@ -46,16 +47,17 @@ flowchart LR
 
 ## The pieces
 
-| Piece                     | What                                                    | Why                                                                                                           |
-| ------------------------- | ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
-| **Next.js app**           | One app: pages, API routes, ingestion job               | No separate backend to deploy/monitor — Vercel hosts everything.                                              |
-| **SEC EDGAR**             | Free, keyless Atom feed of 8-K filings                  | First data vendor; more (FDA, ClinicalTrials.gov) planned later.                                              |
-| **`fetchSecEdgar()` job** | Fetches, resolves tickers, dedupes, writes              | Single source of truth for ingestion, called 3 ways (below).                                                  |
-| **Scheduler**             | GitHub Actions cron (prod) / `npm run cron` (local)     | Free scheduler that just calls the API — see [DEPLOYMENT.md](DEPLOYMENT.md) for why it's not Vercel Cron yet. |
-| **libSQL / Turso**        | All app data (companies, catalysts, raw sources, users) | SQLite locally (zero setup), hosted Turso in prod (same driver/schema, Vercel has no durable disk).           |
-| **Supabase**              | Auth only (Google OAuth)                                | No passwords stored; Supabase's own Postgres is unused.                                                       |
-| **`src/proxy.ts`**        | Refreshes session cookie, optimistic redirect           | Cheap edge check; real authorization still happens per-route.                                                 |
-| **Dashboard**             | Polls `/api/catalysts` while the tab is visible         | "Live feed" feel without websockets.                                                                          |
+| Piece                     | What                                                          | Why                                                                                                                                      |
+| ------------------------- | ------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| **Next.js app**           | One app: pages, API routes, ingestion job                     | No separate backend to deploy/monitor — Vercel hosts everything.                                                                         |
+| **SEC EDGAR**             | Free, keyless Atom feed of 8-K filings                        | First data vendor; more (FDA, ClinicalTrials.gov) planned later.                                                                         |
+| **`fetchSecEdgar()` job** | Fetches, resolves tickers, dedupes, writes                    | Single source of truth for ingestion, called 3 ways (below).                                                                             |
+| **Scheduler**             | GitHub Actions cron (staging + prod) / `npm run cron` (local) | Free scheduler that just calls the API, but drifts far past its 5-min config (~75min avg observed) — see [DEPLOYMENT.md](DEPLOYMENT.md). |
+| **Self-healing backstop** | `GET /api/catalysts` triggers a refetch if data is stale      | Covers for the scheduler's unreliable timing whenever there's real traffic.                                                              |
+| **libSQL / Turso**        | All app data (companies, catalysts, raw sources, users)       | SQLite locally (zero setup), hosted Turso in prod (same driver/schema, Vercel has no durable disk).                                      |
+| **Supabase**              | Auth only (Google OAuth)                                      | No passwords stored; Supabase's own Postgres is unused.                                                                                  |
+| **`src/proxy.ts`**        | Refreshes session cookie, optimistic redirect                 | Cheap edge check; real authorization still happens per-route.                                                                            |
+| **Dashboard**             | Polls `/api/catalysts` while the tab is visible               | "Live feed" feel without websockets.                                                                                                     |
 
 ## Data flow, step by step
 
