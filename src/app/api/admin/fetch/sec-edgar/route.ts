@@ -64,7 +64,7 @@ export async function POST(request: NextRequest) {
 
     try {
       const result = await fetchSecEdgar();
-      await captureIngestionEvent(triggerDistinctId, "completed", result);
+      await captureIngestionEvent(triggerDistinctId, "completed", { ...result });
       return withRateLimitHeaders(NextResponse.json(result), limitResult);
     } catch (error) {
       const errorMessage =
@@ -81,7 +81,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const result = await fetchSecEdgar();
-    await captureIngestionEvent(triggerDistinctId, "completed", result);
+    await captureIngestionEvent(triggerDistinctId, "completed", { ...result });
     return NextResponse.json(result);
   } catch (error) {
     const errorMessage =
