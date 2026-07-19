@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { desc } from "drizzle-orm";
 
 import { AppHeader } from "@/components/app-header";
+import { PostHogIdentify } from "@/components/posthog-identify";
 import { Badge } from "@/components/ui/badge";
 import {
   Table,
@@ -31,6 +32,12 @@ export default async function DashboardPage() {
 
   return (
     <div className="flex flex-1 flex-col">
+      <PostHogIdentify
+        supabaseUserId={user.supabaseUserId}
+        email={user.email}
+        role={user.role}
+        subscription={user.subscription}
+      />
       <AppHeader email={user.email} role={user.role} />
       <main className="flex flex-1 flex-col gap-4 p-6">
         <div className="flex items-center justify-between">
