@@ -147,27 +147,14 @@ turso db show catalyst-intel --url
 turso db tokens create catalyst-intel
 ```
 
-Migrate each once (from your machine / WSL, with the app repo checked out):
-
-```powershell
-# PowerShell
-$env:LIBSQL_URL = "<staging url>"
-$env:LIBSQL_AUTH_TOKEN = "<staging token>"
-npm run db:migrate
-
-$env:LIBSQL_URL = "<production url>"
-$env:LIBSQL_AUTH_TOKEN = "<production token>"
-npm run db:migrate
-```
+You do **not** need to migrate these manually - Vercel's build step runs migrations
+automatically (see "Database migrations in CI/CD" below), including the very first one
+against a brand-new, empty database. Just add the URL/token to Vercel (next step) and deploy;
+if you want to sanity-check a DB before that, `npm run db:migrate` still works standalone:
 
 ```bash
-# bash / WSL
 LIBSQL_URL="<staging url>" LIBSQL_AUTH_TOKEN="<staging token>" npm run db:migrate
-LIBSQL_URL="<production url>" LIBSQL_AUTH_TOKEN="<production token>" npm run db:migrate
 ```
-
-Then add the same values in Vercel → Settings → Environment Variables
-(Preview = staging, Production = production) and redeploy.
 
 ### 2. Create a Vercel project
 
@@ -195,6 +182,33 @@ node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
    environment that has its secrets configured.
 4. Sign in with Google on the live URL using an allowlisted admin email (or set
    `ADMIN_EMAILS` on Vercel), open `/admin`, run a fetch, confirm `/dashboard` shows data.
+
+## Database migrations in CI/CD
+
+`npm run build` is `drizzle-kit migrate && next build` (see `package.json`) - migrations are
+not a separate manual step, they run wherever a build runs:
+
+- **Vercel** builds staging on every push to `dev` and production on every push to `main`
+  (`vercel.json` restricts deploys to just those two branches). Each build applies any pending
+  migration against that environment's `LIBSQL_URL`/`LIBSQL_AUTH_TOKEN` _before_ `next build`
+  compiles the app, so new code and its matching schema always land together, and a broken
+  migration fails the build (and the deploy) instead of shipping silently.
+- **GitHub Actions CI** (`ci.yml`) also runs `npm run build` on every push/PR, against a
+  throwaway SQLite file (`DATABASE_URL: file:./local.db`, recreated per run). This isn't a
+  real environment, but it does mean every PR into `dev` verifies its migrations apply
+  cleanly - a broken migration SQL file fails CI before it can be merged.
+
+**Workflow when you change `src/db/schema.ts`:**
+
+1. `npm run db:generate` - writes a new file under `drizzle/`.
+2. Commit the generated SQL alongside your schema change.
+3. Open the PR as usual. CI applies it against the throwaway DB; merging to `dev` /
+   promoting to `main` applies it to staging / production automatically on the next build.
+
+**Known limitation:** two builds hitting the same Turso DB at the exact same moment (e.g. a
+rapid double-push) both run `drizzle-kit migrate` independently. This is safe in the common
+case - already-applied migrations are skipped - but isn't lock-protected. Not a realistic risk
+at this project's push frequency/team size; revisit if that changes.
 
 ## Data retention
 
