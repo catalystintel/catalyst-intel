@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 
+import { LIBSQL_SETUP_HINT, isLibsqlConfigured } from "@/db/env";
 import { getCurrentAppUser } from "@/lib/auth/current-user";
 import { isValidCronSecret } from "@/lib/auth/cron-secret";
 import { fetchSecEdgar } from "@/lib/jobs/fetch-sec-edgar";
@@ -11,6 +12,10 @@ import { fetchSecEdgar } from "@/lib/jobs/fetch-sec-edgar";
  *    see DEPLOYMENT.md), since that caller has no browser session/cookie.
  */
 export async function POST(request: NextRequest) {
+  if (!isLibsqlConfigured()) {
+    return NextResponse.json({ error: LIBSQL_SETUP_HINT }, { status: 503 });
+  }
+
   const providedSecret = request.headers.get("x-cron-secret");
 
   if (!isValidCronSecret(process.env.CRON_SECRET, providedSecret)) {

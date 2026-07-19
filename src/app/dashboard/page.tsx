@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { desc } from "drizzle-orm";
 
 import { AppHeader } from "@/components/app-header";
+import { DatabaseSetupNotice } from "@/components/database-setup-notice";
 import { Badge } from "@/components/ui/badge";
 import {
   Table,
@@ -12,10 +13,25 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { db } from "@/db/client";
+import { isLibsqlConfigured } from "@/db/env";
 import { catalysts } from "@/db/schema";
 import { getCurrentAppUser } from "@/lib/auth/current-user";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { isSupabaseConfigured } from "@/lib/supabase/env";
 
 export default async function DashboardPage() {
+  // Auth can succeed while Turso is missing — show setup UI instead of a 500.
+  if (!isLibsqlConfigured()) {
+    if (isSupabaseConfigured()) {
+      const supabase = await createSupabaseServerClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        redirect("/login?next=/dashboard");
+      }
+    }
+    return <DatabaseSetupNotice />;
+  }
+
   const user = await getCurrentAppUser();
 
   if (!user) {

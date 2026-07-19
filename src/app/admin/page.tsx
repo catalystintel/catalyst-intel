@@ -1,11 +1,26 @@
 import { redirect } from "next/navigation";
 
 import { AppHeader } from "@/components/app-header";
+import { DatabaseSetupNotice } from "@/components/database-setup-notice";
+import { isLibsqlConfigured } from "@/db/env";
 import { getCurrentAppUser } from "@/lib/auth/current-user";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { isSupabaseConfigured } from "@/lib/supabase/env";
 
 import { FetchTrigger } from "./fetch-trigger";
 
 export default async function AdminPage() {
+  if (!isLibsqlConfigured()) {
+    if (isSupabaseConfigured()) {
+      const supabase = await createSupabaseServerClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        redirect("/login?next=/admin");
+      }
+    }
+    return <DatabaseSetupNotice />;
+  }
+
   const user = await getCurrentAppUser();
 
   if (!user) {

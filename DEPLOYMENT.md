@@ -78,13 +78,26 @@ gh secret set CRON_SECRET --body "<same value as Vercel Production>"
 
 ### 1. Create two Turso databases
 
-```powershell
-# Windows
-powershell -ExecutionPolicy Bypass -c "irm https://github.com/tursodatabase/turso/releases/latest/download/turso_cli-installer.ps1 | iex"
-```
+**Required before Google login can land on `/dashboard` on Vercel.** Without
+`LIBSQL_URL` + `LIBSQL_AUTH_TOKEN`, Auth succeeds but the app falls back to
+`file:local.db`, which serverless cannot open (`ConnectionFailed`).
+
+#### Option A — Turso web dashboard (easiest on Windows)
+
+1. Sign up at [turso.tech](https://turso.tech) (GitHub login).
+2. Create databases: `catalyst-intel-staging` and `catalyst-intel`.
+3. For each DB, copy the **URL** and create a **token**.
+4. Continue with migrate + Vercel env vars below.
+
+#### Option B — Turso Cloud CLI (macOS / Linux / WSL)
+
+The cloud management CLI is **not** the same binary as local `tursodb`.
+On Windows, use [WSL](https://learn.microsoft.com/windows/wsl/install) then:
 
 ```bash
-turso auth signup
+curl -sSfL https://get.tur.so/install.sh | bash
+# open a new shell, then:
+turso auth signup   # or: turso auth login
 turso db create catalyst-intel-staging
 turso db create catalyst-intel          # production
 
@@ -95,9 +108,10 @@ turso db show catalyst-intel --url
 turso db tokens create catalyst-intel
 ```
 
-Migrate each once (from your machine):
+Migrate each once (from your machine / WSL, with the app repo checked out):
 
-```bash
+```powershell
+# PowerShell
 $env:LIBSQL_URL = "<staging url>"
 $env:LIBSQL_AUTH_TOKEN = "<staging token>"
 npm run db:migrate
@@ -106,6 +120,15 @@ $env:LIBSQL_URL = "<production url>"
 $env:LIBSQL_AUTH_TOKEN = "<production token>"
 npm run db:migrate
 ```
+
+```bash
+# bash / WSL
+LIBSQL_URL="<staging url>" LIBSQL_AUTH_TOKEN="<staging token>" npm run db:migrate
+LIBSQL_URL="<production url>" LIBSQL_AUTH_TOKEN="<production token>" npm run db:migrate
+```
+
+Then add the same values in Vercel → Settings → Environment Variables
+(Preview = staging, Production = production) and redeploy.
 
 ### 2. Create a Vercel project
 
