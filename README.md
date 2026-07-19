@@ -3,6 +3,8 @@
 Real-time market catalyst intelligence: detects, stores, and (soon) scores events that can move
 publicly traded stocks - built for active traders and independent analysts.
 
+See [ARCHITECTURE.md](ARCHITECTURE.md) for a diagram and TL;DR of how the pieces fit together.
+
 This is the first working slice of the platform: a local-first Next.js app with SEC EDGAR
 filings flowing into a dashboard, gated behind Supabase-backed auth.
 
