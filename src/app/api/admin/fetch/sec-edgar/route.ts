@@ -1,79 +1,115 @@
-import { timingSafeEqual } from "node:crypto";
-
 import { NextResponse, type NextRequest } from "next/server";
 
+import { LIBSQL_SETUP_HINT, isLibsqlConfigured } from "@/db/env";
 import { getCurrentAppUser } from "@/lib/auth/current-user";
+import { isValidCronSecret } from "@/lib/auth/cron-secret";
+import { getClientIp } from "@/lib/http/client-ip";
+import { RATE_LIMITS, checkRateLimit } from "@/lib/http/rate-limit";
+import {
+  rateLimitExceededResponse,
+  withRateLimitHeaders,
+} from "@/lib/http/rate-limit-response";
 import { fetchSecEdgar } from "@/lib/jobs/fetch-sec-edgar";
-import { getPostHogClient } from "@/lib/posthog-server";
-
-function isValidCronSecret(request: NextRequest): boolean {
-  const expected = process.env.CRON_SECRET;
-  if (!expected) return false;
-
-  const provided = request.headers.get("x-cron-secret");
-  if (!provided) return false;
-
-  const expectedBuf = Buffer.from(expected);
-  const providedBuf = Buffer.from(provided);
-  if (expectedBuf.length !== providedBuf.length) return false;
-
-  return timingSafeEqual(expectedBuf, providedBuf);
-}
+import {
+  getPostHogClient,
+  isPostHogServerConfigured,
+} from "@/lib/posthog-server";
 
 /**
  * Triggers the SEC EDGAR ingestion job. Accepts either:
- *  - an authenticated admin session (used by the "/admin" page button), or
+ *  - an authenticated allowlisted admin session (used by the "/admin" page), or
  *  - a shared secret header (used by the production GitHub Actions cron -
  *    see DEPLOYMENT.md), since that caller has no browser session/cookie.
+ *
+ * Valid cron secret callers bypass per-IP rate limits. Session-based admin
+ * triggers are rate-limited more strictly than feed reads.
  */
 export async function POST(request: NextRequest) {
+  if (!isLibsqlConfigured()) {
+    return NextResponse.json({ error: LIBSQL_SETUP_HINT }, { status: 503 });
+  }
+
+  const providedSecret = request.headers.get("x-cron-secret");
+  const isCron = isValidCronSecret(process.env.CRON_SECRET, providedSecret);
   let triggerDistinctId = "cron";
 
-  if (!isValidCronSecret(request)) {
+  if (!isCron) {
+    const ip = getClientIp(request);
+    const limitResult = checkRateLimit({
+      key: `admin-fetch:${ip}`,
+      ...RATE_LIMITS.adminWrite,
+    });
+
+    if (!limitResult.ok) {
+      return rateLimitExceededResponse(limitResult);
+    }
+
     const user = await getCurrentAppUser();
 
     if (!user) {
-      return NextResponse.json({ error: "Not authenticated." }, { status: 401 });
+      return withRateLimitHeaders(
+        NextResponse.json({ error: "Not authenticated." }, { status: 401 }),
+        limitResult,
+      );
     }
 
-    if (user.role !== "admin") {
-      return NextResponse.json({ error: "Admin role required." }, { status: 403 });
+    if (!user.isAdmin) {
+      return withRateLimitHeaders(
+        NextResponse.json({ error: "Admin access required." }, { status: 403 }),
+        limitResult,
+      );
     }
 
     triggerDistinctId = user.supabaseUserId;
+
+    try {
+      const result = await fetchSecEdgar();
+      await captureIngestionEvent(triggerDistinctId, "completed", result);
+      return withRateLimitHeaders(NextResponse.json(result), limitResult);
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : "Fetch job failed.";
+      await captureIngestionEvent(triggerDistinctId, "failed", {
+        error_message: errorMessage,
+      });
+      return withRateLimitHeaders(
+        NextResponse.json({ error: errorMessage }, { status: 500 }),
+        limitResult,
+      );
+    }
   }
 
   try {
     const result = await fetchSecEdgar();
-    const posthog = getPostHogClient();
-    posthog.capture({
-      distinctId: triggerDistinctId,
-      event: "sec_edgar_ingestion_completed",
-      properties: {
-        fetched: result.fetched,
-        inserted: result.inserted,
-        skipped: result.skipped,
-        errors: result.errors,
-        trigger: triggerDistinctId === "cron" ? "cron" : "admin_ui",
-      },
-    });
-    await posthog.flush();
+    await captureIngestionEvent(triggerDistinctId, "completed", result);
     return NextResponse.json(result);
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : "Fetch job failed.";
-    const posthog = getPostHogClient();
-    posthog.capture({
-      distinctId: triggerDistinctId,
-      event: "sec_edgar_ingestion_failed",
-      properties: {
-        error_message: errorMessage,
-        trigger: triggerDistinctId === "cron" ? "cron" : "admin_ui",
-      },
+    const errorMessage =
+      error instanceof Error ? error.message : "Fetch job failed.";
+    await captureIngestionEvent(triggerDistinctId, "failed", {
+      error_message: errorMessage,
     });
-    await posthog.flush();
-    return NextResponse.json(
-      { error: errorMessage },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
+}
+
+async function captureIngestionEvent(
+  distinctId: string,
+  outcome: "completed" | "failed",
+  properties: Record<string, unknown>,
+) {
+  if (!isPostHogServerConfigured()) return;
+  const posthog = getPostHogClient();
+  posthog.capture({
+    distinctId,
+    event:
+      outcome === "completed"
+        ? "sec_edgar_ingestion_completed"
+        : "sec_edgar_ingestion_failed",
+    properties: {
+      ...properties,
+      trigger: distinctId === "cron" ? "cron" : "admin_ui",
+    },
+  });
+  await posthog.flush();
 }

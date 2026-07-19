@@ -1,12 +1,19 @@
 name: CI
 
+# CI/CD only runs for the two branches that matter: `dev` (staging) and
+# `main` (production) - see .cursor/rules/git-branching-workflow.mdc and
+# DEPLOYMENT.md. PRs into `dev` also run this so feature branches are
+# checked (lint, unit tests, build - covering both the frontend pages and
+# backend API routes/lib code, since this is a single Next.js app) before
+# merging.
 on:
   push:
-    branches: [main]
+    branches: [main, dev]
   pull_request:
+    branches: [dev]
 
 jobs:
-  lint-and-build:
+  test-and-build:
     runs-on: ubuntu-latest
     env:
       # Placeholder values only - just enough for `next build` to not fail
@@ -27,4 +34,8 @@ jobs:
 
       - run: npm run lint
 
-      - run: npm run build
+      - name: Unit tests (frontend + backend)
+        run: npm test
+
+      - name: Build (also type-checks frontend + backend)
+        run: npm run build

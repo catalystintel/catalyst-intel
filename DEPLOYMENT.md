@@ -1,125 +1,196 @@
-# Deploying Catalyst Intel to production
+# Environments & deployment
 
-This is a step-by-step manual for going from "working locally" to "live on the internet with
-automatic deploys and a running data-ingestion cron." Nothing here has been run yet - follow it
-whenever you're ready to go live.
+Three environments, one app:
 
-## Why these choices (read this first)
+| Environment | Git branch | Database | Hosting |
+| --- | --- | --- | --- |
+| **Local** | feature branches on your machine | SQLite file (`local.db`) | `npm run dev` |
+| **Staging** | `dev` | Turso (staging DB) | Vercel Preview deploy for `dev` |
+| **Production** | `main` | Turso (production DB) | Vercel Production |
 
-- **Database: Turso instead of a local SQLite file.** Vercel's serverless functions don't have a
-  durable, writable filesystem across invocations, so the local `local.db` file approach can't
-  work in production. Turso is a hosted version of the exact same SQLite dialect (libSQL) - the
-  app already speaks this driver (`@libsql/client` / `drizzle-orm/libsql`), so going to production
-  is just swapping which URL/token it points at. No schema rewrite, no new query syntax.
-- **Hosting: Vercel.** Matches the original product blueprint, has zero-config Next.js support,
-  and its GitHub integration *is* your CD pipeline - every push to `main` auto-deploys, no custom
-  deploy workflow needed.
-- **Production cron cadence: GitHub Actions, every 5 minutes.** The product goal is "every 1-2
-  minutes," but no free option hits that reliably: Vercel's Hobby plan only allows one cron run
-  *per day*; Vercel Pro gets you per-minute cron but costs $20/mo; GitHub Actions' scheduled
-  workflows have a hard 5-minute floor and are best-effort (expect occasional delays, especially
-  at the top of the hour). Five minutes was chosen as the closest free, simple option. If ingestion
-  freshness becomes a real product requirement later, revisit Vercel Pro or an external pinger
-  service (e.g. cron-job.org) as documented alternatives.
-- **Cron auth: a shared secret header, not a login session.** The `/admin` page's fetch button
-  authenticates via your browser's Supabase session cookie. A GitHub Actions job has no browser and
-  no cookie, so it instead sends a `x-cron-secret` header that the API route checks against a
-  `CRON_SECRET` environment variable (see [src/app/api/admin/fetch/sec-edgar/route.ts](src/app/api/admin/fetch/sec-edgar/route.ts)).
+## Branch / CI / CD rules
 
-## 1. Create a Turso database
+- Feature work: cut from `dev` → PR **into `dev`** (never commit directly to `dev` or `main`).
+- Promote to production only on explicit request: merge `dev` → `main`.
+- **GitHub Actions CI** (`.github/workflows/ci.yml`): lint + unit tests + build on
+  - push to `dev` or `main`
+  - pull requests **targeting `dev`**
+  (This is a single Next.js app - tests cover both frontend pages and backend API/lib code.)
+- **Vercel CD** (`vercel.json`): deploys **only** on push to `dev` (staging) and `main`
+  (production). Feature branches do **not** get Vercel deploys.
+- **Production cron** (`.github/workflows/fetch-sec-edgar-cron.yml`): scheduled GitHub Action
+  hits the production URL with `x-cron-secret`. Inert until secrets are set.
 
-Install the Turso CLI:
+## Env vars cheat sheet
+
+### Local (`.env.local` on your machine)
+
+| Variable | Required? | Notes |
+| --- | --- | --- |
+| `DATABASE_URL` | Yes | `file:./local.db` (default is fine) |
+| `NEXT_PUBLIC_SUPABASE_URL` | Yes | Supabase Project Settings → API |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Yes | Supabase Project Settings → API |
+| `SEC_EDGAR_USER_AGENT` | Yes | e.g. `you@email.com CatalystIntel/0.1` |
+| `CRON_INTERVAL_MINUTES` | No | Default `2` for `npm run cron` |
+| `NEXT_PUBLIC_POSTHOG_KEY` | No | PostHog Project API key; omit to disable analytics |
+| `NEXT_PUBLIC_POSTHOG_HOST` | No | Default `https://us.i.posthog.com` |
+| `ADMIN_EMAILS` | No | Comma-separated admin emails; defaults to `zhbar10@gmail.com,omer.nachshon@gmail.com` |
+| `LIBSQL_URL` / `LIBSQL_AUTH_TOKEN` | No | Leave unset locally - use the SQLite file |
+| `CRON_SECRET` | No | Only needed for remote cron callers |
+
+Auth is **Google OAuth only** via Supabase. Passwords are never collected or stored in our DB
+(our `users` table only has id / supabase user id / email / role / subscription).
+
+**Admin access** is enforced server-side from the verified Supabase session email against
+`ADMIN_EMAILS` (or the built-in defaults). The local `users.role` column is synced as a cache
+and is **not** the source of truth — do not rely on `npm run make-admin` alone. Manual fetch
+via `/admin` uses the same allowlist; GitHub Actions cron still uses `x-cron-secret`.
+
+### API rate limiting
+
+Per-IP fixed-window limits live in `src/lib/http/rate-limit.ts` (in-memory Map):
+
+| Route | Default | Notes |
+| --- | --- | --- |
+| `GET /api/catalysts` | 90 / minute / IP | Live feed soft-refetch |
+| `POST /api/admin/fetch/sec-edgar` (session) | 6 / minute / IP | Admin UI trigger |
+| Same admin route with valid `x-cron-secret` | **bypassed** | GitHub Actions cron must keep working |
+
+Responses that exceed the limit return **429** with `Retry-After` and `X-RateLimit-*`
+headers. This store is **per Vercel isolate** — fine for MVP spam protection; shared Redis
+(e.g. Upstash) would be needed later for strict multi-instance global limits. No Upstash
+env vars are required today.
+
+### Staging (Vercel → Environment: **Preview**, used by the `dev` branch)
+
+| Variable | Required? | Notes |
+| --- | --- | --- |
+| `NEXT_PUBLIC_SUPABASE_URL` | Yes | Same Supabase project is fine for MVP |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Yes | Same as local |
+| `SEC_EDGAR_USER_AGENT` | Yes | Same contact string is fine |
+| `LIBSQL_URL` | Yes | Turso **staging** DB URL |
+| `LIBSQL_AUTH_TOKEN` | Yes | Turso **staging** DB token |
+| `NEXT_PUBLIC_POSTHOG_KEY` | Recommended | Same PostHog project is fine for MVP |
+| `NEXT_PUBLIC_POSTHOG_HOST` | Recommended | `https://us.i.posthog.com` or EU host |
+| `ADMIN_EMAILS` | No | Override admin allowlist if needed (same defaults as local) |
+| `CRON_SECRET` | Recommended | So you can manually trigger fetch against staging |
+
+### Production (Vercel → Environment: **Production**, used by `main`)
+
+| Variable | Required? | Notes |
+| --- | --- | --- |
+| `NEXT_PUBLIC_SUPABASE_URL` | Yes | Same Supabase project is fine for MVP |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Yes | Same as local/staging |
+| `SEC_EDGAR_USER_AGENT` | Yes | Same contact string is fine |
+| `LIBSQL_URL` | Yes | Turso **production** DB URL (separate DB) |
+| `LIBSQL_AUTH_TOKEN` | Yes | Turso **production** DB token |
+| `NEXT_PUBLIC_POSTHOG_KEY` | Recommended | Same PostHog project is fine for MVP |
+| `NEXT_PUBLIC_POSTHOG_HOST` | Recommended | `https://us.i.posthog.com` or EU host |
+| `ADMIN_EMAILS` | No | Override admin allowlist if needed (same defaults as local) |
+| `CRON_SECRET` | Yes | Must match the GitHub repo secret below |
+
+### GitHub repo secrets (for production cron only)
+
+| Secret | Notes |
+| --- | --- |
+| `PROD_APP_URL` | Production Vercel URL, e.g. `https://catalyst-intel.vercel.app` (no trailing slash) |
+| `CRON_SECRET` | Same value as Vercel Production `CRON_SECRET` |
+
+```bash
+gh secret set PROD_APP_URL --body "https://<your-production-domain>"
+gh secret set CRON_SECRET --body "<same value as Vercel Production>"
+```
+
+---
+
+## One-time cloud setup (when you're ready to go live)
+
+### 1. Create two Turso databases
+
+**Required before Google login can land on `/dashboard` on Vercel.** Without
+`LIBSQL_URL` + `LIBSQL_AUTH_TOKEN`, Auth succeeds but the app falls back to
+`file:local.db`, which serverless cannot open (`ConnectionFailed`).
+
+#### Option A — Turso web dashboard (easiest on Windows)
+
+1. Sign up at [turso.tech](https://turso.tech) (GitHub login).
+2. Create databases: `catalyst-intel-staging` and `catalyst-intel`.
+3. For each DB, copy the **URL** and create a **token**.
+4. Continue with migrate + Vercel env vars below.
+
+#### Option B — Turso Cloud CLI (macOS / Linux / WSL)
+
+The cloud management CLI is **not** the same binary as local `tursodb`.
+On Windows, use [WSL](https://learn.microsoft.com/windows/wsl/install) then:
+
+```bash
+curl -sSfL https://get.tur.so/install.sh | bash
+# open a new shell, then:
+turso auth signup   # or: turso auth login
+turso db create catalyst-intel-staging
+turso db create catalyst-intel          # production
+
+turso db show catalyst-intel-staging --url
+turso db tokens create catalyst-intel-staging
+
+turso db show catalyst-intel --url
+turso db tokens create catalyst-intel
+```
+
+Migrate each once (from your machine / WSL, with the app repo checked out):
 
 ```powershell
-# Windows (native)
-powershell -ExecutionPolicy Bypass -c "irm https://github.com/tursodatabase/turso/releases/latest/download/turso_cli-installer.ps1 | iex"
-```
+# PowerShell
+$env:LIBSQL_URL = "<staging url>"
+$env:LIBSQL_AUTH_TOKEN = "<staging token>"
+npm run db:migrate
 
-(Alternatively, on Windows via WSL: `curl -sSfL https://get.tur.so/install.sh | bash`.)
-
-Then:
-
-```bash
-turso auth signup      # opens your browser to create a free account
-turso db create catalyst-intel
-turso db show catalyst-intel --url        # copy this - it's LIBSQL_URL
-turso db tokens create catalyst-intel     # copy this - it's LIBSQL_AUTH_TOKEN
-```
-
-Push the existing schema to it (run locally, once, using the Turso credentials you just got):
-
-```bash
-$env:LIBSQL_URL = "<url from above>"
-$env:LIBSQL_AUTH_TOKEN = "<token from above>"
+$env:LIBSQL_URL = "<production url>"
+$env:LIBSQL_AUTH_TOKEN = "<production token>"
 npm run db:migrate
 ```
 
-This creates the `users`, `companies`, `raw_sources`, and `catalysts` tables on Turso, identical to
-your local schema.
+```bash
+# bash / WSL
+LIBSQL_URL="<staging url>" LIBSQL_AUTH_TOKEN="<staging token>" npm run db:migrate
+LIBSQL_URL="<production url>" LIBSQL_AUTH_TOKEN="<production token>" npm run db:migrate
+```
 
-## 2. Create a Vercel project
+Then add the same values in Vercel → Settings → Environment Variables
+(Preview = staging, Production = production) and redeploy.
 
-1. Go to [vercel.com](https://vercel.com) and sign up (free Hobby plan is fine).
-2. **Import Project** -> select the `zhbar10/catalyst-intel` GitHub repo.
-3. Framework preset should auto-detect as Next.js. Leave build settings as default.
-4. Don't deploy yet - add the environment variables first (next section), then deploy.
+### 2. Create a Vercel project
 
-Once imported, **this alone is your CD pipeline**: every push to `main` triggers a new Vercel
-deployment automatically. No GitHub Actions deploy workflow is needed (`.github/workflows/ci.yml`
-only runs lint/build *checks*, it does not deploy anything).
+1. [vercel.com](https://vercel.com) → Import `zhbar10/catalyst-intel`.
+2. Framework: Next.js (auto-detected).
+3. **Settings → Git → Production Branch** = `main`.
+4. Deploys for other branches are already restricted by [`vercel.json`](vercel.json) to
+   **`dev` and `main` only**.
+5. Add the env vars from the tables above. Scope carefully:
+   - Staging Turso vars → **Preview**
+   - Production Turso vars → **Production**
+   - Shared Supabase / SEC vars → **Preview + Production** (or All)
 
-## 3. Set environment variables in Vercel
-
-In the Vercel project -> **Settings -> Environment Variables**, add:
-
-| Variable | Value | Public? |
-| --- | --- | --- |
-| `NEXT_PUBLIC_SUPABASE_URL` | From your Supabase project settings | Yes (safe to expose - it's a public URL) |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | From your Supabase project settings | Yes (designed to be public; RLS protects data) |
-| `SEC_EDGAR_USER_AGENT` | e.g. `you@email.com CatalystIntel/1.0` | No need to be secret, but no reason to expose either |
-| `LIBSQL_URL` | From `turso db show` above | Keep private |
-| `LIBSQL_AUTH_TOKEN` | From `turso db tokens create` above | **Secret** |
-| `CRON_SECRET` | Any long random string (see below) | **Secret** |
-
-Generate a `CRON_SECRET` value:
+Generate `CRON_SECRET`:
 
 ```bash
 node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 ```
 
-Deploy (or redeploy) after adding these.
+### 3. Verify
 
-## 4. Add GitHub repo secrets (for the cron workflow)
+1. Push / merge into `dev` → Vercel staging deploy + GitHub Actions CI.
+2. Promote `dev` → `main` (only when you ask) → Vercel production deploy + CI.
+3. Actions → `Fetch SEC EDGAR (production cron)` → **Run workflow** → expect HTTP 200.
+4. Sign in with Google on the live URL using an allowlisted admin email (or set
+   `ADMIN_EMAILS` on Vercel), open `/admin`, run a fetch, confirm `/dashboard` shows data.
 
-The already-committed [.github/workflows/fetch-sec-edgar-cron.yml](.github/workflows/fetch-sec-edgar-cron.yml)
-needs two repo secrets to actually do anything - until they're set, it runs every 5 minutes and
-exits cleanly with a "not configured yet" message (harmless).
+## Why Turso (not local SQLite) on Vercel
 
-```bash
-gh secret set PROD_APP_URL --body "https://<your-vercel-domain>"
-gh secret set CRON_SECRET --body "<same value you put in Vercel>"
-```
+Vercel serverless has no durable writable filesystem across invocations. Turso is hosted libSQL -
+same driver and schema as local SQLite; only the URL/token change.
 
-Find your Vercel domain in the Vercel dashboard (Settings -> Domains), or use the
-`*.vercel.app` domain Vercel assigns automatically on first deploy.
+## Why GitHub Actions cron every 5 minutes
 
-## 5. Verify everything works
-
-1. Push to `main` (or just wait if you just deployed) - confirm the deployment succeeds in the
-   Vercel dashboard.
-2. Go to **Actions** tab on GitHub -> `Fetch SEC EDGAR (production cron)` -> **Run workflow**
-   (manual trigger, via `workflow_dispatch`) to test immediately rather than waiting up to 5
-   minutes. Confirm it logs a successful HTTP 200 with fetch results.
-3. Visit `https://<your-vercel-domain>/dashboard` (after signing up + logging in + promoting
-   yourself to admin - same steps as local, in [README.md](README.md)) and confirm catalysts are
-   listed.
-4. Watch the Actions tab over the next 15-20 minutes to confirm the schedule keeps firing
-   (expect occasional delay - this is normal GitHub Actions behavior, not a bug).
-
-## Future improvements (not done yet)
-
-- If 5-minute cadence isn't fresh enough: upgrade to Vercel Pro for native per-minute cron, or
-  point an external free pinger (e.g. cron-job.org) at the same endpoint.
-- Add the same `CRON_SECRET` pattern to future vendor jobs (FDA, ClinicalTrials.gov) as they're
-  added.
-- Consider Vercel preview deployments + a staging Turso database once there's a second contributor.
+Closest free option to "every 1-2 minutes." Vercel Hobby allows one cron/day; Pro is $20/mo for
+per-minute. Expect occasional schedule drift on GitHub Actions - that is normal.

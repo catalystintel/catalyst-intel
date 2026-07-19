@@ -56,7 +56,7 @@ export async function getTickerByCik(userAgent: string): Promise<Map<number, str
   return inMemoryCache;
 }
 
-function buildMap(data: Record<string, TickerEntry>): Map<number, string> {
+export function buildMap(data: Record<string, TickerEntry>): Map<number, string> {
   const map = new Map<number, string>();
   for (const entry of Object.values(data)) {
     if (entry?.cik_str != null && entry?.ticker) {
