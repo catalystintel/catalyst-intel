@@ -59,6 +59,7 @@ cp .env.example .env.local
 | `SEC_EDGAR_USER_AGENT` | Yes | SEC requires a descriptive contact string, e.g. `you@email.com CatalystIntel/0.1` |
 | `NEXT_PUBLIC_POSTHOG_KEY` | No | PostHog Project API key (`phc_…`). Leave blank to disable analytics |
 | `NEXT_PUBLIC_POSTHOG_HOST` | No | Default `https://us.i.posthog.com` (use `https://eu.i.posthog.com` for EU) |
+| `ADMIN_EMAILS` | No | Comma-separated admin emails; defaults to `zhbar10@gmail.com,omer.nachshon@gmail.com` |
 | `SUPABASE_SERVICE_ROLE_KEY` | No | Reserved for future admin operations |
 | `GROQ_API_KEY` | No | Only needed once AI scoring is added |
 
@@ -97,22 +98,20 @@ npm run dev
 
 Visit [http://localhost:3000](http://localhost:3000).
 
-### 6. Create an account and promote yourself to admin
+### 6. Create an account (admin is email-allowlisted)
 
 1. Go to `/login` and click **Continue with Google** - this creates your account automatically
    (no separate signup step, no password).
-2. That first sign-in creates your row in the local `users` table.
-3. Promote yourself to admin so you can trigger data ingestion:
-
-   ```bash
-   npm run make-admin -- you@email.com
-   ```
+2. That first sign-in creates your row in the local `users` table and syncs `role` from the
+   admin email allowlist (`ADMIN_EMAILS` or the defaults in `src/lib/auth/admin.ts`).
+3. Only allowlisted emails can open `/admin` or trigger the manual fetch API. Everyone else
+   lands on the Live feed (`/dashboard`) after login.
 
 ### 7. Populate real data
 
-Go to `/admin` and click **"Fetch SEC EDGAR now"**. This pulls the latest 8-K filings from SEC
-EDGAR's free feed, resolves tickers where possible, and stores them. Then check `/dashboard` to
-see them listed.
+Sign in as an allowlisted admin, go to `/admin`, and click **"Fetch SEC EDGAR now"**. This pulls
+the latest 8-K filings from SEC EDGAR's free feed, resolves tickers where possible, and stores
+them. Then check `/dashboard` (Live) to see them listed.
 
 ### 8. (Optional) Keep data flowing continuously while developing
 
@@ -140,7 +139,7 @@ Vercel; production is `main`. Env vars for each environment (and CI/CD triggers)
 | `npm run db:generate` | Generate a new Drizzle migration after changing `src/db/schema.ts` |
 | `npm run db:migrate` | Apply pending migrations to `local.db` |
 | `npm run db:studio` | Open Drizzle Studio to browse `local.db` |
-| `npm run make-admin -- <email>` | Promote a logged-in user to admin |
+| `npm run make-admin -- <email>` | Deprecated helper — syncs local `users.role` from the allowlist (does not grant access alone) |
 | `npm run cron` | Continuously re-fetch SEC EDGAR every `CRON_INTERVAL_MINUTES` (local dev) |
 
 ## Architecture notes
@@ -150,12 +149,20 @@ Vercel; production is `main`. Env vars for each environment (and CI/CD triggers)
   driver or schema changes needed, just different env vars (`LIBSQL_URL`/`LIBSQL_AUTH_TOKEN`).
   Supabase Cloud is used only for Auth; its Postgres database is not touched by the app.
 - **`src/proxy.ts`** (Next.js 16's replacement for `middleware.ts`) refreshes the Supabase session
-  cookie and does a cheap, optimistic redirect for signed-out visitors. The real authorization
-  check lives in `getCurrentAppUser()`, called directly from `/dashboard` and `/admin`.
+  cookie and does a cheap, optimistic redirect for signed-out visitors. Real authorization lives
+  in page/API handlers: session via `getCurrentAppUser()`, admin via JWT email allowlist
+  (`src/lib/auth/admin.ts`).
 - **Data ingestion** can be triggered three ways, all calling the same
   [src/lib/jobs/fetch-sec-edgar.ts](src/lib/jobs/fetch-sec-edgar.ts): the `/admin` page button
-  (session auth), `npm run cron` (local, continuous), or a scheduled GitHub Actions workflow in
-  production (`x-cron-secret` header auth) - see [DEPLOYMENT.md](DEPLOYMENT.md).
+  (allowlisted session), `npm run cron` (local, continuous), or a scheduled GitHub Actions
+  workflow in production (`x-cron-secret` header auth) - see [DEPLOYMENT.md](DEPLOYMENT.md).
+- **IA:** `/` is marketing for signed-out users (signed-in users redirect to Live). `/dashboard`
+  is the Live feed; `/profile` is account + sign-out.
+- **Live presence:** while the Live tab is visible/focused, the client soft-refetches
+  `GET /api/catalysts` on an interval (no full page reload). Hidden tabs pause; unfocused
+  but visible tabs poll more slowly.
+- **Rate limits:** per-IP in-memory windows on API routes (`src/lib/http/rate-limit.ts`).
+  Cron with `x-cron-secret` bypasses the admin write limit.
 - **`src/lib/jobs/fetch-sec-edgar.ts`** dedupes by SEC accession number, so re-running the fetch is
   always safe.
 

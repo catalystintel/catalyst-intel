@@ -1,30 +1,24 @@
 import { redirect } from "next/navigation";
-import { desc } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 
 import { AppHeader } from "@/components/app-header";
+import { LiveCatalystFeed } from "@/components/live-catalyst-feed";
 import { DatabaseSetupNotice } from "@/components/database-setup-notice";
-import { Badge } from "@/components/ui/badge";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { PageEnter } from "@/components/page-enter";
 import { db } from "@/db/client";
 import { isLibsqlConfigured } from "@/db/env";
-import { catalysts } from "@/db/schema";
+import { catalysts, rawSources } from "@/db/schema";
 import { getCurrentAppUser } from "@/lib/auth/current-user";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 
 export default async function DashboardPage() {
-  // Auth can succeed while Turso is missing — show setup UI instead of a 500.
   if (!isLibsqlConfigured()) {
     if (isSupabaseConfigured()) {
       const supabase = await createSupabaseServerClient();
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (!user) {
         redirect("/login?next=/dashboard");
       }
@@ -39,70 +33,58 @@ export default async function DashboardPage() {
   }
 
   const recentCatalysts = await db
-    .select()
+    .select({
+      id: catalysts.id,
+      ticker: catalysts.ticker,
+      type: catalysts.type,
+      title: catalysts.title,
+      timestamp: catalysts.timestamp,
+      summary: catalysts.summary,
+      impactScore: catalysts.impactScore,
+      sourceUrl: rawSources.url,
+    })
     .from(catalysts)
+    .leftJoin(rawSources, eq(catalysts.rawSourceId, rawSources.id))
     .orderBy(desc(catalysts.timestamp))
     .limit(50)
     .all();
 
   return (
-    <div className="flex flex-1 flex-col">
-      <AppHeader email={user.email} role={user.role} />
-      <main className="flex flex-1 flex-col gap-4 p-6">
-        <div className="flex items-center justify-between">
+    <div className="desk-shell flex flex-1 flex-col">
+      <AppHeader
+        email={user.email}
+        isAdmin={user.isAdmin}
+        displayName={user.displayName}
+        avatarUrl={user.avatarUrl}
+        active="live"
+      />
+      <PageEnter className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-4 px-3 py-5 sm:px-5 sm:py-6">
+        <div className="flex flex-wrap items-end justify-between gap-3 border-b border-border/50 pb-4">
           <div>
-            <h1 className="text-xl font-semibold tracking-tight">Live catalysts</h1>
-            <p className="text-sm text-muted-foreground">
-              Most recent market-moving events, newest first.
+            <div className="flex items-center gap-2">
+              <span aria-hidden className="live-pulse inline-block size-1.5 rounded-full bg-amber-400" />
+              <p className="font-mono text-[0.65rem] uppercase tracking-[0.2em] text-amber-400/90">
+                Live feed
+              </p>
+            </div>
+            <h1 className="mt-1 text-xl font-semibold tracking-tight sm:text-2xl">
+              On-spot catalysts
+            </h1>
+            <p className="mt-1 max-w-xl text-sm text-muted-foreground">
+              SEC filings as they hit — scan ticker, type, age, and why. Click a row for
+              the filing link. Soft-refreshes while focused; pauses when hidden.
             </p>
           </div>
-          <span className="text-xs text-muted-foreground">
-            {recentCatalysts.length} shown
-          </span>
+          <p className="font-mono text-[0.65rem] uppercase tracking-[0.14em] text-muted-foreground">
+            Desk · multi-monitor scan
+          </p>
         </div>
 
-        {recentCatalysts.length === 0 ? (
-          <div className="flex flex-1 flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-border p-12 text-center">
-            <p className="text-sm font-medium">No catalysts yet</p>
-            <p className="text-sm text-muted-foreground">
-              {user.role === "admin"
-                ? "Head to the Admin page and click \u201cFetch SEC EDGAR now\u201d to populate data."
-                : "Data will appear here once an admin runs the first ingestion job."}
-            </p>
-          </div>
-        ) : (
-          <div className="rounded-lg border border-border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Ticker</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Title</TableHead>
-                  <TableHead className="text-right">Filed</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {recentCatalysts.map((catalyst) => (
-                  <TableRow key={catalyst.id}>
-                    <TableCell>
-                      {catalyst.ticker ? (
-                        <Badge variant="secondary">{catalyst.ticker}</Badge>
-                      ) : (
-                        <span className="text-muted-foreground">—</span>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">{catalyst.type}</TableCell>
-                    <TableCell>{catalyst.title}</TableCell>
-                    <TableCell className="text-right text-muted-foreground">
-                      {new Date(catalyst.timestamp).toLocaleDateString()}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        )}
-      </main>
+        <LiveCatalystFeed
+          initialCatalysts={recentCatalysts}
+          isAdmin={user.isAdmin}
+        />
+      </PageEnter>
     </div>
   );
 }

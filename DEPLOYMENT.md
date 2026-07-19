@@ -34,11 +34,32 @@ Three environments, one app:
 | `CRON_INTERVAL_MINUTES` | No | Default `2` for `npm run cron` |
 | `NEXT_PUBLIC_POSTHOG_KEY` | No | PostHog Project API key; omit to disable analytics |
 | `NEXT_PUBLIC_POSTHOG_HOST` | No | Default `https://us.i.posthog.com` |
+| `ADMIN_EMAILS` | No | Comma-separated admin emails; defaults to `zhbar10@gmail.com,omer.nachshon@gmail.com` |
 | `LIBSQL_URL` / `LIBSQL_AUTH_TOKEN` | No | Leave unset locally - use the SQLite file |
 | `CRON_SECRET` | No | Only needed for remote cron callers |
 
 Auth is **Google OAuth only** via Supabase. Passwords are never collected or stored in our DB
 (our `users` table only has id / supabase user id / email / role / subscription).
+
+**Admin access** is enforced server-side from the verified Supabase session email against
+`ADMIN_EMAILS` (or the built-in defaults). The local `users.role` column is synced as a cache
+and is **not** the source of truth — do not rely on `npm run make-admin` alone. Manual fetch
+via `/admin` uses the same allowlist; GitHub Actions cron still uses `x-cron-secret`.
+
+### API rate limiting
+
+Per-IP fixed-window limits live in `src/lib/http/rate-limit.ts` (in-memory Map):
+
+| Route | Default | Notes |
+| --- | --- | --- |
+| `GET /api/catalysts` | 90 / minute / IP | Live feed soft-refetch |
+| `POST /api/admin/fetch/sec-edgar` (session) | 6 / minute / IP | Admin UI trigger |
+| Same admin route with valid `x-cron-secret` | **bypassed** | GitHub Actions cron must keep working |
+
+Responses that exceed the limit return **429** with `Retry-After` and `X-RateLimit-*`
+headers. This store is **per Vercel isolate** — fine for MVP spam protection; shared Redis
+(e.g. Upstash) would be needed later for strict multi-instance global limits. No Upstash
+env vars are required today.
 
 ### Staging (Vercel → Environment: **Preview**, used by the `dev` branch)
 
@@ -51,6 +72,7 @@ Auth is **Google OAuth only** via Supabase. Passwords are never collected or sto
 | `LIBSQL_AUTH_TOKEN` | Yes | Turso **staging** DB token |
 | `NEXT_PUBLIC_POSTHOG_KEY` | Recommended | Same PostHog project is fine for MVP |
 | `NEXT_PUBLIC_POSTHOG_HOST` | Recommended | `https://us.i.posthog.com` or EU host |
+| `ADMIN_EMAILS` | No | Override admin allowlist if needed (same defaults as local) |
 | `CRON_SECRET` | Recommended | So you can manually trigger fetch against staging |
 
 ### Production (Vercel → Environment: **Production**, used by `main`)
@@ -64,6 +86,7 @@ Auth is **Google OAuth only** via Supabase. Passwords are never collected or sto
 | `LIBSQL_AUTH_TOKEN` | Yes | Turso **production** DB token |
 | `NEXT_PUBLIC_POSTHOG_KEY` | Recommended | Same PostHog project is fine for MVP |
 | `NEXT_PUBLIC_POSTHOG_HOST` | Recommended | `https://us.i.posthog.com` or EU host |
+| `ADMIN_EMAILS` | No | Override admin allowlist if needed (same defaults as local) |
 | `CRON_SECRET` | Yes | Must match the GitHub repo secret below |
 
 ### GitHub repo secrets (for production cron only)
@@ -159,8 +182,8 @@ node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 1. Push / merge into `dev` → Vercel staging deploy + GitHub Actions CI.
 2. Promote `dev` → `main` (only when you ask) → Vercel production deploy + CI.
 3. Actions → `Fetch SEC EDGAR (production cron)` → **Run workflow** → expect HTTP 200.
-4. Sign in with Google on the live URL, promote yourself (`npm run make-admin` against the
-   production Turso credentials), confirm `/dashboard` shows data.
+4. Sign in with Google on the live URL using an allowlisted admin email (or set
+   `ADMIN_EMAILS` on Vercel), open `/admin`, run a fetch, confirm `/dashboard` shows data.
 
 ## Why Turso (not local SQLite) on Vercel
 

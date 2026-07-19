@@ -47,12 +47,27 @@ export async function signInWithGoogle(formData: FormData) {
   redirect(data.url);
 }
 
+/** Clears the current browser session (this device). */
 export async function logout() {
   if (!isSupabaseConfigured()) {
     redirect(`/login?error=${encodeURIComponent(SUPABASE_SETUP_HINT)}`);
   }
 
   const supabase = await createSupabaseServerClient();
-  await supabase.auth.signOut();
-  redirect("/login");
+  await supabase.auth.signOut({ scope: "local" });
+  redirect("/");
+}
+
+/**
+ * Signs out of every device/session for this account via Supabase.
+ * This does not delete the Google account or unlink the OAuth identity.
+ */
+export async function signOutEverywhere() {
+  if (!isSupabaseConfigured()) {
+    redirect(`/login?error=${encodeURIComponent(SUPABASE_SETUP_HINT)}`);
+  }
+
+  const supabase = await createSupabaseServerClient();
+  await supabase.auth.signOut({ scope: "global" });
+  redirect("/");
 }

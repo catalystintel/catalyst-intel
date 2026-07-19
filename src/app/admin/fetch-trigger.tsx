@@ -36,22 +36,26 @@ export function FetchTrigger() {
 
   return (
     <div className="flex flex-col gap-3">
-      <Button onClick={handleFetch} disabled={loading} className="w-fit">
-        {loading ? "Fetching..." : "Fetch SEC EDGAR now"}
+      <Button
+        onClick={handleFetch}
+        disabled={loading}
+        className="btn-press w-fit bg-amber-500 text-zinc-950 hover:bg-amber-400"
+      >
+        {loading ? "Fetching…" : "Fetch SEC EDGAR now"}
       </Button>
-      {error ? <p className="text-sm text-destructive">{error}</p> : null}
+      {error ? <p className="font-mono text-sm text-destructive">{error}</p> : null}
       {result ? (
-        <dl className="grid w-fit grid-cols-2 gap-x-6 gap-y-1 rounded-lg border border-border p-4 text-sm">
+        <dl className="grid w-fit grid-cols-2 gap-x-8 gap-y-1.5 border border-border/70 bg-background/40 p-4 font-mono text-sm">
           <dt className="text-muted-foreground">Fetched</dt>
-          <dd>{result.fetched}</dd>
+          <dd className="tabular-nums">{result.fetched}</dd>
           <dt className="text-muted-foreground">Inserted</dt>
-          <dd>{result.inserted}</dd>
-          <dt className="text-muted-foreground">Skipped (dupes)</dt>
-          <dd>{result.skipped}</dd>
+          <dd className="tabular-nums">{result.inserted}</dd>
+          <dt className="text-muted-foreground">Skipped</dt>
+          <dd className="tabular-nums">{result.skipped}</dd>
           <dt className="text-muted-foreground">Errors</dt>
-          <dd>{result.errors}</dd>
+          <dd className="tabular-nums">{result.errors}</dd>
           <dt className="text-muted-foreground">Ran at</dt>
-          <dd>{new Date(result.ranAt).toLocaleTimeString()}</dd>
+          <dd className="tabular-nums">{new Date(result.ranAt).toLocaleTimeString()}</dd>
         </dl>
       ) : null}
     </div>
