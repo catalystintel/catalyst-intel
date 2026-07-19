@@ -13,6 +13,7 @@ filings flowing into a dashboard, gated behind Supabase-backed auth.
   sources, local users. Locally this is a plain file (`local.db`); in production it's a hosted
   Turso database - same driver, same schema, no code changes (see [DEPLOYMENT.md](DEPLOYMENT.md))
 - **Supabase Cloud** for Auth only (its own Postgres database is *not* used for app data)
+- **PostHog** for optional product analytics (pageviews + autocapture when configured)
 - **SEC EDGAR** (free, no API key) as the first data vendor
 - AI classification/scoring (Groq hosting Qwen3-32B) is planned for a later phase - not wired up yet
 
@@ -56,10 +57,29 @@ cp .env.example .env.local
 | `NEXT_PUBLIC_SUPABASE_URL` | Yes | From Supabase Project Settings -> API |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Yes | From Supabase Project Settings -> API |
 | `SEC_EDGAR_USER_AGENT` | Yes | SEC requires a descriptive contact string, e.g. `you@email.com CatalystIntel/0.1` |
+| `NEXT_PUBLIC_POSTHOG_KEY` | No | PostHog Project API key (`phc_…`). Leave blank to disable analytics |
+| `NEXT_PUBLIC_POSTHOG_HOST` | No | Default `https://us.i.posthog.com` (use `https://eu.i.posthog.com` for EU) |
 | `SUPABASE_SERVICE_ROLE_KEY` | No | Reserved for future admin operations |
 | `GROQ_API_KEY` | No | Only needed once AI scoring is added |
 
 No SEC/FDA/ClinicalTrials.gov API keys are needed - those vendors are free and keyless.
+
+### PostHog analytics (optional)
+
+1. Create a free project at [posthog.com](https://posthog.com) (pick US or EU Cloud).
+2. Open **Project settings** and copy the **Project API key** (`phc_…`).
+3. Locally, add to `.env.local` (then restart `npm run dev`):
+
+   ```bash
+   NEXT_PUBLIC_POSTHOG_KEY=phc_your_key_here
+   NEXT_PUBLIC_POSTHOG_HOST=https://us.i.posthog.com
+   ```
+
+   For EU Cloud, use `https://eu.i.posthog.com` instead.
+4. On Vercel: **Project → Settings → Environment Variables** — set the same two vars for
+   Preview (`dev` / staging) and Production (`main`). Redeploy after saving.
+
+If `NEXT_PUBLIC_POSTHOG_KEY` is missing, PostHog stays off and the app runs normally.
 
 ### 4. Set up the local database
 
