@@ -5,6 +5,7 @@ export const users = sqliteTable("users", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   supabaseUserId: text("supabase_user_id").notNull().unique(),
   email: text("email").notNull().unique(),
+  // Cache of admin allowlist status (JWT email). Source of truth: ADMIN_EMAILS / defaults.
   role: text("role", { enum: ["user", "admin"] })
     .notNull()
     .default("user"),
