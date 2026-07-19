@@ -48,6 +48,10 @@ export async function signInWithGoogle(formData: FormData) {
 }
 
 export async function logout() {
+  if (!isSupabaseConfigured()) {
+    redirect(`/login?error=${encodeURIComponent(SUPABASE_SETUP_HINT)}`);
+  }
+
   const supabase = await createSupabaseServerClient();
   await supabase.auth.signOut();
   redirect("/login");
