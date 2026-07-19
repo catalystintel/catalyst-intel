@@ -1,8 +1,10 @@
 import { redirect } from "next/navigation";
+import { Bell, CreditCard } from "lucide-react";
 
-import { AppHeader } from "@/components/app-header";
+import { AppShell } from "@/components/app-shell";
 import { DatabaseSetupNotice } from "@/components/database-setup-notice";
 import { PageEnter } from "@/components/page-enter";
+import { ProfileNameForm } from "@/components/profile-name-form";
 import { Button } from "@/components/ui/button";
 import { isLibsqlConfigured } from "@/db/env";
 import { logout, signOutEverywhere } from "@/app/login/actions";
@@ -37,75 +39,82 @@ export default async function ProfilePage() {
   ).toUpperCase();
 
   return (
-    <div className="desk-shell flex flex-1 flex-col">
-      <AppHeader
-        email={user.email}
-        isAdmin={user.isAdmin}
-        displayName={user.displayName}
-        avatarUrl={user.avatarUrl}
-        active="profile"
-      />
-      <PageEnter className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-6 px-3 py-5 sm:px-5 sm:py-6">
+    <AppShell
+      user={{
+        email: user.email,
+        isAdmin: user.isAdmin,
+        displayName: user.displayName,
+        avatarUrl: user.avatarUrl,
+      }}
+      active="profile"
+    >
+      <PageEnter className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-6 px-3 py-5 sm:px-5 sm:py-6">
         <div className="border-b border-border/50 pb-4">
           <p className="font-mono text-[0.65rem] tracking-[0.2em] text-amber-400/90 uppercase">
             Account
           </p>
           <h1 className="mt-1 text-xl font-semibold tracking-tight sm:text-2xl">
-            Profile
+            Profile &amp; settings
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Google via Supabase. Disconnect clears this session only.
+            Signed in with Google via Supabase.
           </p>
         </div>
 
-        <section className="flex flex-col gap-5 border border-border/70 bg-[oklch(0.175_0.016_255)] p-5 sm:flex-row sm:items-center">
-          {user.avatarUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={user.avatarUrl}
-              alt=""
-              className="size-14 rounded-sm border border-border object-cover"
-              referrerPolicy="no-referrer"
-            />
-          ) : (
-            <span className="flex size-14 items-center justify-center rounded-sm border border-border bg-secondary font-mono text-xl text-amber-300">
-              {initial}
-            </span>
-          )}
-          <dl className="grid flex-1 gap-3 text-sm sm:grid-cols-2">
-            <div>
-              <dt className="font-mono text-[0.65rem] tracking-[0.14em] text-muted-foreground uppercase">
-                Name
-              </dt>
-              <dd className="mt-1">{user.displayName ?? "—"}</dd>
-            </div>
-            <div>
-              <dt className="font-mono text-[0.65rem] tracking-[0.14em] text-muted-foreground uppercase">
-                Email
-              </dt>
-              <dd className="mt-1 font-mono text-xs break-all sm:text-sm">
+        <section className="flex flex-col gap-5 rounded-lg border border-border/70 bg-[oklch(0.175_0.016_255)] p-5">
+          <div className="flex items-center gap-4">
+            {user.avatarUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={user.avatarUrl}
+                alt=""
+                className="size-14 rounded-full border border-border object-cover"
+                referrerPolicy="no-referrer"
+              />
+            ) : (
+              <span className="flex size-14 items-center justify-center rounded-full border border-border bg-secondary font-mono text-xl text-amber-300">
+                {initial}
+              </span>
+            )}
+            <div className="min-w-0">
+              <p className="truncate text-base font-medium">
+                {user.displayName ?? user.email}
+              </p>
+              <p className="truncate font-mono text-xs text-muted-foreground">
                 {user.email}
-              </dd>
+              </p>
             </div>
-            <div>
-              <dt className="font-mono text-[0.65rem] tracking-[0.14em] text-muted-foreground uppercase">
-                Plan
-              </dt>
-              <dd className="mt-1 capitalize">{user.subscription}</dd>
-            </div>
-            <div>
-              <dt className="font-mono text-[0.65rem] tracking-[0.14em] text-muted-foreground uppercase">
-                Access
-              </dt>
-              <dd className="mt-1 font-mono text-xs sm:text-sm">
-                {user.isAdmin ? "Admin · allowlist" : "Member"}
-              </dd>
-            </div>
-          </dl>
+            <span className="ml-auto rounded-sm border border-border/70 bg-muted/40 px-2 py-1 font-mono text-[0.6rem] tracking-[0.12em] text-muted-foreground uppercase">
+              {user.isAdmin ? "Admin" : "Member"} · {user.subscription}
+            </span>
+          </div>
+
+          <div className="border-t border-border/60 pt-5">
+            <ProfileNameForm currentName={user.displayName} />
+          </div>
         </section>
 
-        <section className="border border-border/70 bg-[oklch(0.175_0.016_255)] p-5">
-          <h2 className="font-mono text-sm tracking-wide">Disconnect</h2>
+        <section className="rounded-lg border border-border/70 bg-[oklch(0.175_0.016_255)] p-5">
+          <h2 className="text-sm font-semibold">Coming soon</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Preferences we&apos;re building next.
+          </p>
+          <ul className="mt-4 flex flex-col divide-y divide-border/50">
+            <ComingSoonRow
+              icon={<Bell className="size-4" />}
+              title="Alert preferences"
+              description="Email or push when a watched ticker files a material 8-K."
+            />
+            <ComingSoonRow
+              icon={<CreditCard className="size-4" />}
+              title="Billing & plan"
+              description="Upgrade to Pro for real-time alerts and extended history."
+            />
+          </ul>
+        </section>
+
+        <section className="rounded-lg border border-border/70 bg-[oklch(0.175_0.016_255)] p-5">
+          <h2 className="text-sm font-semibold">Session</h2>
           <p className="mt-1 max-w-xl text-sm text-muted-foreground">
             Sign out ends your Catalyst Intel session. It does not delete your
             Google account or permanently unlink OAuth from Supabase.
@@ -124,6 +133,29 @@ export default async function ProfilePage() {
           </div>
         </section>
       </PageEnter>
-    </div>
+    </AppShell>
+  );
+}
+
+function ComingSoonRow({
+  icon,
+  title,
+  description,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  description: string;
+}) {
+  return (
+    <li className="flex items-start gap-3 py-3 first:pt-0 last:pb-0">
+      <span className="mt-0.5 text-muted-foreground/70">{icon}</span>
+      <div className="min-w-0 flex-1">
+        <p className="text-sm text-foreground/85">{title}</p>
+        <p className="text-xs text-muted-foreground">{description}</p>
+      </div>
+      <span className="rounded-sm border border-border/60 px-1.5 py-0.5 font-mono text-[0.55rem] tracking-[0.1em] text-muted-foreground/70 uppercase">
+        Soon
+      </span>
+    </li>
   );
 }

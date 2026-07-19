@@ -1,11 +1,18 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
+import { isDevAuthBypassEnabled } from "@/lib/auth/dev-bypass";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 
 const PROTECTED_PREFIXES = ["/dashboard", "/admin", "/profile"];
 
 export async function updateSession(request: NextRequest) {
+  // Local bypass: treat every request as authenticated so protected routes
+  // render without an OAuth round-trip. Inert in production (see dev-bypass.ts).
+  if (isDevAuthBypassEnabled()) {
+    return NextResponse.next({ request });
+  }
+
   let supabaseResponse = NextResponse.next({ request });
 
   const isProtected = PROTECTED_PREFIXES.some((prefix) =>

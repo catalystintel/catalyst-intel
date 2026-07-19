@@ -4,10 +4,10 @@ import { useEffect } from "react";
 import { ExternalLink, XIcon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { CategoryBadge } from "@/components/category-badge";
+import type { FeedCatalyst } from "@/lib/catalysts/feed-catalyst";
 import { formatRelativeAge } from "@/lib/format/relative-time";
 import { cn } from "@/lib/utils";
-
-import type { FeedCatalyst } from "./live-catalyst-feed";
 
 export function CatalystDetailDrawer({
   catalyst,
@@ -65,7 +65,7 @@ export function CatalystDetailDrawer({
             <div className="flex items-start justify-between gap-3 border-b border-border/70 px-5 py-4">
               <div className="min-w-0">
                 <p className="font-mono text-[0.65rem] tracking-[0.18em] text-amber-400/90 uppercase">
-                  Catalyst
+                  {catalyst.headline ?? "Catalyst"}
                 </p>
                 <h2
                   id={`catalyst-drawer-${catalyst.id}`}
@@ -73,6 +73,11 @@ export function CatalystDetailDrawer({
                 >
                   {catalyst.ticker ?? "—"}
                 </h2>
+                {catalyst.companyName ? (
+                  <p className="mt-0.5 truncate text-sm text-muted-foreground">
+                    {catalyst.companyName}
+                  </p>
+                ) : null}
               </div>
               <Button
                 type="button"
@@ -87,10 +92,17 @@ export function CatalystDetailDrawer({
             </div>
 
             <div className="flex flex-1 flex-col gap-5 overflow-y-auto px-5 py-5">
+              {catalyst.eventCategory ? (
+                <CategoryBadge
+                  category={catalyst.eventCategory}
+                  className="w-fit"
+                />
+              ) : null}
+
               <dl className="grid grid-cols-2 gap-4 font-mono text-xs">
                 <div>
                   <dt className="tracking-[0.14em] text-muted-foreground uppercase">
-                    Type
+                    Form
                   </dt>
                   <dd className="mt-1 text-sm text-foreground">
                     {catalyst.type}
@@ -104,17 +116,7 @@ export function CatalystDetailDrawer({
                     {formatRelativeAge(catalyst.timestamp)}
                   </dd>
                 </div>
-                <div>
-                  <dt className="tracking-[0.14em] text-muted-foreground uppercase">
-                    Impact
-                  </dt>
-                  <dd className="mt-1 text-sm text-muted-foreground">
-                    {catalyst.impactScore != null
-                      ? String(catalyst.impactScore)
-                      : "Not scored yet"}
-                  </dd>
-                </div>
-                <div>
+                <div className="col-span-2">
                   <dt className="tracking-[0.14em] text-muted-foreground uppercase">
                     Filed
                   </dt>
@@ -124,14 +126,35 @@ export function CatalystDetailDrawer({
                 </div>
               </dl>
 
-              <div>
-                <p className="font-mono text-[0.65rem] tracking-[0.14em] text-muted-foreground uppercase">
-                  Why it matters
-                </p>
-                <p className="mt-2 text-sm leading-relaxed text-foreground/95">
-                  {catalyst.summary?.trim() || catalyst.title}
-                </p>
-              </div>
+              {catalyst.items.length > 0 ? (
+                <div>
+                  <p className="font-mono text-[0.65rem] tracking-[0.14em] text-muted-foreground uppercase">
+                    Filing items
+                  </p>
+                  <ul className="mt-2 flex flex-col gap-1.5">
+                    {catalyst.items.map((item) => (
+                      <li
+                        key={item.code}
+                        className="flex items-baseline gap-2 text-sm"
+                      >
+                        <span className="font-mono text-xs text-amber-200/80 tabular-nums">
+                          {item.code}
+                        </span>
+                        <span className="text-foreground/90">{item.label}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : (
+                <div>
+                  <p className="font-mono text-[0.65rem] tracking-[0.14em] text-muted-foreground uppercase">
+                    Summary
+                  </p>
+                  <p className="mt-2 text-sm leading-relaxed text-foreground/95">
+                    {catalyst.summary?.trim() || catalyst.title}
+                  </p>
+                </div>
+              )}
 
               {catalyst.sourceUrl ? (
                 <a
