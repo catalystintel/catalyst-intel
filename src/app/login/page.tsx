@@ -1,11 +1,6 @@
+import Link from "next/link";
+
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 
 import { signInWithGoogle } from "./actions";
@@ -42,45 +37,59 @@ export default async function LoginPage({
   const configured = isSupabaseConfigured();
 
   return (
-    <div className="flex flex-1 items-center justify-center px-4">
-      <Card className="w-full max-w-sm">
-        <CardHeader>
-          <CardTitle>Log in</CardTitle>
-          <CardDescription>
-            Access your Catalyst Intel dashboard. Signing in creates your account
-            automatically on first use - no password, ever.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-4">
-          {!configured ? (
-            <div className="rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
-              <p className="font-medium">Supabase Auth is not configured</p>
-              <p className="mt-1 text-destructive/90">
-                Put your real project URL and anon key in{" "}
-                <code className="text-xs">.env.local</code>, enable Google under
-                Authentication → Providers, add{" "}
-                <code className="text-xs">http://localhost:3000/auth/callback</code>{" "}
-                to Redirect URLs, then restart the dev server.
-              </p>
-            </div>
-          ) : null}
+    <div className="relative flex flex-1 flex-col overflow-hidden">
+      <div aria-hidden className="desk-grid pointer-events-none absolute inset-0" />
+      <header className="relative z-10 flex items-center justify-between px-6 py-5">
+        <Link href="/" className="flex items-center gap-2 text-sm font-semibold tracking-tight">
+          <span
+            aria-hidden
+            className="inline-block size-2 rounded-full bg-amber-400 shadow-[0_0_12px_rgba(251,191,36,0.55)]"
+          />
+          Catalyst Intel
+        </Link>
+      </header>
 
-          <form action={signInWithGoogle} className="flex flex-col gap-4">
-            <input type="hidden" name="next" value={next ?? "/dashboard"} />
-            {message ? <p className="text-sm text-muted-foreground">{message}</p> : null}
-            {error ? <p className="text-sm text-destructive">{error}</p> : null}
-            <Button
-              type="submit"
-              variant="outline"
-              className="w-full gap-2"
-              disabled={!configured}
-            >
-              <GoogleIcon />
-              Continue with Google
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
+      <main className="page-enter relative z-10 flex flex-1 items-center justify-center px-4 pb-16">
+        <div className="w-full max-w-sm rounded-xl border border-border/80 bg-card/50 p-6 backdrop-blur-sm">
+          <p className="font-mono text-[0.65rem] uppercase tracking-[0.18em] text-amber-400/90">
+            Access
+          </p>
+          <h1 className="mt-2 text-xl font-semibold tracking-tight">Sign in</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Continue with Google to open the Live catalyst feed. No password — ever.
+          </p>
+
+          <div className="mt-6 flex flex-col gap-4">
+            {!configured ? (
+              <div className="rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
+                <p className="font-medium">Supabase Auth is not configured</p>
+                <p className="mt-1 text-destructive/90">
+                  Put your real project URL and anon key in{" "}
+                  <code className="text-xs">.env.local</code>, enable Google under
+                  Authentication → Providers, add{" "}
+                  <code className="text-xs">http://localhost:3000/auth/callback</code>{" "}
+                  to Redirect URLs, then restart the dev server.
+                </p>
+              </div>
+            ) : null}
+
+            <form action={signInWithGoogle} className="flex flex-col gap-4">
+              <input type="hidden" name="next" value={next ?? "/dashboard"} />
+              {message ? <p className="text-sm text-muted-foreground">{message}</p> : null}
+              {error ? <p className="text-sm text-destructive">{error}</p> : null}
+              <Button
+                type="submit"
+                variant="outline"
+                className="btn-press w-full gap-2"
+                disabled={!configured}
+              >
+                <GoogleIcon />
+                Continue with Google
+              </Button>
+            </form>
+          </div>
+        </div>
+      </main>
     </div>
   );
 }

@@ -36,12 +36,16 @@ export function FetchTrigger() {
 
   return (
     <div className="flex flex-col gap-3">
-      <Button onClick={handleFetch} disabled={loading} className="w-fit">
-        {loading ? "Fetching..." : "Fetch SEC EDGAR now"}
+      <Button
+        onClick={handleFetch}
+        disabled={loading}
+        className="btn-press w-fit bg-amber-500 text-zinc-950 hover:bg-amber-400"
+      >
+        {loading ? "Fetching…" : "Fetch SEC EDGAR now"}
       </Button>
       {error ? <p className="text-sm text-destructive">{error}</p> : null}
       {result ? (
-        <dl className="grid w-fit grid-cols-2 gap-x-6 gap-y-1 rounded-lg border border-border p-4 text-sm">
+        <dl className="grid w-fit grid-cols-2 gap-x-6 gap-y-1 rounded-lg border border-border/80 bg-background/50 p-4 font-mono text-sm">
           <dt className="text-muted-foreground">Fetched</dt>
           <dd>{result.fetched}</dd>
           <dt className="text-muted-foreground">Inserted</dt>
