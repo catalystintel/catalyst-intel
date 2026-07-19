@@ -196,6 +196,16 @@ node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 4. Sign in with Google on the live URL using an allowlisted admin email (or set
    `ADMIN_EMAILS` on Vercel), open `/admin`, run a fetch, confirm `/dashboard` shows data.
 
+## Data retention
+
+Catalysts older than 30 days (`RETENTION_DAYS` in `src/lib/jobs/data-retention.ts`) are purged at
+the end of every successful `fetchSecEdgar()` run - cron, manual `/admin` trigger, or the
+self-healing backstop all get this for free since they all call the same job. Purging is keyed off
+the catalyst's **filing timestamp**, not when it was ingested. Any raw source left with no
+catalyst referencing it (i.e. its catalyst was just purged) is deleted too. `companies` rows are
+never purged - they're small, reused reference data, not raw event volume. A retention failure
+logs an error but never fails the ingestion itself.
+
 ## Why Turso (not local SQLite) on Vercel
 
 Vercel serverless has no durable writable filesystem across invocations. Turso is hosted libSQL -

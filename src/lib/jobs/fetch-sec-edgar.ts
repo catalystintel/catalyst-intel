@@ -3,6 +3,7 @@ import { eq } from "drizzle-orm";
 
 import { db } from "@/db/client";
 import { catalysts, companies, rawSources } from "@/db/schema";
+import { purgeStaleCatalysts } from "./data-retention";
 import { getTickerByCik } from "./ticker-lookup";
 
 const FEED_URL =
@@ -14,6 +15,8 @@ export interface FetchSecEdgarResult {
   skipped: number;
   errors: number;
   ranAt: string;
+  purgedCatalysts: number;
+  purgedRawSources: number;
 }
 
 interface AtomEntry {
@@ -191,11 +194,25 @@ export async function fetchSecEdgar(): Promise<FetchSecEdgarResult> {
     }
   }
 
+  // Retention is a housekeeping concern, not a reason to fail an otherwise
+  // successful ingestion - log and move on if it errors.
+  let purgedCatalysts = 0;
+  let purgedRawSources = 0;
+  try {
+    const retentionResult = await purgeStaleCatalysts();
+    purgedCatalysts = retentionResult.deletedCatalysts;
+    purgedRawSources = retentionResult.deletedRawSources;
+  } catch (error) {
+    console.error("Data retention purge failed:", error);
+  }
+
   return {
     fetched: entries.length,
     inserted,
     skipped,
     errors,
     ranAt: new Date().toISOString(),
+    purgedCatalysts,
+    purgedRawSources,
   };
 }
