@@ -11,6 +11,8 @@ interface FetchResult {
   skipped: number;
   errors: number;
   ranAt: string;
+  purgedCatalysts: number;
+  purgedRawSources: number;
 }
 
 export function FetchTrigger() {
@@ -69,6 +71,11 @@ export function FetchTrigger() {
           <dt className="text-muted-foreground">Ran at</dt>
           <dd className="tabular-nums">
             {new Date(result.ranAt).toLocaleTimeString()}
+          </dd>
+          <dt className="text-muted-foreground">Purged (30d+)</dt>
+          <dd className="tabular-nums">
+            {result.purgedCatalysts} catalysts / {result.purgedRawSources}{" "}
+            sources
           </dd>
         </dl>
       ) : null}

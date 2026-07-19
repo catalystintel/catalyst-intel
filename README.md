@@ -170,6 +170,9 @@ Vercel; production is `main`. Env vars for each environment (and CI/CD triggers)
   Cron with `x-cron-secret` bypasses the admin write limit.
 - **`src/lib/jobs/fetch-sec-edgar.ts`** dedupes by SEC accession number, so re-running the fetch is
   always safe.
+- **Data retention:** catalysts older than 30 days (by filing timestamp, not ingestion time) are
+  purged at the end of every fetch run, along with any now-orphaned raw source
+  (`src/lib/jobs/data-retention.ts`). Companies are kept indefinitely (small reference data).
 
 ## What's next (not in this pass)
 
