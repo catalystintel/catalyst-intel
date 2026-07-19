@@ -33,7 +33,7 @@ export default function RootLayout({
       lang="en"
       className={`dark ${plexSans.variable} ${plexMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col font-sans">
+      <body className="flex min-h-full flex-col font-sans">
         <PostHogProvider>{children}</PostHogProvider>
       </body>
     </html>

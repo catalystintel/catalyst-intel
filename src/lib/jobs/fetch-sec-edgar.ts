@@ -39,7 +39,9 @@ function getUserAgent(): string {
 async function fetchFeedXml(userAgent: string): Promise<string> {
   const res = await fetch(FEED_URL, { headers: { "User-Agent": userAgent } });
   if (!res.ok) {
-    throw new Error(`SEC EDGAR feed request failed: ${res.status} ${res.statusText}`);
+    throw new Error(
+      `SEC EDGAR feed request failed: ${res.status} ${res.statusText}`,
+    );
   }
   return res.text();
 }
@@ -53,7 +55,9 @@ export function stripHtml(html: string): string {
 
 /** Parses titles like "8-K - PEDEVCO CORP (0001141197) (Filer)". */
 export function parseFilingTitle(title: string) {
-  const match = title.match(/^(.+?) - (.+) \((\d+)\) \((?:Filer|Filed by|Subject)\)$/);
+  const match = title.match(
+    /^(.+?) - (.+) \((\d+)\) \((?:Filer|Filed by|Subject)\)$/,
+  );
   if (!match) return null;
   const [, formType, companyName, cik] = match;
   return { formType, companyName: companyName.trim(), cik: Number(cik) };
@@ -114,7 +118,9 @@ export async function fetchSecEdgar(): Promise<FetchSecEdgarResult> {
       const parsedTitle = parseFilingTitle(rawTitle);
       const link = entry.link?.["@_href"] ?? null;
       const rawSummary =
-        typeof entry.summary === "string" ? entry.summary : entry.summary?.["#text"] ?? "";
+        typeof entry.summary === "string"
+          ? entry.summary
+          : (entry.summary?.["#text"] ?? "");
       const summaryText = stripHtml(rawSummary);
 
       const filedDate = extractFiledDate(summaryText);
@@ -124,9 +130,12 @@ export async function fetchSecEdgar(): Promise<FetchSecEdgarResult> {
           ? new Date(entry.updated).toISOString()
           : new Date().toISOString();
 
-      const formType = parsedTitle?.formType ?? entry.category?.["@_term"] ?? "8-K";
+      const formType =
+        parsedTitle?.formType ?? entry.category?.["@_term"] ?? "8-K";
       const companyName = parsedTitle?.companyName ?? rawTitle;
-      const ticker = parsedTitle ? tickerByCik.get(parsedTitle.cik) ?? null : null;
+      const ticker = parsedTitle
+        ? (tickerByCik.get(parsedTitle.cik) ?? null)
+        : null;
 
       const rawRow = await db
         .insert(rawSources)
@@ -182,5 +191,11 @@ export async function fetchSecEdgar(): Promise<FetchSecEdgarResult> {
     }
   }
 
-  return { fetched: entries.length, inserted, skipped, errors, ranAt: new Date().toISOString() };
+  return {
+    fetched: entries.length,
+    inserted,
+    skipped,
+    errors,
+    ranAt: new Date().toISOString(),
+  };
 }

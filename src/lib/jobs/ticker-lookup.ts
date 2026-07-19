@@ -2,7 +2,11 @@ import fs from "node:fs";
 import path from "node:path";
 
 const TICKERS_URL = "https://www.sec.gov/files/company_tickers.json";
-const CACHE_PATH = path.join(process.cwd(), ".cache", "sec-company-tickers.json");
+const CACHE_PATH = path.join(
+  process.cwd(),
+  ".cache",
+  "sec-company-tickers.json",
+);
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 
 interface TickerEntry {
@@ -37,7 +41,9 @@ function writeDiskCache(data: unknown) {
  * using SEC's own free, keyless company_tickers.json, cached on disk for a
  * day so we don't re-download it on every admin-triggered fetch.
  */
-export async function getTickerByCik(userAgent: string): Promise<Map<number, string>> {
+export async function getTickerByCik(
+  userAgent: string,
+): Promise<Map<number, string>> {
   if (inMemoryCache) return inMemoryCache;
 
   const cached = readDiskCache();
@@ -46,9 +52,13 @@ export async function getTickerByCik(userAgent: string): Promise<Map<number, str
     return inMemoryCache;
   }
 
-  const res = await fetch(TICKERS_URL, { headers: { "User-Agent": userAgent } });
+  const res = await fetch(TICKERS_URL, {
+    headers: { "User-Agent": userAgent },
+  });
   if (!res.ok) {
-    throw new Error(`Failed to fetch SEC company tickers: ${res.status} ${res.statusText}`);
+    throw new Error(
+      `Failed to fetch SEC company tickers: ${res.status} ${res.statusText}`,
+    );
   }
   const data = (await res.json()) as Record<string, TickerEntry>;
   writeDiskCache(data);
@@ -56,7 +66,9 @@ export async function getTickerByCik(userAgent: string): Promise<Map<number, str
   return inMemoryCache;
 }
 
-export function buildMap(data: Record<string, TickerEntry>): Map<number, string> {
+export function buildMap(
+  data: Record<string, TickerEntry>,
+): Map<number, string> {
   const map = new Map<number, string>();
   for (const entry of Object.values(data)) {
     if (entry?.cik_str != null && entry?.ticker) {

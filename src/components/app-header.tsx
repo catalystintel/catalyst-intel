@@ -37,7 +37,7 @@ export function AppHeader({
             <span className="hidden sm:inline">Catalyst Intel</span>
             <span className="sm:hidden">CI</span>
           </Link>
-          <nav className="flex items-center gap-0.5 font-mono text-[0.75rem] uppercase tracking-[0.12em]">
+          <nav className="flex items-center gap-0.5 font-mono text-[0.75rem] tracking-[0.12em] uppercase">
             <NavLink href="/dashboard" active={active === "live"}>
               Live
             </NavLink>

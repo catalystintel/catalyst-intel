@@ -19,16 +19,17 @@ export function DatabaseSetupNotice() {
             >
               turso.tech
             </a>{" "}
-            (or via the Turso CLI — see <code className="text-xs">DEPLOYMENT.md</code>).
+            (or via the Turso CLI — see{" "}
+            <code className="text-xs">DEPLOYMENT.md</code>).
           </li>
           <li>
             Set <code className="text-xs">LIBSQL_URL</code> and{" "}
-            <code className="text-xs">LIBSQL_AUTH_TOKEN</code> in the Vercel project
-            (Production and Preview).
+            <code className="text-xs">LIBSQL_AUTH_TOKEN</code> in the Vercel
+            project (Production and Preview).
           </li>
           <li>
-            Run <code className="text-xs">npm run db:migrate</code> against those
-            credentials, then redeploy.
+            Run <code className="text-xs">npm run db:migrate</code> against
+            those credentials, then redeploy.
           </li>
         </ol>
       </div>
