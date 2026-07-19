@@ -138,7 +138,7 @@ Vercel; production is `main`. Env vars for each environment (and CI/CD triggers)
 | Command                         | Purpose                                                                                       |
 | ------------------------------- | --------------------------------------------------------------------------------------------- |
 | `npm run dev`                   | Start the dev server                                                                          |
-| `npm run build`                 | Production build                                                                              |
+| `npm run build`                 | Applies pending migrations, then production build (see `DEPLOYMENT.md`)                       |
 | `npm run db:generate`           | Generate a new Drizzle migration after changing `src/db/schema.ts`                            |
 | `npm run db:migrate`            | Apply pending migrations to `local.db`                                                        |
 | `npm run db:studio`             | Open Drizzle Studio to browse `local.db`                                                      |
