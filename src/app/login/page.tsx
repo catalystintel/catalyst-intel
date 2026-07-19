@@ -1,11 +1,12 @@
 import Link from "next/link";
 
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import {
   getDevBypassEmail,
   isDevAuthBypassEnabled,
 } from "@/lib/auth/dev-bypass";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
+import { cn } from "@/lib/utils";
 
 import { signInWithGoogle } from "./actions";
 
@@ -87,12 +88,12 @@ export default async function LoginPage({
                     {getDevBypassEmail()}
                   </p>
                 </div>
-                <Button
-                  render={<Link href={destination} />}
-                  className="btn-press w-full"
+                <Link
+                  href={destination}
+                  className={cn(buttonVariants(), "btn-press w-full")}
                 >
                   Enter as dev user
-                </Button>
+                </Link>
               </div>
             ) : null}
 
