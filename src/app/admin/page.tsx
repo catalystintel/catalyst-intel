@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { count, desc, eq } from "drizzle-orm";
 
-import { AppHeader } from "@/components/app-header";
+import { AppShell } from "@/components/app-shell";
 import { DatabaseSetupNotice } from "@/components/database-setup-notice";
 import { PageEnter } from "@/components/page-enter";
 import { db } from "@/db/client";
@@ -55,14 +55,15 @@ export default async function AdminPage() {
   const sourceCount = sourceCountRow?.value ?? 0;
 
   return (
-    <div className="desk-shell flex flex-1 flex-col">
-      <AppHeader
-        email={user.email}
-        isAdmin={user.isAdmin}
-        displayName={user.displayName}
-        avatarUrl={user.avatarUrl}
-        active="admin"
-      />
+    <AppShell
+      user={{
+        email: user.email,
+        isAdmin: user.isAdmin,
+        displayName: user.displayName,
+        avatarUrl: user.avatarUrl,
+      }}
+      active="admin"
+    >
       <PageEnter className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-6 px-3 py-5 sm:px-5 sm:py-6">
         <div className="border-b border-border/50 pb-4">
           <p className="font-mono text-[0.65rem] tracking-[0.2em] text-amber-400/90 uppercase">
@@ -106,6 +107,6 @@ export default async function AdminPage() {
           </div>
         </section>
       </PageEnter>
-    </div>
+    </AppShell>
   );
 }

@@ -58,8 +58,12 @@ export async function GET(request: NextRequest) {
     .select({
       id: catalysts.id,
       ticker: catalysts.ticker,
+      companyName: catalysts.companyName,
       type: catalysts.type,
       title: catalysts.title,
+      headline: catalysts.headline,
+      eventCategory: catalysts.eventCategory,
+      itemCodes: catalysts.itemCodes,
       timestamp: catalysts.timestamp,
       summary: catalysts.summary,
       impactScore: catalysts.impactScore,

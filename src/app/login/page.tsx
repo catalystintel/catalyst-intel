@@ -1,6 +1,10 @@
 import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
+import {
+  getDevBypassEmail,
+  isDevAuthBypassEnabled,
+} from "@/lib/auth/dev-bypass";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 
 import { signInWithGoogle } from "./actions";
@@ -35,6 +39,8 @@ export default async function LoginPage({
 }) {
   const { error, message, next } = await searchParams;
   const configured = isSupabaseConfigured();
+  const devBypass = isDevAuthBypassEnabled();
+  const destination = next ?? "/dashboard";
 
   return (
     <div className="relative flex flex-1 flex-col overflow-hidden">
@@ -71,6 +77,25 @@ export default async function LoginPage({
           </p>
 
           <div className="mt-6 flex flex-col gap-4">
+            {devBypass ? (
+              <div className="flex flex-col gap-3 rounded-md border border-amber-400/40 bg-amber-400/10 p-3">
+                <div className="text-sm">
+                  <p className="font-medium text-amber-200">
+                    Dev auth bypass is on
+                  </p>
+                  <p className="mt-1 font-mono text-xs break-all text-amber-200/80">
+                    {getDevBypassEmail()}
+                  </p>
+                </div>
+                <Button
+                  render={<Link href={destination} />}
+                  className="btn-press w-full"
+                >
+                  Enter as dev user
+                </Button>
+              </div>
+            ) : null}
+
             {!configured ? (
               <div className="border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
                 <p className="font-medium">Supabase Auth is not configured</p>

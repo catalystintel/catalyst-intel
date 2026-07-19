@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { desc, eq } from "drizzle-orm";
 
-import { AppHeader } from "@/components/app-header";
+import { AppShell } from "@/components/app-shell";
 import { LiveCatalystFeed } from "@/components/live-catalyst-feed";
 import { DatabaseSetupNotice } from "@/components/database-setup-notice";
 import { PageEnter } from "@/components/page-enter";
@@ -9,6 +9,7 @@ import { db } from "@/db/client";
 import { isLibsqlConfigured } from "@/db/env";
 import { catalysts, rawSources } from "@/db/schema";
 import { getCurrentAppUser } from "@/lib/auth/current-user";
+import { toFeedCatalyst } from "@/lib/catalysts/feed-catalyst";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 
@@ -36,8 +37,12 @@ export default async function DashboardPage() {
     .select({
       id: catalysts.id,
       ticker: catalysts.ticker,
+      companyName: catalysts.companyName,
       type: catalysts.type,
       title: catalysts.title,
+      headline: catalysts.headline,
+      eventCategory: catalysts.eventCategory,
+      itemCodes: catalysts.itemCodes,
       timestamp: catalysts.timestamp,
       summary: catalysts.summary,
       impactScore: catalysts.impactScore,
@@ -50,14 +55,15 @@ export default async function DashboardPage() {
     .all();
 
   return (
-    <div className="desk-shell flex flex-1 flex-col">
-      <AppHeader
-        email={user.email}
-        isAdmin={user.isAdmin}
-        displayName={user.displayName}
-        avatarUrl={user.avatarUrl}
-        active="live"
-      />
+    <AppShell
+      user={{
+        email: user.email,
+        isAdmin: user.isAdmin,
+        displayName: user.displayName,
+        avatarUrl: user.avatarUrl,
+      }}
+      active="live"
+    >
       <PageEnter className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-4 px-3 py-5 sm:px-5 sm:py-6">
         <div className="flex flex-wrap items-end justify-between gap-3 border-b border-border/50 pb-4">
           <div>
@@ -74,9 +80,10 @@ export default async function DashboardPage() {
               On-spot catalysts
             </h1>
             <p className="mt-1 max-w-xl text-sm text-muted-foreground">
-              SEC filings as they hit — scan ticker, type, age, and why. Click a
-              row for the filing link. Soft-refreshes while focused; pauses when
-              hidden.
+              8-K filings decoded as they hit — each row shows the ticker,
+              company, and the actual event (earnings, M&amp;A, management,
+              distress…). Click for items and the filing link. Soft-refreshes
+              while focused; pauses when hidden.
             </p>
           </div>
           <p className="font-mono text-[0.65rem] tracking-[0.14em] text-muted-foreground uppercase">
@@ -85,10 +92,10 @@ export default async function DashboardPage() {
         </div>
 
         <LiveCatalystFeed
-          initialCatalysts={recentCatalysts}
+          initialCatalysts={recentCatalysts.map(toFeedCatalyst)}
           isAdmin={user.isAdmin}
         />
       </PageEnter>
-    </div>
+    </AppShell>
   );
 }
