@@ -32,6 +32,8 @@ Three environments, one app:
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Yes | Supabase Project Settings → API |
 | `SEC_EDGAR_USER_AGENT` | Yes | e.g. `you@email.com CatalystIntel/0.1` |
 | `CRON_INTERVAL_MINUTES` | No | Default `2` for `npm run cron` |
+| `NEXT_PUBLIC_POSTHOG_KEY` | No | PostHog Project API key; omit to disable analytics |
+| `NEXT_PUBLIC_POSTHOG_HOST` | No | Default `https://us.i.posthog.com` |
 | `LIBSQL_URL` / `LIBSQL_AUTH_TOKEN` | No | Leave unset locally - use the SQLite file |
 | `CRON_SECRET` | No | Only needed for remote cron callers |
 
@@ -47,6 +49,8 @@ Auth is **Google OAuth only** via Supabase. Passwords are never collected or sto
 | `SEC_EDGAR_USER_AGENT` | Yes | Same contact string is fine |
 | `LIBSQL_URL` | Yes | Turso **staging** DB URL |
 | `LIBSQL_AUTH_TOKEN` | Yes | Turso **staging** DB token |
+| `NEXT_PUBLIC_POSTHOG_KEY` | Recommended | Same PostHog project is fine for MVP |
+| `NEXT_PUBLIC_POSTHOG_HOST` | Recommended | `https://us.i.posthog.com` or EU host |
 | `CRON_SECRET` | Recommended | So you can manually trigger fetch against staging |
 
 ### Production (Vercel → Environment: **Production**, used by `main`)
@@ -58,6 +62,8 @@ Auth is **Google OAuth only** via Supabase. Passwords are never collected or sto
 | `SEC_EDGAR_USER_AGENT` | Yes | Same contact string is fine |
 | `LIBSQL_URL` | Yes | Turso **production** DB URL (separate DB) |
 | `LIBSQL_AUTH_TOKEN` | Yes | Turso **production** DB token |
+| `NEXT_PUBLIC_POSTHOG_KEY` | Recommended | Same PostHog project is fine for MVP |
+| `NEXT_PUBLIC_POSTHOG_HOST` | Recommended | `https://us.i.posthog.com` or EU host |
 | `CRON_SECRET` | Yes | Must match the GitHub repo secret below |
 
 ### GitHub repo secrets (for production cron only)
