@@ -30,7 +30,11 @@ export default async function ProfilePage() {
     redirect("/login?next=/profile");
   }
 
-  const initial = (user.displayName?.trim()?.[0] || user.email[0] || "?").toUpperCase();
+  const initial = (
+    user.displayName?.trim()?.[0] ||
+    user.email[0] ||
+    "?"
+  ).toUpperCase();
 
   return (
     <div className="desk-shell flex flex-1 flex-col">
@@ -43,10 +47,12 @@ export default async function ProfilePage() {
       />
       <PageEnter className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-6 px-3 py-5 sm:px-5 sm:py-6">
         <div className="border-b border-border/50 pb-4">
-          <p className="font-mono text-[0.65rem] uppercase tracking-[0.2em] text-amber-400/90">
+          <p className="font-mono text-[0.65rem] tracking-[0.2em] text-amber-400/90 uppercase">
             Account
           </p>
-          <h1 className="mt-1 text-xl font-semibold tracking-tight sm:text-2xl">Profile</h1>
+          <h1 className="mt-1 text-xl font-semibold tracking-tight sm:text-2xl">
+            Profile
+          </h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Google via Supabase. Disconnect clears this session only.
           </p>
@@ -68,25 +74,27 @@ export default async function ProfilePage() {
           )}
           <dl className="grid flex-1 gap-3 text-sm sm:grid-cols-2">
             <div>
-              <dt className="font-mono text-[0.65rem] uppercase tracking-[0.14em] text-muted-foreground">
+              <dt className="font-mono text-[0.65rem] tracking-[0.14em] text-muted-foreground uppercase">
                 Name
               </dt>
               <dd className="mt-1">{user.displayName ?? "—"}</dd>
             </div>
             <div>
-              <dt className="font-mono text-[0.65rem] uppercase tracking-[0.14em] text-muted-foreground">
+              <dt className="font-mono text-[0.65rem] tracking-[0.14em] text-muted-foreground uppercase">
                 Email
               </dt>
-              <dd className="mt-1 break-all font-mono text-xs sm:text-sm">{user.email}</dd>
+              <dd className="mt-1 font-mono text-xs break-all sm:text-sm">
+                {user.email}
+              </dd>
             </div>
             <div>
-              <dt className="font-mono text-[0.65rem] uppercase tracking-[0.14em] text-muted-foreground">
+              <dt className="font-mono text-[0.65rem] tracking-[0.14em] text-muted-foreground uppercase">
                 Plan
               </dt>
               <dd className="mt-1 capitalize">{user.subscription}</dd>
             </div>
             <div>
-              <dt className="font-mono text-[0.65rem] uppercase tracking-[0.14em] text-muted-foreground">
+              <dt className="font-mono text-[0.65rem] tracking-[0.14em] text-muted-foreground uppercase">
                 Access
               </dt>
               <dd className="mt-1 font-mono text-xs sm:text-sm">
@@ -99,8 +107,8 @@ export default async function ProfilePage() {
         <section className="border border-border/70 bg-[oklch(0.175_0.016_255)] p-5">
           <h2 className="font-mono text-sm tracking-wide">Disconnect</h2>
           <p className="mt-1 max-w-xl text-sm text-muted-foreground">
-            Sign out ends your Catalyst Intel session. It does not delete your Google
-            account or permanently unlink OAuth from Supabase.
+            Sign out ends your Catalyst Intel session. It does not delete your
+            Google account or permanently unlink OAuth from Supabase.
           </p>
           <div className="mt-4 flex flex-wrap gap-3">
             <form action={logout}>

@@ -65,15 +65,15 @@ export default async function AdminPage() {
       />
       <PageEnter className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-6 px-3 py-5 sm:px-5 sm:py-6">
         <div className="border-b border-border/50 pb-4">
-          <p className="font-mono text-[0.65rem] uppercase tracking-[0.2em] text-amber-400/90">
+          <p className="font-mono text-[0.65rem] tracking-[0.2em] text-amber-400/90 uppercase">
             Ops console
           </p>
           <h1 className="mt-1 text-xl font-semibold tracking-tight sm:text-2xl">
             Data ingestion
           </h1>
           <p className="mt-1 max-w-xl text-sm text-muted-foreground">
-            Trigger vendor fetch jobs for the Live tape. Production schedules still use
-            the cron secret path (GitHub Actions).
+            Trigger vendor fetch jobs for the Live tape. Production schedules
+            still use the cron secret path (GitHub Actions).
           </p>
         </div>
 
@@ -84,18 +84,21 @@ export default async function AdminPage() {
                 SEC EDGAR · 8-K
               </h2>
               <p className="mt-1 text-sm text-muted-foreground">
-                Pull the Atom feed, dedupe by accession, resolve tickers into the Live feed.
+                Pull the Atom feed, dedupe by accession, resolve tickers into
+                the Live feed.
               </p>
             </div>
             <dl className="grid grid-cols-2 gap-x-8 gap-y-1 font-mono text-xs">
               <dt className="text-muted-foreground">Last fetch</dt>
-              <dd className="text-right tabular-nums text-foreground/90">
+              <dd className="text-right text-foreground/90 tabular-nums">
                 {lastFetch?.fetchedAt
                   ? new Date(lastFetch.fetchedAt).toLocaleString()
                   : "Never"}
               </dd>
               <dt className="text-muted-foreground">Stored sources</dt>
-              <dd className="text-right tabular-nums text-foreground/90">{sourceCount}</dd>
+              <dd className="text-right text-foreground/90 tabular-nums">
+                {sourceCount}
+              </dd>
             </dl>
           </div>
           <div className="px-4 py-4 sm:px-5">

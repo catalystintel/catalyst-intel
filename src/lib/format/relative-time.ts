@@ -14,7 +14,11 @@ export function formatRelativeAge(iso: string, now = Date.now()): string {
   });
 }
 
-export function isWithinWindow(iso: string, windowHours: number | null, now = Date.now()): boolean {
+export function isWithinWindow(
+  iso: string,
+  windowHours: number | null,
+  now = Date.now(),
+): boolean {
   if (windowHours === null) return true;
   const then = new Date(iso).getTime();
   if (Number.isNaN(then)) return false;

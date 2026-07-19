@@ -2,11 +2,11 @@
 
 Three environments, one app:
 
-| Environment | Git branch | Database | Hosting |
-| --- | --- | --- | --- |
-| **Local** | feature branches on your machine | SQLite file (`local.db`) | `npm run dev` |
-| **Staging** | `dev` | Turso (staging DB) | Vercel Preview deploy for `dev` |
-| **Production** | `main` | Turso (production DB) | Vercel Production |
+| Environment    | Git branch                       | Database                 | Hosting                         |
+| -------------- | -------------------------------- | ------------------------ | ------------------------------- |
+| **Local**      | feature branches on your machine | SQLite file (`local.db`) | `npm run dev`                   |
+| **Staging**    | `dev`                            | Turso (staging DB)       | Vercel Preview deploy for `dev` |
+| **Production** | `main`                           | Turso (production DB)    | Vercel Production               |
 
 ## Branch / CI / CD rules
 
@@ -15,28 +15,30 @@ Three environments, one app:
 - **GitHub Actions CI** (`.github/workflows/ci.yml`): lint + unit tests + build on
   - push to `dev` or `main`
   - pull requests **targeting `dev`**
-  (This is a single Next.js app - tests cover both frontend pages and backend API/lib code.)
+    (This is a single Next.js app - tests cover both frontend pages and backend API/lib code.)
 - **Vercel CD** (`vercel.json`): deploys **only** on push to `dev` (staging) and `main`
   (production). Feature branches do **not** get Vercel deploys.
-- **Production cron** (`.github/workflows/fetch-sec-edgar-cron.yml`): scheduled GitHub Action
-  hits the production URL with `x-cron-secret`. Inert until secrets are set.
+- **Scheduled ETL** (`.github/workflows/fetch-sec-edgar-cron.yml`): scheduled GitHub Action hits
+  both the production and staging URLs with `x-cron-secret` (matrix job, each side optional). Inert
+  until that environment's secrets are set. See "Why GitHub Actions cron" below for the observed
+  real-world cadence and the in-app self-healing backstop.
 
 ## Env vars cheat sheet
 
 ### Local (`.env.local` on your machine)
 
-| Variable | Required? | Notes |
-| --- | --- | --- |
-| `DATABASE_URL` | Yes | `file:./local.db` (default is fine) |
-| `NEXT_PUBLIC_SUPABASE_URL` | Yes | Supabase Project Settings → API |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Yes | Supabase Project Settings → API |
-| `SEC_EDGAR_USER_AGENT` | Yes | e.g. `you@email.com CatalystIntel/0.1` |
-| `CRON_INTERVAL_MINUTES` | No | Default `2` for `npm run cron` |
-| `NEXT_PUBLIC_POSTHOG_KEY` | No | PostHog Project API key; omit to disable analytics |
-| `NEXT_PUBLIC_POSTHOG_HOST` | No | Default `https://us.i.posthog.com` |
-| `ADMIN_EMAILS` | No | Comma-separated admin emails; defaults to `zhbar10@gmail.com,omer.nachshon@gmail.com` |
-| `LIBSQL_URL` / `LIBSQL_AUTH_TOKEN` | No | Leave unset locally - use the SQLite file |
-| `CRON_SECRET` | No | Only needed for remote cron callers |
+| Variable                           | Required? | Notes                                                                                 |
+| ---------------------------------- | --------- | ------------------------------------------------------------------------------------- |
+| `DATABASE_URL`                     | Yes       | `file:./local.db` (default is fine)                                                   |
+| `NEXT_PUBLIC_SUPABASE_URL`         | Yes       | Supabase Project Settings → API                                                       |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY`    | Yes       | Supabase Project Settings → API                                                       |
+| `SEC_EDGAR_USER_AGENT`             | Yes       | e.g. `you@email.com CatalystIntel/0.1`                                                |
+| `CRON_INTERVAL_MINUTES`            | No        | Default `2` for `npm run cron`                                                        |
+| `NEXT_PUBLIC_POSTHOG_KEY`          | No        | PostHog Project API key; omit to disable analytics                                    |
+| `NEXT_PUBLIC_POSTHOG_HOST`         | No        | Default `https://us.i.posthog.com`                                                    |
+| `ADMIN_EMAILS`                     | No        | Comma-separated admin emails; defaults to `zhbar10@gmail.com,omer.nachshon@gmail.com` |
+| `LIBSQL_URL` / `LIBSQL_AUTH_TOKEN` | No        | Leave unset locally - use the SQLite file                                             |
+| `CRON_SECRET`                      | No        | Only needed for remote cron callers                                                   |
 
 Auth is **Google OAuth only** via Supabase. Passwords are never collected or stored in our DB
 (our `users` table only has id / supabase user id / email / role / subscription).
@@ -50,11 +52,11 @@ via `/admin` uses the same allowlist; GitHub Actions cron still uses `x-cron-sec
 
 Per-IP fixed-window limits live in `src/lib/http/rate-limit.ts` (in-memory Map):
 
-| Route | Default | Notes |
-| --- | --- | --- |
-| `GET /api/catalysts` | 90 / minute / IP | Live feed soft-refetch |
-| `POST /api/admin/fetch/sec-edgar` (session) | 6 / minute / IP | Admin UI trigger |
-| Same admin route with valid `x-cron-secret` | **bypassed** | GitHub Actions cron must keep working |
+| Route                                       | Default          | Notes                                 |
+| ------------------------------------------- | ---------------- | ------------------------------------- |
+| `GET /api/catalysts`                        | 90 / minute / IP | Live feed soft-refetch                |
+| `POST /api/admin/fetch/sec-edgar` (session) | 6 / minute / IP  | Admin UI trigger                      |
+| Same admin route with valid `x-cron-secret` | **bypassed**     | GitHub Actions cron must keep working |
 
 Responses that exceed the limit return **429** with `Retry-After` and `X-RateLimit-*`
 headers. This store is **per Vercel isolate** — fine for MVP spam protection; shared Redis
@@ -63,42 +65,50 @@ env vars are required today.
 
 ### Staging (Vercel → Environment: **Preview**, used by the `dev` branch)
 
-| Variable | Required? | Notes |
-| --- | --- | --- |
-| `NEXT_PUBLIC_SUPABASE_URL` | Yes | Same Supabase project is fine for MVP |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Yes | Same as local |
-| `SEC_EDGAR_USER_AGENT` | Yes | Same contact string is fine |
-| `LIBSQL_URL` | Yes | Turso **staging** DB URL |
-| `LIBSQL_AUTH_TOKEN` | Yes | Turso **staging** DB token |
-| `NEXT_PUBLIC_POSTHOG_KEY` | Recommended | Same PostHog project is fine for MVP |
-| `NEXT_PUBLIC_POSTHOG_HOST` | Recommended | `https://us.i.posthog.com` or EU host |
-| `ADMIN_EMAILS` | No | Override admin allowlist if needed (same defaults as local) |
-| `CRON_SECRET` | Recommended | So you can manually trigger fetch against staging |
+| Variable                        | Required?   | Notes                                                       |
+| ------------------------------- | ----------- | ----------------------------------------------------------- |
+| `NEXT_PUBLIC_SUPABASE_URL`      | Yes         | Same Supabase project is fine for MVP                       |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Yes         | Same as local                                               |
+| `SEC_EDGAR_USER_AGENT`          | Yes         | Same contact string is fine                                 |
+| `LIBSQL_URL`                    | Yes         | Turso **staging** DB URL                                    |
+| `LIBSQL_AUTH_TOKEN`             | Yes         | Turso **staging** DB token                                  |
+| `NEXT_PUBLIC_POSTHOG_KEY`       | Recommended | Same PostHog project is fine for MVP                        |
+| `NEXT_PUBLIC_POSTHOG_HOST`      | Recommended | `https://us.i.posthog.com` or EU host                       |
+| `ADMIN_EMAILS`                  | No          | Override admin allowlist if needed (same defaults as local) |
+| `CRON_SECRET`                   | Recommended | So you can manually trigger fetch against staging           |
 
 ### Production (Vercel → Environment: **Production**, used by `main`)
 
-| Variable | Required? | Notes |
-| --- | --- | --- |
-| `NEXT_PUBLIC_SUPABASE_URL` | Yes | Same Supabase project is fine for MVP |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Yes | Same as local/staging |
-| `SEC_EDGAR_USER_AGENT` | Yes | Same contact string is fine |
-| `LIBSQL_URL` | Yes | Turso **production** DB URL (separate DB) |
-| `LIBSQL_AUTH_TOKEN` | Yes | Turso **production** DB token |
-| `NEXT_PUBLIC_POSTHOG_KEY` | Recommended | Same PostHog project is fine for MVP |
-| `NEXT_PUBLIC_POSTHOG_HOST` | Recommended | `https://us.i.posthog.com` or EU host |
-| `ADMIN_EMAILS` | No | Override admin allowlist if needed (same defaults as local) |
-| `CRON_SECRET` | Yes | Must match the GitHub repo secret below |
+| Variable                        | Required?   | Notes                                                       |
+| ------------------------------- | ----------- | ----------------------------------------------------------- |
+| `NEXT_PUBLIC_SUPABASE_URL`      | Yes         | Same Supabase project is fine for MVP                       |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Yes         | Same as local/staging                                       |
+| `SEC_EDGAR_USER_AGENT`          | Yes         | Same contact string is fine                                 |
+| `LIBSQL_URL`                    | Yes         | Turso **production** DB URL (separate DB)                   |
+| `LIBSQL_AUTH_TOKEN`             | Yes         | Turso **production** DB token                               |
+| `NEXT_PUBLIC_POSTHOG_KEY`       | Recommended | Same PostHog project is fine for MVP                        |
+| `NEXT_PUBLIC_POSTHOG_HOST`      | Recommended | `https://us.i.posthog.com` or EU host                       |
+| `ADMIN_EMAILS`                  | No          | Override admin allowlist if needed (same defaults as local) |
+| `CRON_SECRET`                   | Yes         | Must match the GitHub repo secret below                     |
 
-### GitHub repo secrets (for production cron only)
+### GitHub repo secrets (for the scheduled ETL workflow)
 
-| Secret | Notes |
-| --- | --- |
-| `PROD_APP_URL` | Production Vercel URL, e.g. `https://catalyst-intel.vercel.app` (no trailing slash) |
-| `CRON_SECRET` | Same value as Vercel Production `CRON_SECRET` |
+`fetch-sec-edgar-cron.yml` runs a matrix job against **both** environments, so staging gets the
+same automated ingestion attempts as production. Each pair below is independent — a missing pair
+just skips that environment's job (logs a message, exits 0) instead of failing the workflow.
+
+| Secret                | Notes                                                                               |
+| --------------------- | ----------------------------------------------------------------------------------- |
+| `PROD_APP_URL`        | Production Vercel URL, e.g. `https://catalyst-intel.vercel.app` (no trailing slash) |
+| `CRON_SECRET`         | Same value as Vercel **Production** `CRON_SECRET`                                   |
+| `STAGING_APP_URL`     | Staging (Preview) Vercel URL for the `dev` branch (no trailing slash)               |
+| `STAGING_CRON_SECRET` | Same value as Vercel **Preview** `CRON_SECRET`                                      |
 
 ```bash
 gh secret set PROD_APP_URL --body "https://<your-production-domain>"
 gh secret set CRON_SECRET --body "<same value as Vercel Production>"
+gh secret set STAGING_APP_URL --body "https://<your-staging-preview-domain>"
+gh secret set STAGING_CRON_SECRET --body "<same value as Vercel Preview>"
 ```
 
 ---
@@ -137,27 +147,14 @@ turso db show catalyst-intel --url
 turso db tokens create catalyst-intel
 ```
 
-Migrate each once (from your machine / WSL, with the app repo checked out):
-
-```powershell
-# PowerShell
-$env:LIBSQL_URL = "<staging url>"
-$env:LIBSQL_AUTH_TOKEN = "<staging token>"
-npm run db:migrate
-
-$env:LIBSQL_URL = "<production url>"
-$env:LIBSQL_AUTH_TOKEN = "<production token>"
-npm run db:migrate
-```
+You do **not** need to migrate these manually - Vercel's build step runs migrations
+automatically (see "Database migrations in CI/CD" below), including the very first one
+against a brand-new, empty database. Just add the URL/token to Vercel (next step) and deploy;
+if you want to sanity-check a DB before that, `npm run db:migrate` still works standalone:
 
 ```bash
-# bash / WSL
 LIBSQL_URL="<staging url>" LIBSQL_AUTH_TOKEN="<staging token>" npm run db:migrate
-LIBSQL_URL="<production url>" LIBSQL_AUTH_TOKEN="<production token>" npm run db:migrate
 ```
-
-Then add the same values in Vercel → Settings → Environment Variables
-(Preview = staging, Production = production) and redeploy.
 
 ### 2. Create a Vercel project
 
@@ -181,9 +178,47 @@ node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 
 1. Push / merge into `dev` → Vercel staging deploy + GitHub Actions CI.
 2. Promote `dev` → `main` (only when you ask) → Vercel production deploy + CI.
-3. Actions → `Fetch SEC EDGAR (production cron)` → **Run workflow** → expect HTTP 200.
+3. Actions → `Fetch SEC EDGAR (scheduled ETL)` → **Run workflow** → expect HTTP 200 for each
+   environment that has its secrets configured.
 4. Sign in with Google on the live URL using an allowlisted admin email (or set
    `ADMIN_EMAILS` on Vercel), open `/admin`, run a fetch, confirm `/dashboard` shows data.
+
+## Database migrations in CI/CD
+
+`npm run build` is `drizzle-kit migrate && next build` (see `package.json`) - migrations are
+not a separate manual step, they run wherever a build runs:
+
+- **Vercel** builds staging on every push to `dev` and production on every push to `main`
+  (`vercel.json` restricts deploys to just those two branches). Each build applies any pending
+  migration against that environment's `LIBSQL_URL`/`LIBSQL_AUTH_TOKEN` _before_ `next build`
+  compiles the app, so new code and its matching schema always land together, and a broken
+  migration fails the build (and the deploy) instead of shipping silently.
+- **GitHub Actions CI** (`ci.yml`) also runs `npm run build` on every push/PR, against a
+  throwaway SQLite file (`DATABASE_URL: file:./local.db`, recreated per run). This isn't a
+  real environment, but it does mean every PR into `dev` verifies its migrations apply
+  cleanly - a broken migration SQL file fails CI before it can be merged.
+
+**Workflow when you change `src/db/schema.ts`:**
+
+1. `npm run db:generate` - writes a new file under `drizzle/`.
+2. Commit the generated SQL alongside your schema change.
+3. Open the PR as usual. CI applies it against the throwaway DB; merging to `dev` /
+   promoting to `main` applies it to staging / production automatically on the next build.
+
+**Known limitation:** two builds hitting the same Turso DB at the exact same moment (e.g. a
+rapid double-push) both run `drizzle-kit migrate` independently. This is safe in the common
+case - already-applied migrations are skipped - but isn't lock-protected. Not a realistic risk
+at this project's push frequency/team size; revisit if that changes.
+
+## Data retention
+
+Catalysts older than 30 days (`RETENTION_DAYS` in `src/lib/jobs/data-retention.ts`) are purged at
+the end of every successful `fetchSecEdgar()` run - cron, manual `/admin` trigger, or the
+self-healing backstop all get this for free since they all call the same job. Purging is keyed off
+the catalyst's **filing timestamp**, not when it was ingested. Any raw source left with no
+catalyst referencing it (i.e. its catalyst was just purged) is deleted too. `companies` rows are
+never purged - they're small, reused reference data, not raw event volume. A retention failure
+logs an error but never fails the ingestion itself.
 
 ## Why Turso (not local SQLite) on Vercel
 
@@ -193,4 +228,38 @@ same driver and schema as local SQLite; only the URL/token change.
 ## Why GitHub Actions cron every 5 minutes
 
 Closest free option to "every 1-2 minutes." Vercel Hobby allows one cron/day; Pro is $20/mo for
-per-minute. Expect occasional schedule drift on GitHub Actions - that is normal.
+per-minute.
+
+**Real-world cadence is worse than the configured interval, not just "occasional drift."**
+Pulling actual run history (`gh run list --workflow=fetch-sec-edgar-cron.yml`) shows gaps of
+45 minutes to 3.5+ hours between scheduled runs, averaging ~75 minutes, against a configured
+`*/5 * * * *`. GitHub throttles/coalesces frequent `schedule` triggers under load far more than
+the docs imply — treat this workflow as "best-effort, roughly hourly," not "every 5 minutes."
+
+**Self-healing backstop:** because the scheduler can't be trusted to hit its own interval,
+`GET /api/catalysts` (`src/app/api/catalysts/route.ts`) checks the most recent ingestion timestamp
+on every read and fires a non-blocking `fetchSecEdgar()` itself if the data is stale (>10 min old),
+with a 3-minute cooldown to avoid overlapping runs (`src/lib/jobs/ingestion-freshness.ts`). In
+practice: as long as anyone is using the app, data stays fresh regardless of cron timing. The
+scheduled workflow remains useful for keeping data fresh even with zero traffic.
+
+**Decision: keep GitHub Actions cron while on Vercel Hobby.** GitHub Actions here is a scheduler
+pinging `/api/admin/fetch/sec-edgar` — it never touches Turso directly, the route handler does.
+The ideal end-state is GitHub Actions reserved purely for CI (`ci.yml`) and Vercel's native
+`crons` config (in `vercel.json`) driving ETL, since it removes one moving part and Vercel Cron
+auto-sends `Authorization: Bearer $CRON_SECRET`, matching the secret this project already uses.
+But Vercel Cron on Hobby is capped at once/day with ±59min timing precision — switching now would
+regress the scheduled path from ~hourly to once a day. Revisit this the moment the project moves
+to Vercel Pro.
+
+## Testing ETL end-to-end
+
+| Where          | How                                                                                                                                                                                                                                                                                |
+| -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Local**      | `npm run cron` (continuous, every `CRON_INTERVAL_MINUTES`) or `/admin` → "Fetch SEC EDGAR now" once.                                                                                                                                                                               |
+| **Staging**    | Sign in with an allowlisted admin email on the staging Preview URL → `/admin` → run a fetch; or set `STAGING_APP_URL`/`STAGING_CRON_SECRET` (above) so the scheduled workflow covers it too; or `gh workflow run fetch-sec-edgar-cron.yml` to trigger both environments on demand. |
+| **Production** | Same as staging, against the production URL/secrets, or watch the self-healing backstop kick in on real traffic.                                                                                                                                                                   |
+
+To confirm data actually landed, check `/dashboard` (Live feed) or open Drizzle Studio
+(`npm run db:studio` locally; point `LIBSQL_URL`/`LIBSQL_AUTH_TOKEN` at a remote Turso DB to
+inspect staging/production the same way).

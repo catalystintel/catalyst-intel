@@ -22,7 +22,9 @@ export async function syncSupabaseUser(supabaseUser: User) {
 
   const email = supabaseUser.email;
   if (!email) {
-    throw new Error("Supabase user has no email; cannot sync to local users table.");
+    throw new Error(
+      "Supabase user has no email; cannot sync to local users table.",
+    );
   }
 
   const role = adminRoleForEmail(email);

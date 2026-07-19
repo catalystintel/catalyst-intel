@@ -11,6 +11,8 @@ interface FetchResult {
   skipped: number;
   errors: number;
   ranAt: string;
+  purgedCatalysts: number;
+  purgedRawSources: number;
 }
 
 export function FetchTrigger() {
@@ -53,7 +55,9 @@ export function FetchTrigger() {
       >
         {loading ? "Fetching…" : "Fetch SEC EDGAR now"}
       </Button>
-      {error ? <p className="font-mono text-sm text-destructive">{error}</p> : null}
+      {error ? (
+        <p className="font-mono text-sm text-destructive">{error}</p>
+      ) : null}
       {result ? (
         <dl className="grid w-fit grid-cols-2 gap-x-8 gap-y-1.5 border border-border/70 bg-background/40 p-4 font-mono text-sm">
           <dt className="text-muted-foreground">Fetched</dt>
@@ -65,7 +69,14 @@ export function FetchTrigger() {
           <dt className="text-muted-foreground">Errors</dt>
           <dd className="tabular-nums">{result.errors}</dd>
           <dt className="text-muted-foreground">Ran at</dt>
-          <dd className="tabular-nums">{new Date(result.ranAt).toLocaleTimeString()}</dd>
+          <dd className="tabular-nums">
+            {new Date(result.ranAt).toLocaleTimeString()}
+          </dd>
+          <dt className="text-muted-foreground">Purged (30d+)</dt>
+          <dd className="tabular-nums">
+            {result.purgedCatalysts} catalysts / {result.purgedRawSources}{" "}
+            sources
+          </dd>
         </dl>
       ) : null}
     </div>

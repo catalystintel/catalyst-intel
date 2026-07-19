@@ -3,6 +3,8 @@
 Real-time market catalyst intelligence: detects, stores, and (soon) scores events that can move
 publicly traded stocks - built for active traders and independent analysts.
 
+See [ARCHITECTURE.md](ARCHITECTURE.md) for a diagram and TL;DR of how the pieces fit together.
+
 This is the first working slice of the platform: a local-first Next.js app with SEC EDGAR
 filings flowing into a dashboard, gated behind Supabase-backed auth.
 
@@ -12,7 +14,7 @@ filings flowing into a dashboard, gated behind Supabase-backed auth.
 - **SQLite-compatible (libSQL) via Drizzle ORM** for all app data - companies, catalysts, raw
   sources, local users. Locally this is a plain file (`local.db`); in production it's a hosted
   Turso database - same driver, same schema, no code changes (see [DEPLOYMENT.md](DEPLOYMENT.md))
-- **Supabase Cloud** for Auth only (its own Postgres database is *not* used for app data)
+- **Supabase Cloud** for Auth only (its own Postgres database is _not_ used for app data)
 - **PostHog** for optional product analytics (pageviews + autocapture when configured)
 - **SEC EDGAR** (free, no API key) as the first data vendor
 - AI classification/scoring (Groq hosting Qwen3-32B) is planned for a later phase - not wired up yet
@@ -32,7 +34,7 @@ npm install
    - **Site URL**: `http://localhost:3000` (change to your Vercel URL later for staging/prod)
    - **Redirect URLs**: add `http://localhost:3000/auth/callback` (and later your staging/prod
      callback URLs, e.g. `https://<staging>.vercel.app/auth/callback`)
-3. In **Authentication → Providers**, enable **Google** (this is the *only* sign-in method - no
+3. In **Authentication → Providers**, enable **Google** (this is the _only_ sign-in method - no
    passwords are ever collected or stored by this app). Follow Supabase's
    [Google OAuth guide](https://supabase.com/docs/guides/auth/social-login/auth-google):
    - Create a Google Cloud **OAuth client ID** (Web application)
@@ -51,17 +53,17 @@ Copy `.env.example` to `.env.local` and fill in the Supabase values:
 cp .env.example .env.local
 ```
 
-| Variable | Required now? | Notes |
-| --- | --- | --- |
-| `DATABASE_URL` | Yes (default is fine) | Local SQLite file path |
-| `NEXT_PUBLIC_SUPABASE_URL` | Yes | From Supabase Project Settings -> API |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Yes | From Supabase Project Settings -> API |
-| `SEC_EDGAR_USER_AGENT` | Yes | SEC requires a descriptive contact string, e.g. `you@email.com CatalystIntel/0.1` |
-| `NEXT_PUBLIC_POSTHOG_KEY` | No | PostHog Project API key (`phc_…`). Leave blank to disable analytics |
-| `NEXT_PUBLIC_POSTHOG_HOST` | No | Default `https://us.i.posthog.com` (use `https://eu.i.posthog.com` for EU) |
-| `ADMIN_EMAILS` | No | Comma-separated admin emails; defaults to `zhbar10@gmail.com,omer.nachshon@gmail.com` |
-| `SUPABASE_SERVICE_ROLE_KEY` | No | Reserved for future admin operations |
-| `GROQ_API_KEY` | No | Only needed once AI scoring is added |
+| Variable                        | Required now?         | Notes                                                                                 |
+| ------------------------------- | --------------------- | ------------------------------------------------------------------------------------- |
+| `DATABASE_URL`                  | Yes (default is fine) | Local SQLite file path                                                                |
+| `NEXT_PUBLIC_SUPABASE_URL`      | Yes                   | From Supabase Project Settings -> API                                                 |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Yes                   | From Supabase Project Settings -> API                                                 |
+| `SEC_EDGAR_USER_AGENT`          | Yes                   | SEC requires a descriptive contact string, e.g. `you@email.com CatalystIntel/0.1`     |
+| `NEXT_PUBLIC_POSTHOG_KEY`       | No                    | PostHog Project API key (`phc_…`). Leave blank to disable analytics                   |
+| `NEXT_PUBLIC_POSTHOG_HOST`      | No                    | Default `https://us.i.posthog.com` (use `https://eu.i.posthog.com` for EU)            |
+| `ADMIN_EMAILS`                  | No                    | Comma-separated admin emails; defaults to `zhbar10@gmail.com,omer.nachshon@gmail.com` |
+| `SUPABASE_SERVICE_ROLE_KEY`     | No                    | Reserved for future admin operations                                                  |
+| `GROQ_API_KEY`                  | No                    | Only needed once AI scoring is added                                                  |
 
 No SEC/FDA/ClinicalTrials.gov API keys are needed - those vendors are free and keyless.
 
@@ -77,6 +79,7 @@ No SEC/FDA/ClinicalTrials.gov API keys are needed - those vendors are free and k
    ```
 
    For EU Cloud, use `https://eu.i.posthog.com` instead.
+
 4. On Vercel: **Project → Settings → Environment Variables** — set the same two vars for
    Preview (`dev` / staging) and Production (`main`). Redeploy after saving.
 
@@ -132,15 +135,15 @@ Vercel; production is `main`. Env vars for each environment (and CI/CD triggers)
 
 ## Useful scripts
 
-| Command | Purpose |
-| --- | --- |
-| `npm run dev` | Start the dev server |
-| `npm run build` | Production build |
-| `npm run db:generate` | Generate a new Drizzle migration after changing `src/db/schema.ts` |
-| `npm run db:migrate` | Apply pending migrations to `local.db` |
-| `npm run db:studio` | Open Drizzle Studio to browse `local.db` |
+| Command                         | Purpose                                                                                       |
+| ------------------------------- | --------------------------------------------------------------------------------------------- |
+| `npm run dev`                   | Start the dev server                                                                          |
+| `npm run build`                 | Applies pending migrations, then production build (see `DEPLOYMENT.md`)                       |
+| `npm run db:generate`           | Generate a new Drizzle migration after changing `src/db/schema.ts`                            |
+| `npm run db:migrate`            | Apply pending migrations to `local.db`                                                        |
+| `npm run db:studio`             | Open Drizzle Studio to browse `local.db`                                                      |
 | `npm run make-admin -- <email>` | Deprecated helper — syncs local `users.role` from the allowlist (does not grant access alone) |
-| `npm run cron` | Continuously re-fetch SEC EDGAR every `CRON_INTERVAL_MINUTES` (local dev) |
+| `npm run cron`                  | Continuously re-fetch SEC EDGAR every `CRON_INTERVAL_MINUTES` (local dev)                     |
 
 ## Architecture notes
 
@@ -152,10 +155,12 @@ Vercel; production is `main`. Env vars for each environment (and CI/CD triggers)
   cookie and does a cheap, optimistic redirect for signed-out visitors. Real authorization lives
   in page/API handlers: session via `getCurrentAppUser()`, admin via JWT email allowlist
   (`src/lib/auth/admin.ts`).
-- **Data ingestion** can be triggered three ways, all calling the same
+- **Data ingestion** can be triggered four ways, all calling the same
   [src/lib/jobs/fetch-sec-edgar.ts](src/lib/jobs/fetch-sec-edgar.ts): the `/admin` page button
-  (allowlisted session), `npm run cron` (local, continuous), or a scheduled GitHub Actions
-  workflow in production (`x-cron-secret` header auth) - see [DEPLOYMENT.md](DEPLOYMENT.md).
+  (allowlisted session), `npm run cron` (local, continuous), a scheduled GitHub Actions workflow
+  against staging/production (`x-cron-secret` header auth), or a self-healing background trigger
+  on `GET /api/catalysts` when data looks stale (`src/lib/jobs/ingestion-freshness.ts`) - see
+  [DEPLOYMENT.md](DEPLOYMENT.md) for why the scheduler alone isn't reliable enough.
 - **IA:** `/` is marketing for signed-out users (signed-in users redirect to Live). `/dashboard`
   is the Live feed; `/profile` is account + sign-out.
 - **Live presence:** while the Live tab is visible/focused, the client soft-refetches
@@ -165,6 +170,9 @@ Vercel; production is `main`. Env vars for each environment (and CI/CD triggers)
   Cron with `x-cron-secret` bypasses the admin write limit.
 - **`src/lib/jobs/fetch-sec-edgar.ts`** dedupes by SEC accession number, so re-running the fetch is
   always safe.
+- **Data retention:** catalysts older than 30 days (by filing timestamp, not ingestion time) are
+  purged at the end of every fetch run, along with any now-orphaned raw source
+  (`src/lib/jobs/data-retention.ts`). Companies are kept indefinitely (small reference data).
 
 ## What's next (not in this pass)
 

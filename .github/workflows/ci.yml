@@ -3,9 +3,11 @@ name: CI
 # CI/CD only runs for the two branches that matter: `dev` (staging) and
 # `main` (production) - see .cursor/rules/git-branching-workflow.mdc and
 # DEPLOYMENT.md. PRs into `dev` also run this so feature branches are
-# checked (lint, unit tests, build - covering both the frontend pages and
-# backend API routes/lib code, since this is a single Next.js app) before
-# merging.
+# checked (format, lint, unit tests, build/type-check - covering both the
+# frontend pages and backend API routes/lib code, since this is a single
+# Next.js app) before merging. This workflow only verifies the code - it does
+# not deploy. Deployment on push to `dev`/`main` is handled separately by
+# Vercel's own GitHub integration (see vercel.json and DEPLOYMENT.md).
 on:
   push:
     branches: [main, dev]
@@ -23,19 +25,28 @@ jobs:
       SEC_EDGAR_USER_AGENT: catalyst-intel-ci ci@example.com
       DATABASE_URL: file:./local.db
     steps:
-      - uses: actions/checkout@v4
+      # Pin to v7+: earlier majors run their own action code on the
+      # (now-deprecated) Node 20 Actions runtime. This is unrelated to the
+      # node-version below, which only controls the Node used to run our app.
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: "24"
           cache: "npm"
 
       - run: npm ci
 
+      - name: Prettier format check
+        run: npm run format:check
+
       - run: npm run lint
 
       - name: Unit tests (frontend + backend)
         run: npm test
 
-      - name: Build (also type-checks frontend + backend)
+      # `npm run build` = `drizzle-kit migrate && next build` (see package.json), so this
+      # also verifies every committed migration applies cleanly against a throwaway
+      # SQLite file before it ever reaches staging/production - see DEPLOYMENT.md.
+      - name: Build (migrations + type-check for frontend + backend)
         run: npm run build

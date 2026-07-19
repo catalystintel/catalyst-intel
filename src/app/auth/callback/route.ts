@@ -16,7 +16,8 @@ export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
   const next = safeNextPath(searchParams.get("next"));
-  const oauthError = searchParams.get("error_description") ?? searchParams.get("error");
+  const oauthError =
+    searchParams.get("error_description") ?? searchParams.get("error");
 
   if (oauthError) {
     return NextResponse.redirect(

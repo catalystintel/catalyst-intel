@@ -11,10 +11,7 @@ import {
 
 import { CatalystDetailDrawer } from "@/components/catalyst-detail-drawer";
 import { Input } from "@/components/ui/input";
-import {
-  formatRelativeAge,
-  isWithinWindow,
-} from "@/lib/format/relative-time";
+import { formatRelativeAge, isWithinWindow } from "@/lib/format/relative-time";
 import { cn } from "@/lib/utils";
 
 export type FeedCatalyst = {
@@ -34,12 +31,13 @@ const BLURRED_POLL_MS = 90_000;
 type Presence = "active" | "blurred" | "hidden";
 type TimeWindow = "1h" | "4h" | "24h" | "all";
 
-const TIME_WINDOWS: { id: TimeWindow; label: string; hours: number | null }[] = [
-  { id: "1h", label: "1h", hours: 1 },
-  { id: "4h", label: "4h", hours: 4 },
-  { id: "24h", label: "24h", hours: 24 },
-  { id: "all", label: "All", hours: null },
-];
+const TIME_WINDOWS: { id: TimeWindow; label: string; hours: number | null }[] =
+  [
+    { id: "1h", label: "1h", hours: 1 },
+    { id: "4h", label: "4h", hours: 4 },
+    { id: "24h", label: "24h", hours: 24 },
+    { id: "all", label: "All", hours: null },
+  ];
 
 function readPresence(): Presence {
   if (typeof document === "undefined") return "active";
@@ -94,7 +92,9 @@ export function LiveCatalystFeed({
         throw new Error(data.error ?? "Could not refresh feed.");
       }
       const next: FeedCatalyst[] = data.catalysts ?? [];
-      const fresh = next.filter((c) => !knownIds.current.has(c.id)).map((c) => c.id);
+      const fresh = next
+        .filter((c) => !knownIds.current.has(c.id))
+        .map((c) => c.id);
       if (fresh.length > 0) {
         for (const id of next.map((c) => c.id)) knownIds.current.add(id);
         setFlashIds((prev) => {
@@ -116,7 +116,9 @@ export function LiveCatalystFeed({
       setLastFetchedAt(data.fetchedAt ?? new Date().toISOString());
       setPollError(null);
     } catch (err) {
-      setPollError(err instanceof Error ? err.message : "Could not refresh feed.");
+      setPollError(
+        err instanceof Error ? err.message : "Could not refresh feed.",
+      );
     } finally {
       inFlight.current = false;
     }
@@ -192,11 +194,7 @@ export function LiveCatalystFeed({
     : null;
 
   const statusLabel =
-    presence === "hidden"
-      ? "Paused"
-      : presence === "blurred"
-        ? "Slow"
-        : "LIVE";
+    presence === "hidden" ? "Paused" : presence === "blurred" ? "Slow" : "LIVE";
 
   return (
     <div className="flex flex-col gap-3">
@@ -206,13 +204,17 @@ export function LiveCatalystFeed({
             aria-hidden
             className={cn(
               "inline-block size-2 rounded-full",
-              presence === "active" ? "live-pulse bg-amber-400" : "bg-muted-foreground/45",
+              presence === "active"
+                ? "live-pulse bg-amber-400"
+                : "bg-muted-foreground/45",
             )}
           />
           <span
             className={cn(
               "tracking-[0.16em]",
-              presence === "active" ? "text-amber-400" : "text-muted-foreground",
+              presence === "active"
+                ? "text-amber-400"
+                : "text-muted-foreground",
             )}
           >
             {statusLabel}
@@ -225,7 +227,10 @@ export function LiveCatalystFeed({
         </div>
         <span className="font-mono text-xs text-muted-foreground tabular-nums">
           {filtered.length}
-          {filtered.length !== catalysts.length ? ` / ${catalysts.length}` : ""} rows
+          {filtered.length !== catalysts.length
+            ? ` / ${catalysts.length}`
+            : ""}{" "}
+          rows
         </span>
       </div>
 
@@ -301,7 +306,7 @@ function FeedFilters({
           onChange={(e) => onTickerQuery(e.target.value)}
           placeholder="Ticker…"
           aria-label="Filter by ticker"
-          className="h-8 w-36 font-mono text-xs uppercase tracking-wide md:text-xs"
+          className="h-8 w-36 font-mono text-xs tracking-wide uppercase md:text-xs"
         />
         <div className="flex flex-wrap items-center gap-1">
           {TIME_WINDOWS.map((w) => (
@@ -317,7 +322,10 @@ function FeedFilters({
       </div>
       {typeOptions.length > 0 ? (
         <div className="flex flex-wrap items-center gap-1">
-          <FilterChip active={typeFilter === null} onClick={() => onTypeFilter(null)}>
+          <FilterChip
+            active={typeFilter === null}
+            onClick={() => onTypeFilter(null)}
+          >
             All types
           </FilterChip>
           {typeOptions.map(({ type, count }) => (
@@ -376,7 +384,7 @@ function CatalystFeedList({
 }) {
   return (
     <div className="overflow-hidden border border-border/70 bg-[oklch(0.175_0.016_255)]">
-      <div className="grid grid-cols-[4.5rem_4.25rem_3.5rem_3rem_minmax(0,1fr)] gap-2 border-b border-border/60 bg-[oklch(0.19_0.018_255)] px-3 py-2 font-mono text-[0.62rem] uppercase tracking-[0.14em] text-muted-foreground sm:grid-cols-[5.5rem_5rem_4rem_3.5rem_minmax(0,1fr)] sm:gap-3 sm:px-4">
+      <div className="grid grid-cols-[4.5rem_4.25rem_3.5rem_3rem_minmax(0,1fr)] gap-2 border-b border-border/60 bg-[oklch(0.19_0.018_255)] px-3 py-2 font-mono text-[0.62rem] tracking-[0.14em] text-muted-foreground uppercase sm:grid-cols-[5.5rem_5rem_4rem_3.5rem_minmax(0,1fr)] sm:gap-3 sm:px-4">
         <span>Ticker</span>
         <span>Type</span>
         <span>Impact</span>
@@ -406,12 +414,12 @@ function CatalystFeedList({
                 <span className="truncate font-mono text-[0.7rem] text-muted-foreground">
                   {catalyst.type}
                 </span>
-                <span className="font-mono text-[0.7rem] tabular-nums text-muted-foreground/80">
+                <span className="font-mono text-[0.7rem] text-muted-foreground/80 tabular-nums">
                   {catalyst.impactScore != null ? catalyst.impactScore : "—"}
                 </span>
                 <time
                   dateTime={catalyst.timestamp}
-                  className="text-right font-mono text-[0.7rem] tabular-nums text-amber-200/85"
+                  className="text-right font-mono text-[0.7rem] text-amber-200/85 tabular-nums"
                 >
                   {formatRelativeAge(catalyst.timestamp, nowTick)}
                 </time>
