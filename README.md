@@ -155,10 +155,12 @@ Vercel; production is `main`. Env vars for each environment (and CI/CD triggers)
   cookie and does a cheap, optimistic redirect for signed-out visitors. Real authorization lives
   in page/API handlers: session via `getCurrentAppUser()`, admin via JWT email allowlist
   (`src/lib/auth/admin.ts`).
-- **Data ingestion** can be triggered three ways, all calling the same
+- **Data ingestion** can be triggered four ways, all calling the same
   [src/lib/jobs/fetch-sec-edgar.ts](src/lib/jobs/fetch-sec-edgar.ts): the `/admin` page button
-  (allowlisted session), `npm run cron` (local, continuous), or a scheduled GitHub Actions
-  workflow in production (`x-cron-secret` header auth) - see [DEPLOYMENT.md](DEPLOYMENT.md).
+  (allowlisted session), `npm run cron` (local, continuous), a scheduled GitHub Actions workflow
+  against staging/production (`x-cron-secret` header auth), or a self-healing background trigger
+  on `GET /api/catalysts` when data looks stale (`src/lib/jobs/ingestion-freshness.ts`) - see
+  [DEPLOYMENT.md](DEPLOYMENT.md) for why the scheduler alone isn't reliable enough.
 - **IA:** `/` is marketing for signed-out users (signed-in users redirect to Live). `/dashboard`
   is the Live feed; `/profile` is account + sign-out.
 - **Live presence:** while the Live tab is visible/focused, the client soft-refetches

@@ -1,9 +1,12 @@
-name: Fetch SEC EDGAR (production cron)
+name: Fetch SEC EDGAR (scheduled ETL)
 
 # GitHub Actions' scheduled workflows have a 5-minute floor and are
 # best-effort (delays are common at peak load) - this is the closest free
 # approximation to the product's "every 1-2 minutes" goal. See DEPLOYMENT.md
-# for the trade-off and alternatives (Vercel Pro cron, external pinger).
+# for the trade-off, the observed real-world cadence, and alternatives
+# (Vercel Pro cron, external pinger). The app itself also self-heals stale
+# data on read (src/lib/jobs/ingestion-freshness.ts) as a backstop for when
+# this scheduler drifts.
 on:
   schedule:
     - cron: "*/5 * * * *"
@@ -11,19 +14,26 @@ on:
 
 jobs:
   fetch:
+    strategy:
+      fail-fast: false
+      matrix:
+        environment: [production, staging]
     runs-on: ubuntu-latest
     steps:
-      - name: Trigger ingestion endpoint
+      - name: Trigger ingestion endpoint (${{ matrix.environment }})
+        env:
+          APP_URL: ${{ matrix.environment == 'production' && secrets.PROD_APP_URL || secrets.STAGING_APP_URL }}
+          CRON_SECRET: ${{ matrix.environment == 'production' && secrets.CRON_SECRET || secrets.STAGING_CRON_SECRET }}
         run: |
-          if [ -z "${{ secrets.PROD_APP_URL }}" ] || [ -z "${{ secrets.CRON_SECRET }}" ]; then
-            echo "PROD_APP_URL and/or CRON_SECRET repo secrets are not set yet - see DEPLOYMENT.md."
-            echo "This is expected until you've deployed to production; skipping without failing the workflow."
+          if [ -z "$APP_URL" ] || [ -z "$CRON_SECRET" ]; then
+            echo "${{ matrix.environment }}: APP_URL and/or CRON_SECRET repo secrets are not set yet - see DEPLOYMENT.md."
+            echo "This is expected until that environment's secrets are configured; skipping without failing the workflow."
             exit 0
           fi
 
           response=$(curl -s -o response.json -w "%{http_code}" -X POST \
-            "${{ secrets.PROD_APP_URL }}/api/admin/fetch/sec-edgar" \
-            -H "x-cron-secret: ${{ secrets.CRON_SECRET }}")
+            "$APP_URL/api/admin/fetch/sec-edgar" \
+            -H "x-cron-secret: $CRON_SECRET")
 
           echo "HTTP status: $response"
           cat response.json
