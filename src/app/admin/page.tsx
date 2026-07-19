@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 
 import { AppHeader } from "@/components/app-header";
+import { PostHogIdentify } from "@/components/posthog-identify";
 import { getCurrentAppUser } from "@/lib/auth/current-user";
 
 import { FetchTrigger } from "./fetch-trigger";
@@ -18,6 +19,12 @@ export default async function AdminPage() {
 
   return (
     <div className="flex flex-1 flex-col">
+      <PostHogIdentify
+        supabaseUserId={user.supabaseUserId}
+        email={user.email}
+        role={user.role}
+        subscription={user.subscription}
+      />
       <AppHeader email={user.email} role={user.role} />
       <main className="flex flex-1 flex-col gap-6 p-6">
         <div>

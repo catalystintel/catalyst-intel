@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import posthog from "posthog-js";
 
 import { Button } from "@/components/ui/button";
 
@@ -20,6 +21,7 @@ export function FetchTrigger() {
   async function handleFetch() {
     setLoading(true);
     setError(null);
+    posthog.capture("sec_edgar_fetch_triggered");
     try {
       const res = await fetch("/api/admin/fetch/sec-edgar", { method: "POST" });
       const data = await res.json();
@@ -27,8 +29,16 @@ export function FetchTrigger() {
         throw new Error(data.error ?? "Fetch job failed.");
       }
       setResult(data);
+      posthog.capture("sec_edgar_fetch_completed", {
+        fetched: data.fetched,
+        inserted: data.inserted,
+        skipped: data.skipped,
+        errors: data.errors,
+      });
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Fetch job failed.");
+      const message = err instanceof Error ? err.message : "Fetch job failed.";
+      setError(message);
+      posthog.capture("sec_edgar_fetch_error", { error_message: message });
     } finally {
       setLoading(false);
     }

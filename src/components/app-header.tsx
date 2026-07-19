@@ -1,8 +1,6 @@
 import Link from "next/link";
 
-import { buttonVariants } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
-import { logout } from "@/app/login/actions";
+import { LogoutButton } from "@/components/logout-button";
 
 export function AppHeader({
   email,
@@ -30,11 +28,7 @@ export function AppHeader({
       </div>
       <div className="flex items-center gap-3 text-sm text-muted-foreground">
         <span>{email}</span>
-        <form action={logout}>
-          <button type="submit" className={cn(buttonVariants({ variant: "outline", size: "sm" }))}>
-            Log out
-          </button>
-        </form>
+        <LogoutButton />
       </div>
     </header>
   );

@@ -3,6 +3,7 @@ import { eq } from "drizzle-orm";
 
 import { db } from "@/db/client";
 import { users } from "@/db/schema";
+import { getPostHogClient } from "@/lib/posthog-server";
 
 /**
  * Ensures a Supabase-authenticated user has a matching row in the local
@@ -29,6 +30,14 @@ export async function syncSupabaseUser(supabaseUser: User) {
     .values({ supabaseUserId: supabaseUser.id, email })
     .onConflictDoNothing()
     .run();
+
+  const posthog = getPostHogClient();
+  posthog.capture({
+    distinctId: supabaseUser.id,
+    event: "user_signed_up",
+    properties: { role: "user", subscription: "free" },
+  });
+  await posthog.flush();
 
   return db
     .select()

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { getPostHogClient } from "@/lib/posthog-server";
 
 /**
  * Google OAuth redirects here with a one-time `code` after the user
@@ -14,10 +15,24 @@ export async function GET(request: Request) {
 
   if (code) {
     const supabase = await createSupabaseServerClient();
-    const { error } = await supabase.auth.exchangeCodeForSession(code);
-    if (!error) {
+    const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+    if (!error && data.user) {
+      const posthog = getPostHogClient();
+      posthog.capture({
+        distinctId: data.user.id,
+        event: "user_logged_in",
+        properties: { provider: "google" },
+      });
+      await posthog.flush();
       return NextResponse.redirect(`${origin}${next}`);
     }
+    const posthog = getPostHogClient();
+    posthog.capture({
+      distinctId: "anonymous",
+      event: "login_failed",
+      properties: { provider: "google", error_message: error?.message ?? "Unknown error" },
+    });
+    await posthog.flush();
   }
 
   return NextResponse.redirect(
