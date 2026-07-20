@@ -5,10 +5,12 @@ import {
 } from "@/lib/catalysts/materiality";
 import type { EventCategoryKey } from "@/lib/jobs/parse-8k-items";
 
+/** Accent only for High impact; Med/Low stay grayscale. */
 const TIER_STYLES: Record<MaterialityTier, string> = {
-  high: "border-red-500/45 bg-red-500/12 text-red-300",
-  medium: "border-amber-400/45 bg-amber-400/12 text-amber-200",
-  low: "border-[var(--desk-border-strong)] bg-white/[0.03] text-[var(--desk-text-muted)]",
+  high: "border-[rgba(240,193,75,0.45)] bg-[rgba(240,193,75,0.14)] text-[var(--desk-live)]",
+  medium:
+    "border-[var(--desk-border-strong)] bg-white/[0.04] text-[var(--desk-text-secondary)]",
+  low: "border-[var(--desk-border)] bg-transparent text-[var(--desk-text-muted)]",
 };
 
 export function MaterialityBadge({
@@ -24,14 +26,14 @@ export function MaterialityBadge({
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 font-mono text-[0.68rem] tracking-wide",
+        "inline-flex items-center gap-1.5 rounded-sm border px-1.5 py-0.5 font-mono text-[0.65rem] tracking-wide uppercase",
         TIER_STYLES[m.tier],
         className,
       )}
       title={`Rule-based materiality ${m.score}/100`}
     >
       <span className="opacity-70">{m.score}</span>
-      <span className="font-medium uppercase">{m.label}</span>
+      <span className="font-semibold">{m.label}</span>
     </span>
   );
 }

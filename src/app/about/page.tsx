@@ -31,7 +31,7 @@ export default function AboutPage() {
     <PreLoginChrome glowClassName="h-[45vh]" activeNav="about">
       <main className="page-enter relative z-10 mx-auto flex w-full max-w-3xl flex-1 flex-col gap-14 px-5 pt-6 pb-16 sm:px-8 sm:pt-10">
         <section className="max-w-2xl">
-          <span className="font-mono text-[0.72rem] font-medium tracking-[0.14em] text-[var(--desk-accent-fg)] uppercase">
+          <span className="font-mono text-[0.72rem] font-medium tracking-[0.14em] text-[var(--desk-text-dim)] uppercase">
             About us
           </span>
           <h1 className="mt-3 text-3xl font-bold tracking-tight text-balance text-[var(--desk-text)] sm:text-4xl">

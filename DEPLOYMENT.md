@@ -37,6 +37,7 @@ Three environments, one app:
 | `NEXT_PUBLIC_POSTHOG_KEY`          | No        | PostHog Project API key; omit to disable analytics                                    |
 | `NEXT_PUBLIC_POSTHOG_HOST`         | No        | Default `https://us.i.posthog.com`                                                    |
 | `ADMIN_EMAILS`                     | No        | Comma-separated admin emails; defaults to `zhbar10@gmail.com,omer.nachshon@gmail.com` |
+| `FINNHUB_API_KEY`                  | No        | Finnhub key for NYSE listings/quotes; soft-fails empty when unset                     |
 | `LIBSQL_URL` / `LIBSQL_AUTH_TOKEN` | No        | Leave unset locally - use the SQLite file                                             |
 | `CRON_SECRET`                      | No        | Only needed for remote cron callers                                                   |
 
@@ -103,6 +104,7 @@ env vars are required today.
 | `NEXT_PUBLIC_POSTHOG_HOST`      | Recommended | `https://us.i.posthog.com` or EU host                       |
 | `ADMIN_EMAILS`                  | No          | Override admin allowlist if needed (same defaults as local) |
 | `CRON_SECRET`                   | Recommended | So you can manually trigger fetch against staging           |
+| `FINNHUB_API_KEY`               | No          | Enables NYSE listing ingest via Finnhub (Admin / cron)      |
 | `RESEND_API_KEY`                | No          | Enables email alert delivery (webhook works without it)     |
 | `RESEND_FROM_EMAIL`             | No          | Optional From for Resend (defaults to onboarding sender)    |
 
@@ -119,6 +121,7 @@ env vars are required today.
 | `NEXT_PUBLIC_POSTHOG_HOST`      | Recommended | `https://us.i.posthog.com` or EU host                       |
 | `ADMIN_EMAILS`                  | No          | Override admin allowlist if needed (same defaults as local) |
 | `CRON_SECRET`                   | Yes         | Must match the GitHub repo secret below                     |
+| `FINNHUB_API_KEY`               | No          | Enables NYSE listing ingest via Finnhub (Admin / cron)      |
 | `RESEND_API_KEY`                | No          | Enables email alert delivery (webhook works without it)     |
 | `RESEND_FROM_EMAIL`             | No          | Optional From for Resend                                    |
 

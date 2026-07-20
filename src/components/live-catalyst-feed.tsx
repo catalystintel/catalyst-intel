@@ -13,18 +13,12 @@ import { Check, ChevronDown, ListFilter, RefreshCw, X } from "lucide-react";
 import { CatalystDetailDrawer } from "@/components/catalyst-detail-drawer";
 import { EdgarProofLink } from "@/components/edgar-proof-link";
 import { MaterialityBadge } from "@/components/materiality-badge";
-import { SectorPill } from "@/components/sector-pill";
 import { Input } from "@/components/ui/input";
 import {
   toFeedCatalyst,
   type FeedCatalyst,
 } from "@/lib/catalysts/feed-catalyst";
-import {
-  sectorLabel,
-  sectorTone,
-  sourceDisplay,
-  titleLine,
-} from "@/lib/catalysts/feed-display";
+import { titleLine } from "@/lib/catalysts/feed-display";
 import {
   DEFAULT_PLAYBOOK_CATEGORIES,
   matchesQuietPlaybook,
@@ -57,8 +51,9 @@ const TIME_WINDOWS: { id: TimeWindow; label: string; hours: number | null }[] =
     { id: "all", label: "All", hours: null },
   ];
 
+/** Blotter: Ticker · Event · Impact · Title · Proof · Time · Action */
 const FEED_GRID =
-  "grid-cols-1 sm:grid-cols-[120px_88px_100px_minmax(0,1fr)_88px_118px] lg:grid-cols-[132px_96px_108px_minmax(0,1fr)_96px_132px]";
+  "grid-cols-1 sm:grid-cols-[72px_88px_78px_minmax(0,1fr)_64px_72px] lg:grid-cols-[80px_96px_84px_minmax(0,1fr)_72px_78px_118px]";
 
 function readPresence(): Presence {
   if (typeof document === "undefined") return "active";
@@ -355,7 +350,7 @@ export function LiveCatalystFeed({
     >
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--desk-border)] bg-[var(--desk-header)] px-4 py-3.5 sm:px-5">
         <h1 className="text-[1.05rem] font-semibold tracking-tight text-[var(--desk-text)]">
-          Latest News
+          Live tape
         </h1>
         <div className="flex flex-wrap items-center gap-2 sm:gap-3">
           <button
@@ -382,7 +377,7 @@ export function LiveCatalystFeed({
             className={cn(
               "inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-[0.82rem] font-medium transition-colors",
               filtersOpen || filtersActive
-                ? "border-[var(--desk-accent)]/45 bg-[var(--desk-accent)]/10 text-[var(--desk-accent-fg)]"
+                ? "border-[var(--desk-live)]/40 bg-[var(--desk-live)]/10 text-[var(--desk-live)]"
                 : "border-[var(--desk-border-strong)] bg-white/[0.02] text-[var(--desk-text-secondary)] hover:bg-white/[0.05] hover:text-[var(--desk-text)]",
             )}
           >
@@ -578,7 +573,7 @@ function FilterChip({
       className={cn(
         "inline-flex h-7 items-center rounded-md border px-2.5 font-mono text-[0.7rem] tracking-wide transition-colors",
         active
-          ? "border-[var(--desk-accent)]/55 bg-[var(--desk-accent)]/12 text-[var(--desk-accent-fg)]"
+          ? "border-white/35 bg-white/[0.08] text-[var(--desk-text)]"
           : "border-[var(--desk-border)] bg-transparent text-[var(--desk-text-muted)] hover:border-[var(--desk-border-strong)] hover:text-[var(--desk-text)]",
       )}
     >
@@ -611,15 +606,15 @@ function CatalystFeedList({
       <div
         role="row"
         className={cn(
-          "sticky top-0 z-[2] grid h-10 items-center gap-2 border-b border-[var(--desk-border-strong)] bg-[#0f1620] px-4 font-mono text-[0.66rem] font-medium tracking-[0.12em] text-[#6d7d92] uppercase shadow-[0_1px_0_rgba(0,0,0,0.25)] sm:gap-3 sm:px-5",
+          "sticky top-0 z-[2] grid h-10 items-center gap-2 border-b border-[var(--desk-border-strong)] bg-[#0c0c0c] px-4 font-mono text-[0.62rem] font-medium tracking-[0.12em] text-[var(--desk-text-dim)] uppercase shadow-[0_1px_0_rgba(0,0,0,0.35)] sm:gap-3 sm:px-5",
           FEED_GRID,
         )}
       >
         <div role="columnheader" className="hidden sm:block">
-          Ticker / Event
+          Ticker
         </div>
         <div role="columnheader" className="hidden sm:block">
-          Sector
+          Event
         </div>
         <div role="columnheader" className="hidden sm:block">
           Impact
@@ -633,18 +628,20 @@ function CatalystFeedList({
         <div role="columnheader" className="hidden text-right sm:block">
           Time
         </div>
+        <div role="columnheader" className="hidden text-right lg:block">
+          Action
+        </div>
       </div>
 
       <div className="flex flex-col">
         {catalysts.map((catalyst, index) => {
           const flashing = flashIds.has(catalyst.id);
           const selected = selectedId === catalyst.id;
-          const source = sourceDisplay(catalyst);
           const eventLabel =
-            catalyst.headline?.trim() ||
+            catalyst.type?.trim() ||
             (catalyst.eventCategory
               ? CATEGORY_LABELS[catalyst.eventCategory]
-              : catalyst.type);
+              : "—");
           return (
             <article
               key={catalyst.id}
@@ -658,31 +655,24 @@ function CatalystFeedList({
                 }
               }}
               className={cn(
-                "feed-row group grid min-h-[64px] cursor-pointer items-center gap-2 border-b border-[rgba(28,39,54,0.95)] px-4 py-3 transition-colors duration-100 outline-none sm:gap-3 sm:px-5 sm:py-0",
+                "feed-row group grid min-h-[56px] cursor-pointer items-center gap-2 border-b border-white/[0.06] px-4 py-3 transition-colors duration-100 outline-none sm:gap-3 sm:px-5 sm:py-0",
                 FEED_GRID,
-                "hover:bg-white/[0.045] focus-visible:bg-white/[0.045] focus-visible:shadow-[inset_2px_0_0_var(--desk-accent)]",
-                selected && "bg-[var(--desk-accent)]/[0.08]",
+                "hover:bg-white/[0.04] focus-visible:bg-white/[0.04] focus-visible:shadow-[inset_2px_0_0_var(--desk-live)]",
+                selected && "bg-white/[0.05]",
                 flashing && "row-flash",
               )}
               style={{ animationDelay: `${Math.min(index, 28) * 22}ms` }}
             >
-              <div
-                role="cell"
-                className="col-source hidden min-w-0 flex-col gap-0.5 sm:flex"
-              >
-                <span className="truncate font-mono text-[0.95rem] font-semibold tracking-tight text-[var(--desk-text)]">
+              <div role="cell" className="hidden min-w-0 sm:block">
+                <span className="truncate font-mono text-[0.88rem] font-semibold tracking-tight text-[var(--desk-text)]">
                   {catalyst.ticker ?? "—"}
-                </span>
-                <span className="truncate text-[0.7rem] text-[var(--desk-text-dim)]">
-                  {eventLabel}
                 </span>
               </div>
 
               <div role="cell" className="hidden min-w-0 sm:block">
-                <SectorPill
-                  tone={sectorTone(catalyst)}
-                  label={sectorLabel(catalyst)}
-                />
+                <span className="inline-flex max-w-full truncate rounded-sm border border-[var(--desk-border-strong)] bg-white/[0.04] px-1.5 py-0.5 font-mono text-[0.68rem] text-[var(--desk-text-secondary)]">
+                  {eventLabel}
+                </span>
               </div>
 
               <div role="cell" className="hidden min-w-0 sm:block">
@@ -693,12 +683,15 @@ function CatalystFeedList({
               </div>
 
               <div role="cell" className="min-w-0">
-                <span className="block text-[0.9rem] font-medium tracking-tight text-[var(--desk-text-secondary)] group-hover:text-[var(--desk-text)] group-focus-visible:text-[var(--desk-text)] max-sm:line-clamp-2 sm:truncate">
+                <span className="block text-[0.86rem] font-medium tracking-tight text-[var(--desk-text-secondary)] group-hover:text-[var(--desk-text)] group-focus-visible:text-[var(--desk-text)] max-sm:line-clamp-2 sm:truncate">
                   {titleLine(catalyst)}
                 </span>
                 <span className="mt-1.5 flex flex-wrap items-center gap-2 sm:hidden">
                   <span className="font-mono text-[0.8rem] font-semibold text-[var(--desk-text)]">
                     {catalyst.ticker ?? "—"}
+                  </span>
+                  <span className="font-mono text-[0.68rem] text-[var(--desk-text-dim)]">
+                    {eventLabel}
                   </span>
                   <MaterialityBadge
                     score={catalyst.impactScore}
@@ -713,14 +706,14 @@ function CatalystFeedList({
                   </time>
                 </span>
                 <div
-                  className="mt-2 flex flex-wrap items-center gap-1.5"
+                  className="mt-2 flex flex-wrap items-center gap-1.5 lg:hidden"
                   onClick={(e) => e.stopPropagation()}
                   onKeyDown={(e) => e.stopPropagation()}
                 >
                   <button
                     type="button"
                     onClick={() => onAct(catalyst.id)}
-                    className="inline-flex items-center gap-1 rounded-md border border-[var(--desk-accent)]/40 bg-[var(--desk-accent)]/10 px-2 py-0.5 font-mono text-[0.65rem] tracking-wide text-[var(--desk-accent-fg)] uppercase hover:bg-[var(--desk-accent)]/18"
+                    className="inline-flex items-center gap-1 rounded-sm bg-[var(--desk-live)] px-2 py-0.5 font-mono text-[0.65rem] font-semibold tracking-wide text-[#121212] uppercase hover:brightness-110"
                   >
                     <Check className="size-3" />
                     Act
@@ -728,14 +721,11 @@ function CatalystFeedList({
                   <button
                     type="button"
                     onClick={() => onDismiss(catalyst.id)}
-                    className="inline-flex items-center gap-1 rounded-md border border-[var(--desk-border-strong)] px-2 py-0.5 font-mono text-[0.65rem] tracking-wide text-[var(--desk-text-muted)] uppercase hover:bg-white/[0.05] hover:text-[var(--desk-text)]"
+                    className="inline-flex items-center gap-1 rounded-sm border border-[var(--desk-border-strong)] px-2 py-0.5 font-mono text-[0.65rem] tracking-wide text-[var(--desk-text-muted)] uppercase hover:bg-white/[0.05] hover:text-[var(--desk-text)]"
                   >
                     <X className="size-3" />
                     Dismiss
                   </button>
-                  <span className="hidden text-[0.65rem] text-[var(--desk-text-dim)] sm:inline">
-                    {source.name}
-                  </span>
                 </div>
               </div>
 
@@ -750,10 +740,32 @@ function CatalystFeedList({
               <div role="cell" className="hidden min-w-0 text-right sm:block">
                 <time
                   dateTime={catalyst.timestamp}
-                  className="inline-block font-mono text-[0.74rem] font-medium tracking-tight whitespace-nowrap text-[var(--desk-text-muted)] tabular-nums"
+                  className="inline-block font-mono text-[0.72rem] font-medium tracking-tight whitespace-nowrap text-[var(--desk-text-dim)] tabular-nums"
                 >
                   {formatTimeDate(catalyst.timestamp)}
                 </time>
+              </div>
+
+              <div
+                role="cell"
+                className="hidden justify-end gap-1.5 lg:flex"
+                onClick={(e) => e.stopPropagation()}
+                onKeyDown={(e) => e.stopPropagation()}
+              >
+                <button
+                  type="button"
+                  onClick={() => onAct(catalyst.id)}
+                  className="inline-flex items-center gap-1 rounded-sm bg-[var(--desk-live)] px-2 py-0.5 font-mono text-[0.65rem] font-semibold tracking-wide text-[#121212] uppercase hover:brightness-110"
+                >
+                  Act
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onDismiss(catalyst.id)}
+                  className="inline-flex items-center gap-1 rounded-sm border border-[var(--desk-border-strong)] px-2 py-0.5 font-mono text-[0.65rem] tracking-wide text-[var(--desk-text-muted)] uppercase hover:bg-white/[0.05] hover:text-[var(--desk-text)]"
+                >
+                  Dismiss
+                </button>
               </div>
             </article>
           );

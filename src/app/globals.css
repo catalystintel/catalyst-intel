@@ -87,58 +87,58 @@
   --sidebar-border: oklch(0.88 0.015 250);
   --sidebar-ring: oklch(0.65 0.08 250);
 
-  /* Desk chrome (v3 mock) */
-  --desk-app: #0b111a;
-  --desk-sidebar: #0a1018;
-  --desk-panel: #111821;
-  --desk-header: #0e1520;
-  --desk-border: #1c2736;
-  --desk-border-strong: #243246;
-  --desk-text: #e6edf7;
-  --desk-text-secondary: #a7b4c7;
-  --desk-text-muted: #7b8a9e;
-  --desk-text-dim: #5c6b80;
-  --desk-accent: #4f8fd9;
-  --desk-accent-fg: #8eb8ec;
+  /* Mono desk: charcoal B&W + amber only where necessary (LIVE / High / Act). */
+  --desk-app: #0a0a0a;
+  --desk-sidebar: #070707;
+  --desk-panel: #111111;
+  --desk-header: #0d0d0d;
+  --desk-border: #222222;
+  --desk-border-strong: #2e2e2e;
+  --desk-text: #f2f2f2;
+  --desk-text-secondary: #b8b8b8;
+  --desk-text-muted: #888888;
+  --desk-text-dim: #5c5c5c;
+  --desk-accent: #cfcfcf;
+  --desk-accent-fg: #e8e8e8;
   --desk-live: #f0c14b;
-  --desk-nav-active: rgba(79, 143, 217, 0.14);
+  --desk-nav-active: rgba(255, 255, 255, 0.07);
 }
 
 .dark {
-  /* Trading desk: charcoal base aligned to v3 mock hex tokens. */
-  --background: #0b111a;
-  --foreground: #e6edf7;
-  --card: #111821;
-  --card-foreground: #e6edf7;
-  --popover: #111821;
-  --popover-foreground: #e6edf7;
+  /* Professional black & white trading desk. */
+  --background: #0a0a0a;
+  --foreground: #f2f2f2;
+  --card: #111111;
+  --card-foreground: #f2f2f2;
+  --popover: #111111;
+  --popover-foreground: #f2f2f2;
   --primary: #f0c14b;
-  --primary-foreground: #1a1520;
-  --secondary: #151c27;
-  --secondary-foreground: #e6edf7;
-  --muted: #151c27;
-  --muted-foreground: #7b8a9e;
-  --accent: #1a2433;
-  --accent-foreground: #e6edf7;
+  --primary-foreground: #121212;
+  --secondary: #161616;
+  --secondary-foreground: #f2f2f2;
+  --muted: #161616;
+  --muted-foreground: #888888;
+  --accent: #1a1a1a;
+  --accent-foreground: #f2f2f2;
   --destructive: oklch(0.65 0.18 25);
-  --border: #1c2736;
-  --input: #1a2433;
-  --ring: #4f8fd9;
-  --steel: #4f8fd9;
-  --steel-foreground: #8eb8ec;
+  --border: #222222;
+  --input: #1a1a1a;
+  --ring: #f0c14b;
+  --steel: #cfcfcf;
+  --steel-foreground: #e8e8e8;
   --chart-1: #f0c14b;
-  --chart-2: #4f8fd9;
-  --chart-3: #7b8a9e;
-  --chart-4: #5c6b80;
-  --chart-5: #243246;
-  --sidebar: #0a1018;
-  --sidebar-foreground: #e6edf7;
-  --sidebar-primary: #4f8fd9;
-  --sidebar-primary-foreground: #e6edf7;
-  --sidebar-accent: #151c27;
-  --sidebar-accent-foreground: #e6edf7;
-  --sidebar-border: #1c2736;
-  --sidebar-ring: #4f8fd9;
+  --chart-2: #cfcfcf;
+  --chart-3: #888888;
+  --chart-4: #5c5c5c;
+  --chart-5: #2e2e2e;
+  --sidebar: #070707;
+  --sidebar-foreground: #f2f2f2;
+  --sidebar-primary: #f0c14b;
+  --sidebar-primary-foreground: #121212;
+  --sidebar-accent: #161616;
+  --sidebar-accent-foreground: #f2f2f2;
+  --sidebar-border: #222222;
+  --sidebar-ring: #f0c14b;
 }
 
 @layer base {
@@ -155,8 +155,8 @@
 
 @layer utilities {
   .brand-mark {
-    background: linear-gradient(145deg, #3d6fa8 0%, #1e3a5c 100%);
-    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+    background: linear-gradient(145deg, #3a3a3a 0%, #141414 100%);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14);
   }
 
   .brand-mark::after {
@@ -170,8 +170,8 @@
 
   .desk-shell {
     background-image:
-      linear-gradient(oklch(0.7 0.04 250 / 0.03) 1px, transparent 1px),
-      linear-gradient(90deg, oklch(0.7 0.04 250 / 0.03) 1px, transparent 1px);
+      linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
     background-size: 56px 56px;
     background-attachment: fixed;
   }
@@ -179,8 +179,8 @@
   .desk-grid {
     background-color: var(--background);
     background-image:
-      linear-gradient(oklch(0.7 0.04 250 / 0.045) 1px, transparent 1px),
-      linear-gradient(90deg, oklch(0.7 0.04 250 / 0.045) 1px, transparent 1px);
+      linear-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
     background-size: 40px 40px;
     mask-image: radial-gradient(ellipse at 40% 30%, black 15%, transparent 72%);
   }
