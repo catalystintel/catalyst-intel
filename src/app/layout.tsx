@@ -38,9 +38,9 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`dark ${dmSans.variable} ${plexMono.variable} h-full antialiased`}
+      className={`dark ${dmSans.variable} ${plexMono.variable} h-full overflow-x-hidden antialiased`}
     >
-      <body className="flex min-h-dvh flex-col font-sans">
+      <body className="flex min-h-dvh flex-col overflow-x-hidden font-sans">
         <PostHogProvider>{children}</PostHogProvider>
       </body>
     </html>
