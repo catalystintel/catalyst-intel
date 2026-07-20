@@ -163,7 +163,7 @@ function Avatar({
     <span
       className={cn(
         "flex items-center justify-center rounded-full font-bold tracking-wide text-[var(--desk-text)]",
-        "bg-[linear-gradient(145deg,#3a5474,#1c2a40)] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.1)]",
+        "bg-[linear-gradient(145deg,#3a3a3a,#141414)] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.12)]",
         dimensions,
       )}
     >

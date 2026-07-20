@@ -427,7 +427,7 @@ export function LiveCatalystFeed({
       ) : null}
 
       {pollError ? (
-        <p className="border-b border-[var(--desk-border)] px-4 py-2 font-mono text-xs text-amber-400/90 sm:px-5">
+        <p className="border-b border-[var(--desk-border)] px-4 py-2 font-mono text-xs text-[var(--desk-live)] sm:px-5">
           {pollError}
         </p>
       ) : null}

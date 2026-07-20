@@ -62,7 +62,7 @@ export function AppShell({ user, active, children }: AppShellProps) {
       ) : null}
 
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-40 flex items-center justify-between gap-3 border-b border-[var(--desk-border)] bg-[rgba(11,17,26,0.96)] px-3 pt-[max(0.75rem,env(safe-area-inset-top))] pb-3 sm:px-5">
+        <header className="sticky top-0 z-40 flex items-center justify-between gap-3 border-b border-[var(--desk-border)] bg-[var(--desk-header)]/95 px-3 pt-[max(0.75rem,env(safe-area-inset-top))] pb-3 backdrop-blur-sm sm:px-5">
           <div className="flex min-w-0 items-center gap-2">
             <button
               type="button"

@@ -235,7 +235,7 @@ export function AlertRulesPanel() {
           <Button
             type="submit"
             disabled={saving}
-            className="btn-press w-fit gap-1.5 bg-amber-500 text-zinc-950 hover:bg-amber-400"
+            className="btn-press w-fit gap-1.5 bg-[var(--desk-live)] text-[#121212] hover:brightness-110"
           >
             <Plus className="size-3.5" />
             Save rule
