@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { DM_Sans, IBM_Plex_Mono } from "next/font/google";
 
 import { PostHogProvider } from "@/components/posthog-provider";
@@ -23,6 +23,13 @@ export const metadata: Metadata = {
     "Live SEC catalysts for day traders — on-spot filings on a trading-desk feed.",
 };
 
+/** Phone-friendly viewport; `viewportFit` keeps notched Safari usable. */
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+};
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -33,7 +40,7 @@ export default function RootLayout({
       lang="en"
       className={`dark ${dmSans.variable} ${plexMono.variable} h-full antialiased`}
     >
-      <body className="flex min-h-full flex-col font-sans">
+      <body className="flex min-h-dvh flex-col font-sans">
         <PostHogProvider>{children}</PostHogProvider>
       </body>
     </html>

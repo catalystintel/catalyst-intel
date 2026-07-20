@@ -43,6 +43,20 @@ Three environments, one app:
 Auth is **Google OAuth only** via Supabase. Passwords are never collected or stored in our DB
 (our `users` table only has id / supabase user id / email / role / subscription).
 
+**Supabase Auth URL allowlist (required for phone + desktop sign-in):** in the Supabase
+dashboard → **Authentication → URL Configuration**, set:
+
+| Setting                  | Exact value                                       |
+| ------------------------ | ------------------------------------------------- |
+| Site URL                 | `https://catalyst-intel.vercel.app`               |
+| Redirect URLs            | `https://catalyst-intel.vercel.app/auth/callback` |
+| Redirect URLs            | `http://localhost:3000/auth/callback`             |
+| Redirect URLs (optional) | `https://<your-preview>.vercel.app/auth/callback` |
+
+Also add `https://catalyst-intel.vercel.app` (and localhost) under Google Cloud → OAuth client
+→ **Authorized JavaScript origins**. Missing production redirect URLs are a common cause of
+“works on desktop / fails on phone” OAuth returns.
+
 **Admin access** is enforced server-side from the verified Supabase session email against
 `ADMIN_EMAILS` (or the built-in defaults). The local `users.role` column is synced as a cache
 and is **not** the source of truth — do not rely on `npm run make-admin` alone. Manual fetch
