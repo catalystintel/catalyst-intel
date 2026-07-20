@@ -103,6 +103,8 @@ env vars are required today.
 | `NEXT_PUBLIC_POSTHOG_HOST`      | Recommended | `https://us.i.posthog.com` or EU host                       |
 | `ADMIN_EMAILS`                  | No          | Override admin allowlist if needed (same defaults as local) |
 | `CRON_SECRET`                   | Recommended | So you can manually trigger fetch against staging           |
+| `RESEND_API_KEY`                | No          | Enables email alert delivery (webhook works without it)     |
+| `RESEND_FROM_EMAIL`             | No          | Optional From for Resend (defaults to onboarding sender)    |
 
 ### Production (Vercel → Environment: **Production**, used by `main`)
 
@@ -117,6 +119,8 @@ env vars are required today.
 | `NEXT_PUBLIC_POSTHOG_HOST`      | Recommended | `https://us.i.posthog.com` or EU host                       |
 | `ADMIN_EMAILS`                  | No          | Override admin allowlist if needed (same defaults as local) |
 | `CRON_SECRET`                   | Yes         | Must match the GitHub repo secret below                     |
+| `RESEND_API_KEY`                | No          | Enables email alert delivery (webhook works without it)     |
+| `RESEND_FROM_EMAIL`             | No          | Optional From for Resend                                    |
 
 ### GitHub repo secrets (for the scheduled ETL workflow)
 

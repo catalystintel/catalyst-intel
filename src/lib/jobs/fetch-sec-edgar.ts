@@ -3,6 +3,8 @@ import { eq } from "drizzle-orm";
 
 import { db } from "@/db/client";
 import { catalysts, companies, rawSources } from "@/db/schema";
+import { scoreFromCategory } from "@/lib/catalysts/materiality";
+
 import { purgeStaleCatalysts } from "./data-retention";
 import { parseFilingSummary } from "./parse-8k-items";
 import {
@@ -200,6 +202,7 @@ export async function fetchSecEdgar(
           itemCodes: items,
           timestamp,
           rawSourceId: rawRow.id,
+          impactScore: scoreFromCategory(primaryCategory),
         })
         .run();
 

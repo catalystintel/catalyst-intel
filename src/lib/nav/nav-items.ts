@@ -39,8 +39,8 @@ const PRIMARY_NAV: NavItem[] = [
     href: "/dashboard",
   },
   { key: "news", label: "News Feed", icon: Newspaper, comingSoon: true },
-  { key: "alerts", label: "Alerts", icon: Bell, comingSoon: true },
-  { key: "watchlist", label: "Watchlists", icon: Star, comingSoon: true },
+  { key: "alerts", label: "Alerts", icon: Bell, href: "/alerts" },
+  { key: "watchlist", label: "Watchlists", icon: Star, href: "/watchlist" },
   { key: "reports", label: "Reports", icon: Bookmark, comingSoon: true },
   {
     key: "analytics",
