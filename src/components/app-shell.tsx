@@ -30,7 +30,7 @@ export function AppShell({ user, active, children }: AppShellProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
-    <div className="flex min-h-0 flex-1 bg-[var(--desk-app)]">
+    <div className="flex h-dvh min-h-0 flex-1 overflow-hidden bg-[var(--desk-app)]">
       <aside className="hidden md:block">
         <div className="sticky top-0 h-dvh">
           <AppSidebar
@@ -50,7 +50,7 @@ export function AppShell({ user, active, children }: AppShellProps) {
             className="absolute inset-0 bg-black/55"
             onClick={() => setMobileOpen(false)}
           />
-          <div className="absolute inset-y-0 left-0">
+          <div className="absolute inset-y-0 left-0 max-w-[min(212px,85vw)] pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
             <AppSidebar
               active={active}
               isAdmin={user.isAdmin}
@@ -61,16 +61,16 @@ export function AppShell({ user, active, children }: AppShellProps) {
         </div>
       ) : null}
 
-      <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-40 flex items-center justify-between gap-3 border-b border-[var(--desk-border)] bg-[rgba(11,17,26,0.96)] px-3 py-3 sm:px-5">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+        <header className="sticky top-0 z-40 flex items-center justify-between gap-3 border-b border-[var(--desk-border)] bg-[rgba(11,17,26,0.96)] px-3 pt-[max(0.75rem,env(safe-area-inset-top))] pb-3 sm:px-5">
           <div className="flex min-w-0 items-center gap-2">
             <button
               type="button"
               aria-label="Open navigation"
               onClick={() => setMobileOpen(true)}
-              className="rounded-lg p-1.5 text-[var(--desk-text-muted)] transition-colors hover:bg-white/[0.05] hover:text-[var(--desk-text)] md:hidden"
+              className="inline-flex size-11 items-center justify-center rounded-lg text-[var(--desk-text-muted)] transition-colors hover:bg-white/[0.05] hover:text-[var(--desk-text)] md:hidden"
             >
-              <Menu className="size-4" />
+              <Menu className="size-5" />
             </button>
             <button
               type="button"
@@ -101,7 +101,9 @@ export function AppShell({ user, active, children }: AppShellProps) {
           />
         </header>
 
-        <main className="flex min-w-0 flex-1 flex-col">{children}</main>
+        <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+          {children}
+        </main>
       </div>
     </div>
   );

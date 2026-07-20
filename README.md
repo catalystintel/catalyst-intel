@@ -31,14 +31,18 @@ npm install
 
 1. Go to [supabase.com](https://supabase.com) and create a new project (free tier).
 2. In **Authentication → URL Configuration**:
-   - **Site URL**: `http://localhost:3000` (change to your Vercel URL later for staging/prod)
-   - **Redirect URLs**: add `http://localhost:3000/auth/callback` (and later your staging/prod
-     callback URLs, e.g. `https://<staging>.vercel.app/auth/callback`)
+   - **Site URL** (production): `https://catalyst-intel.vercel.app`
+   - **Redirect URLs** (add all that you use):
+     - `http://localhost:3000/auth/callback`
+     - `https://catalyst-intel.vercel.app/auth/callback`
+     - any Vercel preview URL callback you need, e.g.
+       `https://<preview>.vercel.app/auth/callback`
 3. In **Authentication → Providers**, enable **Google** (this is the _only_ sign-in method - no
    passwords are ever collected or stored by this app). Follow Supabase's
    [Google OAuth guide](https://supabase.com/docs/guides/auth/social-login/auth-google):
    - Create a Google Cloud **OAuth client ID** (Web application)
-   - Authorized JavaScript origins: `http://localhost:3000`
+   - Authorized JavaScript origins: `http://localhost:3000` and
+     `https://catalyst-intel.vercel.app`
    - Authorized redirect URI: the value Supabase shows on the Google provider page
      (`https://<your-project-ref>.supabase.co/auth/v1/callback`)
    - Paste the Client ID and Client Secret into Supabase → Save

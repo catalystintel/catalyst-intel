@@ -10,7 +10,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 
 const PREVIEW_GRID =
-  "grid-cols-[minmax(0,1fr)_auto] sm:grid-cols-[148px_132px_minmax(0,1fr)_150px] lg:grid-cols-[168px_148px_minmax(0,1fr)_168px]";
+  "grid-cols-1 sm:grid-cols-[148px_132px_minmax(0,1fr)_150px] lg:grid-cols-[168px_148px_minmax(0,1fr)_168px]";
 
 const DEMO_ROWS: {
   sourceName: string;
@@ -75,7 +75,7 @@ export default async function Home() {
 
   return (
     <PreLoginChrome glowClassName="h-[55vh]">
-      <main className="page-enter relative z-10 mx-auto flex w-full max-w-5xl flex-1 flex-col justify-center gap-10 px-5 pt-4 pb-16 sm:px-8">
+      <main className="page-enter relative z-10 mx-auto flex w-full max-w-5xl flex-1 flex-col justify-start gap-8 px-4 pt-2 pb-12 sm:justify-center sm:gap-10 sm:px-8 sm:pt-4 sm:pb-16">
         <div className="max-w-2xl">
           <span className="inline-flex items-center gap-1.5 rounded-full border border-[rgba(240,193,75,0.35)] bg-[rgba(240,193,75,0.12)] px-2.5 py-1 text-[0.68rem] font-bold tracking-[0.08em] text-[var(--desk-live)]">
             <span
@@ -91,12 +91,12 @@ export default async function Home() {
             Live SEC catalysts as they hit EDGAR — Source, Sector, Title, and
             Time on a trading-desk feed built for multi-monitor scanning.
           </p>
-          <div className="mt-8 flex flex-wrap items-center gap-3">
+          <div className="mt-8 flex flex-col items-start gap-3 sm:flex-row sm:flex-wrap sm:items-center">
             <Link
               href="/login"
               className={cn(
                 buttonVariants({ size: "lg" }),
-                "btn-press bg-[var(--desk-live)] text-[#1a1520] hover:bg-[#f5cc63]",
+                "btn-press min-h-11 w-full justify-center bg-[var(--desk-live)] text-[#1a1520] hover:bg-[#f5cc63] sm:w-auto",
               )}
             >
               Continue with Google
@@ -148,7 +148,7 @@ export default async function Home() {
                 Sector
               </div>
               <div role="columnheader">Title</div>
-              <div role="columnheader" className="text-right">
+              <div role="columnheader" className="hidden text-right sm:block">
                 Time
               </div>
             </div>
@@ -158,7 +158,7 @@ export default async function Home() {
                 key={`${row.sourceMeta}-${row.time}`}
                 role="row"
                 className={cn(
-                  "feed-row grid min-h-[60px] items-center gap-3 border-b border-[rgba(28,39,54,0.95)] px-4 sm:gap-4 sm:px-5",
+                  "feed-row grid min-h-[60px] items-center gap-3 border-b border-[rgba(28,39,54,0.95)] px-4 py-3 sm:gap-4 sm:px-5 sm:py-0",
                   PREVIEW_GRID,
                 )}
                 style={{ animationDelay: `${index * 70}ms` }}
@@ -189,13 +189,18 @@ export default async function Home() {
                   <span className="line-clamp-2 text-[0.92rem] font-medium text-[var(--desk-text)] sm:line-clamp-1">
                     {row.title}
                   </span>
-                  <span className="mt-1 block font-mono text-[0.7rem] text-[var(--desk-text-dim)] sm:hidden">
-                    {row.sourceMeta} · {row.sector}
+                  <span className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 sm:hidden">
+                    <span className="font-mono text-[0.7rem] text-[var(--desk-text-dim)]">
+                      {row.sourceMeta} · {row.sector}
+                    </span>
+                    <time className="font-mono text-[0.7rem] text-[var(--desk-text-muted)] tabular-nums">
+                      {row.time}
+                    </time>
                   </span>
                 </div>
                 <div
                   role="cell"
-                  className="text-right font-mono text-[0.78rem] text-[var(--desk-text-muted)] tabular-nums"
+                  className="hidden text-right font-mono text-[0.78rem] text-[var(--desk-text-muted)] tabular-nums sm:block"
                 >
                   <time>{row.time}</time>
                 </div>
