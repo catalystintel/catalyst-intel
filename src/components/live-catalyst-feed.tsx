@@ -112,8 +112,8 @@ export function LiveCatalystFeed({
   const [timeWindow, setTimeWindow] = useState<TimeWindow>("all");
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [nowTick, setNowTick] = useState(() => Date.now());
-  const [dismissedIds, setDismissedIds] = useState<Set<number>>(
-    () => new Set(),
+  const [dismissedIds, setDismissedIds] = useState<Set<number>>(() =>
+    readDismissedIds(),
   );
   const [watchlistTickers, setWatchlistTickers] = useState<string[]>([]);
   const [playbookCategories, setPlaybookCategories] = useState<
@@ -123,10 +123,6 @@ export function LiveCatalystFeed({
   const [prefsLoaded, setPrefsLoaded] = useState(false);
   const inFlight = useRef(false);
   const knownIds = useRef(new Set(initialCatalysts.map((c) => c.id)));
-
-  useEffect(() => {
-    setDismissedIds(readDismissedIds());
-  }, []);
 
   useEffect(() => {
     let cancelled = false;
