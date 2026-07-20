@@ -26,7 +26,6 @@ export function WatchlistPlaybookPanel() {
   const [loaded, setLoaded] = useState(false);
 
   const load = useCallback(async () => {
-    setError(null);
     try {
       const [wRes, pRes] = await Promise.all([
         fetch("/api/watchlist", {
@@ -43,6 +42,7 @@ export function WatchlistPlaybookPanel() {
       }
       const wData = await wRes.json();
       const pData = await pRes.json();
+      setError(null);
       setTickers(wData.tickers ?? []);
       setCategories(
         Array.isArray(pData.categories) && pData.categories.length > 0
@@ -58,7 +58,12 @@ export function WatchlistPlaybookPanel() {
   }, []);
 
   useEffect(() => {
-    void load();
+    // Defer so the initial fetch's setState is not synchronous in the effect body
+    // (react-hooks/set-state-in-effect).
+    const id = window.setTimeout(() => {
+      void load();
+    }, 0);
+    return () => window.clearTimeout(id);
   }, [load]);
 
   async function addTicker(e: React.FormEvent) {

@@ -35,7 +35,6 @@ export function AlertRulesPanel() {
   const [sessionsAhPm, setSessionsAhPm] = useState(true);
 
   const load = useCallback(async () => {
-    setError(null);
     try {
       const res = await fetch("/api/alert-rules", {
         credentials: "same-origin",
@@ -43,6 +42,7 @@ export function AlertRulesPanel() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Could not load rules.");
+      setError(null);
       setRules(data.rules ?? []);
       setEmailConfigured(Boolean(data.emailConfigured));
     } catch (err) {
@@ -53,7 +53,10 @@ export function AlertRulesPanel() {
   }, []);
 
   useEffect(() => {
-    void load();
+    const id = window.setTimeout(() => {
+      void load();
+    }, 0);
+    return () => window.clearTimeout(id);
   }, [load]);
 
   async function createRule(e: React.FormEvent) {
