@@ -16,7 +16,7 @@ export function PreLoginChrome({
   activeNav,
 }: PreLoginChromeProps) {
   return (
-    <div className="relative flex flex-1 flex-col overflow-hidden bg-[var(--desk-app)]">
+    <div className="relative flex min-h-dvh flex-1 flex-col overflow-x-hidden bg-[var(--desk-app)]">
       <div
         aria-hidden
         className="desk-grid pointer-events-none absolute inset-0"
@@ -33,7 +33,7 @@ export function PreLoginChrome({
         className="pointer-events-none absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-[var(--desk-app)] to-transparent"
       />
 
-      <header className="relative z-10 flex items-center justify-between gap-4 px-5 py-5 sm:px-8">
+      <header className="relative z-10 flex items-center justify-between gap-2 px-4 pt-[max(1rem,env(safe-area-inset-top))] pb-4 sm:gap-4 sm:px-8 sm:py-5">
         <Link
           href="/"
           className="flex min-w-0 items-center gap-2.5 text-base font-bold tracking-tight text-[var(--desk-text)] sm:text-lg"
@@ -46,24 +46,24 @@ export function PreLoginChrome({
         </Link>
         <nav
           aria-label="Primary"
-          className="flex shrink-0 items-center gap-1 sm:gap-2"
+          className="flex shrink-0 items-center gap-0.5 sm:gap-2"
         >
           <Link
             href="/about"
             className={cn(
-              "rounded-md px-2.5 py-1.5 text-sm transition-colors",
+              "inline-flex min-h-11 items-center rounded-md px-2.5 py-2 text-sm transition-colors sm:min-h-0 sm:py-1.5",
               activeNav === "about"
                 ? "text-[var(--desk-text)]"
                 : "text-[var(--desk-text-secondary)] hover:text-[var(--desk-text)]",
             )}
           >
-            About us
+            About
           </Link>
           <Link
             href="/login"
             className={cn(
               buttonVariants({ variant: "outline", size: "sm" }),
-              "btn-press border-[var(--desk-border-strong)] bg-transparent text-[var(--desk-text-secondary)] hover:bg-white/[0.05] hover:text-[var(--desk-text)]",
+              "btn-press min-h-11 border-[var(--desk-border-strong)] bg-transparent px-3 text-[var(--desk-text-secondary)] hover:bg-white/[0.05] hover:text-[var(--desk-text)] sm:min-h-0",
             )}
           >
             Sign in
@@ -73,7 +73,7 @@ export function PreLoginChrome({
 
       {children}
 
-      <footer className="relative z-10 mt-auto border-t border-[var(--desk-border)] px-5 py-5 sm:px-8">
+      <footer className="relative z-10 mt-auto border-t border-[var(--desk-border)] px-5 py-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:px-8">
         <div className="mx-auto flex w-full max-w-5xl flex-wrap items-center justify-between gap-3">
           <p className="font-mono text-[0.72rem] tracking-[0.06em] text-[var(--desk-text-dim)] uppercase">
             Catalyst Intel
@@ -83,7 +83,7 @@ export function PreLoginChrome({
               href="/about"
               className="text-sm text-[var(--desk-text-muted)] transition-colors hover:text-[var(--desk-text)]"
             >
-              About us
+              About
             </Link>
             <Link
               href="/login"

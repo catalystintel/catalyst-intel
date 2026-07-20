@@ -27,7 +27,11 @@ import {
   CATEGORY_LABELS,
   type EventCategoryKey,
 } from "@/lib/jobs/parse-8k-items";
-import { formatTimeDate, isWithinWindow } from "@/lib/format/relative-time";
+import {
+  formatClockTime,
+  formatTimeDate,
+  isWithinWindow,
+} from "@/lib/format/relative-time";
 import { cn } from "@/lib/utils";
 
 export type { FeedCatalyst };
@@ -47,7 +51,7 @@ const TIME_WINDOWS: { id: TimeWindow; label: string; hours: number | null }[] =
   ];
 
 const FEED_GRID =
-  "grid-cols-[minmax(0,1fr)_auto] sm:grid-cols-[148px_132px_minmax(0,1fr)_150px] lg:grid-cols-[168px_148px_minmax(0,1fr)_168px]";
+  "grid-cols-1 sm:grid-cols-[148px_132px_minmax(0,1fr)_150px] lg:grid-cols-[168px_148px_minmax(0,1fr)_168px]";
 
 function readPresence(): Presence {
   if (typeof document === "undefined") return "active";
@@ -442,7 +446,7 @@ function CatalystFeedList({
         <div role="columnheader" className="col-span-1 sm:col-span-1">
           Title
         </div>
-        <div role="columnheader" className="text-right">
+        <div role="columnheader" className="hidden text-right sm:block">
           Time
         </div>
       </div>
@@ -465,7 +469,7 @@ function CatalystFeedList({
                 }
               }}
               className={cn(
-                "feed-row group grid min-h-[60px] cursor-pointer items-center gap-3 border-b border-[rgba(28,39,54,0.95)] px-4 transition-colors duration-100 outline-none sm:gap-4 sm:px-5",
+                "feed-row group grid min-h-[60px] cursor-pointer items-center gap-3 border-b border-[rgba(28,39,54,0.95)] px-4 py-3 transition-colors duration-100 outline-none sm:gap-4 sm:px-5 sm:py-0",
                 FEED_GRID,
                 "hover:bg-white/[0.045] focus-visible:bg-white/[0.045] focus-visible:shadow-[inset_2px_0_0_var(--desk-accent)]",
                 selected && "bg-[var(--desk-accent)]/[0.08]",
@@ -505,11 +509,11 @@ function CatalystFeedList({
                 />
               </div>
 
-              <div role="cell" className="min-w-0 max-sm:col-span-1">
-                <span className="block truncate text-[0.9rem] font-medium tracking-tight text-[var(--desk-text-secondary)] group-hover:text-[var(--desk-text)] group-focus-visible:text-[var(--desk-text)] max-sm:line-clamp-2 max-sm:whitespace-normal">
+              <div role="cell" className="min-w-0">
+                <span className="block text-[0.9rem] font-medium tracking-tight text-[var(--desk-text-secondary)] group-hover:text-[var(--desk-text)] group-focus-visible:text-[var(--desk-text)] max-sm:line-clamp-2 sm:truncate">
                   {titleLine(catalyst)}
                 </span>
-                <span className="mt-1 flex items-center gap-2 sm:hidden">
+                <span className="mt-1.5 flex flex-wrap items-center gap-2 sm:hidden">
                   <SectorPill
                     tone={sectorTone(catalyst)}
                     label={sectorLabel(catalyst)}
@@ -517,10 +521,16 @@ function CatalystFeedList({
                   <span className="truncate text-[0.72rem] text-[var(--desk-text-dim)]">
                     {source.name}
                   </span>
+                  <time
+                    dateTime={catalyst.timestamp}
+                    className="ml-auto font-mono text-[0.72rem] font-medium tracking-tight text-[var(--desk-text-muted)] tabular-nums"
+                  >
+                    {formatClockTime(catalyst.timestamp)}
+                  </time>
                 </span>
               </div>
 
-              <div role="cell" className="min-w-0 text-right">
+              <div role="cell" className="hidden min-w-0 text-right sm:block">
                 <time
                   dateTime={catalyst.timestamp}
                   className="inline-block font-mono text-[0.74rem] font-medium tracking-tight whitespace-nowrap text-[var(--desk-text-muted)] tabular-nums"

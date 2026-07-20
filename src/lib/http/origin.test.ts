@@ -3,9 +3,13 @@ import { describe, expect, it } from "vitest";
 import { getRequestOrigin, safeNextPath } from "./origin";
 
 describe("getRequestOrigin", () => {
-  it("prefers the Origin header", () => {
-    const headers = new Headers({ origin: "http://localhost:3000" });
-    expect(getRequestOrigin(headers)).toBe("http://localhost:3000");
+  it("prefers x-forwarded-host over Origin (mobile / proxy safe)", () => {
+    const headers = new Headers({
+      origin: "http://localhost:3000",
+      "x-forwarded-host": "catalyst-intel.vercel.app",
+      "x-forwarded-proto": "https",
+    });
+    expect(getRequestOrigin(headers)).toBe("https://catalyst-intel.vercel.app");
   });
 
   it("uses http for localhost when Origin is missing", () => {
@@ -16,6 +20,11 @@ describe("getRequestOrigin", () => {
   it("uses https for non-local hosts when Origin is missing", () => {
     const headers = new Headers({ host: "catalyst-intel.vercel.app" });
     expect(getRequestOrigin(headers)).toBe("https://catalyst-intel.vercel.app");
+  });
+
+  it("falls back to Origin when no host headers exist", () => {
+    const headers = new Headers({ origin: "http://localhost:3000" });
+    expect(getRequestOrigin(headers)).toBe("http://localhost:3000");
   });
 });
 
