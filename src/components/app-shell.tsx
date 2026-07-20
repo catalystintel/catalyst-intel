@@ -1,12 +1,11 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
-import Link from "next/link";
 import { Menu, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 
 import { AccountMenu } from "@/components/account-menu";
 import { AppSidebar } from "@/components/app-sidebar";
-import { cn } from "@/lib/utils";
+import { LiveHeaderStatus } from "@/components/live-header-status";
 import type { NavKey } from "@/lib/nav/nav-items";
 
 interface AppShellUser {
@@ -23,26 +22,22 @@ interface AppShellProps {
 }
 
 /**
- * App chrome for authenticated pages: collapsible left sidebar, a slim top bar
- * with the brand and account menu, and a scrollable content region.
- *
- * @param user - Current user identity for the account menu and admin gating.
- * @param active - Active nav key for sidebar highlighting.
- * @param children - Page content rendered in the main region.
- * @returns The full application shell.
+ * App chrome for authenticated pages: collapsible left sidebar, LIVE top bar,
+ * account menu, and a scrollable content region.
  */
 export function AppShell({ user, active, children }: AppShellProps) {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
-    <div className="flex min-h-0 flex-1">
+    <div className="flex min-h-0 flex-1 bg-[var(--desk-app)]">
       <aside className="hidden md:block">
         <div className="sticky top-0 h-dvh">
           <AppSidebar
             active={active}
             isAdmin={user.isAdmin}
             collapsed={collapsed}
+            onCollapseToggle={() => setCollapsed((prev) => !prev)}
           />
         </div>
       </aside>
@@ -66,14 +61,14 @@ export function AppShell({ user, active, children }: AppShellProps) {
         </div>
       ) : null}
 
-      <div className="desk-shell flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-40 flex h-12 items-center justify-between gap-3 border-b border-border/70 bg-[oklch(0.15_0.015_255_/0.92)] px-3 backdrop-blur-md sm:px-5">
-          <div className="flex items-center gap-2">
+      <div className="flex min-w-0 flex-1 flex-col">
+        <header className="sticky top-0 z-40 flex items-center justify-between gap-3 border-b border-[var(--desk-border)] bg-[rgba(11,17,26,0.96)] px-3 py-3 sm:px-5">
+          <div className="flex min-w-0 items-center gap-2">
             <button
               type="button"
               aria-label="Open navigation"
               onClick={() => setMobileOpen(true)}
-              className="btn-press rounded-md border border-transparent p-1.5 text-muted-foreground hover:border-border/70 hover:bg-muted/40 md:hidden"
+              className="rounded-lg p-1.5 text-[var(--desk-text-muted)] transition-colors hover:bg-white/[0.05] hover:text-[var(--desk-text)] md:hidden"
             >
               <Menu className="size-4" />
             </button>
@@ -81,7 +76,7 @@ export function AppShell({ user, active, children }: AppShellProps) {
               type="button"
               aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
               onClick={() => setCollapsed((prev) => !prev)}
-              className="btn-press hidden rounded-md border border-transparent p-1.5 text-muted-foreground hover:border-border/70 hover:bg-muted/40 md:block"
+              className="hidden rounded-lg p-1.5 text-[var(--desk-text-muted)] transition-colors hover:bg-white/[0.05] hover:text-[var(--desk-text)] md:block"
             >
               {collapsed ? (
                 <PanelLeftOpen className="size-4" />
@@ -89,19 +84,13 @@ export function AppShell({ user, active, children }: AppShellProps) {
                 <PanelLeftClose className="size-4" />
               )}
             </button>
-            <Link
-              href="/dashboard"
-              className="group flex items-center gap-2 text-sm font-semibold tracking-tight transition-colors hover:text-amber-300"
-            >
-              <span
-                aria-hidden
-                className={cn(
-                  "inline-block size-2 rounded-full bg-amber-400",
-                  active === "live" && "live-pulse",
-                )}
-              />
-              <span>Catalyst Intel</span>
-            </Link>
+            {active === "live" ? (
+              <LiveHeaderStatus />
+            ) : (
+              <span className="truncate text-sm font-semibold tracking-tight text-[var(--desk-text)]">
+                Catalyst Intel
+              </span>
+            )}
           </div>
 
           <AccountMenu

@@ -67,17 +67,15 @@ export function AccountMenu({
         aria-haspopup="menu"
         aria-expanded={open}
         className={cn(
-          "btn-press flex items-center gap-2 rounded-md border px-1.5 py-1 transition-colors",
+          "btn-press flex items-center gap-1 rounded-full border py-0.5 pr-1.5 pl-0.5 transition-colors",
           open
-            ? "border-border/70 bg-muted/40"
-            : "border-transparent hover:border-border/70 hover:bg-muted/30",
+            ? "border-[var(--desk-border-strong)] bg-white/[0.04]"
+            : "border-transparent hover:bg-white/[0.04]",
         )}
+        aria-label="Account menu"
       >
         <Avatar avatarUrl={avatarUrl} initial={initial} />
-        <span className="hidden max-w-[9rem] truncate text-sm text-foreground/90 sm:inline">
-          {label}
-        </span>
-        <ChevronDown className="hidden size-3.5 text-muted-foreground sm:block" />
+        <ChevronDown className="size-3.5 text-[var(--desk-text-dim)]" />
       </button>
 
       {open ? (
@@ -145,7 +143,8 @@ function Avatar({
   initial: string;
   size?: "sm" | "lg";
 }) {
-  const dimensions = size === "lg" ? "size-9 text-sm" : "size-6 text-[0.65rem]";
+  const dimensions =
+    size === "lg" ? "size-9 text-sm" : "size-[30px] text-[0.68rem]";
   if (avatarUrl) {
     return (
       // eslint-disable-next-line @next/next/no-img-element -- Google avatar URL from OAuth metadata
@@ -153,7 +152,7 @@ function Avatar({
         src={avatarUrl}
         alt=""
         className={cn(
-          "rounded-sm border border-border object-cover",
+          "rounded-full border border-[var(--desk-border)] object-cover",
           dimensions,
         )}
         referrerPolicy="no-referrer"
@@ -163,7 +162,8 @@ function Avatar({
   return (
     <span
       className={cn(
-        "flex items-center justify-center rounded-sm border border-border bg-secondary font-mono text-amber-300",
+        "flex items-center justify-center rounded-full font-bold tracking-wide text-[var(--desk-text)]",
+        "bg-[linear-gradient(145deg,#3a5474,#1c2a40)] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.1)]",
         dimensions,
       )}
     >

@@ -48,20 +48,20 @@ export default async function ProfilePage() {
       }}
       active="profile"
     >
-      <PageEnter className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-6 px-3 py-5 sm:px-5 sm:py-6">
-        <div className="border-b border-border/50 pb-4">
-          <p className="font-mono text-[0.65rem] tracking-[0.2em] text-amber-400/90 uppercase">
+      <PageEnter className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-6 p-4 sm:p-5">
+        <div className="border-b border-[var(--desk-border)] pb-4">
+          <p className="font-mono text-[0.65rem] tracking-[0.2em] text-[var(--desk-live)] uppercase">
             Account
           </p>
-          <h1 className="mt-1 text-xl font-semibold tracking-tight sm:text-2xl">
+          <h1 className="mt-1 text-xl font-semibold tracking-tight text-[var(--desk-text)] sm:text-2xl">
             Profile &amp; settings
           </h1>
-          <p className="mt-1 text-sm text-muted-foreground">
+          <p className="mt-1 text-sm text-[var(--desk-text-muted)]">
             Signed in with Google via Supabase.
           </p>
         </div>
 
-        <section className="flex flex-col gap-5 rounded-lg border border-border/70 bg-[oklch(0.175_0.016_255)] p-5">
+        <section className="flex flex-col gap-5 rounded-xl border border-[var(--desk-border)] bg-[var(--desk-panel)] p-5">
           <div className="flex items-center gap-4">
             {user.avatarUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
