@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { count, desc, eq } from "drizzle-orm";
+import { count, desc, sql } from "drizzle-orm";
 
 import { AppShell } from "@/components/app-shell";
 import { DatabaseSetupNotice } from "@/components/database-setup-notice";
@@ -43,7 +43,6 @@ export default async function AdminPage() {
       fetchedAt: rawSources.fetchedAt,
     })
     .from(rawSources)
-    .where(eq(rawSources.provider, "sec-edgar"))
     .orderBy(desc(rawSources.fetchedAt))
     .limit(1)
     .get();
@@ -51,9 +50,18 @@ export default async function AdminPage() {
   const sourceCountRow = await db
     .select({ value: count() })
     .from(rawSources)
-    .where(eq(rawSources.provider, "sec-edgar"))
     .get();
   const sourceCount = sourceCountRow?.value ?? 0;
+
+  const providerCounts = await db
+    .select({
+      provider: rawSources.provider,
+      value: count(),
+    })
+    .from(rawSources)
+    .groupBy(rawSources.provider)
+    .orderBy(sql`count(*) desc`)
+    .all();
 
   const nyseCountRow = await db
     .select({ value: count() })
@@ -111,6 +119,21 @@ export default async function AdminPage() {
               </dd>
             </dl>
           </div>
+          {providerCounts.length > 0 ? (
+            <ul className="flex flex-wrap gap-x-4 gap-y-1 border-b border-border/60 px-4 py-3 font-mono text-xs text-[var(--desk-text-muted)] sm:px-5">
+              {providerCounts.map((row) => (
+                <li key={row.provider}>
+                  <span className="text-[var(--desk-text-secondary)]">
+                    {row.provider}
+                  </span>
+                  {" · "}
+                  <span className="text-foreground/90 tabular-nums">
+                    {row.value}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          ) : null}
           <div className="px-4 py-4 sm:px-5">
             <FetchTrigger />
           </div>

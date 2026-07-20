@@ -39,6 +39,12 @@ export interface FetchSecEdgarOptions {
   mode?: SecFetchMode;
   /** Limit which form types to pull (defaults to all configured feeds). */
   formTypes?: string[];
+  /**
+   * Run 30-day retention after insert. Defaults to true for standalone SEC
+   * runs; the multi-source orchestrator sets false and purges once at the end
+   * so parallel keyless inserts are not deleted mid-flight.
+   */
+  purge?: boolean;
 }
 
 interface AtomEntry {
@@ -225,7 +231,9 @@ export async function fetchSecEdgar(
     return true;
   });
 
-  const result = await ingestNormalizedCatalysts(unique, { purge: true });
+  const result = await ingestNormalizedCatalysts(unique, {
+    purge: options.purge !== false,
+  });
 
   return {
     ...result,

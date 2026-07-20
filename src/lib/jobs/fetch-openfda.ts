@@ -1,9 +1,18 @@
+import { RETENTION_DAYS } from "@/lib/jobs/data-retention";
 import {
   ingestNormalizedCatalysts,
   toSourceResult,
   type NormalizedCatalyst,
   type SourceFetchResult,
 } from "@/lib/jobs/ingest-pipeline";
+
+export interface OpenFdaSubmission {
+  submission_status_date?: string;
+  submission_type?: string;
+  submission_status?: string;
+  submission_class_code?: string;
+  submission_class_code_description?: string;
+}
 
 /**
  * openFDA returns submission_status_date as YYYYMMDD (e.g. "20241023").
@@ -36,13 +45,83 @@ function toIsoTimestamp(dateYmd: string): string {
   return iso.toISOString();
 }
 
+function yyyymmdd(d: Date): string {
+  const y = d.getUTCFullYear();
+  const m = String(d.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(d.getUTCDate()).padStart(2, "0");
+  return `${y}${m}${day}`;
+}
+
+function retentionWindowStart(now: Date = new Date()): string {
+  const start = new Date(now.getTime() - RETENTION_DAYS * 24 * 60 * 60 * 1000);
+  return yyyymmdd(start);
+}
+
+/**
+ * Among AP submissions inside the retention window, prefer the newest
+ * status date (live tape), breaking ties toward ORIG (true approvals).
+ */
+export function pickRecentApprovedSubmission(
+  submissions: OpenFdaSubmission[] | undefined,
+  options?: { now?: Date; retentionDays?: number },
+): { submission: OpenFdaSubmission; dateYmd: string } | null {
+  const now = options?.now ?? new Date();
+  const retentionDays = options?.retentionDays ?? RETENTION_DAYS;
+  const cutoff = new Date(now.getTime() - retentionDays * 24 * 60 * 60 * 1000);
+  const cutoffYmd = cutoff.toISOString().slice(0, 10);
+
+  const candidates: Array<{
+    submission: OpenFdaSubmission;
+    dateYmd: string;
+    isOrig: boolean;
+  }> = [];
+
+  for (const submission of submissions ?? []) {
+    if (submission.submission_status?.trim().toUpperCase() !== "AP") continue;
+    const dateYmd = parseOpenFdaDate(submission.submission_status_date);
+    if (!dateYmd || dateYmd < cutoffYmd) continue;
+    candidates.push({
+      submission,
+      dateYmd,
+      isOrig: submission.submission_type?.trim().toUpperCase() === "ORIG",
+    });
+  }
+
+  if (candidates.length === 0) return null;
+
+  candidates.sort((a, b) => {
+    const byDate = b.dateYmd.localeCompare(a.dateYmd);
+    if (byDate !== 0) return byDate;
+    if (a.isOrig !== b.isOrig) return a.isOrig ? -1 : 1;
+    return 0;
+  });
+
+  const best = candidates[0];
+  return { submission: best.submission, dateYmd: best.dateYmd };
+}
+
+function buildOpenFdaUrl(now: Date = new Date()): string {
+  const from = retentionWindowStart(now);
+  const to = yyyymmdd(now);
+  const search = `submissions.submission_status:AP AND submissions.submission_status_date:[${from} TO ${to}]`;
+  const params = new URLSearchParams({
+    search,
+    sort: "submissions.submission_status_date:desc",
+    limit: "25",
+  });
+  return `https://api.fda.gov/drug/drugsfda.json?${params.toString()}`;
+}
+
 /**
  * openFDA recent drug approvals / application events (free, no key required
  * for modest rate limits). Soft network failures bubble to the orchestrator.
+ *
+ * Queries only the retention window and stamps catalysts with the newest
+ * in-window AP submission date so they are not immediately wiped by the
+ * 30-day purge that runs after SEC ingest.
  */
 export async function fetchOpenFda(): Promise<SourceFetchResult> {
-  const url =
-    "https://api.fda.gov/drug/drugsfda.json?search=submissions.submission_status:AP&limit=25";
+  const url = buildOpenFdaUrl();
 
   const res = await fetch(url, {
     headers: { Accept: "application/json" },
@@ -59,11 +138,7 @@ export async function fetchOpenFda(): Promise<SourceFetchResult> {
       application_number?: string;
       sponsor_name?: string;
       products?: Array<{ brand_name?: string; active_ingredients?: unknown }>;
-      submissions?: Array<{
-        submission_status_date?: string;
-        submission_type?: string;
-        submission_status?: string;
-      }>;
+      submissions?: OpenFdaSubmission[];
       openfda?: { brand_name?: string[]; generic_name?: string[] };
     }>;
   };
@@ -74,15 +149,19 @@ export async function fetchOpenFda(): Promise<SourceFetchResult> {
     const app = row.application_number?.trim();
     if (!app) continue;
 
+    const picked = pickRecentApprovedSubmission(row.submissions);
+    if (!picked) continue;
+
     const brand =
       row.openfda?.brand_name?.[0] ||
       row.products?.[0]?.brand_name ||
       "Drug approval";
     const sponsor = row.sponsor_name?.trim() || null;
-    const submission = row.submissions?.[0];
-    const date =
-      parseOpenFdaDate(submission?.submission_status_date) ||
-      new Date().toISOString().slice(0, 10);
+    const { submission, dateYmd: date } = picked;
+    const classLabel =
+      submission.submission_class_code_description?.trim() ||
+      submission.submission_class_code?.trim() ||
+      null;
 
     normalized.push({
       provider: "openfda",
@@ -93,13 +172,17 @@ export async function fetchOpenFda(): Promise<SourceFetchResult> {
       companyName: sponsor,
       type: "FDA Approval",
       title: `${sponsor ?? "Sponsor"} — ${brand}`,
-      headline: "FDA drug approval",
+      headline:
+        submission.submission_type?.trim().toUpperCase() === "ORIG"
+          ? "FDA original approval"
+          : "FDA approval update",
       eventCategory: "regulatory",
       subcategory: "openfda_approval",
       timestamp: toIsoTimestamp(date),
       summary: [
-        submission?.submission_type,
-        submission?.submission_status,
+        submission.submission_type,
+        submission.submission_status,
+        classLabel,
         brand,
       ]
         .filter(Boolean)
