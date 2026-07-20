@@ -10,6 +10,7 @@ import {
   withRateLimitHeaders,
 } from "@/lib/http/rate-limit-response";
 import { fetchSecEdgar } from "@/lib/jobs/fetch-sec-edgar";
+import { formatSecFetchError } from "@/lib/jobs/sec-edgar-http";
 import {
   getPostHogClient,
   isPostHogServerConfigured,
@@ -63,14 +64,13 @@ export async function POST(request: NextRequest) {
     triggerDistinctId = user.supabaseUserId;
 
     try {
-      const result = await fetchSecEdgar();
+      const result = await fetchSecEdgar({ mode: "primary" });
       await captureIngestionEvent(triggerDistinctId, "completed", {
         ...result,
       });
       return withRateLimitHeaders(NextResponse.json(result), limitResult);
     } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : "Fetch job failed.";
+      const errorMessage = formatSecFetchError(error);
       await captureIngestionEvent(triggerDistinctId, "failed", {
         error_message: errorMessage,
       });
@@ -82,12 +82,11 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const result = await fetchSecEdgar();
+    const result = await fetchSecEdgar({ mode: "primary" });
     await captureIngestionEvent(triggerDistinctId, "completed", { ...result });
     return NextResponse.json(result);
   } catch (error) {
-    const errorMessage =
-      error instanceof Error ? error.message : "Fetch job failed.";
+    const errorMessage = formatSecFetchError(error);
     await captureIngestionEvent(triggerDistinctId, "failed", {
       error_message: errorMessage,
     });
