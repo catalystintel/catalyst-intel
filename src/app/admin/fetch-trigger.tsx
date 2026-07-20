@@ -143,10 +143,11 @@ export function FetchTrigger() {
           {loading ? "Fetching…" : "Fetch all sources now"}
         </Button>
         <p className="max-w-xl text-sm text-[var(--desk-text-muted)]">
-          Runs SEC EDGAR (8-K, Form 4, S-3/424B, 13D/G), Nasdaq halts, Finnhub,
-          Polygon, openFDA, ClinicalTrials, and optional Form4API via{" "}
+          Keyless (always attempted with{" "}
+          <code className="font-mono text-[0.8em]">SEC_EDGAR_USER_AGENT</code>
+          ): SEC EDGAR (+ Form 4), Nasdaq halts, openFDA, ClinicalTrials.gov.
+          Optional keys soft-skip: Finnhub, Polygon, Form4API. Via{" "}
           <code className="font-mono text-[0.8em]">Promise.allSettled</code>.
-          Missing API keys soft-skip.
         </p>
         {error ? (
           <p className="font-mono text-sm text-destructive">{error}</p>

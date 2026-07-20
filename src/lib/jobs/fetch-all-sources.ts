@@ -1,3 +1,4 @@
+import { purgeStaleCatalysts } from "@/lib/jobs/data-retention";
 import { fetchClinicalTrials } from "@/lib/jobs/fetch-clinicaltrials";
 import { fetchFinnhubCatalysts } from "@/lib/jobs/fetch-finnhub-catalysts";
 import { fetchForm4Api } from "@/lib/jobs/fetch-form4api";
@@ -38,7 +39,9 @@ async function runSource(id: CatalystSourceId): Promise<SourceFetchResult> {
   switch (id) {
     case "sec-edgar": {
       try {
-        const result = await fetchSecEdgar({ mode: "primary" });
+        // Defer retention to fetchAllCatalystSources so parallel keyless
+        // inserts (openFDA, etc.) are not wiped mid-orchestrator run.
+        const result = await fetchSecEdgar({ mode: "primary", purge: false });
         return toSourceResult("sec-edgar", result);
       } catch (error) {
         return {
@@ -130,6 +133,25 @@ export async function fetchAllCatalystSources(options?: {
 
   if (options?.includeLaterStubs) {
     sources.push(...listLaterSourceStubs());
+  }
+
+  // Single retention pass after all sources finish inserting.
+  let purgedCatalysts = 0;
+  let purgedRawSources = 0;
+  try {
+    const retention = await purgeStaleCatalysts();
+    purgedCatalysts = retention.deletedCatalysts;
+    purgedRawSources = retention.deletedRawSources;
+  } catch (error) {
+    console.error("Data retention purge failed:", error);
+  }
+
+  if (purgedCatalysts > 0 || purgedRawSources > 0) {
+    const sec = sources.find((s) => s.source === "sec-edgar");
+    if (sec) {
+      sec.purgedCatalysts = purgedCatalysts;
+      sec.purgedRawSources = purgedRawSources;
+    }
   }
 
   const totals = sources.reduce(
