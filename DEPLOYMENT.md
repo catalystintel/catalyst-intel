@@ -228,6 +228,24 @@ node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
    `ADMIN_EMAILS` on Vercel), open `/admin`, run **Fetch all sources now**, confirm `/dashboard`
    shows multi-source data.
 
+#### Keyless sources checklist (only `SEC_EDGAR_USER_AGENT` required)
+
+After **Fetch all sources now** (or a successful GHA cron run), the admin per-source
+breakdown and `raw_sources.provider` counts should include:
+
+| Provider                          | Expected status                     | Notes                                    |
+| --------------------------------- | ----------------------------------- | ---------------------------------------- |
+| `sec-edgar`                       | `ok` (Form 4 via Atom `type=4`)     | Needs `SEC_EDGAR_USER_AGENT`             |
+| `nasdaq-halts`                    | `ok`                                | No key                                   |
+| `openfda`                         | `ok` (recent AP submissions only)   | No key; dates inside 30-day retention    |
+| `clinicaltrials`                  | `ok`                                | No key                                   |
+| `finnhub`                         | `skipped` without `FINNHUB_API_KEY` | Soft-fail OK                             |
+| `polygon-news` / `polygon-prices` | `skipped` without `POLYGON_API_KEY` | Soft-fail OK                             |
+| `form4api`                        | `skipped` without `FORM4_API_KEY`   | EDGAR Form 4 still works via `sec-edgar` |
+
+On `/dashboard`, Source column should show **SEC EDGAR**, **Nasdaq Halts**, **openFDA**,
+and/or **ClinicalTrials** (not only SEC).
+
 ## Database migrations in CI/CD
 
 `npm run build` is `drizzle-kit migrate && next build` (see `package.json`) - migrations are
@@ -257,9 +275,10 @@ at this project's push frequency/team size; revisit if that changes.
 
 ## Data retention
 
-Catalysts older than 30 days (`RETENTION_DAYS` in `src/lib/jobs/data-retention.ts`) are purged at
-the end of every successful SEC EDGAR ingest (which the multi-source orchestrator always includes).
-Purging is keyed off the catalyst's **filing timestamp**, not when it was ingested. Any raw source
+Catalysts older than 30 days (`RETENTION_DAYS` in `src/lib/jobs/data-retention.ts`) are purged
+once at the end of each multi-source orchestrator run (and after standalone SEC fetches).
+Purging is keyed off the catalyst's **event timestamp**, not when it was ingested. openFDA only
+ingests AP submissions inside that window so they are not immediately deleted. Any raw source
 left with no catalyst referencing it is deleted too. `companies` rows are never purged.
 
 ## Why Turso (not local SQLite) on Vercel

@@ -181,6 +181,5 @@ Vercel; production is `main`. Env vars for each environment (and CI/CD triggers)
 ## What's next (not in this pass)
 
 - AI classification/scoring/summarization via Groq (Qwen3-32B)
-- Additional vendors: FDA openFDA, ClinicalTrials.gov
 - Watchlists and alerts
 - Deciding if/when to migrate app data to Supabase Postgres instead of Turso
