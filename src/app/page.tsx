@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
+import { PreLoginChrome } from "@/components/pre-login-chrome";
 import { SectorPill } from "@/components/sector-pill";
 import { buttonVariants } from "@/components/ui/button";
 import type { EventCategoryKey } from "@/lib/jobs/parse-8k-items";
@@ -73,41 +74,7 @@ export default async function Home() {
   }
 
   return (
-    <div className="relative flex flex-1 flex-col overflow-hidden bg-[var(--desk-app)]">
-      <div
-        aria-hidden
-        className="desk-grid pointer-events-none absolute inset-0"
-      />
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-x-0 top-0 h-[55vh] bg-[radial-gradient(ellipse_at_top,rgba(79,143,217,0.14),transparent_62%)]"
-      />
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-[var(--desk-app)] to-transparent"
-      />
-
-      <header className="relative z-10 flex items-center justify-between px-5 py-5 sm:px-8">
-        <div className="flex items-center gap-2.5">
-          <span
-            aria-hidden
-            className="brand-mark relative size-7 shrink-0 rounded-lg"
-          />
-          <span className="text-base font-bold tracking-tight text-[var(--desk-text)] sm:text-lg">
-            Catalyst Intel
-          </span>
-        </div>
-        <Link
-          href="/login"
-          className={cn(
-            buttonVariants({ variant: "outline", size: "sm" }),
-            "btn-press border-[var(--desk-border-strong)] bg-transparent text-[var(--desk-text-secondary)] hover:bg-white/[0.05] hover:text-[var(--desk-text)]",
-          )}
-        >
-          Sign in
-        </Link>
-      </header>
-
+    <PreLoginChrome glowClassName="h-[55vh]">
       <main className="page-enter relative z-10 mx-auto flex w-full max-w-5xl flex-1 flex-col justify-center gap-10 px-5 pt-4 pb-16 sm:px-8">
         <div className="max-w-2xl">
           <span className="inline-flex items-center gap-1.5 rounded-full border border-[rgba(240,193,75,0.35)] bg-[rgba(240,193,75,0.12)] px-2.5 py-1 text-[0.68rem] font-bold tracking-[0.08em] text-[var(--desk-live)]">
@@ -237,6 +204,6 @@ export default async function Home() {
           </div>
         </section>
       </main>
-    </div>
+    </PreLoginChrome>
   );
 }
