@@ -44,37 +44,43 @@ export default async function LoginPage({
   const destination = next ?? "/dashboard";
 
   return (
-    <div className="relative flex flex-1 flex-col overflow-hidden">
+    <div className="relative flex flex-1 flex-col overflow-hidden bg-[var(--desk-app)]">
       <div
         aria-hidden
         className="desk-grid pointer-events-none absolute inset-0"
       />
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-x-0 top-0 h-[40vh] bg-[radial-gradient(ellipse_at_top,oklch(0.45_0.06_250_/0.18),transparent_65%)]"
+        className="pointer-events-none absolute inset-x-0 top-0 h-[40vh] bg-[radial-gradient(ellipse_at_top,rgba(79,143,217,0.14),transparent_65%)]"
       />
 
       <header className="relative z-10 flex items-center justify-between px-5 py-5 sm:px-8">
         <Link
           href="/"
-          className="flex items-center gap-2.5 text-sm font-semibold tracking-tight"
+          className="flex items-center gap-2.5 text-sm font-bold tracking-tight text-[var(--desk-text)]"
         >
           <span
             aria-hidden
-            className="live-pulse inline-block size-2 rounded-full bg-amber-400"
+            className="brand-mark relative size-7 shrink-0 rounded-lg"
           />
           Catalyst Intel
         </Link>
       </header>
 
       <main className="page-enter relative z-10 flex flex-1 items-center justify-center px-4 pb-16">
-        <div className="w-full max-w-sm border border-border/70 bg-[oklch(0.175_0.016_255_/0.95)] p-6 backdrop-blur-sm">
-          <p className="font-mono text-[0.65rem] tracking-[0.18em] text-amber-400/90 uppercase">
-            Desk access
-          </p>
-          <h1 className="mt-2 text-xl font-semibold tracking-tight">Sign in</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Continue with Google to open the Live catalyst feed.
+        <div className="w-full max-w-sm rounded-xl border border-[var(--desk-border)] bg-[var(--desk-panel)] p-6 shadow-[0_24px_80px_rgba(0,0,0,0.28)]">
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-[rgba(240,193,75,0.35)] bg-[rgba(240,193,75,0.12)] px-2.5 py-1 text-[0.68rem] font-bold tracking-[0.08em] text-[var(--desk-live)]">
+            <span
+              aria-hidden
+              className="live-pulse size-1.5 rounded-full bg-[var(--desk-live)]"
+            />
+            LIVE
+          </span>
+          <h1 className="mt-3 text-xl font-semibold tracking-tight text-[var(--desk-text)]">
+            Sign in
+          </h1>
+          <p className="mt-1 text-sm text-[var(--desk-text-muted)]">
+            Continue with Google to open the Latest News feed.
           </p>
 
           <div className="mt-6 flex flex-col gap-4">
