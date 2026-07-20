@@ -1,9 +1,10 @@
 import {
   Bell,
-  CalendarClock,
+  Bookmark,
   ChartNoAxesCombined,
-  Radio,
-  SlidersHorizontal,
+  LayoutDashboard,
+  Newspaper,
+  Settings,
   Star,
   Wrench,
   type LucideIcon,
@@ -12,10 +13,10 @@ import {
 /** Stable identifier for the active nav entry, passed by each page. */
 export type NavKey =
   | "live"
+  | "news"
   | "watchlist"
-  | "screener"
   | "alerts"
-  | "calendar"
+  | "reports"
   | "analytics"
   | "admin"
   | "profile";
@@ -31,22 +32,23 @@ export interface NavItem {
 }
 
 const PRIMARY_NAV: NavItem[] = [
-  { key: "live", label: "Live feed", icon: Radio, href: "/dashboard" },
-  { key: "watchlist", label: "Watchlist", icon: Star, comingSoon: true },
   {
-    key: "screener",
-    label: "Screener",
-    icon: SlidersHorizontal,
-    comingSoon: true,
+    key: "live",
+    label: "Dashboard",
+    icon: LayoutDashboard,
+    href: "/dashboard",
   },
+  { key: "news", label: "News Feed", icon: Newspaper, comingSoon: true },
   { key: "alerts", label: "Alerts", icon: Bell, comingSoon: true },
-  { key: "calendar", label: "Calendar", icon: CalendarClock, comingSoon: true },
+  { key: "watchlist", label: "Watchlists", icon: Star, comingSoon: true },
+  { key: "reports", label: "Reports", icon: Bookmark, comingSoon: true },
   {
     key: "analytics",
     label: "Analytics",
     icon: ChartNoAxesCombined,
     comingSoon: true,
   },
+  { key: "profile", label: "Settings", icon: Settings, href: "/profile" },
 ];
 
 const ADMIN_NAV: NavItem = {

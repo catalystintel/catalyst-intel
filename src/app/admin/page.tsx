@@ -64,21 +64,21 @@ export default async function AdminPage() {
       }}
       active="admin"
     >
-      <PageEnter className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-6 px-3 py-5 sm:px-5 sm:py-6">
-        <div className="border-b border-border/50 pb-4">
-          <p className="font-mono text-[0.65rem] tracking-[0.2em] text-amber-400/90 uppercase">
+      <PageEnter className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-6 p-4 sm:p-5">
+        <div className="border-b border-[var(--desk-border)] pb-4">
+          <p className="font-mono text-[0.65rem] tracking-[0.2em] text-[var(--desk-live)] uppercase">
             Ops console
           </p>
-          <h1 className="mt-1 text-xl font-semibold tracking-tight sm:text-2xl">
+          <h1 className="mt-1 text-xl font-semibold tracking-tight text-[var(--desk-text)] sm:text-2xl">
             Data ingestion
           </h1>
-          <p className="mt-1 max-w-xl text-sm text-muted-foreground">
+          <p className="mt-1 max-w-xl text-sm text-[var(--desk-text-muted)]">
             Trigger vendor fetch jobs for the Live tape. Production schedules
             still use the cron secret path (GitHub Actions).
           </p>
         </div>
 
-        <section className="border border-border/70 bg-[oklch(0.175_0.016_255)]">
+        <section className="overflow-hidden rounded-xl border border-[var(--desk-border)] bg-[var(--desk-panel)]">
           <div className="flex flex-wrap items-start justify-between gap-4 border-b border-border/60 px-4 py-4 sm:px-5">
             <div>
               <h2 className="font-mono text-sm tracking-wide text-foreground">

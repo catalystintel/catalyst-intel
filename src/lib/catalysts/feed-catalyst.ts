@@ -19,6 +19,10 @@ export interface FeedCatalyst {
   summary: string | null;
   impactScore: number | null;
   sourceUrl: string | null;
+  /** raw_sources.provider, e.g. "sec-edgar". */
+  sourceProvider: string | null;
+  /** companies.sector when the catalyst is linked to a company row. */
+  sector: string | null;
 }
 
 /** Shape shared by the DB row and the JSON API response before normalization. */
@@ -35,6 +39,8 @@ export interface RawCatalystRow {
   summary: string | null;
   impactScore: number | null;
   sourceUrl: string | null;
+  sourceProvider?: string | null;
+  sector?: string | null;
 }
 
 function toEventCategory(
@@ -67,5 +73,7 @@ export function toFeedCatalyst(row: RawCatalystRow): FeedCatalyst {
     summary: row.summary,
     impactScore: row.impactScore,
     sourceUrl: row.sourceUrl,
+    sourceProvider: row.sourceProvider ?? null,
+    sector: row.sector ?? null,
   };
 }

@@ -7,7 +7,7 @@ import { DatabaseSetupNotice } from "@/components/database-setup-notice";
 import { PageEnter } from "@/components/page-enter";
 import { db } from "@/db/client";
 import { isLibsqlConfigured } from "@/db/env";
-import { catalysts, rawSources } from "@/db/schema";
+import { catalysts, companies, rawSources } from "@/db/schema";
 import { getCurrentAppUser } from "@/lib/auth/current-user";
 import { toFeedCatalyst } from "@/lib/catalysts/feed-catalyst";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -47,9 +47,12 @@ export default async function DashboardPage() {
       summary: catalysts.summary,
       impactScore: catalysts.impactScore,
       sourceUrl: rawSources.url,
+      sourceProvider: rawSources.provider,
+      sector: companies.sector,
     })
     .from(catalysts)
     .leftJoin(rawSources, eq(catalysts.rawSourceId, rawSources.id))
+    .leftJoin(companies, eq(catalysts.companyId, companies.id))
     .orderBy(desc(catalysts.timestamp))
     .limit(50)
     .all();
@@ -64,33 +67,7 @@ export default async function DashboardPage() {
       }}
       active="live"
     >
-      <PageEnter className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-4 px-3 py-5 sm:px-5 sm:py-6">
-        <div className="flex flex-wrap items-end justify-between gap-3 border-b border-border/50 pb-4">
-          <div>
-            <div className="flex items-center gap-2">
-              <span
-                aria-hidden
-                className="live-pulse inline-block size-1.5 rounded-full bg-amber-400"
-              />
-              <p className="font-mono text-[0.65rem] tracking-[0.2em] text-amber-400/90 uppercase">
-                Live feed
-              </p>
-            </div>
-            <h1 className="mt-1 text-xl font-semibold tracking-tight sm:text-2xl">
-              On-spot catalysts
-            </h1>
-            <p className="mt-1 max-w-xl text-sm text-muted-foreground">
-              8-K filings decoded as they hit — each row shows the ticker,
-              company, and the actual event (earnings, M&amp;A, management,
-              distress…). Click for items and the filing link. Soft-refreshes
-              while focused; pauses when hidden.
-            </p>
-          </div>
-          <p className="font-mono text-[0.65rem] tracking-[0.14em] text-muted-foreground uppercase">
-            Desk · multi-monitor scan
-          </p>
-        </div>
-
+      <PageEnter className="flex min-h-0 flex-1 flex-col p-4 sm:p-5">
         <LiveCatalystFeed
           initialCatalysts={recentCatalysts.map(toFeedCatalyst)}
           isAdmin={user.isAdmin}

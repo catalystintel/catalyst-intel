@@ -3,7 +3,7 @@ import { desc, eq } from "drizzle-orm";
 
 import { LIBSQL_SETUP_HINT, isLibsqlConfigured } from "@/db/env";
 import { db } from "@/db/client";
-import { catalysts, rawSources } from "@/db/schema";
+import { catalysts, companies, rawSources } from "@/db/schema";
 import { getCurrentAppUser } from "@/lib/auth/current-user";
 import { getClientIp } from "@/lib/http/client-ip";
 import { RATE_LIMITS, checkRateLimit } from "@/lib/http/rate-limit";
@@ -68,9 +68,12 @@ export async function GET(request: NextRequest) {
       summary: catalysts.summary,
       impactScore: catalysts.impactScore,
       sourceUrl: rawSources.url,
+      sourceProvider: rawSources.provider,
+      sector: companies.sector,
     })
     .from(catalysts)
     .leftJoin(rawSources, eq(catalysts.rawSourceId, rawSources.id))
+    .leftJoin(companies, eq(catalysts.companyId, companies.id))
     .orderBy(desc(catalysts.timestamp))
     .limit(limit)
     .all();

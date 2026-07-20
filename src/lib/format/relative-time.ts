@@ -14,14 +14,32 @@ export function formatRelativeAge(iso: string, now = Date.now()): string {
   });
 }
 
-/** Wall-clock time (HH:MM) in the viewer's locale, for the feed's "Time" cell. */
+/** Wall-clock time in en-US, for the feed's compact "Time" cell. */
 export function formatClockTime(iso: string): string {
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return "—";
-  return date.toLocaleTimeString(undefined, {
-    hour: "2-digit",
+  return date.toLocaleTimeString("en-US", {
+    hour: "numeric",
     minute: "2-digit",
   });
+}
+
+/**
+ * Trading-desk time cell: `10:23 AM · Jul 20, 2026` (en-US, matches UX mock).
+ */
+export function formatTimeDate(iso: string): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return "—";
+  const time = date.toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+  });
+  const day = date.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+  return `${time} · ${day}`;
 }
 
 export function isWithinWindow(
