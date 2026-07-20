@@ -1,4 +1,4 @@
-name: Fetch SEC EDGAR (scheduled ETL)
+name: Fetch catalysts (scheduled ETL)
 
 # GitHub Actions' scheduled workflows have a 5-minute floor and are
 # best-effort (delays are common at peak load) - this is the closest free
@@ -20,7 +20,7 @@ jobs:
         environment: [production, staging]
     runs-on: ubuntu-latest
     steps:
-      - name: Trigger ingestion endpoint (${{ matrix.environment }})
+      - name: Trigger multi-source ingestion (${{ matrix.environment }})
         env:
           APP_URL: ${{ matrix.environment == 'production' && secrets.PROD_APP_URL || secrets.STAGING_APP_URL }}
           CRON_SECRET: ${{ matrix.environment == 'production' && secrets.CRON_SECRET || secrets.STAGING_CRON_SECRET }}
@@ -32,8 +32,9 @@ jobs:
           fi
 
           response=$(curl -s -o response.json -w "%{http_code}" -X POST \
-            "$APP_URL/api/admin/fetch/sec-edgar" \
-            -H "x-cron-secret: $CRON_SECRET")
+            "$APP_URL/api/admin/fetch/all" \
+            -H "x-cron-secret: $CRON_SECRET" \
+            -H "Content-Type: application/json")
 
           echo "HTTP status: $response"
           cat response.json

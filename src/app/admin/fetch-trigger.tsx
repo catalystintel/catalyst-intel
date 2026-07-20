@@ -4,15 +4,28 @@ import { useState } from "react";
 import posthog from "posthog-js";
 
 import { Button } from "@/components/ui/button";
+import { CATALYST_SOURCE_IDS } from "@/lib/jobs/catalyst-sources";
 
-interface FetchResult {
+interface SourceResult {
+  source: string;
+  configured: boolean;
+  status: "ok" | "skipped" | "error";
+  message?: string;
   fetched: number;
   inserted: number;
   skipped: number;
   errors: number;
+}
+
+interface FetchAllResult {
   ranAt: string;
-  purgedCatalysts: number;
-  purgedRawSources: number;
+  sources: SourceResult[];
+  totals: {
+    fetched: number;
+    inserted: number;
+    skipped: number;
+    errors: number;
+  };
 }
 
 interface NyseFetchResult {
@@ -28,36 +41,67 @@ interface NyseFetchResult {
 
 export function FetchTrigger() {
   const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<FetchResult | null>(null);
+  const [result, setResult] = useState<FetchAllResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [sourceLoading, setSourceLoading] = useState<string | null>(null);
 
   const [nyseLoading, setNyseLoading] = useState(false);
   const [nyseResult, setNyseResult] = useState<NyseFetchResult | null>(null);
   const [nyseError, setNyseError] = useState<string | null>(null);
 
-  async function handleFetch() {
+  async function handleFetchAll() {
     setLoading(true);
     setError(null);
-    posthog.capture("sec_edgar_fetch_triggered");
+    posthog.capture("multi_source_fetch_triggered");
     try {
-      const res = await fetch("/api/admin/fetch/sec-edgar", { method: "POST" });
+      const res = await fetch("/api/admin/fetch/all", { method: "POST" });
       const data = await res.json();
       if (!res.ok) {
-        throw new Error(data.error ?? "Fetch job failed.");
+        throw new Error(data.error ?? "Fetch all failed.");
       }
       setResult(data);
-      posthog.capture("sec_edgar_fetch_completed", {
-        fetched: data.fetched,
-        inserted: data.inserted,
-        skipped: data.skipped,
-        errors: data.errors,
+      posthog.capture("multi_source_fetch_completed", {
+        inserted: data.totals?.inserted,
+        errors: data.totals?.errors,
       });
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Fetch job failed.";
+      const message = err instanceof Error ? err.message : "Fetch all failed.";
       setError(message);
-      posthog.capture("sec_edgar_fetch_error", { error_message: message });
+      posthog.capture("multi_source_fetch_error", { error_message: message });
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handleFetchSource(source: string) {
+    setSourceLoading(source);
+    setError(null);
+    posthog.capture("source_fetch_triggered", { source });
+    try {
+      const res = await fetch(
+        `/api/admin/fetch/${encodeURIComponent(source)}`,
+        { method: "POST" },
+      );
+      const data = await res.json();
+      if (!res.ok && data.status !== "skipped") {
+        throw new Error(data.error ?? data.message ?? "Source fetch failed.");
+      }
+      setResult({
+        ranAt: data.ranAt ?? new Date().toISOString(),
+        sources: [data],
+        totals: {
+          fetched: data.fetched ?? 0,
+          inserted: data.inserted ?? 0,
+          skipped: data.skipped ?? 0,
+          errors: data.errors ?? 0,
+        },
+      });
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Source fetch failed.";
+      setError(message);
+    } finally {
+      setSourceLoading(null);
     }
   }
 
@@ -92,36 +136,69 @@ export function FetchTrigger() {
     <div className="flex flex-col gap-8">
       <div className="flex flex-col gap-3">
         <Button
-          onClick={handleFetch}
-          disabled={loading}
+          onClick={handleFetchAll}
+          disabled={loading || sourceLoading !== null}
           className="btn-press w-fit bg-[var(--desk-live)] text-[#121212] hover:brightness-110"
         >
-          {loading ? "Fetching…" : "Fetch SEC EDGAR now"}
+          {loading ? "Fetching…" : "Fetch all sources now"}
         </Button>
+        <p className="max-w-xl text-sm text-[var(--desk-text-muted)]">
+          Runs SEC EDGAR (8-K, Form 4, S-3/424B, 13D/G), Nasdaq halts, Finnhub,
+          Polygon, openFDA, ClinicalTrials, and optional Form4API via{" "}
+          <code className="font-mono text-[0.8em]">Promise.allSettled</code>.
+          Missing API keys soft-skip.
+        </p>
         {error ? (
           <p className="font-mono text-sm text-destructive">{error}</p>
         ) : null}
         {result ? (
-          <dl className="grid w-fit grid-cols-2 gap-x-8 gap-y-1.5 border border-border/70 bg-background/40 p-4 font-mono text-sm">
-            <dt className="text-muted-foreground">Fetched</dt>
-            <dd className="tabular-nums">{result.fetched}</dd>
-            <dt className="text-muted-foreground">Inserted</dt>
-            <dd className="tabular-nums">{result.inserted}</dd>
-            <dt className="text-muted-foreground">Skipped</dt>
-            <dd className="tabular-nums">{result.skipped}</dd>
-            <dt className="text-muted-foreground">Errors</dt>
-            <dd className="tabular-nums">{result.errors}</dd>
-            <dt className="text-muted-foreground">Ran at</dt>
-            <dd className="tabular-nums">
-              {new Date(result.ranAt).toLocaleTimeString()}
-            </dd>
-            <dt className="text-muted-foreground">Purged (30d+)</dt>
-            <dd className="tabular-nums">
-              {result.purgedCatalysts} catalysts / {result.purgedRawSources}{" "}
-              sources
-            </dd>
-          </dl>
+          <div className="flex flex-col gap-3">
+            <dl className="grid w-fit grid-cols-2 gap-x-8 gap-y-1.5 border border-border/70 bg-background/40 p-4 font-mono text-sm">
+              <dt className="text-muted-foreground">Inserted</dt>
+              <dd className="tabular-nums">{result.totals.inserted}</dd>
+              <dt className="text-muted-foreground">Skipped</dt>
+              <dd className="tabular-nums">{result.totals.skipped}</dd>
+              <dt className="text-muted-foreground">Errors</dt>
+              <dd className="tabular-nums">{result.totals.errors}</dd>
+              <dt className="text-muted-foreground">Ran at</dt>
+              <dd className="tabular-nums">
+                {new Date(result.ranAt).toLocaleTimeString()}
+              </dd>
+            </dl>
+            <ul className="flex flex-col gap-1 font-mono text-xs text-[var(--desk-text-muted)]">
+              {result.sources.map((s) => (
+                <li key={s.source}>
+                  <span className="text-[var(--desk-text-secondary)]">
+                    {s.source}
+                  </span>
+                  {" · "}
+                  {s.status}
+                  {" · "}+{s.inserted}/skip{s.skipped}/err{s.errors}
+                  {s.message ? ` — ${s.message}` : ""}
+                </li>
+              ))}
+            </ul>
+          </div>
         ) : null}
+      </div>
+
+      <div className="border-t border-[var(--desk-border)] pt-6">
+        <h3 className="font-mono text-sm tracking-wide text-[var(--desk-text)]">
+          Per-source
+        </h3>
+        <div className="mt-3 flex flex-wrap gap-2">
+          {CATALYST_SOURCE_IDS.map((source) => (
+            <Button
+              key={source}
+              onClick={() => void handleFetchSource(source)}
+              disabled={loading || sourceLoading !== null}
+              variant="outline"
+              className="btn-press border-[var(--desk-border-strong)] bg-transparent font-mono text-xs text-[var(--desk-text)] hover:bg-white/[0.05]"
+            >
+              {sourceLoading === source ? "…" : source}
+            </Button>
+          ))}
+        </div>
       </div>
 
       <div className="border-t border-[var(--desk-border)] pt-6">

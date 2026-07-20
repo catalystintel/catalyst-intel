@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { FeedCatalyst } from "./feed-catalyst";
 import {
+  eventLabel,
   sectorLabel,
   sectorTone,
   sourceDisplay,
@@ -17,10 +18,14 @@ function base(overrides: Partial<FeedCatalyst> = {}): FeedCatalyst {
     title: "NVIDIA Corp — 8-K filing",
     headline: "Earnings / results",
     eventCategory: "earnings",
+    subcategory: "8k",
     items: [],
     timestamp: "2026-07-20T14:23:00.000Z",
     summary: null,
     impactScore: null,
+    confidence: 85,
+    tags: ["8k"],
+    historicalImpact: null,
     sourceUrl: "https://example.com",
     sourceProvider: "sec-edgar",
     sector: null,
@@ -36,6 +41,14 @@ describe("sourceDisplay", () => {
       initial: "S",
       tone: "sec",
     });
+  });
+
+  it("maps nasdaq-halts provider", () => {
+    expect(
+      sourceDisplay(
+        base({ sourceProvider: "nasdaq-halts", type: "Trading Halt" }),
+      ),
+    ).toMatchObject({ name: "Nasdaq Halts", initial: "N" });
   });
 });
 
@@ -57,6 +70,14 @@ describe("titleLine", () => {
     expect(titleLine(base())).toBe("Earnings / results");
     expect(titleLine(base({ headline: null }))).toBe(
       "NVIDIA Corp — 8-K filing",
+    );
+  });
+});
+
+describe("eventLabel", () => {
+  it("prefers subcategory", () => {
+    expect(eventLabel(base({ subcategory: "halt_resumed" }))).toBe(
+      "halt resumed",
     );
   });
 });
