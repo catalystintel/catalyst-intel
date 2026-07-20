@@ -24,7 +24,7 @@ export function PreLoginChrome({
       <div
         aria-hidden
         className={cn(
-          "pointer-events-none absolute inset-x-0 top-0 bg-[radial-gradient(ellipse_at_top,rgba(79,143,217,0.14),transparent_62%)]",
+          "pointer-events-none absolute inset-x-0 top-0 bg-[radial-gradient(ellipse_at_top,rgba(255,255,255,0.07),transparent_62%)]",
           glowClassName,
         )}
       />

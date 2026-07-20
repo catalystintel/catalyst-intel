@@ -15,6 +15,20 @@
       "when": 1784493236619,
       "tag": "0001_nebulous_tenebrous",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1784560000000,
+      "tag": "0002_jtbd_watchlist_alerts",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1784600000000,
+      "tag": "0003_nyse_listings",
+      "breakpoints": true
     }
   ]
 }

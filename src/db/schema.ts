@@ -63,8 +63,91 @@ export const catalysts = sqliteTable("catalysts", {
     .references(() => rawSources.id),
   // Filled in by the later AI processing phase - null until then.
   summary: text("summary"),
+  // Rule-based materiality (0–100) until AI scoring; see materiality.ts.
   impactScore: integer("impact_score"),
   createdAt: text("created_at")
+    .notNull()
+    .default(sql`(current_timestamp)`),
+});
+
+/** Per-user tickers the desk cares about (JTBD quiet-mode filter). */
+export const watchlistEntries = sqliteTable("watchlist_entries", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: integer("user_id")
+    .notNull()
+    .references(() => users.id),
+  ticker: text("ticker").notNull(),
+  createdAt: text("created_at")
+    .notNull()
+    .default(sql`(current_timestamp)`),
+});
+
+/**
+ * Playbook: which event categories count as signal when the tape is quiet.
+ * One row per user; `categories` is a JSON string array of EventCategoryKey.
+ */
+export const playbookSettings = sqliteTable("playbook_settings", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: integer("user_id")
+    .notNull()
+    .unique()
+    .references(() => users.id),
+  categories: text("categories", { mode: "json" }).notNull(),
+  /** When true, Live feed only shows watchlist + playbook-matching rows. */
+  quietMode: integer("quiet_mode", { mode: "boolean" })
+    .notNull()
+    .default(false),
+  updatedAt: text("updated_at")
+    .notNull()
+    .default(sql`(current_timestamp)`),
+});
+
+export type AlertChannel = "email" | "webhook" | "push";
+
+export type AlertSession = "AH" | "PM" | "RTH" | "any";
+
+export interface AlertRuleConditions {
+  /** Empty / omitted = any category. */
+  categories?: string[];
+  /** Minimum rule-based impact score (0–100). */
+  minImpact?: number;
+  /** Session filter for AH/PM bombs; default any. */
+  sessions?: AlertSession[];
+}
+
+/** User-defined delivery rules (email / webhook MVP; push stubbed). */
+export const alertRules = sqliteTable("alert_rules", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: integer("user_id")
+    .notNull()
+    .references(() => users.id),
+  name: text("name").notNull(),
+  channel: text("channel", { enum: ["email", "webhook", "push"] }).notNull(),
+  enabled: integer("enabled", { mode: "boolean" }).notNull().default(true),
+  webhookUrl: text("webhook_url"),
+  emailTo: text("email_to"),
+  conditions: text("conditions", { mode: "json" }).notNull(),
+  createdAt: text("created_at")
+    .notNull()
+    .default(sql`(current_timestamp)`),
+});
+
+/**
+ * NYSE listing universe from Finnhub (`stock/symbol?exchange=US`, mic XNYS).
+ * Optional last price filled when quote enrichment runs.
+ */
+export const nyseListings = sqliteTable("nyse_listings", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  symbol: text("symbol").notNull().unique(),
+  displaySymbol: text("display_symbol").notNull(),
+  description: text("description"),
+  mic: text("mic"),
+  type: text("type"),
+  currency: text("currency"),
+  /** Last trade price as decimal string (e.g. "184.25"); null until quoted. */
+  lastPrice: text("last_price"),
+  quotedAt: text("quoted_at"),
+  updatedAt: text("updated_at")
     .notNull()
     .default(sql`(current_timestamp)`),
 });

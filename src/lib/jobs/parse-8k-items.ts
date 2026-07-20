@@ -83,7 +83,8 @@ const ITEM_CATALOG: Record<string, ItemMeta> = {
 
 // Higher wins when a filing lists several items. Distress/earnings/deals are the
 // headline-grabbers; 9.01 (exhibits) and 7.01/8.01 are near-boilerplate padding.
-const CATEGORY_PRIORITY: Record<EventCategoryKey, number> = {
+// Also used as the rule-based materiality score (0–100) until AI scoring ships.
+export const CATEGORY_PRIORITY: Record<EventCategoryKey, number> = {
   distress: 90,
   earnings: 85,
   deals: 80,

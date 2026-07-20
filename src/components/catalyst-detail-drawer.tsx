@@ -1,10 +1,12 @@
 "use client";
 
 import { useEffect } from "react";
-import { ExternalLink, XIcon } from "lucide-react";
+import { Check, XIcon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { CategoryBadge } from "@/components/category-badge";
+import { EdgarProofLink } from "@/components/edgar-proof-link";
+import { MaterialityBadge } from "@/components/materiality-badge";
 import type { FeedCatalyst } from "@/lib/catalysts/feed-catalyst";
 import { formatRelativeAge } from "@/lib/format/relative-time";
 import { CATEGORY_LABELS } from "@/lib/jobs/parse-8k-items";
@@ -13,9 +15,13 @@ import { cn } from "@/lib/utils";
 export function CatalystDetailDrawer({
   catalyst,
   onClose,
+  onAct,
+  onDismiss,
 }: {
   catalyst: FeedCatalyst | null;
   onClose: () => void;
+  onAct?: () => void;
+  onDismiss?: () => void;
 }) {
   const open = catalyst !== null;
 
@@ -93,12 +99,33 @@ export function CatalystDetailDrawer({
             </div>
 
             <div className="flex flex-1 flex-col gap-5 overflow-y-auto px-5 py-5">
-              {catalyst.eventCategory ? (
-                <CategoryBadge
+              <div className="flex flex-wrap items-center gap-2">
+                {catalyst.eventCategory ? (
+                  <CategoryBadge category={catalyst.eventCategory} />
+                ) : null}
+                <MaterialityBadge
+                  score={catalyst.impactScore}
                   category={catalyst.eventCategory}
-                  className="w-fit"
                 />
-              ) : null}
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => onAct?.()}
+                  className="inline-flex items-center gap-1.5 rounded-md border border-amber-400/45 bg-amber-400/12 px-3 py-1.5 font-mono text-xs text-amber-200"
+                >
+                  <Check className="size-3.5" />
+                  Act
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onDismiss?.()}
+                  className="inline-flex items-center gap-1.5 rounded-md border border-border/70 px-3 py-1.5 font-mono text-xs text-muted-foreground hover:text-foreground"
+                >
+                  Dismiss
+                </button>
+              </div>
 
               <dl className="grid grid-cols-2 gap-4 font-mono text-xs">
                 <div>
@@ -178,21 +205,24 @@ export function CatalystDetailDrawer({
                 </div>
               )}
 
-              {catalyst.sourceUrl ? (
-                <a
-                  href={catalyst.sourceUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="btn-press inline-flex w-fit items-center gap-2 rounded-md border border-steel/50 bg-steel/15 px-3 py-2 font-mono text-xs text-steel-foreground transition-colors hover:border-amber-400/50 hover:bg-amber-400/10 hover:text-amber-200"
-                >
-                  Open SEC filing
-                  <ExternalLink className="size-3.5" />
-                </a>
-              ) : (
-                <p className="font-mono text-xs text-muted-foreground">
-                  No filing deep-link stored for this row.
+              <div>
+                <p className="font-mono text-[0.65rem] tracking-[0.14em] text-muted-foreground uppercase">
+                  Proof (EDGAR)
                 </p>
-              )}
+                <div className="mt-2">
+                  <EdgarProofLink url={catalyst.sourceUrl} />
+                </div>
+              </div>
+
+              <div className="rounded-lg border border-dashed border-border/70 bg-muted/20 px-3 py-3">
+                <p className="font-mono text-[0.65rem] tracking-[0.14em] text-muted-foreground uppercase">
+                  Historical reaction
+                </p>
+                <p className="mt-1.5 text-sm text-muted-foreground">
+                  Coming soon — prior move context after similar catalysts will
+                  land here. No synthetic history is shown.
+                </p>
+              </div>
             </div>
           </>
         ) : null}

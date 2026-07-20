@@ -2,65 +2,74 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { PreLoginChrome } from "@/components/pre-login-chrome";
-import { SectorPill } from "@/components/sector-pill";
 import { buttonVariants } from "@/components/ui/button";
-import type { EventCategoryKey } from "@/lib/jobs/parse-8k-items";
 import { cn } from "@/lib/utils";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 
 const PREVIEW_GRID =
-  "grid-cols-1 sm:grid-cols-[148px_132px_minmax(0,1fr)_150px] lg:grid-cols-[168px_148px_minmax(0,1fr)_168px]";
+  "grid-cols-1 sm:grid-cols-[72px_72px_72px_minmax(0,1fr)_64px] lg:grid-cols-[80px_80px_80px_minmax(0,1fr)_72px_78px]";
 
 const DEMO_ROWS: {
-  sourceName: string;
-  sourceMeta: string;
-  sector: string;
-  tone: EventCategoryKey | "sec";
+  ticker: string;
+  event: string;
+  impact: "HIGH" | "MED" | "LOW";
   title: string;
   time: string;
 }[] = [
   {
-    sourceName: "SEC EDGAR",
-    sourceMeta: "8-K · NVDA",
-    sector: "Earnings",
-    tone: "earnings",
-    title: "NVDA — preliminary quarterly results (Item 2.02)",
-    time: "10:23 AM · Jul 20, 2026",
+    ticker: "NVDA",
+    event: "8-K",
+    impact: "HIGH",
+    title: "Item 2.02 — Results of Operations and Financial Condition",
+    time: "10:23 AM",
   },
   {
-    sourceName: "SEC EDGAR",
-    sourceMeta: "8-K · TSLA",
-    sector: "Disclosure",
-    tone: "disclosure",
-    title: "TSLA — other events, guidance update (Item 8.01)",
-    time: "10:18 AM · Jul 20, 2026",
+    ticker: "TSLA",
+    event: "8-K",
+    impact: "HIGH",
+    title: "Item 8.01 — Other Events · guidance update",
+    time: "10:18 AM",
   },
   {
-    sourceName: "SEC EDGAR",
-    sourceMeta: "8-K · AMD",
-    sector: "M&A / Deals",
-    tone: "deals",
-    title: "AMD — material definitive agreement (Item 1.01)",
-    time: "10:15 AM · Jul 20, 2026",
+    ticker: "AMD",
+    event: "8-K",
+    impact: "MED",
+    title: "Item 1.01 — Material definitive agreement",
+    time: "10:15 AM",
   },
   {
-    sourceName: "SEC EDGAR",
-    sourceMeta: "8-K · PLTR",
-    sector: "Management",
-    tone: "management",
-    title: "PLTR — officer / director change (Item 5.02)",
-    time: "10:12 AM · Jul 20, 2026",
+    ticker: "JPM",
+    event: "8-K",
+    impact: "LOW",
+    title: "Item 5.02 — Departure of directors or certain officers",
+    time: "10:12 AM",
   },
   {
-    sourceName: "SEC EDGAR",
-    sourceMeta: "8-K · SMCI",
-    sector: "Restructuring",
-    tone: "restructuring",
-    title: "SMCI — costs associated with exit (Item 2.05)",
-    time: "10:08 AM · Jul 20, 2026",
+    ticker: "MRK",
+    event: "8-K",
+    impact: "HIGH",
+    title: "Item 8.01 — Other Events · FDA decision referenced",
+    time: "10:08 AM",
   },
 ];
+
+function ImpactChip({ impact }: { impact: "HIGH" | "MED" | "LOW" }) {
+  return (
+    <span
+      className={cn(
+        "inline-flex rounded-sm border px-1.5 py-0.5 font-mono text-[0.62rem] font-semibold tracking-wide",
+        impact === "HIGH"
+          ? "border-[rgba(240,193,75,0.45)] bg-[rgba(240,193,75,0.14)] text-[var(--desk-live)]"
+          : impact === "MED"
+            ? "border-[var(--desk-border-strong)] bg-white/[0.04] text-[var(--desk-text-secondary)]"
+            : "border-[var(--desk-border)] text-[var(--desk-text-muted)]",
+      )}
+    >
+      {impact}
+    </span>
+  );
+}
 
 export default async function Home() {
   if (isSupabaseConfigured()) {
@@ -88,15 +97,15 @@ export default async function Home() {
             Catalyst Intel
           </h1>
           <p className="mt-4 max-w-lg text-base text-pretty text-[var(--desk-text-secondary)] sm:text-lg">
-            Live SEC catalysts as they hit EDGAR — Source, Sector, Title, and
-            Time on a trading-desk feed built for multi-monitor scanning.
+            Material SEC filings on a black-and-white trading blotter — Ticker,
+            Event, Impact, Title, Proof, Time. Act or dismiss in seconds.
           </p>
           <div className="mt-8 flex flex-col items-start gap-3 sm:flex-row sm:flex-wrap sm:items-center">
             <Link
               href="/login"
               className={cn(
                 buttonVariants({ size: "lg" }),
-                "btn-press min-h-11 w-full justify-center bg-[var(--desk-live)] text-[#1a1520] hover:bg-[#f5cc63] sm:w-auto",
+                "btn-press min-h-11 w-full justify-center bg-[var(--desk-live)] text-[#121212] hover:brightness-110 sm:w-auto",
               )}
             >
               Continue with Google
@@ -107,15 +116,13 @@ export default async function Home() {
           </div>
         </div>
 
-        {/* Always-visible phone CTA — hero CTA can sit above the fold but the
-            long feed preview still pushes some users past it after scroll. */}
         <div className="pointer-events-none fixed inset-x-0 bottom-0 z-30 sm:hidden">
-          <div className="pointer-events-auto border-t border-[var(--desk-border)] bg-[rgba(11,17,26,0.96)] px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur-md">
+          <div className="pointer-events-auto border-t border-[var(--desk-border)] bg-[rgba(10,10,10,0.96)] px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur-md">
             <Link
               href="/login"
               className={cn(
                 buttonVariants({ size: "lg" }),
-                "btn-press min-h-12 w-full justify-center bg-[var(--desk-live)] text-[#1a1520] hover:bg-[#f5cc63]",
+                "btn-press min-h-12 w-full justify-center bg-[var(--desk-live)] text-[#121212] hover:brightness-110",
               )}
             >
               Continue with Google
@@ -125,7 +132,7 @@ export default async function Home() {
 
         <section
           aria-label="Feed preview"
-          className="landing-feed overflow-hidden rounded-xl border border-[var(--desk-border)] bg-[var(--desk-panel)] shadow-[0_24px_80px_rgba(0,0,0,0.35)]"
+          className="landing-feed overflow-hidden rounded-lg border border-[var(--desk-border)] bg-[var(--desk-panel)] shadow-[0_24px_80px_rgba(0,0,0,0.45)]"
         >
           <div className="flex items-center justify-between border-b border-[var(--desk-border)] bg-[var(--desk-header)] px-4 py-3 sm:px-5">
             <div className="flex min-w-0 items-center gap-3">
@@ -137,7 +144,7 @@ export default async function Home() {
                 LIVE
               </span>
               <span className="hidden truncate text-[0.86rem] text-[var(--desk-text-muted)] sm:inline">
-                Latest News preview
+                Live tape preview
               </span>
             </div>
             <span className="font-mono text-[0.72rem] tracking-[0.08em] text-[var(--desk-text-dim)] uppercase">
@@ -147,68 +154,67 @@ export default async function Home() {
 
           <div
             role="table"
-            aria-label="News feed preview"
+            aria-label="Blotter preview"
             className="flex flex-col"
           >
             <div
               role="row"
               className={cn(
-                "grid h-10 items-center gap-3 border-b border-[var(--desk-border-strong)] bg-[#0f1620] px-4 font-mono text-[0.66rem] font-medium tracking-[0.12em] text-[#6d7d92] uppercase sm:gap-4 sm:px-5",
+                "grid h-10 items-center gap-3 border-b border-[var(--desk-border-strong)] bg-[#0c0c0c] px-4 font-mono text-[0.62rem] font-medium tracking-[0.12em] text-[var(--desk-text-dim)] uppercase sm:gap-4 sm:px-5",
                 PREVIEW_GRID,
               )}
             >
               <div role="columnheader" className="hidden sm:block">
-                Source
+                Ticker
               </div>
               <div role="columnheader" className="hidden sm:block">
-                Sector
+                Event
+              </div>
+              <div role="columnheader" className="hidden sm:block">
+                Impact
               </div>
               <div role="columnheader">Title</div>
-              <div role="columnheader" className="hidden text-right sm:block">
+              <div role="columnheader" className="hidden sm:block">
+                Proof
+              </div>
+              <div role="columnheader" className="hidden text-right lg:block">
                 Time
               </div>
             </div>
 
             {DEMO_ROWS.map((row, index) => (
               <article
-                key={`${row.sourceMeta}-${row.time}`}
+                key={`${row.ticker}-${row.time}`}
                 role="row"
                 className={cn(
-                  "feed-row grid min-h-[60px] items-center gap-3 border-b border-[rgba(28,39,54,0.95)] px-4 py-3 sm:gap-4 sm:px-5 sm:py-0",
+                  "feed-row grid min-h-[56px] items-center gap-3 border-b border-white/[0.06] px-4 py-3 sm:gap-4 sm:px-5 sm:py-0",
                   PREVIEW_GRID,
                 )}
                 style={{ animationDelay: `${index * 70}ms` }}
               >
                 <div
                   role="cell"
-                  className="hidden min-w-0 items-center gap-2.5 sm:flex"
+                  className="hidden font-mono text-[0.88rem] font-semibold text-[var(--desk-text)] sm:block"
                 >
-                  <span
-                    aria-hidden
-                    className="grid size-7 shrink-0 place-items-center rounded-[7px] bg-[#1a4a7a] text-[0.7rem] font-bold text-white"
-                  >
-                    S
-                  </span>
-                  <span className="flex min-w-0 flex-col gap-0.5">
-                    <span className="truncate text-[0.86rem] font-semibold text-[var(--desk-text)]">
-                      {row.sourceName}
-                    </span>
-                    <span className="truncate text-[0.72rem] text-[var(--desk-text-dim)]">
-                      {row.sourceMeta}
-                    </span>
+                  {row.ticker}
+                </div>
+                <div role="cell" className="hidden sm:block">
+                  <span className="rounded-sm border border-[var(--desk-border-strong)] bg-white/[0.04] px-1.5 py-0.5 font-mono text-[0.68rem] text-[var(--desk-text-secondary)]">
+                    {row.event}
                   </span>
                 </div>
                 <div role="cell" className="hidden sm:block">
-                  <SectorPill label={row.sector} tone={row.tone} />
+                  <ImpactChip impact={row.impact} />
                 </div>
                 <div role="cell" className="min-w-0">
-                  <span className="line-clamp-2 text-[0.92rem] font-medium text-[var(--desk-text)] sm:line-clamp-1">
+                  <span className="line-clamp-2 text-[0.88rem] font-medium text-[var(--desk-text-secondary)] sm:line-clamp-1">
                     {row.title}
                   </span>
                   <span className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 sm:hidden">
-                    <span className="font-mono text-[0.7rem] text-[var(--desk-text-dim)]">
-                      {row.sourceMeta} · {row.sector}
+                    <span className="font-mono text-[0.75rem] font-semibold text-[var(--desk-text)]">
+                      {row.ticker}
                     </span>
+                    <ImpactChip impact={row.impact} />
                     <time className="font-mono text-[0.7rem] text-[var(--desk-text-muted)] tabular-nums">
                       {row.time}
                     </time>
@@ -216,7 +222,13 @@ export default async function Home() {
                 </div>
                 <div
                   role="cell"
-                  className="hidden text-right font-mono text-[0.78rem] text-[var(--desk-text-muted)] tabular-nums sm:block"
+                  className="hidden font-mono text-[0.72rem] text-[var(--desk-text-muted)] sm:block"
+                >
+                  EDGAR
+                </div>
+                <div
+                  role="cell"
+                  className="hidden text-right font-mono text-[0.72rem] text-[var(--desk-text-dim)] tabular-nums lg:block"
                 >
                   <time>{row.time}</time>
                 </div>

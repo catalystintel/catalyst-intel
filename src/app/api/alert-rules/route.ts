@@ -1,0 +1,202 @@
+import { NextResponse, type NextRequest } from "next/server";
+import { and, desc, eq } from "drizzle-orm";
+
+import { LIBSQL_SETUP_HINT, isLibsqlConfigured } from "@/db/env";
+import { db } from "@/db/client";
+import { alertRules, type AlertChannel } from "@/db/schema";
+import { getCurrentAppUser } from "@/lib/auth/current-user";
+import { isResendConfigured } from "@/lib/alerts/deliver";
+import { normalizeAlertConditions } from "@/lib/alerts/normalize";
+import { getClientIp } from "@/lib/http/client-ip";
+import { RATE_LIMITS, checkRateLimit } from "@/lib/http/rate-limit";
+import {
+  rateLimitExceededResponse,
+  withRateLimitHeaders,
+} from "@/lib/http/rate-limit-response";
+
+const CHANNELS = new Set<AlertChannel>(["email", "webhook", "push"]);
+
+async function requireUser(request: NextRequest) {
+  if (!isLibsqlConfigured()) {
+    return {
+      error: NextResponse.json({ error: LIBSQL_SETUP_HINT }, { status: 503 }),
+    };
+  }
+
+  const ip = getClientIp(request);
+  const limitResult = checkRateLimit({
+    key: `alert-rules:${ip}`,
+    ...RATE_LIMITS.userWrite,
+  });
+  if (!limitResult.ok) {
+    return { error: rateLimitExceededResponse(limitResult) };
+  }
+
+  const user = await getCurrentAppUser();
+  if (!user) {
+    return {
+      error: withRateLimitHeaders(
+        NextResponse.json({ error: "Not authenticated." }, { status: 401 }),
+        limitResult,
+      ),
+    };
+  }
+
+  return { user, limitResult };
+}
+
+function serializeRule(row: typeof alertRules.$inferSelect) {
+  return {
+    id: row.id,
+    name: row.name,
+    channel: row.channel,
+    enabled: Boolean(row.enabled),
+    webhookUrl: row.webhookUrl,
+    emailTo: row.emailTo,
+    conditions: normalizeAlertConditions(row.conditions),
+    createdAt: row.createdAt,
+  };
+}
+
+export async function GET(request: NextRequest) {
+  const auth = await requireUser(request);
+  if ("error" in auth && auth.error) return auth.error;
+  const { user, limitResult } = auth as {
+    user: NonNullable<(typeof auth)["user"]>;
+    limitResult: NonNullable<(typeof auth)["limitResult"]>;
+  };
+
+  const rows = await db
+    .select()
+    .from(alertRules)
+    .where(eq(alertRules.userId, user.id))
+    .orderBy(desc(alertRules.createdAt))
+    .all();
+
+  return withRateLimitHeaders(
+    NextResponse.json({
+      rules: rows.map(serializeRule),
+      emailConfigured: isResendConfigured(),
+      pushAvailable: false,
+    }),
+    limitResult,
+  );
+}
+
+export async function POST(request: NextRequest) {
+  const auth = await requireUser(request);
+  if ("error" in auth && auth.error) return auth.error;
+  const { user, limitResult } = auth as {
+    user: NonNullable<(typeof auth)["user"]>;
+    limitResult: NonNullable<(typeof auth)["limitResult"]>;
+  };
+
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return withRateLimitHeaders(
+      NextResponse.json({ error: "Invalid JSON body." }, { status: 400 }),
+      limitResult,
+    );
+  }
+
+  const raw =
+    typeof body === "object" && body !== null
+      ? (body as Record<string, unknown>)
+      : {};
+
+  const name =
+    typeof raw.name === "string" && raw.name.trim()
+      ? raw.name.trim().slice(0, 80)
+      : "Untitled rule";
+  const channel =
+    typeof raw.channel === "string" && CHANNELS.has(raw.channel as AlertChannel)
+      ? (raw.channel as AlertChannel)
+      : null;
+  if (!channel) {
+    return withRateLimitHeaders(
+      NextResponse.json(
+        { error: "channel must be email, webhook, or push." },
+        { status: 400 },
+      ),
+      limitResult,
+    );
+  }
+
+  const webhookUrl =
+    typeof raw.webhookUrl === "string" && raw.webhookUrl.trim()
+      ? raw.webhookUrl.trim()
+      : null;
+  const emailTo =
+    typeof raw.emailTo === "string" && raw.emailTo.trim()
+      ? raw.emailTo.trim()
+      : null;
+  const conditions = normalizeAlertConditions(raw.conditions);
+  const enabled = raw.enabled === undefined ? true : Boolean(raw.enabled);
+
+  if (channel === "webhook" && !webhookUrl) {
+    return withRateLimitHeaders(
+      NextResponse.json(
+        { error: "webhookUrl is required for webhook rules." },
+        { status: 400 },
+      ),
+      limitResult,
+    );
+  }
+  if (channel === "email" && !emailTo) {
+    return withRateLimitHeaders(
+      NextResponse.json(
+        { error: "emailTo is required for email rules." },
+        { status: 400 },
+      ),
+      limitResult,
+    );
+  }
+
+  const row = await db
+    .insert(alertRules)
+    .values({
+      userId: user.id,
+      name,
+      channel,
+      enabled,
+      webhookUrl: channel === "webhook" ? webhookUrl : null,
+      emailTo: channel === "email" ? emailTo : null,
+      conditions,
+    })
+    .returning()
+    .get();
+
+  return withRateLimitHeaders(
+    NextResponse.json(serializeRule(row), { status: 201 }),
+    limitResult,
+  );
+}
+
+export async function DELETE(request: NextRequest) {
+  const auth = await requireUser(request);
+  if ("error" in auth && auth.error) return auth.error;
+  const { user, limitResult } = auth as {
+    user: NonNullable<(typeof auth)["user"]>;
+    limitResult: NonNullable<(typeof auth)["limitResult"]>;
+  };
+
+  const idParam = Number(request.nextUrl.searchParams.get("id") ?? "");
+  if (!Number.isFinite(idParam) || idParam < 1) {
+    return withRateLimitHeaders(
+      NextResponse.json({ error: "Invalid id." }, { status: 400 }),
+      limitResult,
+    );
+  }
+
+  await db
+    .delete(alertRules)
+    .where(and(eq(alertRules.id, idParam), eq(alertRules.userId, user.id)))
+    .run();
+
+  return withRateLimitHeaders(
+    NextResponse.json({ ok: true, id: idParam }),
+    limitResult,
+  );
+}

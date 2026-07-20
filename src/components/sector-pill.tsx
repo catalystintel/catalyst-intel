@@ -3,21 +3,29 @@ import { cn } from "@/lib/utils";
 
 type SectorTone = EventCategoryKey | "sector" | "sec";
 
+/** Mono desk: grayscale pills only — no rainbow category colors. */
 const TONE_STYLES: Record<SectorTone, string> = {
-  distress: "border-red-400/35 bg-red-400/12 text-red-300",
-  earnings: "border-amber-400/35 bg-amber-400/12 text-amber-200",
-  deals: "border-emerald-400/35 bg-emerald-400/12 text-emerald-300",
-  restructuring: "border-orange-400/35 bg-orange-400/12 text-orange-300",
-  capital: "border-sky-400/35 bg-sky-400/12 text-sky-300",
-  management: "border-violet-400/35 bg-violet-400/12 text-violet-300",
-  governance: "border-[#b89af0]/35 bg-[rgba(184,154,240,0.12)] text-[#b89af0]",
+  distress:
+    "border-[var(--desk-border-strong)] bg-white/[0.04] text-[var(--desk-text-secondary)]",
+  earnings:
+    "border-[var(--desk-border-strong)] bg-white/[0.04] text-[var(--desk-text-secondary)]",
+  deals:
+    "border-[var(--desk-border-strong)] bg-white/[0.04] text-[var(--desk-text-secondary)]",
+  restructuring:
+    "border-[var(--desk-border-strong)] bg-white/[0.04] text-[var(--desk-text-secondary)]",
+  capital:
+    "border-[var(--desk-border-strong)] bg-white/[0.04] text-[var(--desk-text-secondary)]",
+  management:
+    "border-[var(--desk-border-strong)] bg-white/[0.04] text-[var(--desk-text-secondary)]",
+  governance:
+    "border-[var(--desk-border-strong)] bg-white/[0.04] text-[var(--desk-text-secondary)]",
   disclosure:
-    "border-[var(--desk-border-strong)] bg-white/[0.04] text-[var(--desk-text-muted)]",
+    "border-[var(--desk-border-strong)] bg-white/[0.03] text-[var(--desk-text-muted)]",
   other:
     "border-[var(--desk-border)] bg-transparent text-[var(--desk-text-muted)]",
   sector:
-    "border-[var(--desk-accent)]/28 bg-[var(--desk-accent)]/12 text-[#7eb6f0]",
-  sec: "border-[var(--desk-accent)]/28 bg-[var(--desk-accent)]/12 text-[#7eb6f0]",
+    "border-[var(--desk-border-strong)] bg-white/[0.04] text-[var(--desk-text-secondary)]",
+  sec: "border-[var(--desk-border-strong)] bg-white/[0.04] text-[var(--desk-text-secondary)]",
 };
 
 interface SectorPillProps {
@@ -27,13 +35,13 @@ interface SectorPillProps {
 }
 
 /**
- * Rounded sector / category pill for the Latest News Sector column.
+ * Rounded sector / event pill for blotter columns (B&W desk).
  */
 export function SectorPill({ label, tone, className }: SectorPillProps) {
   return (
     <span
       className={cn(
-        "inline-flex max-w-full items-center truncate rounded-full border px-2 py-1 text-[0.75rem] font-medium",
+        "inline-flex max-w-full items-center truncate rounded-sm border px-1.5 py-0.5 font-mono text-[0.7rem] font-medium tracking-wide",
         TONE_STYLES[tone],
         className,
       )}

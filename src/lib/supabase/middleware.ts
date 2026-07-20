@@ -5,7 +5,13 @@ import { isDevAuthBypassEnabled } from "@/lib/auth/dev-bypass";
 import { supabaseCookieOptions } from "@/lib/supabase/cookie-options";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 
-const PROTECTED_PREFIXES = ["/dashboard", "/admin", "/profile"];
+const PROTECTED_PREFIXES = [
+  "/dashboard",
+  "/admin",
+  "/profile",
+  "/watchlist",
+  "/alerts",
+];
 
 export async function updateSession(request: NextRequest) {
   // Local bypass: treat every request as authenticated so protected routes
