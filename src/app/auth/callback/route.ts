@@ -61,8 +61,11 @@ export async function GET(request: Request) {
       await posthog.flush();
     }
 
+    const detail =
+      error?.message ??
+      "Google sign-in failed — clear site data for this site and try again.";
     return NextResponse.redirect(
-      `${origin}/login?error=${encodeURIComponent(error?.message ?? "Google sign-in failed.")}`,
+      `${origin}/login?error=${encodeURIComponent(detail)}`,
     );
   }
 
