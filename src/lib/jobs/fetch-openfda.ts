@@ -6,6 +6,37 @@ import {
 } from "@/lib/jobs/ingest-pipeline";
 
 /**
+ * openFDA returns submission_status_date as YYYYMMDD (e.g. "20241023").
+ * Also accepts YYYY-MM-DD. Returns ISO date (YYYY-MM-DD) or null.
+ */
+export function parseOpenFdaDate(
+  raw: string | undefined | null,
+): string | null {
+  const value = raw?.trim();
+  if (!value) return null;
+
+  if (/^\d{8}$/.test(value)) {
+    return `${value.slice(0, 4)}-${value.slice(4, 6)}-${value.slice(6, 8)}`;
+  }
+
+  if (/^\d{4}-\d{2}-\d{2}/.test(value)) {
+    return value.slice(0, 10);
+  }
+
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return null;
+  return parsed.toISOString().slice(0, 10);
+}
+
+function toIsoTimestamp(dateYmd: string): string {
+  const iso = new Date(`${dateYmd}T12:00:00.000Z`);
+  if (Number.isNaN(iso.getTime())) {
+    return new Date().toISOString();
+  }
+  return iso.toISOString();
+}
+
+/**
  * openFDA recent drug approvals / application events (free, no key required
  * for modest rate limits). Soft network failures bubble to the orchestrator.
  */
@@ -50,7 +81,7 @@ export async function fetchOpenFda(): Promise<SourceFetchResult> {
     const sponsor = row.sponsor_name?.trim() || null;
     const submission = row.submissions?.[0];
     const date =
-      submission?.submission_status_date?.trim() ||
+      parseOpenFdaDate(submission?.submission_status_date) ||
       new Date().toISOString().slice(0, 10);
 
     normalized.push({
@@ -65,7 +96,7 @@ export async function fetchOpenFda(): Promise<SourceFetchResult> {
       headline: "FDA drug approval",
       eventCategory: "regulatory",
       subcategory: "openfda_approval",
-      timestamp: new Date(`${date}T12:00:00.000Z`).toISOString(),
+      timestamp: toIsoTimestamp(date),
       summary: [
         submission?.submission_type,
         submission?.submission_status,
