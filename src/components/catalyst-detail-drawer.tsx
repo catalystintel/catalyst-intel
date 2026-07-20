@@ -63,25 +63,25 @@ export function CatalystDetailDrawer({
           catalyst ? `catalyst-drawer-${catalyst.id}` : undefined
         }
         className={cn(
-          "drawer-panel absolute inset-y-0 right-0 flex w-full max-w-md flex-col border-l border-border/80 bg-[oklch(0.17_0.018_255)] shadow-[-12px_0_40px_rgba(0,0,0,0.45)] transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]",
+          "drawer-panel absolute inset-y-0 right-0 flex w-full max-w-md flex-col border-l border-[var(--desk-border)] bg-[var(--desk-panel)] shadow-[-12px_0_40px_rgba(0,0,0,0.55)] transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]",
           open ? "translate-x-0" : "translate-x-full",
         )}
       >
         {catalyst ? (
           <>
-            <div className="flex items-start justify-between gap-3 border-b border-border/70 px-5 py-4">
+            <div className="flex items-start justify-between gap-3 border-b border-[var(--desk-border)] bg-[var(--desk-header)] px-5 py-4">
               <div className="min-w-0">
-                <p className="font-mono text-[0.65rem] tracking-[0.18em] text-amber-400/90 uppercase">
+                <p className="font-mono text-[0.65rem] tracking-[0.18em] text-[var(--desk-live)] uppercase">
                   {catalyst.headline ?? "Catalyst"}
                 </p>
                 <h2
                   id={`catalyst-drawer-${catalyst.id}`}
-                  className="mt-1 truncate font-mono text-2xl font-semibold tracking-tight text-steel-foreground"
+                  className="mt-1 truncate font-mono text-2xl font-semibold tracking-tight text-[var(--desk-text)]"
                 >
                   {catalyst.ticker ?? "—"}
                 </h2>
                 {catalyst.companyName ? (
-                  <p className="mt-0.5 truncate text-sm text-muted-foreground">
+                  <p className="mt-0.5 truncate text-sm text-[var(--desk-text-muted)]">
                     {catalyst.companyName}
                   </p>
                 ) : null}
@@ -90,7 +90,7 @@ export function CatalystDetailDrawer({
                 type="button"
                 variant="ghost"
                 size="icon-sm"
-                className="btn-press shrink-0"
+                className="btn-press shrink-0 text-[var(--desk-text-muted)] hover:text-[var(--desk-text)]"
                 onClick={onClose}
               >
                 <XIcon />
@@ -113,7 +113,7 @@ export function CatalystDetailDrawer({
                 <button
                   type="button"
                   onClick={() => onAct?.()}
-                  className="inline-flex items-center gap-1.5 rounded-md border border-amber-400/45 bg-amber-400/12 px-3 py-1.5 font-mono text-xs text-amber-200"
+                  className="inline-flex items-center gap-1.5 rounded-sm bg-[var(--desk-live)] px-3 py-1.5 font-mono text-xs font-semibold tracking-wide text-[#121212] uppercase hover:brightness-110"
                 >
                   <Check className="size-3.5" />
                   Act
@@ -121,7 +121,7 @@ export function CatalystDetailDrawer({
                 <button
                   type="button"
                   onClick={() => onDismiss?.()}
-                  className="inline-flex items-center gap-1.5 rounded-md border border-border/70 px-3 py-1.5 font-mono text-xs text-muted-foreground hover:text-foreground"
+                  className="inline-flex items-center gap-1.5 rounded-sm border border-[var(--desk-border-strong)] px-3 py-1.5 font-mono text-xs tracking-wide text-[var(--desk-text-muted)] uppercase hover:bg-white/[0.05] hover:text-[var(--desk-text)]"
                 >
                   Dismiss
                 </button>
@@ -129,20 +129,20 @@ export function CatalystDetailDrawer({
 
               <dl className="grid grid-cols-2 gap-4 font-mono text-xs">
                 <div>
-                  <dt className="tracking-[0.14em] text-muted-foreground uppercase">
+                  <dt className="tracking-[0.14em] text-[var(--desk-text-dim)] uppercase">
                     Source
                   </dt>
-                  <dd className="mt-1 text-sm text-foreground">
+                  <dd className="mt-1 text-sm text-[var(--desk-text)]">
                     {catalyst.sourceProvider === "sec-edgar"
                       ? "SEC EDGAR"
                       : (catalyst.sourceProvider ?? "—")}
                   </dd>
                 </div>
                 <div>
-                  <dt className="tracking-[0.14em] text-muted-foreground uppercase">
+                  <dt className="tracking-[0.14em] text-[var(--desk-text-dim)] uppercase">
                     Sector
                   </dt>
-                  <dd className="mt-1 text-sm text-foreground">
+                  <dd className="mt-1 text-sm text-[var(--desk-text)]">
                     {catalyst.sector?.trim() ||
                       (catalyst.eventCategory
                         ? CATEGORY_LABELS[catalyst.eventCategory]
@@ -150,26 +150,26 @@ export function CatalystDetailDrawer({
                   </dd>
                 </div>
                 <div>
-                  <dt className="tracking-[0.14em] text-muted-foreground uppercase">
+                  <dt className="tracking-[0.14em] text-[var(--desk-text-dim)] uppercase">
                     Form
                   </dt>
-                  <dd className="mt-1 text-sm text-foreground">
+                  <dd className="mt-1 text-sm text-[var(--desk-text)]">
                     {catalyst.type}
                   </dd>
                 </div>
                 <div>
-                  <dt className="tracking-[0.14em] text-muted-foreground uppercase">
+                  <dt className="tracking-[0.14em] text-[var(--desk-text-dim)] uppercase">
                     Age
                   </dt>
-                  <dd className="mt-1 text-sm text-foreground tabular-nums">
+                  <dd className="mt-1 text-sm text-[var(--desk-text)] tabular-nums">
                     {formatRelativeAge(catalyst.timestamp)}
                   </dd>
                 </div>
                 <div className="col-span-2">
-                  <dt className="tracking-[0.14em] text-muted-foreground uppercase">
+                  <dt className="tracking-[0.14em] text-[var(--desk-text-dim)] uppercase">
                     Filed
                   </dt>
-                  <dd className="mt-1 text-sm text-foreground tabular-nums">
+                  <dd className="mt-1 text-sm text-[var(--desk-text)] tabular-nums">
                     {new Date(catalyst.timestamp).toLocaleString()}
                   </dd>
                 </div>
@@ -177,7 +177,7 @@ export function CatalystDetailDrawer({
 
               {catalyst.items.length > 0 ? (
                 <div>
-                  <p className="font-mono text-[0.65rem] tracking-[0.14em] text-muted-foreground uppercase">
+                  <p className="font-mono text-[0.65rem] tracking-[0.14em] text-[var(--desk-text-dim)] uppercase">
                     Filing items
                   </p>
                   <ul className="mt-2 flex flex-col gap-1.5">
@@ -186,27 +186,29 @@ export function CatalystDetailDrawer({
                         key={item.code}
                         className="flex items-baseline gap-2 text-sm"
                       >
-                        <span className="font-mono text-xs text-amber-200/80 tabular-nums">
+                        <span className="font-mono text-xs text-[var(--desk-text-secondary)] tabular-nums">
                           {item.code}
                         </span>
-                        <span className="text-foreground/90">{item.label}</span>
+                        <span className="text-[var(--desk-text-secondary)]">
+                          {item.label}
+                        </span>
                       </li>
                     ))}
                   </ul>
                 </div>
               ) : (
                 <div>
-                  <p className="font-mono text-[0.65rem] tracking-[0.14em] text-muted-foreground uppercase">
+                  <p className="font-mono text-[0.65rem] tracking-[0.14em] text-[var(--desk-text-dim)] uppercase">
                     Summary
                   </p>
-                  <p className="mt-2 text-sm leading-relaxed text-foreground/95">
+                  <p className="mt-2 text-sm leading-relaxed text-[var(--desk-text-secondary)]">
                     {catalyst.summary?.trim() || catalyst.title}
                   </p>
                 </div>
               )}
 
               <div>
-                <p className="font-mono text-[0.65rem] tracking-[0.14em] text-muted-foreground uppercase">
+                <p className="font-mono text-[0.65rem] tracking-[0.14em] text-[var(--desk-text-dim)] uppercase">
                   Proof (EDGAR)
                 </p>
                 <div className="mt-2">
@@ -214,11 +216,11 @@ export function CatalystDetailDrawer({
                 </div>
               </div>
 
-              <div className="rounded-lg border border-dashed border-border/70 bg-muted/20 px-3 py-3">
-                <p className="font-mono text-[0.65rem] tracking-[0.14em] text-muted-foreground uppercase">
+              <div className="rounded-md border border-dashed border-[var(--desk-border-strong)] bg-white/[0.02] px-3 py-3">
+                <p className="font-mono text-[0.65rem] tracking-[0.14em] text-[var(--desk-text-dim)] uppercase">
                   Historical reaction
                 </p>
-                <p className="mt-1.5 text-sm text-muted-foreground">
+                <p className="mt-1.5 text-sm text-[var(--desk-text-muted)]">
                   Coming soon — prior move context after similar catalysts will
                   land here. No synthetic history is shown.
                 </p>
