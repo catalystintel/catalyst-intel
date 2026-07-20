@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, it } from "vitest";
 
 import {
+  markRefetchCompleted,
+  markRefetchFailed,
   markRefetchTriggered,
   resetIngestionFreshnessStore,
   shouldTriggerBackgroundRefetch,
@@ -46,11 +48,54 @@ describe("shouldTriggerBackgroundRefetch", () => {
     const now = 20 * 60_000;
     const lastFetchedAt = new Date(now - 11 * 60_000);
     markRefetchTriggered(now);
+    markRefetchCompleted();
 
     expect(
       shouldTriggerBackgroundRefetch({
         lastFetchedAt,
-        now: now + 4 * 60_000,
+        now: now + 6 * 60_000,
+      }),
+    ).toBe(true);
+  });
+
+  it("suppresses concurrent triggers while a refetch is in flight", () => {
+    const now = 20 * 60_000;
+    const lastFetchedAt = new Date(now - 11 * 60_000);
+    markRefetchTriggered(now);
+
+    expect(
+      shouldTriggerBackgroundRefetch({
+        lastFetchedAt,
+        now: now + 10 * 60_000,
+      }),
+    ).toBe(false);
+
+    markRefetchCompleted();
+    expect(
+      shouldTriggerBackgroundRefetch({
+        lastFetchedAt,
+        now: now + 10 * 60_000,
+      }),
+    ).toBe(true);
+  });
+
+  it("applies a longer cooldown after a failed background refetch", () => {
+    const now = 20 * 60_000;
+    const lastFetchedAt = new Date(now - 11 * 60_000);
+    markRefetchTriggered(now);
+    markRefetchFailed(now);
+
+    expect(
+      shouldTriggerBackgroundRefetch({
+        lastFetchedAt,
+        now: now + 6 * 60_000,
+      }),
+    ).toBe(false);
+
+    expect(
+      shouldTriggerBackgroundRefetch({
+        lastFetchedAt,
+        now: now + 16 * 60_000,
       }),
     ).toBe(true);
   });

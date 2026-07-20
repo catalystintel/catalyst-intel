@@ -5,8 +5,17 @@ import { db } from "@/db/client";
 import { catalysts, companies, rawSources } from "@/db/schema";
 import { purgeStaleCatalysts } from "./data-retention";
 import { parseFilingSummary } from "./parse-8k-items";
+import {
+  type SecFetchMode,
+  fetchSecUrl,
+  getSecUserAgent,
+} from "./sec-edgar-http";
 import { getTickerByCik } from "./ticker-lookup";
 
+/**
+ * Current 8-K Atom feed lives on www.sec.gov (Akamai CDN), not data.sec.gov.
+ * data.sec.gov hosts JSON submissions APIs; there is no equivalent Atom feed there.
+ */
 const FEED_URL =
   "https://www.sec.gov/cgi-bin/browse-edgar?action=getcurrent&type=8-K&output=atom&count=100";
 
@@ -20,6 +29,11 @@ export interface FetchSecEdgarResult {
   purgedRawSources: number;
 }
 
+export interface FetchSecEdgarOptions {
+  /** Defaults to `primary` (admin / GHA cron). Background self-heal uses shorter timeouts. */
+  mode?: SecFetchMode;
+}
+
 interface AtomEntry {
   title?: string;
   link?: { "@_href"?: string };
@@ -29,24 +43,11 @@ interface AtomEntry {
   id?: string;
 }
 
-function getUserAgent(): string {
-  const userAgent = process.env.SEC_EDGAR_USER_AGENT;
-  if (!userAgent) {
-    throw new Error(
-      "SEC_EDGAR_USER_AGENT env var is required (SEC requires a descriptive User-Agent, " +
-        "e.g. 'you@email.com CatalystIntel/0.1').",
-    );
-  }
-  return userAgent;
-}
-
-async function fetchFeedXml(userAgent: string): Promise<string> {
-  const res = await fetch(FEED_URL, { headers: { "User-Agent": userAgent } });
-  if (!res.ok) {
-    throw new Error(
-      `SEC EDGAR feed request failed: ${res.status} ${res.statusText}`,
-    );
-  }
+async function fetchFeedXml(
+  userAgent: string,
+  mode: SecFetchMode,
+): Promise<string> {
+  const res = await fetchSecUrl(FEED_URL, { userAgent, mode });
   return res.text();
 }
 
@@ -77,12 +78,15 @@ function toEntryArray(entry: unknown): AtomEntry[] {
   return Array.isArray(entry) ? (entry as AtomEntry[]) : [entry as AtomEntry];
 }
 
-export async function fetchSecEdgar(): Promise<FetchSecEdgarResult> {
-  const userAgent = getUserAgent();
+export async function fetchSecEdgar(
+  options: FetchSecEdgarOptions = {},
+): Promise<FetchSecEdgarResult> {
+  const mode = options.mode ?? "primary";
+  const userAgent = getSecUserAgent();
 
   const [feedXml, tickerByCik] = await Promise.all([
-    fetchFeedXml(userAgent),
-    getTickerByCik(userAgent),
+    fetchFeedXml(userAgent, mode),
+    getTickerByCik(userAgent, { mode }),
   ]);
 
   const parser = new XMLParser({

@@ -1,6 +1,9 @@
 import fs from "node:fs";
 import path from "node:path";
 
+import { type SecFetchMode, fetchSecUrl } from "./sec-edgar-http";
+
+/** Official company_tickers.json on www.sec.gov (same Akamai edge as the Atom feed). */
 const TICKERS_URL = "https://www.sec.gov/files/company_tickers.json";
 const CACHE_PATH = path.join(
   process.cwd(),
@@ -43,6 +46,7 @@ function writeDiskCache(data: unknown) {
  */
 export async function getTickerByCik(
   userAgent: string,
+  options: { mode?: SecFetchMode } = {},
 ): Promise<Map<number, string>> {
   if (inMemoryCache) return inMemoryCache;
 
@@ -52,14 +56,10 @@ export async function getTickerByCik(
     return inMemoryCache;
   }
 
-  const res = await fetch(TICKERS_URL, {
-    headers: { "User-Agent": userAgent },
+  const res = await fetchSecUrl(TICKERS_URL, {
+    userAgent,
+    mode: options.mode ?? "primary",
   });
-  if (!res.ok) {
-    throw new Error(
-      `Failed to fetch SEC company tickers: ${res.status} ${res.statusText}`,
-    );
-  }
   const data = (await res.json()) as Record<string, TickerEntry>;
   writeDiskCache(data);
   inMemoryCache = buildMap(data);

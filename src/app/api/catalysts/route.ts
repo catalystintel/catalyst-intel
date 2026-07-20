@@ -13,9 +13,12 @@ import {
 } from "@/lib/http/rate-limit-response";
 import { fetchSecEdgar } from "@/lib/jobs/fetch-sec-edgar";
 import {
+  markRefetchCompleted,
+  markRefetchFailed,
   markRefetchTriggered,
   shouldTriggerBackgroundRefetch,
 } from "@/lib/jobs/ingestion-freshness";
+import { formatSecFetchError } from "@/lib/jobs/sec-edgar-http";
 
 /**
  * Authenticated catalyst list for the Live feed soft-refetch.
@@ -91,10 +94,10 @@ export async function GET(request: NextRequest) {
 
 /**
  * Checks the most recent ingestion timestamp and, if stale, fires
- * `fetchSecEdgar()` in the background. Never throws or blocks the response -
- * `fetchSecEdgar()` dedupes by SEC accession number, so an overlapping run
- * (e.g. from concurrent requests) is safe, just wasteful; the cooldown in
- * `shouldTriggerBackgroundRefetch` keeps that rare.
+ * `fetchSecEdgar({ mode: "background" })` as best-effort self-heal.
+ * Never throws or blocks the response. GHA cron remains the primary ingest;
+ * on Vercel, SEC (www.sec.gov / Akamai) often ETIMEDOUT from datacenter IPs,
+ * so background mode uses a short AbortSignal timeout + failure cooldown.
  */
 async function triggerBackgroundRefetchIfStale(): Promise<void> {
   const latestSource = await db
@@ -108,7 +111,15 @@ async function triggerBackgroundRefetchIfStale(): Promise<void> {
   if (!shouldTriggerBackgroundRefetch({ lastFetchedAt })) return;
 
   markRefetchTriggered();
-  void fetchSecEdgar().catch((error: unknown) => {
-    console.error("Background SEC EDGAR refetch failed:", error);
-  });
+  void fetchSecEdgar({ mode: "background" })
+    .then(() => {
+      markRefetchCompleted();
+    })
+    .catch((error: unknown) => {
+      markRefetchFailed();
+      console.warn(
+        "Background SEC EDGAR refetch failed (best-effort; GHA cron is primary):",
+        formatSecFetchError(error),
+      );
+    });
 }
