@@ -13,6 +13,12 @@ export interface SourceDisplay {
 
 const PROVIDER_DISPLAY: Record<string, Omit<SourceDisplay, "meta">> = {
   "sec-edgar": { name: "SEC EDGAR", initial: "S", tone: "sec" },
+  "nasdaq-halts": { name: "Nasdaq Halts", initial: "N", tone: "generic" },
+  finnhub: { name: "Finnhub", initial: "F", tone: "generic" },
+  polygon: { name: "Polygon", initial: "P", tone: "generic" },
+  openfda: { name: "openFDA", initial: "O", tone: "generic" },
+  clinicaltrials: { name: "ClinicalTrials", initial: "C", tone: "generic" },
+  form4api: { name: "Form4API", initial: "4", tone: "generic" },
 };
 
 /**
@@ -52,6 +58,18 @@ export function sectorLabel(c: FeedCatalyst): string {
 /** Primary title cell — headline preferred, then filing title. */
 export function titleLine(c: FeedCatalyst): string {
   return c.headline?.trim() || c.title?.trim() || c.type;
+}
+
+/** Event cell: subcategory when present, else type / category. */
+export function eventLabel(c: FeedCatalyst): string {
+  if (c.subcategory?.trim()) {
+    return c.subcategory.replace(/_/g, " ");
+  }
+  if (c.type?.trim()) return c.type.trim();
+  if (c.eventCategory && c.eventCategory in CATEGORY_LABELS) {
+    return CATEGORY_LABELS[c.eventCategory];
+  }
+  return "—";
 }
 
 /** Stable style key for sector pills (category when known, else generic). */

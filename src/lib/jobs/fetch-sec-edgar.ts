@@ -1,12 +1,15 @@
 import { XMLParser } from "fast-xml-parser";
-import { eq } from "drizzle-orm";
 
-import { db } from "@/db/client";
-import { catalysts, companies, rawSources } from "@/db/schema";
-import { scoreFromCategory } from "@/lib/catalysts/materiality";
+import {
+  ingestNormalizedCatalysts,
+  type IngestPipelineResult,
+  type NormalizedCatalyst,
+} from "@/lib/jobs/ingest-pipeline";
+import {
+  classifySecFormType,
+  parseFilingSummary,
+} from "@/lib/jobs/parse-8k-items";
 
-import { purgeStaleCatalysts } from "./data-retention";
-import { parseFilingSummary } from "./parse-8k-items";
 import {
   type SecFetchMode,
   fetchSecUrl,
@@ -15,25 +18,27 @@ import {
 import { getTickerByCik } from "./ticker-lookup";
 
 /**
- * Current 8-K Atom feed lives on www.sec.gov (Akamai CDN), not data.sec.gov.
+ * Current filing Atom feeds live on www.sec.gov (Akamai CDN), not data.sec.gov.
  * data.sec.gov hosts JSON submissions APIs; there is no equivalent Atom feed there.
  */
-const FEED_URL =
-  "https://www.sec.gov/cgi-bin/browse-edgar?action=getcurrent&type=8-K&output=atom&count=100";
+const SEC_FEED_TYPES = [
+  { type: "8-K", count: 100 },
+  { type: "4", count: 40 },
+  { type: "S-3", count: 40 },
+  { type: "424B", count: 40 },
+  { type: "SC 13D", count: 40 },
+  { type: "SC 13G", count: 40 },
+] as const;
 
-export interface FetchSecEdgarResult {
-  fetched: number;
-  inserted: number;
-  skipped: number;
-  errors: number;
-  ranAt: string;
-  purgedCatalysts: number;
-  purgedRawSources: number;
-}
+export type FetchSecEdgarResult = IngestPipelineResult & {
+  feeds: { type: string; fetched: number; errors: number }[];
+};
 
 export interface FetchSecEdgarOptions {
   /** Defaults to `primary` (admin / GHA cron). Background self-heal uses shorter timeouts. */
   mode?: SecFetchMode;
+  /** Limit which form types to pull (defaults to all configured feeds). */
+  formTypes?: string[];
 }
 
 interface AtomEntry {
@@ -43,14 +48,6 @@ interface AtomEntry {
   updated?: string;
   category?: { "@_term"?: string };
   id?: string;
-}
-
-async function fetchFeedXml(
-  userAgent: string,
-  mode: SecFetchMode,
-): Promise<string> {
-  const res = await fetchSecUrl(FEED_URL, { userAgent, mode });
-  return res.text();
 }
 
 export function stripHtml(html: string): string {
@@ -80,157 +77,159 @@ function toEntryArray(entry: unknown): AtomEntry[] {
   return Array.isArray(entry) ? (entry as AtomEntry[]) : [entry as AtomEntry];
 }
 
-export async function fetchSecEdgar(
-  options: FetchSecEdgarOptions = {},
-): Promise<FetchSecEdgarResult> {
-  const mode = options.mode ?? "primary";
-  const userAgent = getSecUserAgent();
+function feedUrlForType(formType: string, count: number): string {
+  const encoded = encodeURIComponent(formType);
+  return `https://www.sec.gov/cgi-bin/browse-edgar?action=getcurrent&type=${encoded}&output=atom&count=${count}`;
+}
 
-  const [feedXml, tickerByCik] = await Promise.all([
-    fetchFeedXml(userAgent, mode),
-    getTickerByCik(userAgent, { mode }),
-  ]);
-
+function parseFeedXml(feedXml: string): AtomEntry[] {
   const parser = new XMLParser({
     ignoreAttributes: false,
     attributeNamePrefix: "@_",
     textNodeName: "#text",
   });
   const parsed = parser.parse(feedXml);
-  const entries = toEntryArray(parsed?.feed?.entry);
+  return toEntryArray(parsed?.feed?.entry);
+}
 
-  let inserted = 0;
-  let skipped = 0;
-  let errors = 0;
+function entryToNormalized(
+  entry: AtomEntry,
+  tickerByCik: Map<number, string>,
+): NormalizedCatalyst | null {
+  const idText = String(entry.id ?? "");
+  const accessionNumber = idText.match(/accession-number=([\w-]+)/)?.[1];
+  if (!accessionNumber) return null;
 
-  for (const entry of entries) {
-    try {
-      const idText = String(entry.id ?? "");
-      const accessionNumber = idText.match(/accession-number=([\w-]+)/)?.[1];
-      if (!accessionNumber) {
-        errors++;
-        continue;
-      }
+  const rawTitle = String(entry.title ?? "");
+  const parsedTitle = parseFilingTitle(rawTitle);
+  const link = entry.link?.["@_href"] ?? null;
+  const rawSummary =
+    typeof entry.summary === "string"
+      ? entry.summary
+      : (entry.summary?.["#text"] ?? "");
+  const summaryText = stripHtml(rawSummary);
 
-      const externalId = `sec-edgar:${accessionNumber}`;
-      const alreadyStored = await db
-        .select({ id: rawSources.id })
-        .from(rawSources)
-        .where(eq(rawSources.externalId, externalId))
-        .get();
+  const filedDate = extractFiledDate(summaryText);
+  const timestamp = entry.updated
+    ? new Date(entry.updated).toISOString()
+    : filedDate
+      ? new Date(filedDate).toISOString()
+      : new Date().toISOString();
 
-      if (alreadyStored) {
-        skipped++;
-        continue;
-      }
+  const formType = parsedTitle?.formType ?? entry.category?.["@_term"] ?? "8-K";
+  const companyName = parsedTitle?.companyName ?? rawTitle;
+  const ticker = parsedTitle
+    ? (tickerByCik.get(parsedTitle.cik) ?? null)
+    : null;
 
-      const rawTitle = String(entry.title ?? "");
-      const parsedTitle = parseFilingTitle(rawTitle);
-      const link = entry.link?.["@_href"] ?? null;
-      const rawSummary =
-        typeof entry.summary === "string"
-          ? entry.summary
-          : (entry.summary?.["#text"] ?? "");
-      const summaryText = stripHtml(rawSummary);
+  const is8k = /^8-?K/i.test(formType);
+  const formMeta = classifySecFormType(formType);
 
-      // `entry.updated` is the EDGAR acceptance datetime (precise to the second)
-      // and is what makes the Live tape's "age" meaningful; the summary's
-      // "Filed:" value is date-only, so it's only a fallback.
-      const filedDate = extractFiledDate(summaryText);
-      const timestamp = entry.updated
-        ? new Date(entry.updated).toISOString()
-        : filedDate
-          ? new Date(filedDate).toISOString()
-          : new Date().toISOString();
+  let eventCategory = formMeta.category;
+  let headline = formMeta.headline;
+  let subcategory = formMeta.subcategory;
+  let tags = formMeta.tags;
+  let itemCodes = null as ReturnType<typeof parseFilingSummary>["items"] | null;
 
-      const formType =
-        parsedTitle?.formType ?? entry.category?.["@_term"] ?? "8-K";
-      const companyName = parsedTitle?.companyName ?? rawTitle;
-      const ticker = parsedTitle
-        ? (tickerByCik.get(parsedTitle.cik) ?? null)
-        : null;
-
-      const { items, primaryCategory, headline } =
-        parseFilingSummary(summaryText);
-
-      const rawRow = await db
-        .insert(rawSources)
-        .values({
-          provider: "sec-edgar",
-          externalId,
-          url: link,
-          rawContent: {
-            title: rawTitle,
-            summary: summaryText,
-            updated: entry.updated ?? null,
-            link,
-          },
-        })
-        .returning({ id: rawSources.id })
-        .get();
-
-      let companyId: number | null = null;
-      if (ticker) {
-        const existingCompany = await db
-          .select({ id: companies.id })
-          .from(companies)
-          .where(eq(companies.ticker, ticker))
-          .get();
-
-        if (existingCompany) {
-          companyId = existingCompany.id;
-        } else {
-          const insertedCompany = await db
-            .insert(companies)
-            .values({ name: companyName, ticker })
-            .returning({ id: companies.id })
-            .get();
-          companyId = insertedCompany.id;
-        }
-      }
-
-      await db
-        .insert(catalysts)
-        .values({
-          companyId,
-          ticker,
-          companyName,
-          type: formType,
-          title: `${companyName} \u2014 ${formType} filing`,
-          headline,
-          eventCategory: primaryCategory,
-          itemCodes: items,
-          timestamp,
-          rawSourceId: rawRow.id,
-          impactScore: scoreFromCategory(primaryCategory),
-        })
-        .run();
-
-      inserted++;
-    } catch {
-      errors++;
-    }
-  }
-
-  // Retention is a housekeeping concern, not a reason to fail an otherwise
-  // successful ingestion - log and move on if it errors.
-  let purgedCatalysts = 0;
-  let purgedRawSources = 0;
-  try {
-    const retentionResult = await purgeStaleCatalysts();
-    purgedCatalysts = retentionResult.deletedCatalysts;
-    purgedRawSources = retentionResult.deletedRawSources;
-  } catch (error) {
-    console.error("Data retention purge failed:", error);
+  if (is8k) {
+    const parsed = parseFilingSummary(summaryText);
+    eventCategory = parsed.primaryCategory;
+    headline = parsed.headline;
+    subcategory = "8k";
+    itemCodes = parsed.items;
+    tags = ["8k", ...(parsed.items.map((i) => `item-${i.code}`) ?? [])];
   }
 
   return {
-    fetched: entries.length,
-    inserted,
-    skipped,
-    errors,
-    ranAt: new Date().toISOString(),
-    purgedCatalysts,
-    purgedRawSources,
+    provider: "sec-edgar",
+    externalId: `sec-edgar:${accessionNumber}`,
+    url: link,
+    rawContent: {
+      title: rawTitle,
+      summary: summaryText,
+      updated: entry.updated ?? null,
+      link,
+      formType,
+    },
+    ticker,
+    companyName,
+    type: formType,
+    title: `${companyName} \u2014 ${formType} filing`,
+    headline,
+    eventCategory,
+    subcategory,
+    itemCodes,
+    timestamp,
+    summary: summaryText || null,
+    confidence: is8k ? 85 : 75,
+    tags,
+  };
+}
+
+/**
+ * Fetches current SEC EDGAR Atom feeds (8-K + Form 4, S-3/424B, 13D/G),
+ * normalizes, dedupes by accession, and inserts catalysts.
+ */
+export async function fetchSecEdgar(
+  options: FetchSecEdgarOptions = {},
+): Promise<FetchSecEdgarResult> {
+  const mode = options.mode ?? "primary";
+  const userAgent = getSecUserAgent();
+
+  const feeds = SEC_FEED_TYPES.filter((f) =>
+    options.formTypes
+      ? options.formTypes.some((t) => t.toUpperCase() === f.type.toUpperCase())
+      : true,
+  );
+
+  const tickerByCik = await getTickerByCik(userAgent, { mode });
+
+  const feedStats: { type: string; fetched: number; errors: number }[] = [];
+  const normalized: NormalizedCatalyst[] = [];
+
+  for (const feed of feeds) {
+    let fetched = 0;
+    let errors = 0;
+    try {
+      const res = await fetchSecUrl(feedUrlForType(feed.type, feed.count), {
+        userAgent,
+        mode,
+      });
+      const feedXml = await res.text();
+      const entries = parseFeedXml(feedXml);
+      fetched = entries.length;
+
+      for (const entry of entries) {
+        try {
+          const item = entryToNormalized(entry, tickerByCik);
+          if (!item) {
+            errors++;
+            continue;
+          }
+          normalized.push(item);
+        } catch {
+          errors++;
+        }
+      }
+    } catch {
+      errors++;
+    }
+    feedStats.push({ type: feed.type, fetched, errors });
+  }
+
+  // De-dupe within this run (same accession can appear across overlapping feeds).
+  const seen = new Set<string>();
+  const unique = normalized.filter((item) => {
+    if (seen.has(item.externalId)) return false;
+    seen.add(item.externalId);
+    return true;
+  });
+
+  const result = await ingestNormalizedCatalysts(unique, { purge: true });
+
+  return {
+    ...result,
+    fetched: unique.length,
+    feeds: feedStats,
   };
 }

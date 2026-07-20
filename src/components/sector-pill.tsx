@@ -1,4 +1,4 @@
-import type { EventCategoryKey } from "@/lib/jobs/parse-8k-items";
+import type { EventCategoryKey } from "@/lib/catalysts/taxonomy";
 import { cn } from "@/lib/utils";
 
 type SectorTone = EventCategoryKey | "sector" | "sec";
@@ -7,18 +7,27 @@ type SectorTone = EventCategoryKey | "sector" | "sec";
 const TONE_STYLES: Record<SectorTone, string> = {
   distress:
     "border-[var(--desk-border-strong)] bg-white/[0.04] text-[var(--desk-text-secondary)]",
+  trading_halt:
+    "border-[var(--desk-border-strong)] bg-white/[0.04] text-[var(--desk-text-secondary)]",
   earnings:
     "border-[var(--desk-border-strong)] bg-white/[0.04] text-[var(--desk-text-secondary)]",
+  regulatory:
+    "border-[var(--desk-border-strong)] bg-white/[0.04] text-[var(--desk-text-secondary)]",
   deals:
+    "border-[var(--desk-border-strong)] bg-white/[0.04] text-[var(--desk-text-secondary)]",
+  clinical:
     "border-[var(--desk-border-strong)] bg-white/[0.04] text-[var(--desk-text-secondary)]",
   restructuring:
     "border-[var(--desk-border-strong)] bg-white/[0.04] text-[var(--desk-text-secondary)]",
   capital:
     "border-[var(--desk-border-strong)] bg-white/[0.04] text-[var(--desk-text-secondary)]",
+  insider:
+    "border-[var(--desk-border-strong)] bg-white/[0.04] text-[var(--desk-text-secondary)]",
   management:
     "border-[var(--desk-border-strong)] bg-white/[0.04] text-[var(--desk-text-secondary)]",
   governance:
     "border-[var(--desk-border-strong)] bg-white/[0.04] text-[var(--desk-text-secondary)]",
+  news: "border-[var(--desk-border-strong)] bg-white/[0.04] text-[var(--desk-text-secondary)]",
   disclosure:
     "border-[var(--desk-border-strong)] bg-white/[0.03] text-[var(--desk-text-muted)]",
   other:

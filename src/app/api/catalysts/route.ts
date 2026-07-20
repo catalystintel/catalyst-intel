@@ -11,14 +11,13 @@ import {
   rateLimitExceededResponse,
   withRateLimitHeaders,
 } from "@/lib/http/rate-limit-response";
-import { fetchSecEdgar } from "@/lib/jobs/fetch-sec-edgar";
+import { fetchAllCatalystSources } from "@/lib/jobs/fetch-all-sources";
 import {
   markRefetchCompleted,
   markRefetchFailed,
   markRefetchTriggered,
   shouldTriggerBackgroundRefetch,
 } from "@/lib/jobs/ingestion-freshness";
-import { formatSecFetchError } from "@/lib/jobs/sec-edgar-http";
 
 /**
  * Authenticated catalyst list for the Live feed soft-refetch.
@@ -66,10 +65,14 @@ export async function GET(request: NextRequest) {
       title: catalysts.title,
       headline: catalysts.headline,
       eventCategory: catalysts.eventCategory,
+      subcategory: catalysts.subcategory,
       itemCodes: catalysts.itemCodes,
       timestamp: catalysts.timestamp,
       summary: catalysts.summary,
       impactScore: catalysts.impactScore,
+      confidence: catalysts.confidence,
+      tags: catalysts.tags,
+      historicalImpact: catalysts.historicalImpact,
       sourceUrl: rawSources.url,
       sourceProvider: rawSources.provider,
       sector: companies.sector,
@@ -93,11 +96,9 @@ export async function GET(request: NextRequest) {
 }
 
 /**
- * Checks the most recent ingestion timestamp and, if stale, fires
- * `fetchSecEdgar({ mode: "background" })` as best-effort self-heal.
- * Never throws or blocks the response. GHA cron remains the primary ingest;
- * on Vercel, SEC (www.sec.gov / Akamai) often ETIMEDOUT from datacenter IPs,
- * so background mode uses a short AbortSignal timeout + failure cooldown.
+ * Checks the most recent ingestion timestamp and, if stale, fires a light
+ * multi-source refetch (SEC + Nasdaq halts) as best-effort self-heal.
+ * Never throws or blocks the response. GHA cron remains the primary ingest.
  */
 async function triggerBackgroundRefetchIfStale(): Promise<void> {
   const latestSource = await db
@@ -111,15 +112,17 @@ async function triggerBackgroundRefetchIfStale(): Promise<void> {
   if (!shouldTriggerBackgroundRefetch({ lastFetchedAt })) return;
 
   markRefetchTriggered();
-  void fetchSecEdgar({ mode: "background" })
+  void fetchAllCatalystSources({
+    sources: ["sec-edgar", "nasdaq-halts"],
+  })
     .then(() => {
       markRefetchCompleted();
     })
     .catch((error: unknown) => {
       markRefetchFailed();
       console.warn(
-        "Background SEC EDGAR refetch failed (best-effort; GHA cron is primary):",
-        formatSecFetchError(error),
+        "Background multi-source refetch failed (best-effort; GHA cron is primary):",
+        error instanceof Error ? error.message : error,
       );
     });
 }

@@ -1,25 +1,18 @@
-import type { EventCategoryKey } from "@/lib/jobs/parse-8k-items";
-
-const VALID = new Set<string>([
-  "earnings",
-  "deals",
-  "management",
-  "capital",
-  "distress",
-  "restructuring",
-  "governance",
-  "disclosure",
-  "other",
-]);
+import type { EventCategoryKey } from "@/lib/catalysts/taxonomy";
+import { VALID_EVENT_CATEGORIES } from "@/lib/catalysts/taxonomy";
 
 /** Default playbook: high-signal categories traders typically care about. */
 export const DEFAULT_PLAYBOOK_CATEGORIES: EventCategoryKey[] = [
   "distress",
+  "trading_halt",
   "earnings",
+  "regulatory",
   "deals",
+  "clinical",
   "restructuring",
   "capital",
   "management",
+  "insider",
 ];
 
 /**
@@ -31,7 +24,7 @@ export function normalizePlaybookCategories(
   if (!Array.isArray(value)) return [];
   const seen = new Set<EventCategoryKey>();
   for (const entry of value) {
-    if (typeof entry === "string" && VALID.has(entry)) {
+    if (typeof entry === "string" && VALID_EVENT_CATEGORIES.has(entry)) {
       seen.add(entry as EventCategoryKey);
     }
   }

@@ -8,6 +8,7 @@ import { CategoryBadge } from "@/components/category-badge";
 import { EdgarProofLink } from "@/components/edgar-proof-link";
 import { MaterialityBadge } from "@/components/materiality-badge";
 import type { FeedCatalyst } from "@/lib/catalysts/feed-catalyst";
+import { sourceDisplay } from "@/lib/catalysts/feed-display";
 import { formatRelativeAge } from "@/lib/format/relative-time";
 import { CATEGORY_LABELS } from "@/lib/jobs/parse-8k-items";
 import { cn } from "@/lib/utils";
@@ -133,20 +134,20 @@ export function CatalystDetailDrawer({
                     Source
                   </dt>
                   <dd className="mt-1 text-sm text-[var(--desk-text)]">
-                    {catalyst.sourceProvider === "sec-edgar"
-                      ? "SEC EDGAR"
-                      : (catalyst.sourceProvider ?? "—")}
+                    {sourceDisplay(catalyst).name}
                   </dd>
                 </div>
                 <div>
                   <dt className="tracking-[0.14em] text-[var(--desk-text-dim)] uppercase">
-                    Sector
+                    Category
                   </dt>
                   <dd className="mt-1 text-sm text-[var(--desk-text)]">
-                    {catalyst.sector?.trim() ||
-                      (catalyst.eventCategory
-                        ? CATEGORY_LABELS[catalyst.eventCategory]
-                        : "SEC Filings")}
+                    {catalyst.eventCategory
+                      ? CATEGORY_LABELS[catalyst.eventCategory]
+                      : "—"}
+                    {catalyst.subcategory
+                      ? ` · ${catalyst.subcategory.replace(/_/g, " ")}`
+                      : ""}
                   </dd>
                 </div>
                 <div>
@@ -165,6 +166,16 @@ export function CatalystDetailDrawer({
                     {formatRelativeAge(catalyst.timestamp)}
                   </dd>
                 </div>
+                {catalyst.confidence != null ? (
+                  <div>
+                    <dt className="tracking-[0.14em] text-[var(--desk-text-dim)] uppercase">
+                      Confidence
+                    </dt>
+                    <dd className="mt-1 text-sm text-[var(--desk-text)] tabular-nums">
+                      {catalyst.confidence}
+                    </dd>
+                  </div>
+                ) : null}
                 <div className="col-span-2">
                   <dt className="tracking-[0.14em] text-[var(--desk-text-dim)] uppercase">
                     Filed
@@ -174,6 +185,24 @@ export function CatalystDetailDrawer({
                   </dd>
                 </div>
               </dl>
+
+              {catalyst.tags.length > 0 ? (
+                <div>
+                  <p className="font-mono text-[0.65rem] tracking-[0.14em] text-[var(--desk-text-dim)] uppercase">
+                    Tags
+                  </p>
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    {catalyst.tags.map((tag) => (
+                      <span
+                        key={tag}
+                        className="rounded-sm border border-[var(--desk-border)] px-1.5 py-0.5 font-mono text-[0.65rem] text-[var(--desk-text-muted)]"
+                      >
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
 
               {catalyst.items.length > 0 ? (
                 <div>
@@ -209,7 +238,7 @@ export function CatalystDetailDrawer({
 
               <div>
                 <p className="font-mono text-[0.65rem] tracking-[0.14em] text-[var(--desk-text-dim)] uppercase">
-                  Proof (EDGAR)
+                  Proof
                 </p>
                 <div className="mt-2">
                   <EdgarProofLink url={catalyst.sourceUrl} />
@@ -220,10 +249,27 @@ export function CatalystDetailDrawer({
                 <p className="font-mono text-[0.65rem] tracking-[0.14em] text-[var(--desk-text-dim)] uppercase">
                   Historical reaction
                 </p>
-                <p className="mt-1.5 text-sm text-[var(--desk-text-muted)]">
-                  Coming soon — prior move context after similar catalysts will
-                  land here. No synthetic history is shown.
-                </p>
+                {catalyst.historicalImpact &&
+                typeof catalyst.historicalImpact === "object" &&
+                catalyst.historicalImpact !== null &&
+                "pctChange" in catalyst.historicalImpact ? (
+                  <p className="mt-1.5 font-mono text-sm text-[var(--desk-text-secondary)] tabular-nums">
+                    Session move:{" "}
+                    {Number(
+                      (catalyst.historicalImpact as { pctChange: number })
+                        .pctChange,
+                    ).toFixed(2)}
+                    %
+                    {"date" in catalyst.historicalImpact
+                      ? ` · ${(catalyst.historicalImpact as { date?: string }).date}`
+                      : ""}
+                  </p>
+                ) : (
+                  <p className="mt-1.5 text-sm text-[var(--desk-text-muted)]">
+                    No price enrichment yet. Set POLYGON_API_KEY to enable
+                    session-move context.
+                  </p>
+                )}
               </div>
             </div>
           </>

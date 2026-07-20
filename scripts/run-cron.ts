@@ -1,10 +1,10 @@
 /**
  * Local continuous ingestion runner. Start with `npm run cron` and leave it
- * running in its own terminal while you develop - it re-fetches SEC EDGAR
- * on an interval so the dashboard always has fresh data.
+ * running in its own terminal while you develop - it re-fetches all catalyst
+ * sources on an interval so the dashboard always has fresh data.
  *
  * In production this same job is instead triggered by a GitHub Actions
- * schedule hitting the deployed admin endpoint - see DEPLOYMENT.md.
+ * schedule hitting `/api/admin/fetch/all` - see DEPLOYMENT.md.
  */
 async function main() {
   try {
@@ -16,7 +16,8 @@ async function main() {
   // Dynamic import so env vars are loaded before any module (like the DB
   // client) reads process.env at import time - static imports are hoisted
   // above this point and would run too early.
-  const { fetchSecEdgar } = await import("@/lib/jobs/fetch-sec-edgar");
+  const { fetchAllCatalystSources } =
+    await import("@/lib/jobs/fetch-all-sources");
 
   const intervalMinutes = Number(process.env.CRON_INTERVAL_MINUTES ?? 2);
   const intervalMs = intervalMinutes * 60 * 1000;
@@ -30,9 +31,15 @@ async function main() {
     }
     running = true;
     try {
-      const result = await fetchSecEdgar();
+      const result = await fetchAllCatalystSources();
+      const parts = result.sources
+        .map(
+          (s) =>
+            `${s.source}:${s.status}(+${s.inserted}/skip${s.skipped}/err${s.errors})`,
+        )
+        .join(" ");
       console.log(
-        `[cron] ${result.ranAt} fetched=${result.fetched} inserted=${result.inserted} skipped=${result.skipped} errors=${result.errors}`,
+        `[cron] ${result.ranAt} totals inserted=${result.totals.inserted} skipped=${result.totals.skipped} errors=${result.totals.errors} | ${parts}`,
       );
     } catch (error) {
       console.error(
@@ -45,7 +52,7 @@ async function main() {
   }
 
   console.log(
-    `[cron] starting - running every ${intervalMinutes} minute(s). Press Ctrl+C to stop.`,
+    `[cron] starting multi-source ingest every ${intervalMinutes} minute(s). Press Ctrl+C to stop.`,
   );
   await runOnce();
   const timer = setInterval(runOnce, intervalMs);

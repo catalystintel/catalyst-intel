@@ -1,7 +1,7 @@
 import {
   CATEGORY_PRIORITY,
   type EventCategoryKey,
-} from "@/lib/jobs/parse-8k-items";
+} from "@/lib/catalysts/taxonomy";
 
 export type MaterialityTier = "high" | "medium" | "low";
 
