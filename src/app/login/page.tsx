@@ -44,7 +44,7 @@ export default async function LoginPage({
   const destination = next ?? "/dashboard";
 
   return (
-    <div className="relative flex flex-1 flex-col overflow-hidden bg-[var(--desk-app)]">
+    <div className="relative flex min-h-dvh flex-1 flex-col overflow-x-hidden bg-[var(--desk-app)]">
       <div
         aria-hidden
         className="desk-grid pointer-events-none absolute inset-0"
@@ -54,10 +54,10 @@ export default async function LoginPage({
         className="pointer-events-none absolute inset-x-0 top-0 h-[40vh] bg-[radial-gradient(ellipse_at_top,rgba(79,143,217,0.14),transparent_65%)]"
       />
 
-      <header className="relative z-10 flex items-center justify-between px-5 py-5 sm:px-8">
+      <header className="relative z-10 flex items-center justify-between px-4 pt-[max(1rem,env(safe-area-inset-top))] pb-4 sm:px-8 sm:py-5">
         <Link
           href="/"
-          className="flex items-center gap-2.5 text-sm font-bold tracking-tight text-[var(--desk-text)]"
+          className="flex min-h-11 items-center gap-2.5 text-sm font-bold tracking-tight text-[var(--desk-text)]"
         >
           <span
             aria-hidden
@@ -67,7 +67,7 @@ export default async function LoginPage({
         </Link>
       </header>
 
-      <main className="page-enter relative z-10 flex flex-1 items-center justify-center px-4 pb-16">
+      <main className="page-enter relative z-10 flex flex-1 items-center justify-center px-4 pb-[max(4rem,env(safe-area-inset-bottom))]">
         <div className="w-full max-w-sm rounded-xl border border-[var(--desk-border)] bg-[var(--desk-panel)] p-6 shadow-[0_24px_80px_rgba(0,0,0,0.28)]">
           <span className="inline-flex items-center gap-1.5 rounded-full border border-[rgba(240,193,75,0.35)] bg-[rgba(240,193,75,0.12)] px-2.5 py-1 text-[0.68rem] font-bold tracking-[0.08em] text-[var(--desk-live)]">
             <span
@@ -113,6 +113,10 @@ export default async function LoginPage({
                   <code className="text-xs">
                     http://localhost:3000/auth/callback
                   </code>{" "}
+                  and{" "}
+                  <code className="text-xs">
+                    https://catalyst-intel.vercel.app/auth/callback
+                  </code>{" "}
                   to Redirect URLs, then restart the dev server.
                 </p>
               </div>
@@ -129,7 +133,8 @@ export default async function LoginPage({
               <Button
                 type="submit"
                 variant="outline"
-                className="btn-press w-full gap-2"
+                size="lg"
+                className="btn-press min-h-11 w-full gap-2"
                 disabled={!configured}
               >
                 <GoogleIcon />
