@@ -18,7 +18,11 @@ import {
   toFeedCatalyst,
   type FeedCatalyst,
 } from "@/lib/catalysts/feed-catalyst";
-import { titleLine } from "@/lib/catalysts/feed-display";
+import {
+  titleLine,
+  eventLabel as feedEventLabel,
+  sourceDisplay,
+} from "@/lib/catalysts/feed-display";
 import {
   DEFAULT_PLAYBOOK_CATEGORIES,
   matchesQuietPlaybook,
@@ -439,7 +443,7 @@ export function LiveCatalystFeed({
           </p>
           <p className="max-w-sm text-sm text-[var(--desk-text-muted)]">
             {isAdmin
-              ? "Open Admin and run “Fetch SEC EDGAR now” to populate the Live feed."
+              ? "Open Admin and run “Fetch all sources now” to populate the Live feed."
               : "Filings appear here once an admin runs the first ingestion job."}
           </p>
         </div>
@@ -637,11 +641,8 @@ function CatalystFeedList({
         {catalysts.map((catalyst, index) => {
           const flashing = flashIds.has(catalyst.id);
           const selected = selectedId === catalyst.id;
-          const eventLabel =
-            catalyst.type?.trim() ||
-            (catalyst.eventCategory
-              ? CATEGORY_LABELS[catalyst.eventCategory]
-              : "—");
+          const eventLabel = feedEventLabel(catalyst);
+          const source = sourceDisplay(catalyst);
           return (
             <article
               key={catalyst.id}
@@ -670,7 +671,14 @@ function CatalystFeedList({
               </div>
 
               <div role="cell" className="hidden min-w-0 sm:block">
-                <span className="inline-flex max-w-full truncate rounded-sm border border-[var(--desk-border-strong)] bg-white/[0.04] px-1.5 py-0.5 font-mono text-[0.68rem] text-[var(--desk-text-secondary)]">
+                <span
+                  className="inline-flex max-w-full truncate rounded-sm border border-[var(--desk-border-strong)] bg-white/[0.04] px-1.5 py-0.5 font-mono text-[0.68rem] text-[var(--desk-text-secondary)]"
+                  title={
+                    catalyst.eventCategory
+                      ? CATEGORY_LABELS[catalyst.eventCategory]
+                      : undefined
+                  }
+                >
                   {eventLabel}
                 </span>
               </div>
@@ -686,12 +694,21 @@ function CatalystFeedList({
                 <span className="block text-[0.86rem] font-medium tracking-tight text-[var(--desk-text-secondary)] group-hover:text-[var(--desk-text)] group-focus-visible:text-[var(--desk-text)] max-sm:line-clamp-2 sm:truncate">
                   {titleLine(catalyst)}
                 </span>
+                <span className="mt-0.5 hidden truncate font-mono text-[0.62rem] tracking-wide text-[var(--desk-text-dim)] sm:block">
+                  {source.name}
+                  {catalyst.tags.length > 0
+                    ? ` · ${catalyst.tags.slice(0, 3).join(" · ")}`
+                    : ""}
+                </span>
                 <span className="mt-1.5 flex flex-wrap items-center gap-2 sm:hidden">
                   <span className="font-mono text-[0.8rem] font-semibold text-[var(--desk-text)]">
                     {catalyst.ticker ?? "—"}
                   </span>
                   <span className="font-mono text-[0.68rem] text-[var(--desk-text-dim)]">
                     {eventLabel}
+                  </span>
+                  <span className="font-mono text-[0.62rem] text-[var(--desk-text-dim)]">
+                    {source.name}
                   </span>
                   <MaterialityBadge
                     score={catalyst.impactScore}

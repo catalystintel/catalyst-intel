@@ -8,16 +8,15 @@
  * headline - an 8-K's Item code is the whole reason a trader cares which one it is.
  */
 
-export type EventCategoryKey =
-  | "earnings"
-  | "deals"
-  | "management"
-  | "capital"
-  | "distress"
-  | "restructuring"
-  | "governance"
-  | "disclosure"
-  | "other";
+import {
+  CATEGORY_LABELS,
+  CATEGORY_PRIORITY,
+  VALID_EVENT_CATEGORIES,
+  type EventCategoryKey,
+} from "@/lib/catalysts/taxonomy";
+
+export type { EventCategoryKey };
+export { CATEGORY_LABELS, CATEGORY_PRIORITY };
 
 export interface ParsedItem {
   /** SEC item number, e.g. "5.02". */
@@ -34,19 +33,6 @@ export interface ParsedFiling {
   /** Short headline for the most market-moving item (the feed's "Event" cell). */
   headline: string;
 }
-
-/** Display names for each category (single source of truth for UI + storage). */
-export const CATEGORY_LABELS: Record<EventCategoryKey, string> = {
-  earnings: "Earnings",
-  deals: "M&A / Deals",
-  management: "Management",
-  capital: "Capital / Financing",
-  distress: "Distress",
-  restructuring: "Restructuring",
-  governance: "Governance",
-  disclosure: "Disclosure",
-  other: "Other",
-};
 
 interface ItemMeta {
   label: string;
@@ -79,21 +65,6 @@ const ITEM_CATALOG: Record<string, ItemMeta> = {
   "7.01": { label: "Reg FD disclosure", category: "disclosure" },
   "8.01": { label: "Other event", category: "disclosure" },
   "9.01": { label: "Exhibits", category: "other" },
-};
-
-// Higher wins when a filing lists several items. Distress/earnings/deals are the
-// headline-grabbers; 9.01 (exhibits) and 7.01/8.01 are near-boilerplate padding.
-// Also used as the rule-based materiality score (0–100) until AI scoring ships.
-export const CATEGORY_PRIORITY: Record<EventCategoryKey, number> = {
-  distress: 90,
-  earnings: 85,
-  deals: 80,
-  restructuring: 70,
-  capital: 60,
-  management: 55,
-  governance: 40,
-  disclosure: 20,
-  other: 10,
 };
 
 // "Exhibits" almost always tags along with the real item, so it should never win
@@ -148,8 +119,6 @@ export function selectPrimaryItem(items: ParsedItem[]): ParsedItem | null {
   );
 }
 
-const VALID_CATEGORIES = new Set<string>(Object.keys(CATEGORY_LABELS));
-
 /**
  * Coerces the `item_codes` JSON column (typed `unknown` by the driver) into a
  * trusted `ParsedItem[]`, dropping anything malformed.
@@ -167,7 +136,7 @@ export function normalizeItemCodes(value: unknown): ParsedItem[] {
       entry !== null &&
       typeof (entry as ParsedItem).code === "string" &&
       typeof (entry as ParsedItem).label === "string" &&
-      VALID_CATEGORIES.has((entry as ParsedItem).category)
+      VALID_EVENT_CATEGORIES.has((entry as ParsedItem).category)
     ) {
       const item = entry as ParsedItem;
       return [{ code: item.code, label: item.label, category: item.category }];
@@ -195,5 +164,65 @@ export function parseFilingSummary(summary: string): ParsedFiling {
     items,
     primaryCategory: primary.category,
     headline: primary.label,
+  };
+}
+
+/** Maps non-8-K SEC form types into category / headline / subcategory. */
+export function classifySecFormType(formType: string): {
+  category: EventCategoryKey;
+  headline: string;
+  subcategory: string;
+  tags: string[];
+} {
+  const form = formType.trim().toUpperCase();
+
+  if (form === "4" || form.startsWith("4/")) {
+    return {
+      category: "insider",
+      headline: "Form 4 insider transaction",
+      subcategory: "form4",
+      tags: ["form4", "insider"],
+    };
+  }
+  if (form.startsWith("S-3") || form.startsWith("424B")) {
+    return {
+      category: "capital",
+      headline: form.startsWith("424B")
+        ? "Prospectus / offering (424B)"
+        : "Shelf registration (S-3)",
+      subcategory: form.startsWith("424B") ? "424b" : "s3",
+      tags: ["offering", "capital"],
+    };
+  }
+  if (form.includes("13D")) {
+    return {
+      category: "deals",
+      headline: "Beneficial ownership (13D)",
+      subcategory: "13d",
+      tags: ["13d", "ownership"],
+    };
+  }
+  if (form.includes("13G")) {
+    return {
+      category: "governance",
+      headline: "Beneficial ownership (13G)",
+      subcategory: "13g",
+      tags: ["13g", "ownership"],
+    };
+  }
+  if (form.startsWith("8-K")) {
+    return {
+      category: "disclosure",
+      headline: "8-K filing",
+      subcategory: "8k",
+      tags: ["8k"],
+    };
+  }
+
+  return {
+    category: "other",
+    headline: `${formType} filing`,
+    subcategory: form.toLowerCase().replace(/\s+/g, "_"),
+    tags: ["sec"],
   };
 }

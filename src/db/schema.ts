@@ -55,6 +55,8 @@ export const catalysts = sqliteTable("catalysts", {
   headline: text("headline"),
   // Grouping key (see EventCategoryKey) used for feed filtering and color.
   eventCategory: text("event_category"),
+  // Finer grain within eventCategory (e.g. "halt_resumed", "form4_purchase").
+  subcategory: text("subcategory"),
   // All parsed 8-K items on the filing: [{ code, label, category }].
   itemCodes: text("item_codes", { mode: "json" }),
   timestamp: text("timestamp").notNull(),
@@ -65,6 +67,12 @@ export const catalysts = sqliteTable("catalysts", {
   summary: text("summary"),
   // Rule-based materiality (0–100) until AI scoring; see materiality.ts.
   impactScore: integer("impact_score"),
+  // Ingest confidence 0–100 (feed quality / parser certainty).
+  confidence: integer("confidence"),
+  // Free-form tags for desk filtering, e.g. ["fda", "pdufa"].
+  tags: text("tags", { mode: "json" }),
+  // Optional price-move enrichment from Polygon (or notes as JSON/text).
+  historicalImpact: text("historical_impact", { mode: "json" }),
   createdAt: text("created_at")
     .notNull()
     .default(sql`(current_timestamp)`),

@@ -90,11 +90,12 @@ export default async function AdminPage() {
           <div className="flex flex-wrap items-start justify-between gap-4 border-b border-border/60 px-4 py-4 sm:px-5">
             <div>
               <h2 className="font-mono text-sm tracking-wide text-foreground">
-                SEC EDGAR · 8-K
+                Multi-source ingest
               </h2>
               <p className="mt-1 text-sm text-muted-foreground">
-                Pull the Atom feed, dedupe by accession, resolve tickers into
-                the Live feed.
+                Orchestrated fetch across SEC, Nasdaq halts, Finnhub, Polygon,
+                openFDA, and ClinicalTrials. Soft-skips when optional keys are
+                missing.
               </p>
             </div>
             <dl className="grid grid-cols-2 gap-x-8 gap-y-1 font-mono text-xs">

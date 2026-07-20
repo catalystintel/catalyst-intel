@@ -19,9 +19,10 @@ Three environments, one app:
 - **Vercel CD** (`vercel.json`): deploys **only** on push to `dev` (staging) and `main`
   (production). Feature branches do **not** get Vercel deploys.
 - **Scheduled ETL** (`.github/workflows/fetch-sec-edgar-cron.yml`): scheduled GitHub Action hits
-  both the production and staging URLs with `x-cron-secret` (matrix job, each side optional). Inert
-  until that environment's secrets are set. See "Why GitHub Actions cron" below for the observed
-  real-world cadence and the in-app self-healing backstop.
+  both the production and staging URLs' `/api/admin/fetch/all` multi-source orchestrator with
+  `x-cron-secret` (matrix job, each side optional). Inert until that environment's secrets are
+  set. See "Why GitHub Actions cron" below for the observed real-world cadence and the in-app
+  self-healing backstop.
 
 ## Env vars cheat sheet
 
@@ -37,7 +38,10 @@ Three environments, one app:
 | `NEXT_PUBLIC_POSTHOG_KEY`          | No        | PostHog Project API key; omit to disable analytics                                    |
 | `NEXT_PUBLIC_POSTHOG_HOST`         | No        | Default `https://us.i.posthog.com`                                                    |
 | `ADMIN_EMAILS`                     | No        | Comma-separated admin emails; defaults to `zhbar10@gmail.com,omer.nachshon@gmail.com` |
-| `FINNHUB_API_KEY`                  | No        | Finnhub key for NYSE listings/quotes; soft-fails empty when unset                     |
+| `FINNHUB_API_KEY`                  | No        | Finnhub: NYSE listings, earnings/FDA calendars, news (soft-fail)                      |
+| `POLYGON_API_KEY`                  | No        | Polygon/Massive news + historical_impact enrichment (soft-fail)                       |
+| `MASSIVE_API_KEY`                  | No        | Alias for `POLYGON_API_KEY`                                                           |
+| `FORM4_API_KEY`                    | No        | Optional Form4API enrichment (EDGAR Form 4 still works without it)                    |
 | `LIBSQL_URL` / `LIBSQL_AUTH_TOKEN` | No        | Leave unset locally - use the SQLite file                                             |
 | `CRON_SECRET`                      | No        | Only needed for remote cron callers                                                   |
 
@@ -80,11 +84,13 @@ via `/admin` uses the same allowlist; GitHub Actions cron still uses `x-cron-sec
 
 Per-IP fixed-window limits live in `src/lib/http/rate-limit.ts` (in-memory Map):
 
-| Route                                       | Default          | Notes                                 |
-| ------------------------------------------- | ---------------- | ------------------------------------- |
-| `GET /api/catalysts`                        | 90 / minute / IP | Live feed soft-refetch                |
-| `POST /api/admin/fetch/sec-edgar` (session) | 6 / minute / IP  | Admin UI trigger                      |
-| Same admin route with valid `x-cron-secret` | **bypassed**     | GitHub Actions cron must keep working |
+| Route                                        | Default          | Notes                                 |
+| -------------------------------------------- | ---------------- | ------------------------------------- |
+| `GET /api/catalysts`                         | 90 / minute / IP | Live feed soft-refetch                |
+| `POST /api/admin/fetch/all` (session)        | 6 / minute / IP  | Admin multi-source orchestrator       |
+| `POST /api/admin/fetch/[source]` (session)   | 6 / minute / IP  | Per-source admin trigger              |
+| `POST /api/admin/fetch/sec-edgar` (session)  | 6 / minute / IP  | Legacy SEC-only trigger (still works) |
+| Same admin routes with valid `x-cron-secret` | **bypassed**     | GitHub Actions cron must keep working |
 
 Responses that exceed the limit return **429** with `Retry-After` and `X-RateLimit-*`
 headers. This store is **per Vercel isolate** — fine for MVP spam protection; shared Redis
@@ -104,7 +110,9 @@ env vars are required today.
 | `NEXT_PUBLIC_POSTHOG_HOST`      | Recommended | `https://us.i.posthog.com` or EU host                       |
 | `ADMIN_EMAILS`                  | No          | Override admin allowlist if needed (same defaults as local) |
 | `CRON_SECRET`                   | Recommended | So you can manually trigger fetch against staging           |
-| `FINNHUB_API_KEY`               | No          | Enables NYSE listing ingest via Finnhub (Admin / cron)      |
+| `FINNHUB_API_KEY`               | No          | Enables Finnhub catalysts + NYSE listings (Admin / cron)    |
+| `POLYGON_API_KEY`               | No          | Enables Polygon/Benzinga news + price enrichment            |
+| `FORM4_API_KEY`                 | No          | Optional Form4API enrichment                                |
 | `RESEND_API_KEY`                | No          | Enables email alert delivery (webhook works without it)     |
 | `RESEND_FROM_EMAIL`             | No          | Optional From for Resend (defaults to onboarding sender)    |
 
@@ -121,7 +129,9 @@ env vars are required today.
 | `NEXT_PUBLIC_POSTHOG_HOST`      | Recommended | `https://us.i.posthog.com` or EU host                       |
 | `ADMIN_EMAILS`                  | No          | Override admin allowlist if needed (same defaults as local) |
 | `CRON_SECRET`                   | Yes         | Must match the GitHub repo secret below                     |
-| `FINNHUB_API_KEY`               | No          | Enables NYSE listing ingest via Finnhub (Admin / cron)      |
+| `FINNHUB_API_KEY`               | No          | Enables Finnhub catalysts + NYSE listings (Admin / cron)    |
+| `POLYGON_API_KEY`               | No          | Enables Polygon/Benzinga news + price enrichment            |
+| `FORM4_API_KEY`                 | No          | Optional Form4API enrichment                                |
 | `RESEND_API_KEY`                | No          | Enables email alert delivery (webhook works without it)     |
 | `RESEND_FROM_EMAIL`             | No          | Optional From for Resend                                    |
 
@@ -212,10 +222,11 @@ node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 
 1. Push / merge into `dev` → Vercel staging deploy + GitHub Actions CI.
 2. Promote `dev` → `main` (only when you ask) → Vercel production deploy + CI.
-3. Actions → `Fetch SEC EDGAR (scheduled ETL)` → **Run workflow** → expect HTTP 200 for each
+3. Actions → `Fetch catalysts (scheduled ETL)` → **Run workflow** → expect HTTP 200 for each
    environment that has its secrets configured.
 4. Sign in with Google on the live URL using an allowlisted admin email (or set
-   `ADMIN_EMAILS` on Vercel), open `/admin`, run a fetch, confirm `/dashboard` shows data.
+   `ADMIN_EMAILS` on Vercel), open `/admin`, run **Fetch all sources now**, confirm `/dashboard`
+   shows multi-source data.
 
 ## Database migrations in CI/CD
 
@@ -247,12 +258,9 @@ at this project's push frequency/team size; revisit if that changes.
 ## Data retention
 
 Catalysts older than 30 days (`RETENTION_DAYS` in `src/lib/jobs/data-retention.ts`) are purged at
-the end of every successful `fetchSecEdgar()` run - cron, manual `/admin` trigger, or the
-self-healing backstop all get this for free since they all call the same job. Purging is keyed off
-the catalyst's **filing timestamp**, not when it was ingested. Any raw source left with no
-catalyst referencing it (i.e. its catalyst was just purged) is deleted too. `companies` rows are
-never purged - they're small, reused reference data, not raw event volume. A retention failure
-logs an error but never fails the ingestion itself.
+the end of every successful SEC EDGAR ingest (which the multi-source orchestrator always includes).
+Purging is keyed off the catalyst's **filing timestamp**, not when it was ingested. Any raw source
+left with no catalyst referencing it is deleted too. `companies` rows are never purged.
 
 ## Why Turso (not local SQLite) on Vercel
 
@@ -271,14 +279,13 @@ Pulling actual run history (`gh run list --workflow=fetch-sec-edgar-cron.yml`) s
 the docs imply — treat this workflow as "best-effort, roughly hourly," not "every 5 minutes."
 
 **Self-healing backstop:** because the scheduler can't be trusted to hit its own interval,
-`GET /api/catalysts` (`src/app/api/catalysts/route.ts`) checks the most recent ingestion timestamp
-on every read and fires a non-blocking `fetchSecEdgar()` itself if the data is stale (>10 min old),
-with a 3-minute cooldown to avoid overlapping runs (`src/lib/jobs/ingestion-freshness.ts`). In
-practice: as long as anyone is using the app, data stays fresh regardless of cron timing. The
-scheduled workflow remains useful for keeping data fresh even with zero traffic.
+`GET /api/catalysts` checks the most recent ingestion timestamp on every read and fires a
+non-blocking multi-source refetch (SEC EDGAR + Nasdaq halts) if the data is stale (>10 min old),
+with a 3-minute cooldown (`src/lib/jobs/ingestion-freshness.ts`). Full multi-source runs remain
+on GHA cron / Admin “Fetch all”.
 
 **Decision: keep GitHub Actions cron while on Vercel Hobby.** GitHub Actions here is a scheduler
-pinging `/api/admin/fetch/sec-edgar` — it never touches Turso directly, the route handler does.
+pinging `/api/admin/fetch/all` — it never touches Turso directly, the route handler does.
 The ideal end-state is GitHub Actions reserved purely for CI (`ci.yml`) and Vercel's native
 `crons` config (in `vercel.json`) driving ETL, since it removes one moving part and Vercel Cron
 auto-sends `Authorization: Bearer $CRON_SECRET`, matching the secret this project already uses.
@@ -288,11 +295,11 @@ to Vercel Pro.
 
 ## Testing ETL end-to-end
 
-| Where          | How                                                                                                                                                                                                                                                                                |
-| -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Local**      | `npm run cron` (continuous, every `CRON_INTERVAL_MINUTES`) or `/admin` → "Fetch SEC EDGAR now" once.                                                                                                                                                                               |
-| **Staging**    | Sign in with an allowlisted admin email on the staging Preview URL → `/admin` → run a fetch; or set `STAGING_APP_URL`/`STAGING_CRON_SECRET` (above) so the scheduled workflow covers it too; or `gh workflow run fetch-sec-edgar-cron.yml` to trigger both environments on demand. |
-| **Production** | Same as staging, against the production URL/secrets, or watch the self-healing backstop kick in on real traffic.                                                                                                                                                                   |
+| Where          | How                                                                                                                                                                                                                             |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Local**      | `npm run cron` (continuous multi-source, every `CRON_INTERVAL_MINUTES`) or `/admin` → "Fetch all sources now" / per-source buttons.                                                                                             |
+| **Staging**    | Sign in with an allowlisted admin email on the staging Preview URL → `/admin` → run a fetch; or set `STAGING_APP_URL`/`STAGING_CRON_SECRET` so the scheduled workflow covers it; or `gh workflow run fetch-sec-edgar-cron.yml`. |
+| **Production** | Same as staging, against the production URL/secrets, or watch the self-healing backstop kick in on real traffic.                                                                                                                |
 
 To confirm data actually landed, check `/dashboard` (Live feed) or open Drizzle Studio
 (`npm run db:studio` locally; point `LIBSQL_URL`/`LIBSQL_AUTH_TOKEN` at a remote Turso DB to

@@ -14,10 +14,14 @@ export interface FeedCatalyst {
   title: string;
   headline: string | null;
   eventCategory: EventCategoryKey | null;
+  subcategory: string | null;
   items: ParsedItem[];
   timestamp: string;
   summary: string | null;
   impactScore: number | null;
+  confidence: number | null;
+  tags: string[];
+  historicalImpact: unknown | null;
   sourceUrl: string | null;
   /** raw_sources.provider, e.g. "sec-edgar". */
   sourceProvider: string | null;
@@ -34,10 +38,14 @@ export interface RawCatalystRow {
   title: string;
   headline?: string | null;
   eventCategory?: string | null;
+  subcategory?: string | null;
   itemCodes?: unknown;
   timestamp: string;
   summary: string | null;
   impactScore: number | null;
+  confidence?: number | null;
+  tags?: unknown;
+  historicalImpact?: unknown;
   sourceUrl: string | null;
   sourceProvider?: string | null;
   sector?: string | null;
@@ -50,6 +58,13 @@ function toEventCategory(
     return value as EventCategoryKey;
   }
   return null;
+}
+
+function normalizeTags(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter(
+    (t): t is string => typeof t === "string" && t.trim().length > 0,
+  );
 }
 
 /**
@@ -68,10 +83,17 @@ export function toFeedCatalyst(row: RawCatalystRow): FeedCatalyst {
     title: row.title,
     headline: row.headline ?? null,
     eventCategory: toEventCategory(row.eventCategory),
+    subcategory: row.subcategory?.trim() || null,
     items: normalizeItemCodes(row.itemCodes),
     timestamp: row.timestamp,
     summary: row.summary,
     impactScore: row.impactScore,
+    confidence:
+      typeof row.confidence === "number" && Number.isFinite(row.confidence)
+        ? row.confidence
+        : null,
+    tags: normalizeTags(row.tags),
+    historicalImpact: row.historicalImpact ?? null,
     sourceUrl: row.sourceUrl,
     sourceProvider: row.sourceProvider ?? null,
     sector: row.sector ?? null,
