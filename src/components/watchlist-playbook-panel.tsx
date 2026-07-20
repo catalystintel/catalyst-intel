@@ -24,15 +24,23 @@ export function WatchlistPlaybookPanel() {
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [loaded, setLoaded] = useState(false);
+  const [nyseBySymbol, setNyseBySymbol] = useState<
+    Record<string, { lastPrice: string | null; description: string | null }>
+  >({});
+  const [nyseNote, setNyseNote] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
-      const [wRes, pRes] = await Promise.all([
+      const [wRes, pRes, nRes] = await Promise.all([
         fetch("/api/watchlist", {
           credentials: "same-origin",
           cache: "no-store",
         }),
         fetch("/api/playbook", {
+          credentials: "same-origin",
+          cache: "no-store",
+        }),
+        fetch("/api/nyse/symbols?limit=80", {
           credentials: "same-origin",
           cache: "no-store",
         }),
@@ -50,6 +58,32 @@ export function WatchlistPlaybookPanel() {
           : DEFAULT_PLAYBOOK_CATEGORIES,
       );
       setQuietMode(Boolean(pData.quietMode));
+
+      if (nRes.ok) {
+        const nData = await nRes.json();
+        const map: Record<
+          string,
+          { lastPrice: string | null; description: string | null }
+        > = {};
+        for (const row of nData.symbols ?? []) {
+          if (row?.symbol) {
+            map[String(row.symbol).toUpperCase()] = {
+              lastPrice: row.lastPrice ?? null,
+              description: row.description ?? null,
+            };
+          }
+        }
+        setNyseBySymbol(map);
+        setNyseNote(
+          nData.emptyReason
+            ? String(nData.emptyReason)
+            : nData.total
+              ? `${nData.total.toLocaleString()} NYSE listings loaded`
+              : null,
+        );
+      } else {
+        setNyseNote(null);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Load failed.");
     } finally {
@@ -180,12 +214,17 @@ export function WatchlistPlaybookPanel() {
             <Button
               type="submit"
               disabled={saving || !draft.trim()}
-              className="btn-press h-9 gap-1.5 bg-amber-500 text-zinc-950 hover:bg-amber-400"
+              className="btn-press h-9 gap-1.5 bg-[var(--desk-live)] text-[#121212] hover:brightness-110"
             >
               <Plus className="size-3.5" />
               Add
             </Button>
           </form>
+          {nyseNote ? (
+            <p className="font-mono text-[0.7rem] text-[var(--desk-text-dim)]">
+              {nyseNote}
+            </p>
+          ) : null}
           {tickers.length === 0 ? (
             <p className="font-mono text-xs text-[var(--desk-text-dim)]">
               No tickers yet — quiet mode will filter by playbook categories
@@ -193,23 +232,32 @@ export function WatchlistPlaybookPanel() {
             </p>
           ) : (
             <ul className="flex flex-wrap gap-2">
-              {tickers.map((t) => (
-                <li
-                  key={t.id}
-                  className="inline-flex items-center gap-1.5 rounded-md border border-[var(--desk-border-strong)] bg-white/[0.03] px-2.5 py-1 font-mono text-sm text-[var(--desk-text)]"
-                >
-                  {t.ticker}
-                  <button
-                    type="button"
-                    aria-label={`Remove ${t.ticker}`}
-                    disabled={saving}
-                    onClick={() => void removeTicker(t.ticker)}
-                    className="text-[var(--desk-text-muted)] hover:text-red-300"
+              {tickers.map((t) => {
+                const nyse = nyseBySymbol[t.ticker.toUpperCase()];
+                return (
+                  <li
+                    key={t.id}
+                    className="inline-flex items-center gap-1.5 rounded-md border border-[var(--desk-border-strong)] bg-white/[0.03] px-2.5 py-1 font-mono text-sm text-[var(--desk-text)]"
+                    title={nyse?.description ?? undefined}
                   >
-                    <Trash2 className="size-3.5" />
-                  </button>
-                </li>
-              ))}
+                    {t.ticker}
+                    {nyse?.lastPrice ? (
+                      <span className="text-[0.7rem] text-[var(--desk-text-dim)] tabular-nums">
+                        ${nyse.lastPrice}
+                      </span>
+                    ) : null}
+                    <button
+                      type="button"
+                      aria-label={`Remove ${t.ticker}`}
+                      disabled={saving}
+                      onClick={() => void removeTicker(t.ticker)}
+                      className="text-[var(--desk-text-muted)] hover:text-[var(--desk-text)]"
+                    >
+                      <Trash2 className="size-3.5" />
+                    </button>
+                  </li>
+                );
+              })}
             </ul>
           )}
         </div>
@@ -253,7 +301,7 @@ export function WatchlistPlaybookPanel() {
                 className={cn(
                   "inline-flex h-8 items-center rounded-md border px-2.5 font-mono text-[0.7rem] tracking-wide transition-colors",
                   active
-                    ? "border-[var(--desk-accent)]/55 bg-[var(--desk-accent)]/12 text-[var(--desk-accent-fg)]"
+                    ? "border-white/30 bg-white/[0.08] text-[var(--desk-text)]"
                     : "border-[var(--desk-border)] text-[var(--desk-text-muted)] hover:border-[var(--desk-border-strong)]",
                 )}
               >

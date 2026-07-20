@@ -52,6 +52,20 @@ Sign in with Google before checking authenticated surfaces.
 | ------------------- | ------------------- | ------------------------------------ |
 | `RESEND_API_KEY`    | Email delivery      | Optional; webhook works without it   |
 | `RESEND_FROM_EMAIL` | Email From override | Defaults to Resend onboarding sender |
+| `FINNHUB_API_KEY`   | NYSE listings       | Optional; soft-fail empty UI         |
+
+### NYSE stock data (Finnhub)
+
+Catalyst Intel uses **Finnhub** free-tier US equity symbols, filtered to NYSE
+(`mic = XNYS`), stored in `nyse_listings`. Optional last-price enrichment uses
+Finnhub `/quote` for a small sample on each admin/cron fetch.
+
+Endpoints:
+
+- `POST /api/admin/fetch/finnhub-nyse` — admin session or `x-cron-secret`
+- `GET /api/nyse/symbols?q=&limit=` — authenticated search / empty reason
+
+Get a free key at [finnhub.io](https://finnhub.io).
 
 ---
 

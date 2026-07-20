@@ -15,8 +15,8 @@ interface AppSidebarProps {
 }
 
 /**
- * Primary left navigation with brand mark. Live entries link out; coming-soon
- * entries render as disabled with a count-style badge when provided.
+ * Primary left navigation with brand mark and readable section/nav titles.
+ * Labels stay visible whenever the sidebar is expanded (default desk layout).
  */
 export function AppSidebar({
   active,
@@ -26,42 +26,58 @@ export function AppSidebar({
   onCollapseToggle,
 }: AppSidebarProps) {
   const items = getPrimaryNav(isAdmin);
+  const workspace = items.filter(
+    (i) => i.key !== "admin" && i.key !== "profile",
+  );
+  const system = items.filter((i) => i.key === "profile" || i.key === "admin");
 
   return (
     <nav
       className={cn(
         "flex h-full flex-col border-r border-[var(--desk-border)] bg-[var(--desk-sidebar)] px-3 py-4",
-        collapsed ? "w-[68px]" : "w-[212px]",
+        collapsed ? "w-[68px]" : "w-[220px]",
       )}
       aria-label="Primary navigation"
     >
       <div
         className={cn(
-          "mb-4 flex items-center gap-2.5 px-2",
+          "mb-5 flex items-center gap-2.5 px-2",
           collapsed && "justify-center px-0",
         )}
       >
         <span
           aria-hidden
-          className="brand-mark relative size-7 shrink-0 rounded-lg"
+          className="brand-mark relative size-7 shrink-0 rounded-md"
         />
         {!collapsed ? (
-          <span className="truncate text-[0.92rem] font-bold tracking-tight text-[var(--desk-text)]">
-            Catalyst Intel
-          </span>
+          <div className="min-w-0">
+            <p className="font-mono text-[0.62rem] font-semibold tracking-[0.16em] text-[var(--desk-text-dim)] uppercase">
+              Trading desk
+            </p>
+            <p className="truncate text-[0.95rem] font-bold tracking-tight text-[var(--desk-text)]">
+              Catalyst Intel
+            </p>
+          </div>
         ) : null}
       </div>
 
-      <div className="flex flex-1 flex-col gap-0.5">
-        {items.map((item) => (
-          <SidebarEntry
-            key={item.key}
-            item={item}
-            active={item.key === active}
+      <div className="flex flex-1 flex-col gap-4">
+        <NavSection
+          label="Workspace"
+          items={workspace}
+          active={active}
+          collapsed={collapsed}
+          onNavigate={onNavigate}
+        />
+        {system.length > 0 ? (
+          <NavSection
+            label="System"
+            items={system}
+            active={active}
             collapsed={collapsed}
             onNavigate={onNavigate}
           />
-        ))}
+        ) : null}
       </div>
 
       {onCollapseToggle ? (
@@ -70,7 +86,7 @@ export function AppSidebar({
             type="button"
             onClick={onCollapseToggle}
             className={cn(
-              "flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-[0.86rem] font-medium text-[var(--desk-text-dim)] transition-colors hover:bg-white/[0.04] hover:text-[var(--desk-text-muted)]",
+              "flex w-full items-center gap-2.5 rounded-md px-2.5 py-2 text-[0.86rem] font-medium text-[var(--desk-text-dim)] transition-colors hover:bg-white/[0.04] hover:text-[var(--desk-text-muted)]",
               collapsed && "justify-center px-0",
             )}
           >
@@ -80,6 +96,39 @@ export function AppSidebar({
         </div>
       ) : null}
     </nav>
+  );
+}
+
+function NavSection({
+  label,
+  items,
+  active,
+  collapsed,
+  onNavigate,
+}: {
+  label: string;
+  items: NavItem[];
+  active: NavKey;
+  collapsed: boolean;
+  onNavigate?: () => void;
+}) {
+  return (
+    <div className="flex flex-col gap-0.5">
+      {!collapsed ? (
+        <p className="px-2.5 pb-1 font-mono text-[0.62rem] tracking-[0.14em] text-[var(--desk-text-dim)] uppercase">
+          {label}
+        </p>
+      ) : null}
+      {items.map((item) => (
+        <SidebarEntry
+          key={item.key}
+          item={item}
+          active={item.key === active}
+          collapsed={collapsed}
+          onNavigate={onNavigate}
+        />
+      ))}
+    </div>
   );
 }
 
@@ -96,7 +145,7 @@ function SidebarEntry({
 }) {
   const Icon = item.icon;
   const base =
-    "group relative flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-[0.86rem] font-medium transition-colors";
+    "group relative flex items-center gap-2.5 rounded-md px-2.5 py-2 text-[0.86rem] font-medium transition-colors";
 
   if (item.comingSoon || !item.href) {
     return (
@@ -113,7 +162,7 @@ function SidebarEntry({
         {!collapsed ? (
           <>
             <span className="truncate">{item.label}</span>
-            <span className="ml-auto rounded-full bg-[#e07a2f] px-1.5 py-0.5 text-[0.68rem] font-bold text-white">
+            <span className="ml-auto rounded border border-[var(--desk-border-strong)] px-1.5 py-0.5 font-mono text-[0.62rem] tracking-wide text-[var(--desk-text-dim)] uppercase">
               Soon
             </span>
           </>
@@ -132,8 +181,8 @@ function SidebarEntry({
         base,
         collapsed && "justify-center px-0",
         active
-          ? "bg-[var(--desk-nav-active)] text-[#8eb8ec] shadow-[inset_2px_0_0_#4f8fd9]"
-          : "text-[var(--desk-text-muted)] hover:bg-white/[0.04] hover:text-[var(--desk-text-secondary)]",
+          ? "bg-white/[0.07] text-[var(--desk-text)] shadow-[inset_2px_0_0_var(--desk-live)]"
+          : "text-[var(--desk-text-muted)] hover:bg-white/[0.04] hover:text-[var(--desk-text)]",
       )}
     >
       <Icon className="size-[17px] shrink-0 opacity-90" />

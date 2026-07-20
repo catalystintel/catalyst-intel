@@ -131,3 +131,23 @@ export const alertRules = sqliteTable("alert_rules", {
     .notNull()
     .default(sql`(current_timestamp)`),
 });
+
+/**
+ * NYSE listing universe from Finnhub (`stock/symbol?exchange=US`, mic XNYS).
+ * Optional last price filled when quote enrichment runs.
+ */
+export const nyseListings = sqliteTable("nyse_listings", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  symbol: text("symbol").notNull().unique(),
+  displaySymbol: text("display_symbol").notNull(),
+  description: text("description"),
+  mic: text("mic"),
+  type: text("type"),
+  currency: text("currency"),
+  /** Last trade price as decimal string (e.g. "184.25"); null until quoted. */
+  lastPrice: text("last_price"),
+  quotedAt: text("quoted_at"),
+  updatedAt: text("updated_at")
+    .notNull()
+    .default(sql`(current_timestamp)`),
+});

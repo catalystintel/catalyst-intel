@@ -22,6 +22,13 @@
       "when": 1784560000000,
       "tag": "0002_jtbd_watchlist_alerts",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1784600000000,
+      "tag": "0003_nyse_listings",
+      "breakpoints": true
     }
   ]
 }

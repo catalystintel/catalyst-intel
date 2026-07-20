@@ -4,19 +4,26 @@ import {
 } from "@/lib/jobs/parse-8k-items";
 import { cn } from "@/lib/utils";
 
-// Color coding mirrors trading-desk urgency: red = distress, amber = earnings,
-// steel/neutral = routine disclosure. Kept as static classes so Tailwind's
-// compiler can see every variant.
+/** Mono desk: grayscale category chips (no rainbow). */
 const CATEGORY_STYLES: Record<EventCategoryKey, string> = {
-  distress: "border-red-500/40 bg-red-500/12 text-red-300",
-  earnings: "border-amber-400/45 bg-amber-400/12 text-amber-200",
-  deals: "border-emerald-400/40 bg-emerald-400/10 text-emerald-300",
-  restructuring: "border-orange-400/40 bg-orange-400/10 text-orange-300",
-  capital: "border-sky-400/40 bg-sky-400/10 text-sky-300",
-  management: "border-violet-400/40 bg-violet-400/10 text-violet-300",
-  governance: "border-border/70 bg-muted/40 text-muted-foreground",
-  disclosure: "border-border/70 bg-muted/30 text-muted-foreground",
-  other: "border-border/60 bg-transparent text-muted-foreground/80",
+  distress:
+    "border-[var(--desk-border-strong)] bg-white/[0.04] text-[var(--desk-text-secondary)]",
+  earnings:
+    "border-[var(--desk-border-strong)] bg-white/[0.04] text-[var(--desk-text-secondary)]",
+  deals:
+    "border-[var(--desk-border-strong)] bg-white/[0.04] text-[var(--desk-text-secondary)]",
+  restructuring:
+    "border-[var(--desk-border-strong)] bg-white/[0.04] text-[var(--desk-text-secondary)]",
+  capital:
+    "border-[var(--desk-border-strong)] bg-white/[0.04] text-[var(--desk-text-secondary)]",
+  management:
+    "border-[var(--desk-border-strong)] bg-white/[0.04] text-[var(--desk-text-secondary)]",
+  governance:
+    "border-[var(--desk-border)] bg-transparent text-[var(--desk-text-muted)]",
+  disclosure:
+    "border-[var(--desk-border)] bg-transparent text-[var(--desk-text-muted)]",
+  other:
+    "border-[var(--desk-border)] bg-transparent text-[var(--desk-text-muted)]",
 };
 
 interface CategoryBadgeProps {
@@ -25,11 +32,7 @@ interface CategoryBadgeProps {
 }
 
 /**
- * Compact color-coded pill for a catalyst's event category.
- *
- * @param category - The catalyst's primary event category.
- * @param className - Optional extra classes for layout tweaks.
- * @returns A styled category badge element.
+ * Compact mono pill for a catalyst's event category.
  */
 export function CategoryBadge({ category, className }: CategoryBadgeProps) {
   return (
