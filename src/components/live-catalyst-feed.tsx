@@ -8,20 +8,26 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { ChevronDown, ListFilter, RefreshCw } from "lucide-react";
 
 import { CatalystDetailDrawer } from "@/components/catalyst-detail-drawer";
-import { CategoryBadge } from "@/components/category-badge";
+import { SectorPill } from "@/components/sector-pill";
 import { Input } from "@/components/ui/input";
 import {
   toFeedCatalyst,
   type FeedCatalyst,
 } from "@/lib/catalysts/feed-catalyst";
 import {
+  sectorLabel,
+  sectorTone,
+  sourceDisplay,
+  titleLine,
+} from "@/lib/catalysts/feed-display";
+import {
   CATEGORY_LABELS,
   type EventCategoryKey,
 } from "@/lib/jobs/parse-8k-items";
-import { formatClockTime, formatRelativeAge } from "@/lib/format/relative-time";
-import { isWithinWindow } from "@/lib/format/relative-time";
+import { formatTimeDate, isWithinWindow } from "@/lib/format/relative-time";
 import { cn } from "@/lib/utils";
 
 export type { FeedCatalyst };
@@ -40,6 +46,9 @@ const TIME_WINDOWS: { id: TimeWindow; label: string; hours: number | null }[] =
     { id: "all", label: "All", hours: null },
   ];
 
+const FEED_GRID =
+  "grid-cols-[minmax(0,1fr)_auto] sm:grid-cols-[148px_132px_minmax(0,1fr)_150px] lg:grid-cols-[168px_148px_minmax(0,1fr)_168px]";
+
 function readPresence(): Presence {
   if (typeof document === "undefined") return "active";
   if (document.visibilityState === "hidden") return "hidden";
@@ -47,14 +56,6 @@ function readPresence(): Presence {
     return "blurred";
   }
   return "active";
-}
-
-function eventLine(c: FeedCatalyst): string {
-  return c.headline?.trim() || c.summary?.trim() || c.type;
-}
-
-function companyLine(c: FeedCatalyst): string {
-  return c.companyName?.trim() || "—";
 }
 
 export function LiveCatalystFeed({
@@ -75,6 +76,7 @@ export function LiveCatalystFeed({
     null,
   );
   const [timeWindow, setTimeWindow] = useState<TimeWindow>("all");
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const [nowTick, setNowTick] = useState(() => Date.now());
   const inFlight = useRef(false);
   const knownIds = useRef(new Set(initialCatalysts.map((c) => c.id)));
@@ -199,73 +201,102 @@ export function LiveCatalystFeed({
     ? (catalysts.find((c) => c.id === selectedId) ?? null)
     : null;
 
-  const statusLabel =
-    presence === "hidden" ? "Paused" : presence === "blurred" ? "Slow" : "LIVE";
+  const filtersActive =
+    Boolean(tickerQuery.trim()) ||
+    categoryFilter !== null ||
+    timeWindow !== "all";
+
+  const lastUpdatedLabel = lastFetchedAt
+    ? new Date(lastFetchedAt).toLocaleTimeString("en-US", {
+        hour: "numeric",
+        minute: "2-digit",
+        second: "2-digit",
+      })
+    : null;
 
   return (
-    <div className="flex flex-col gap-3">
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border/60 pb-3">
-        <div className="flex items-center gap-2.5 font-mono text-xs">
-          <span
-            aria-hidden
+    <section
+      className="news-panel flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-[var(--desk-border)] bg-[var(--desk-panel)]"
+      aria-label="Latest News"
+    >
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--desk-border)] bg-[var(--desk-header)] px-4 py-3.5 sm:px-5">
+        <h1 className="text-[1.05rem] font-semibold tracking-tight text-[var(--desk-text)]">
+          Latest News
+        </h1>
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+          <button
+            type="button"
+            onClick={() => setFiltersOpen((open) => !open)}
+            aria-expanded={filtersOpen}
             className={cn(
-              "inline-block size-2 rounded-full",
-              presence === "active"
-                ? "live-pulse bg-amber-400"
-                : "bg-muted-foreground/45",
-            )}
-          />
-          <span
-            className={cn(
-              "tracking-[0.16em]",
-              presence === "active"
-                ? "text-amber-400"
-                : "text-muted-foreground",
+              "inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-[0.82rem] font-medium transition-colors",
+              filtersOpen || filtersActive
+                ? "border-[var(--desk-accent)]/45 bg-[var(--desk-accent)]/10 text-[var(--desk-accent-fg)]"
+                : "border-[var(--desk-border-strong)] bg-white/[0.02] text-[var(--desk-text-secondary)] hover:bg-white/[0.05] hover:text-[var(--desk-text)]",
             )}
           >
-            {statusLabel}
-          </span>
-          {lastFetchedAt ? (
-            <span className="text-muted-foreground tabular-nums">
-              · sync {new Date(lastFetchedAt).toLocaleTimeString()}
+            <ListFilter className="size-3.5 text-[var(--desk-text-muted)]" />
+            Filters
+            {filtersActive ? (
+              <span className="size-1.5 rounded-full bg-[var(--desk-live)]" />
+            ) : null}
+            <ChevronDown
+              className={cn(
+                "size-3.5 text-[var(--desk-text-muted)] transition-transform",
+                filtersOpen && "rotate-180",
+              )}
+            />
+          </button>
+          {lastUpdatedLabel ? (
+            <span className="hidden font-mono text-[0.78rem] text-[var(--desk-text-dim)] tabular-nums sm:inline">
+              Last updated: {lastUpdatedLabel}
             </span>
           ) : null}
+          <button
+            type="button"
+            aria-label="Refresh"
+            onClick={() => void softRefetch()}
+            className="grid size-[34px] place-items-center rounded-lg border border-[var(--desk-border-strong)] text-[var(--desk-text-muted)] transition-colors hover:bg-white/[0.05] hover:text-[var(--desk-text)]"
+          >
+            <RefreshCw className="size-4" />
+          </button>
         </div>
-        <span className="font-mono text-xs text-muted-foreground tabular-nums">
-          {filtered.length}
-          {filtered.length !== catalysts.length
-            ? ` / ${catalysts.length}`
-            : ""}{" "}
-          rows
-        </span>
       </div>
 
-      <FeedFilters
-        tickerQuery={tickerQuery}
-        onTickerQuery={setTickerQuery}
-        categoryFilter={categoryFilter}
-        onCategoryFilter={setCategoryFilter}
-        categoryOptions={categoryOptions}
-        timeWindow={timeWindow}
-        onTimeWindow={setTimeWindow}
-      />
+      {filtersOpen ? (
+        <div className="border-b border-[var(--desk-border)] bg-[var(--desk-header)]/80 px-4 py-3 sm:px-5">
+          <FeedFilters
+            tickerQuery={tickerQuery}
+            onTickerQuery={setTickerQuery}
+            categoryFilter={categoryFilter}
+            onCategoryFilter={setCategoryFilter}
+            categoryOptions={categoryOptions}
+            timeWindow={timeWindow}
+            onTimeWindow={setTimeWindow}
+          />
+        </div>
+      ) : null}
 
       {pollError ? (
-        <p className="font-mono text-xs text-amber-400/90">{pollError}</p>
+        <p className="border-b border-[var(--desk-border)] px-4 py-2 font-mono text-xs text-amber-400/90 sm:px-5">
+          {pollError}
+        </p>
       ) : null}
 
       {catalysts.length === 0 ? (
-        <div className="flex flex-1 flex-col items-center justify-center gap-2 border border-dashed border-border/70 bg-[oklch(0.18_0.016_255)] px-6 py-16 text-center">
-          <p className="font-mono text-sm text-foreground">No catalysts yet</p>
-          <p className="max-w-sm text-sm text-muted-foreground">
+        <div className="flex flex-1 flex-col items-center justify-center gap-2 px-6 py-16 text-center">
+          <p className="text-sm font-medium text-[var(--desk-text)]">
+            No catalysts yet
+          </p>
+          <p className="max-w-sm text-sm text-[var(--desk-text-muted)]">
             {isAdmin
               ? "Open Admin and run “Fetch SEC EDGAR now” to populate the Live feed."
               : "Filings appear here once an admin runs the first ingestion job."}
           </p>
         </div>
       ) : filtered.length === 0 ? (
-        <div className="border border-dashed border-border/70 px-6 py-12 text-center">
-          <p className="font-mono text-sm text-muted-foreground">
+        <div className="flex flex-1 items-center justify-center px-6 py-12 text-center">
+          <p className="font-mono text-sm text-[var(--desk-text-muted)]">
             No rows match these filters.
           </p>
         </div>
@@ -273,7 +304,6 @@ export function LiveCatalystFeed({
         <CatalystFeedList
           catalysts={filtered}
           flashIds={flashIds}
-          nowTick={nowTick}
           selectedId={selectedId}
           onSelect={setSelectedId}
         />
@@ -283,7 +313,7 @@ export function LiveCatalystFeed({
         catalyst={selected}
         onClose={() => setSelectedId(null)}
       />
-    </div>
+    </section>
   );
 }
 
@@ -314,7 +344,7 @@ function FeedFilters({
           onChange={(e) => onTickerQuery(e.target.value)}
           placeholder="Ticker…"
           aria-label="Filter by ticker"
-          className="h-8 w-36 font-mono text-xs tracking-wide uppercase md:text-xs"
+          className="h-8 w-36 border-[var(--desk-border-strong)] bg-white/[0.02] font-mono text-xs tracking-wide uppercase md:text-xs"
         />
         <div className="flex flex-wrap items-center gap-1">
           {TIME_WINDOWS.map((w) => (
@@ -334,7 +364,7 @@ function FeedFilters({
             active={categoryFilter === null}
             onClick={() => onCategoryFilter(null)}
           >
-            All events
+            All sectors
           </FilterChip>
           {categoryOptions.map(({ category, count }) => (
             <FilterChip
@@ -368,10 +398,10 @@ function FilterChip({
       type="button"
       onClick={onClick}
       className={cn(
-        "btn-press inline-flex h-7 items-center rounded-md border px-2.5 font-mono text-[0.7rem] tracking-wide transition-colors",
+        "inline-flex h-7 items-center rounded-md border px-2.5 font-mono text-[0.7rem] tracking-wide transition-colors",
         active
-          ? "border-amber-400/55 bg-amber-400/12 text-amber-200"
-          : "border-border/70 bg-transparent text-muted-foreground hover:border-steel/50 hover:text-foreground",
+          ? "border-[var(--desk-accent)]/55 bg-[var(--desk-accent)]/12 text-[var(--desk-accent-fg)]"
+          : "border-[var(--desk-border)] bg-transparent text-[var(--desk-text-muted)] hover:border-[var(--desk-border-strong)] hover:text-[var(--desk-text)]",
       )}
     >
       {children}
@@ -382,81 +412,126 @@ function FilterChip({
 function CatalystFeedList({
   catalysts,
   flashIds,
-  nowTick,
   selectedId,
   onSelect,
 }: {
   catalysts: FeedCatalyst[];
   flashIds: Set<number>;
-  nowTick: number;
   selectedId: number | null;
   onSelect: (id: number) => void;
 }) {
-  const columns =
-    "grid-cols-[3.25rem_4rem_minmax(0,1fr)] sm:grid-cols-[4.5rem_5.5rem_minmax(0,1.1fr)_minmax(0,1.4fr)_3.25rem]";
   return (
-    <div className="overflow-hidden border border-border/70 bg-[oklch(0.175_0.016_255)]">
+    <div
+      className="flex min-h-0 flex-1 flex-col overflow-auto"
+      role="table"
+      aria-label="News feed"
+    >
       <div
+        role="row"
         className={cn(
-          "grid gap-2 border-b border-border/60 bg-[oklch(0.19_0.018_255)] px-3 py-2 font-mono text-[0.62rem] tracking-[0.14em] text-muted-foreground uppercase sm:gap-3 sm:px-4",
-          columns,
+          "sticky top-0 z-[2] grid h-10 items-center gap-3 border-b border-[var(--desk-border-strong)] bg-[#0f1620] px-4 font-mono text-[0.66rem] font-medium tracking-[0.12em] text-[#6d7d92] uppercase shadow-[0_1px_0_rgba(0,0,0,0.25)] sm:gap-4 sm:px-5",
+          FEED_GRID,
         )}
       >
-        <span className="text-right sm:text-left">Age</span>
-        <span>Ticker</span>
-        <span className="hidden sm:block">Company</span>
-        <span>Event</span>
-        <span className="hidden text-right sm:block">Time</span>
+        <div role="columnheader" className="hidden sm:block">
+          Source
+        </div>
+        <div role="columnheader" className="hidden sm:block">
+          Sector
+        </div>
+        <div role="columnheader" className="col-span-1 sm:col-span-1">
+          Title
+        </div>
+        <div role="columnheader" className="text-right">
+          Time
+        </div>
       </div>
-      <ul className="divide-y divide-border/40">
+
+      <div className="flex flex-col">
         {catalysts.map((catalyst, index) => {
           const flashing = flashIds.has(catalyst.id);
           const selected = selectedId === catalyst.id;
+          const source = sourceDisplay(catalyst);
           return (
-            <li key={catalyst.id}>
-              <button
-                type="button"
-                onClick={() => onSelect(catalyst.id)}
-                className={cn(
-                  "feed-row grid w-full items-center gap-2 px-3 py-2.5 text-left transition-colors sm:gap-3 sm:px-4 sm:py-3",
-                  columns,
-                  "hover:bg-amber-400/[0.05] focus-visible:bg-amber-400/[0.07] focus-visible:outline-none",
-                  selected && "bg-steel/15",
-                  flashing && "row-flash",
-                )}
-                style={{ animationDelay: `${Math.min(index, 28) * 22}ms` }}
+            <article
+              key={catalyst.id}
+              role="row"
+              tabIndex={0}
+              onClick={() => onSelect(catalyst.id)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  onSelect(catalyst.id);
+                }
+              }}
+              className={cn(
+                "feed-row group grid min-h-[60px] cursor-pointer items-center gap-3 border-b border-[rgba(28,39,54,0.95)] px-4 transition-colors duration-100 outline-none sm:gap-4 sm:px-5",
+                FEED_GRID,
+                "hover:bg-white/[0.045] focus-visible:bg-white/[0.045] focus-visible:shadow-[inset_2px_0_0_var(--desk-accent)]",
+                selected && "bg-[var(--desk-accent)]/[0.08]",
+                flashing && "row-flash",
+              )}
+              style={{ animationDelay: `${Math.min(index, 28) * 22}ms` }}
+            >
+              <div
+                role="cell"
+                className="col-source hidden min-w-0 items-center gap-2.5 sm:flex"
               >
-                <time
-                  dateTime={catalyst.timestamp}
-                  className="text-right font-mono text-[0.7rem] text-amber-200/85 tabular-nums sm:text-left"
+                <span
+                  aria-hidden
+                  className={cn(
+                    "grid size-7 shrink-0 place-items-center rounded-[7px] text-[0.7rem] font-bold text-white",
+                    source.tone === "sec"
+                      ? "bg-[#1a4a7a]"
+                      : "bg-[#1e2430] shadow-[inset_0_0_0_1px_#3a4558]",
+                  )}
                 >
-                  {formatRelativeAge(catalyst.timestamp, nowTick)}
-                </time>
-                <span className="truncate font-mono text-[0.8rem] font-semibold tracking-wide text-steel-foreground">
-                  {catalyst.ticker ?? "—"}
+                  {source.initial}
                 </span>
-                <span className="hidden truncate text-[0.8rem] text-muted-foreground sm:block">
-                  {companyLine(catalyst)}
-                </span>
-                <span className="flex min-w-0 items-center gap-2">
-                  {catalyst.eventCategory ? (
-                    <CategoryBadge category={catalyst.eventCategory} />
-                  ) : null}
-                  <span className="truncate text-[0.8rem] text-foreground/90">
-                    {eventLine(catalyst)}
+                <span className="flex min-w-0 flex-col gap-0.5">
+                  <span className="truncate text-[0.86rem] font-semibold text-[var(--desk-text)]">
+                    {source.name}
+                  </span>
+                  <span className="truncate text-[0.72rem] text-[var(--desk-text-dim)]">
+                    {source.meta}
                   </span>
                 </span>
+              </div>
+
+              <div role="cell" className="hidden min-w-0 sm:block">
+                <SectorPill
+                  tone={sectorTone(catalyst)}
+                  label={sectorLabel(catalyst)}
+                />
+              </div>
+
+              <div role="cell" className="min-w-0 max-sm:col-span-1">
+                <span className="block truncate text-[0.9rem] font-medium tracking-tight text-[var(--desk-text-secondary)] group-hover:text-[var(--desk-text)] group-focus-visible:text-[var(--desk-text)] max-sm:line-clamp-2 max-sm:whitespace-normal">
+                  {titleLine(catalyst)}
+                </span>
+                <span className="mt-1 flex items-center gap-2 sm:hidden">
+                  <SectorPill
+                    tone={sectorTone(catalyst)}
+                    label={sectorLabel(catalyst)}
+                  />
+                  <span className="truncate text-[0.72rem] text-[var(--desk-text-dim)]">
+                    {source.name}
+                  </span>
+                </span>
+              </div>
+
+              <div role="cell" className="min-w-0 text-right">
                 <time
                   dateTime={catalyst.timestamp}
-                  className="hidden text-right font-mono text-[0.68rem] text-muted-foreground tabular-nums sm:block"
+                  className="inline-block font-mono text-[0.74rem] font-medium tracking-tight whitespace-nowrap text-[var(--desk-text-muted)] tabular-nums"
                 >
-                  {formatClockTime(catalyst.timestamp)}
+                  {formatTimeDate(catalyst.timestamp)}
                 </time>
-              </button>
-            </li>
+              </div>
+            </article>
           );
         })}
-      </ul>
+      </div>
     </div>
   );
 }

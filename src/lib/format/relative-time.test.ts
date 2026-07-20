@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { formatRelativeAge, isWithinWindow } from "./relative-time";
+import {
+  formatRelativeAge,
+  formatTimeDate,
+  isWithinWindow,
+} from "./relative-time";
 
 describe("formatRelativeAge", () => {
   const now = Date.parse("2026-07-19T12:00:00.000Z");
@@ -13,6 +17,16 @@ describe("formatRelativeAge", () => {
 
   it("falls back to day / date for older filings", () => {
     expect(formatRelativeAge("2026-07-17T12:00:00.000Z", now)).toBe("2d");
+  });
+});
+
+describe("formatTimeDate", () => {
+  it("formats time · date for the feed TIME column", () => {
+    // Fixed UTC instant → en-US wall clock depends on runner TZ; assert structure.
+    const formatted = formatTimeDate("2026-07-20T14:23:00.000Z");
+    expect(formatted).toMatch(
+      /^\d{1,2}:\d{2} (AM|PM) · [A-Z][a-z]{2} \d{1,2}, 2026$/,
+    );
   });
 });
 

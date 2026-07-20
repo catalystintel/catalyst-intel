@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { CategoryBadge } from "@/components/category-badge";
 import type { FeedCatalyst } from "@/lib/catalysts/feed-catalyst";
 import { formatRelativeAge } from "@/lib/format/relative-time";
+import { CATEGORY_LABELS } from "@/lib/jobs/parse-8k-items";
 import { cn } from "@/lib/utils";
 
 export function CatalystDetailDrawer({
@@ -100,6 +101,27 @@ export function CatalystDetailDrawer({
               ) : null}
 
               <dl className="grid grid-cols-2 gap-4 font-mono text-xs">
+                <div>
+                  <dt className="tracking-[0.14em] text-muted-foreground uppercase">
+                    Source
+                  </dt>
+                  <dd className="mt-1 text-sm text-foreground">
+                    {catalyst.sourceProvider === "sec-edgar"
+                      ? "SEC EDGAR"
+                      : (catalyst.sourceProvider ?? "—")}
+                  </dd>
+                </div>
+                <div>
+                  <dt className="tracking-[0.14em] text-muted-foreground uppercase">
+                    Sector
+                  </dt>
+                  <dd className="mt-1 text-sm text-foreground">
+                    {catalyst.sector?.trim() ||
+                      (catalyst.eventCategory
+                        ? CATEGORY_LABELS[catalyst.eventCategory]
+                        : "SEC Filings")}
+                  </dd>
+                </div>
                 <div>
                   <dt className="tracking-[0.14em] text-muted-foreground uppercase">
                     Form
