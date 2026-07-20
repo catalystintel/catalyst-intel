@@ -11,6 +11,8 @@ import { getForm4ApiKey } from "@/lib/jobs/vendor-env";
  * Optional Form4API enrichment when FORM4_API_KEY is set.
  * Primary Form 4 coverage still comes from SEC EDGAR Atom (type=4).
  * Soft-fails without a key.
+ *
+ * Auth is `X-Api-Key` (not Bearer). Free tier: https://www.form4api.com
  */
 export async function fetchForm4Api(): Promise<SourceFetchResult> {
   const apiKey = getForm4ApiKey();
@@ -21,18 +23,20 @@ export async function fetchForm4Api(): Promise<SourceFetchResult> {
     );
   }
 
-  // Form4API base URL — soft-fail on HTTP errors so missing/paid plans don't break cron.
-  const res = await fetch("https://api.form4api.com/v1/filings?limit=25", {
-    headers: {
-      Accept: "application/json",
-      Authorization: `Bearer ${apiKey}`,
+  // Soft-fail on HTTP errors so missing/paid plans don't break cron.
+  const res = await fetch(
+    "https://api.form4api.com/v1/filings/recent?per_page=25",
+    {
+      headers: {
+        Accept: "application/json",
+        "X-Api-Key": apiKey,
+      },
+      cache: "no-store",
+      signal: AbortSignal.timeout(25_000),
     },
-    cache: "no-store",
-    signal: AbortSignal.timeout(25_000),
-  });
+  );
 
   if (!res.ok) {
-    // Soft-skip rather than hard-fail the orchestrator for optional paid API.
     return {
       ...skippedSourceResult(
         "form4api",
@@ -43,26 +47,38 @@ export async function fetchForm4Api(): Promise<SourceFetchResult> {
     };
   }
 
-  const payload = (await res.json()) as {
-    data?: Array<{
-      id?: string;
-      accession?: string;
-      ticker?: string;
-      company?: string;
-      filedAt?: string;
-      transactionType?: string;
-      url?: string;
-    }>;
+  type Form4Row = {
+    id?: string;
+    accession?: string;
+    accessionNumber?: string;
+    ticker?: string;
+    companyTicker?: string;
+    company?: string;
+    companyName?: string;
+    filedAt?: string;
+    transactionType?: string;
+    amendmentType?: string;
+    url?: string;
   };
 
+  const payload = (await res.json()) as Form4Row[] | { data?: Form4Row[] };
+  const rows = Array.isArray(payload) ? payload : (payload.data ?? []);
   const normalized: NormalizedCatalyst[] = [];
-  for (const row of payload.data ?? []) {
-    const id = row.id || row.accession;
+
+  for (const row of rows) {
+    const id = row.accessionNumber || row.accession || row.id;
     if (!id) continue;
-    const ticker = row.ticker?.trim().toUpperCase() || null;
+
+    const ticker =
+      (row.companyTicker || row.ticker)?.trim().toUpperCase() || null;
+    const company = row.companyName?.trim() || row.company?.trim() || ticker;
     const timestamp = row.filedAt
       ? new Date(row.filedAt).toISOString()
       : new Date().toISOString();
+    const headline =
+      row.amendmentType?.trim() ||
+      row.transactionType?.trim() ||
+      "Insider filing";
 
     normalized.push({
       provider: "form4api",
@@ -70,10 +86,10 @@ export async function fetchForm4Api(): Promise<SourceFetchResult> {
       url: row.url ?? null,
       rawContent: row,
       ticker,
-      companyName: row.company?.trim() || ticker,
+      companyName: company,
       type: "Form 4",
-      title: `${ticker ?? row.company ?? "Issuer"} — Form 4`,
-      headline: row.transactionType?.trim() || "Insider transaction",
+      title: `${ticker ?? company ?? "Issuer"} — Form 4`,
+      headline,
       eventCategory: "insider",
       subcategory: "form4api",
       timestamp,
