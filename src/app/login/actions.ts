@@ -1,17 +1,16 @@
 "use server";
 
-import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
-import { getRequestOrigin, safeNextPath } from "@/lib/http/origin";
+import { safeNextPath } from "@/lib/http/origin";
 import { isSupabaseConfigured, SUPABASE_SETUP_HINT } from "@/lib/supabase/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 /**
  * Google is the only sign-in method - no passwords are ever collected or
- * stored anywhere in this app. Supabase handles the OAuth exchange; our own
- * `users` table only ever stores a Supabase user id, email, role, and
- * subscription tier (see src/db/schema.ts) - never a credential.
+ * stored anywhere in this app. Prefer the browser button or GET /auth/login
+ * (cookie-safe on iOS Safari). This action remains as a thin redirect for
+ * any legacy form posts.
  */
 export async function signInWithGoogle(formData: FormData) {
   if (!isSupabaseConfigured()) {
@@ -19,32 +18,7 @@ export async function signInWithGoogle(formData: FormData) {
   }
 
   const next = safeNextPath(formData.get("next") as string | null);
-
-  const headerList = await headers();
-  let origin: string;
-  try {
-    origin = getRequestOrigin(headerList);
-  } catch {
-    redirect(
-      `/login?error=${encodeURIComponent("Could not determine app URL for Google sign-in.")}`,
-    );
-  }
-
-  const supabase = await createSupabaseServerClient();
-  const { data, error } = await supabase.auth.signInWithOAuth({
-    provider: "google",
-    options: {
-      redirectTo: `${origin}/auth/callback?next=${encodeURIComponent(next)}`,
-    },
-  });
-
-  if (error || !data?.url) {
-    redirect(
-      `/login?error=${encodeURIComponent(error?.message ?? "Could not start Google sign-in.")}`,
-    );
-  }
-
-  redirect(data.url);
+  redirect(`/auth/login?next=${encodeURIComponent(next)}`);
 }
 
 /** Clears the current browser session (this device). */

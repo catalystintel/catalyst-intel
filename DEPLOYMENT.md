@@ -57,6 +57,19 @@ Also add `https://catalyst-intel.vercel.app` (and localhost) under Google Cloud 
 → **Authorized JavaScript origins**. Missing production redirect URLs are a common cause of
 “works on desktop / fails on phone” OAuth returns.
 
+**Phone still can’t enter after layout fixes?** Confirm the allowlist above, then on the phone:
+
+1. Open Safari (not an in-app browser from Messages/Instagram/etc.).
+2. Visit `https://catalyst-intel.vercel.app` directly.
+3. Tap **Continue with Google** (sticky bar on phones, or Sign in).
+4. If it returns to `/login` with an error: **Settings → Safari → Clear History and Website Data**
+   (or per-site: Aa → Website Settings → clear data for `catalyst-intel.vercel.app`), then retry.
+5. Avoid “Prevent Cross-Site Tracking” workarounds that block first-party auth cookies mid-redirect;
+   our cookies are first-party on `catalyst-intel.vercel.app` with `SameSite=Lax`.
+
+OAuth start uses the browser client + `GET /auth/login` (PKCE cookies on the redirect response)
+so iOS Safari does not lose the verifier the way a Server Action `redirect()` sometimes did.
+
 **Admin access** is enforced server-side from the verified Supabase session email against
 `ADMIN_EMAILS` (or the built-in defaults). The local `users.role` column is synced as a cache
 and is **not** the source of truth — do not rely on `npm run make-admin` alone. Manual fetch

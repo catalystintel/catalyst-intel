@@ -30,9 +30,9 @@ export function AppShell({ user, active, children }: AppShellProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
-    <div className="flex h-dvh min-h-0 flex-1 overflow-hidden bg-[var(--desk-app)]">
+    <div className="flex h-dvh max-h-dvh min-h-0 flex-1 overflow-hidden overscroll-none bg-[var(--desk-app)]">
       <aside className="hidden md:block">
-        <div className="sticky top-0 h-dvh">
+        <div className="sticky top-0 h-full max-h-dvh">
           <AppSidebar
             active={active}
             isAdmin={user.isAdmin}

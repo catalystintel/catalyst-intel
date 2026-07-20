@@ -75,7 +75,7 @@ export default async function Home() {
 
   return (
     <PreLoginChrome glowClassName="h-[55vh]">
-      <main className="page-enter relative z-10 mx-auto flex w-full max-w-5xl flex-1 flex-col justify-start gap-8 px-4 pt-2 pb-12 sm:justify-center sm:gap-10 sm:px-8 sm:pt-4 sm:pb-16">
+      <main className="page-enter relative z-10 mx-auto flex w-full max-w-5xl flex-1 flex-col justify-start gap-8 px-4 pt-2 pb-[calc(5.5rem+env(safe-area-inset-bottom))] sm:justify-center sm:gap-10 sm:px-8 sm:pt-4 sm:pb-16">
         <div className="max-w-2xl">
           <span className="inline-flex items-center gap-1.5 rounded-full border border-[rgba(240,193,75,0.35)] bg-[rgba(240,193,75,0.12)] px-2.5 py-1 text-[0.68rem] font-bold tracking-[0.08em] text-[var(--desk-live)]">
             <span
@@ -104,6 +104,22 @@ export default async function Home() {
             <span className="font-mono text-xs text-[var(--desk-text-muted)]">
               Sign in · no password
             </span>
+          </div>
+        </div>
+
+        {/* Always-visible phone CTA — hero CTA can sit above the fold but the
+            long feed preview still pushes some users past it after scroll. */}
+        <div className="pointer-events-none fixed inset-x-0 bottom-0 z-30 sm:hidden">
+          <div className="pointer-events-auto border-t border-[var(--desk-border)] bg-[rgba(11,17,26,0.96)] px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur-md">
+            <Link
+              href="/login"
+              className={cn(
+                buttonVariants({ size: "lg" }),
+                "btn-press min-h-12 w-full justify-center bg-[var(--desk-live)] text-[#1a1520] hover:bg-[#f5cc63]",
+              )}
+            >
+              Continue with Google
+            </Link>
           </div>
         </div>
 
