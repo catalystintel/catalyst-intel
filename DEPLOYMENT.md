@@ -167,6 +167,27 @@ gh secret set STAGING_APP_URL --body "https://<your-staging-preview-domain>"
 gh secret set STAGING_CRON_SECRET --body "<same value as Vercel Preview>"
 ```
 
+### GitHub repo secrets (for the deploy migration workflow)
+
+`migrate.yml` runs `drizzle-kit migrate` from GitHub Actions on every push to `main` /
+`dev`, as an explicit, visible-in-Actions step in addition to the migration Vercel's own
+build already runs. Missing secrets skip that push's job (logs a message, exits 0)
+instead of failing the workflow - Vercel's build-time migration still applies either way.
+
+| Secret                      | Notes                                                   |
+| --------------------------- | ------------------------------------------------------- |
+| `PROD_LIBSQL_URL`           | Same value as Vercel **Production** `LIBSQL_URL`        |
+| `PROD_LIBSQL_AUTH_TOKEN`    | Same value as Vercel **Production** `LIBSQL_AUTH_TOKEN` |
+| `STAGING_LIBSQL_URL`        | Same value as Vercel **Preview** `LIBSQL_URL`           |
+| `STAGING_LIBSQL_AUTH_TOKEN` | Same value as Vercel **Preview** `LIBSQL_AUTH_TOKEN`    |
+
+```bash
+gh secret set PROD_LIBSQL_URL --body "<same value as Vercel Production LIBSQL_URL>"
+gh secret set PROD_LIBSQL_AUTH_TOKEN --body "<same value as Vercel Production LIBSQL_AUTH_TOKEN>"
+gh secret set STAGING_LIBSQL_URL --body "<same value as Vercel Preview LIBSQL_URL>"
+gh secret set STAGING_LIBSQL_AUTH_TOKEN --body "<same value as Vercel Preview LIBSQL_AUTH_TOKEN>"
+```
+
 ---
 
 ## One-time cloud setup (when you're ready to go live)
@@ -273,6 +294,14 @@ not a separate manual step, they run wherever a build runs:
   throwaway SQLite file (`DATABASE_URL: file:./local.db`, recreated per run). This isn't a
   real environment, but it does mean every PR into `dev` verifies its migrations apply
   cleanly - a broken migration SQL file fails CI before it can be merged.
+- **GitHub Actions deploy migration** (`migrate.yml`) additionally runs `drizzle-kit migrate`
+  directly against the real staging/production Turso DB on every push to `dev`/`main`, as its
+  own explicit, visible-in-Actions step (see secrets below). This is redundant with Vercel's
+  build-time migration by design - both are safe to run against the same DB - so a migration
+  landing is never solely dependent on Vercel's build succeeding.
+- **Admin UI** (`/admin` → "Run pending migrations") calls `POST /api/admin/migrate`, which runs
+  the same drizzle migrator in-process against whichever DB the running app is pointed at. Use
+  this to catch up a schema change immediately without waiting on a deploy or Action to finish.
 
 **Workflow when you change `src/db/schema.ts`:**
 
@@ -312,9 +341,13 @@ the docs imply — treat this workflow as "best-effort, roughly hourly," not "ev
 
 **Self-healing backstop:** because the scheduler can't be trusted to hit its own interval,
 `GET /api/catalysts` checks the most recent ingestion timestamp on every read and fires a
-non-blocking multi-source refetch (SEC EDGAR + Nasdaq halts) if the data is stale (>10 min old),
-with a 3-minute cooldown (`src/lib/jobs/ingestion-freshness.ts`). Full multi-source runs remain
-on GHA cron / Admin “Fetch all”.
+non-blocking multi-source refetch (SEC EDGAR + Nasdaq halts) if the data is stale (>4 min old),
+with a 3-minute cooldown and a 10-minute cooldown after a failed attempt
+(`src/lib/jobs/ingestion-freshness.ts`). Tightened from the original 10 min / 5 min / 15 min
+after confirming via `gh run list --workflow=fetch-sec-edgar-cron.yml` that real gaps between
+cron runs are commonly 45 min to 3.5+ hours - this backstop, not the cron schedule, is what
+actually keeps the tape near-live day to day. Full multi-source runs remain on GHA cron / Admin
+"Fetch all".
 
 **Decision: keep GitHub Actions cron while on Vercel Hobby.** GitHub Actions here is a scheduler
 pinging `/api/admin/fetch/all` — it never touches Turso directly, the route handler does.

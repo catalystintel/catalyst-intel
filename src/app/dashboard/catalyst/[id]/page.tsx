@@ -131,24 +131,26 @@ export default async function CatalystArticlePage({ params }: PageProps) {
     rawContent: row.rawContent,
   };
 
-  let enrichedEarnings = null;
-  if (
+  const shouldFetchEarnings =
     isEarningsCatalyst(earningsMeta) &&
-    row.ticker &&
-    needsEarningsEnrichment(row.rawContent)
-  ) {
-    enrichedEarnings = await fetchLatestEarningsForTicker(row.ticker);
-  }
+    Boolean(row.ticker) &&
+    needsEarningsEnrichment(row.rawContent);
+
+  // These two vendor enrichment calls are independent - run them
+  // concurrently instead of one network round-trip after another.
+  const [enrichedEarnings, enrichment] = await Promise.all([
+    shouldFetchEarnings && row.ticker
+      ? fetchLatestEarningsForTicker(row.ticker)
+      : Promise.resolve(null),
+    fetchArticleEnrichment({
+      ticker: row.ticker,
+      excludeCatalystId: row.id,
+    }),
+  ]);
 
   const detailCards = resolveArticleDetailCards({
     ...earningsMeta,
     enrichedEarnings,
-  });
-
-  // Soft-fail vendor enrichment (profile / related headlines / quote).
-  const enrichment = await fetchArticleEnrichment({
-    ticker: row.ticker,
-    excludeCatalystId: row.id,
   });
 
   const deltaSincePublish = parseDeltaSincePublish(row.historicalImpact);

@@ -9,15 +9,20 @@
  * short SEC timeouts + failure cooldown, not eliminated globally.
  */
 
-const STALE_AFTER_MS = 10 * 60_000;
+// Tightened from 10 min after confirming (via `gh run list`) that GHA cron
+// gaps of 45 min to 3.5+ hours are common - see "Why GitHub Actions cron
+// every 5 minutes" in DEPLOYMENT.md. This backstop is the main thing keeping
+// the tape near-live in between those gaps, so it should kick in well before
+// data is user-visibly stale rather than only as a last resort.
+const STALE_AFTER_MS = 4 * 60_000;
 /** Minimum gap between successful trigger attempts in the same isolate. */
-const RETRIGGER_COOLDOWN_MS = 5 * 60_000;
+const RETRIGGER_COOLDOWN_MS = 3 * 60_000;
 /**
  * After a failed background fetch (often ETIMEDOUT from serverless → SEC),
  * wait longer before trying again so logs stay quiet and isolates aren't
  * burned on doomed outbound connects.
  */
-const FAILURE_COOLDOWN_MS = 15 * 60_000;
+const FAILURE_COOLDOWN_MS = 10 * 60_000;
 
 let lastTriggeredAt: number | null = null;
 let failureCooldownUntil: number | null = null;
@@ -32,6 +37,7 @@ export function resetIngestionFreshnessStore(): void {
 
 /**
  * Decides whether a background refetch should be kicked off right now.
+ * Triggers once ingested data is more than `STALE_AFTER_MS` old.
  *
  * @param lastFetchedAt - Timestamp of the most recent successful ingestion
  *   (`null` if the database has never been populated).
