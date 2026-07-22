@@ -1,4 +1,4 @@
-import { and, desc, eq, isNull, isNotNull } from "drizzle-orm";
+import { and, desc, eq, isNull, isNotNull, lt } from "drizzle-orm";
 
 import { db } from "@/db/client";
 import { catalysts } from "@/db/schema";
@@ -12,6 +12,9 @@ import {
 import { getPolygonApiKey } from "@/lib/jobs/vendor-env";
 
 const BASE = "https://api.polygon.io";
+
+/** Free-tier Massive/Polygon REST budget is ~5 req/min; leave headroom for news. */
+const DEFAULT_PRICE_ENRICH_LIMIT = 4;
 
 interface PolygonNewsArticle {
   id?: string;
@@ -34,6 +37,68 @@ interface AggBar {
   t?: number;
 }
 
+export class PolygonHttpError extends Error {
+  readonly status: number;
+  readonly body: string;
+
+  constructor(path: string, status: number, body: string, statusText: string) {
+    super(
+      `Polygon ${path} failed (${status}): ${body.slice(0, 200) || statusText}`,
+    );
+    this.name = "PolygonHttpError";
+    this.status = status;
+    this.body = body;
+  }
+}
+
+export function isPolygonRateLimitError(error: unknown): boolean {
+  if (!(error instanceof PolygonHttpError)) return false;
+  if (error.status === 429) return true;
+  return /exceeded the maximum requests per minute/i.test(error.body);
+}
+
+export function isPolygonPlanTimeframeError(error: unknown): boolean {
+  if (!(error instanceof PolygonHttpError)) return false;
+  if (error.status !== 403) return false;
+  return (
+    /NOT_AUTHORIZED/i.test(error.body) ||
+    /doesn't include this data timeframe/i.test(error.body)
+  );
+}
+
+function utcDateString(d: Date): string {
+  return d.toISOString().slice(0, 10);
+}
+
+function addUtcDays(day: string, delta: number): string {
+  const dt = new Date(`${day}T12:00:00.000Z`);
+  dt.setUTCDate(dt.getUTCDate() + delta);
+  return utcDateString(dt);
+}
+
+function isUtcWeekend(day: string): boolean {
+  const dow = new Date(`${day}T12:00:00.000Z`).getUTCDay();
+  return dow === 0 || dow === 6;
+}
+
+/**
+ * Free-tier aggregates reject "today" (and some too-recent windows) with 403
+ * NOT_AUTHORIZED timeframe. Use a completed session day: never today; roll
+ * Sat/Sun back to Friday.
+ */
+export function polygonEnrichmentSessionDate(
+  eventTimestamp: string,
+  now = new Date(),
+): string {
+  const today = utcDateString(now);
+  const eventDay = eventTimestamp.slice(0, 10);
+  let day = eventDay < today ? eventDay : addUtcDays(today, -1);
+  while (isUtcWeekend(day)) {
+    day = addUtcDays(day, -1);
+  }
+  return day;
+}
+
 async function polygonGet<T>(
   path: string,
   apiKey: string,
@@ -53,9 +118,7 @@ async function polygonGet<T>(
 
   if (!res.ok) {
     const body = await res.text().catch(() => "");
-    throw new Error(
-      `Polygon ${path} failed (${res.status}): ${body.slice(0, 200) || res.statusText}`,
-    );
+    throw new PolygonHttpError(path, res.status, body, res.statusText);
   }
 
   return (await res.json()) as T;
@@ -128,12 +191,29 @@ function pctChange(open: number, close: number): number {
   return ((close - open) / open) * 100;
 }
 
+async function markImpact(
+  id: number,
+  impact: Record<string, unknown>,
+): Promise<void> {
+  await db
+    .update(catalysts)
+    .set({ historicalImpact: impact })
+    .where(eq(catalysts.id, id))
+    .run();
+}
+
 /**
- * Enriches recent catalysts that have a ticker with a simple next-session
+ * Enriches recent catalysts that have a ticker with a simple session
  * price move from Polygon aggregates. Soft-fails without POLYGON_API_KEY.
+ *
+ * Free-tier notes (Massive/Polygon Starter):
+ * - ~5 REST requests/minute — keep batch small and stop on 429
+ * - Same-day / too-recent aggs often return 403 NOT_AUTHORIZED timeframe
+ * - Prefer completed sessions (before today UTC); weekends roll to Friday
  */
 export async function enrichHistoricalImpact(options?: {
   limit?: number;
+  now?: Date;
 }): Promise<SourceFetchResult> {
   const apiKey = getPolygonApiKey();
   if (!apiKey) {
@@ -143,7 +223,12 @@ export async function enrichHistoricalImpact(options?: {
     );
   }
 
-  const limit = options?.limit ?? 20;
+  const now = options?.now ?? new Date();
+  const todayStart = `${utcDateString(now)}T00:00:00.000Z`;
+  const limit = options?.limit ?? DEFAULT_PRICE_ENRICH_LIMIT;
+
+  // Skip "today" rows so free-tier 403 timeframe failures don't monopolize
+  // the null-impact queue every cron tick.
   const candidates = await db
     .select({
       id: catalysts.id,
@@ -152,7 +237,13 @@ export async function enrichHistoricalImpact(options?: {
       historicalImpact: catalysts.historicalImpact,
     })
     .from(catalysts)
-    .where(and(isNotNull(catalysts.ticker), isNull(catalysts.historicalImpact)))
+    .where(
+      and(
+        isNotNull(catalysts.ticker),
+        isNull(catalysts.historicalImpact),
+        lt(catalysts.timestamp, todayStart),
+      ),
+    )
     .orderBy(desc(catalysts.timestamp))
     .limit(limit)
     .all();
@@ -160,10 +251,12 @@ export async function enrichHistoricalImpact(options?: {
   let inserted = 0;
   let skipped = 0;
   let errors = 0;
+  const notes: string[] = [];
 
-  for (const row of candidates) {
+  for (let i = 0; i < candidates.length; i++) {
+    const row = candidates[i];
     const ticker = row.ticker!.toUpperCase();
-    const day = row.timestamp.slice(0, 10);
+    const day = polygonEnrichmentSessionDate(row.timestamp, now);
     try {
       const payload = await polygonGet<{ results?: AggBar[] }>(
         `/v2/aggs/ticker/${encodeURIComponent(ticker)}/range/1/day/${day}/${day}`,
@@ -172,11 +265,17 @@ export async function enrichHistoricalImpact(options?: {
       );
       const bar = payload.results?.[0];
       if (!bar || bar.o == null || bar.c == null) {
+        await markImpact(row.id, {
+          provider: "polygon",
+          status: "no_bar",
+          date: day,
+          reason: "No daily aggregate for session date",
+        });
         skipped++;
         continue;
       }
 
-      const impact = {
+      await markImpact(row.id, {
         provider: "polygon",
         date: day,
         open: bar.o,
@@ -185,16 +284,40 @@ export async function enrichHistoricalImpact(options?: {
         low: bar.l ?? null,
         volume: bar.v ?? null,
         pctChange: Number(pctChange(bar.o, bar.c).toFixed(3)),
-      };
-
-      await db
-        .update(catalysts)
-        .set({ historicalImpact: impact })
-        .where(eq(catalysts.id, row.id))
-        .run();
+      });
       inserted++;
-    } catch {
+    } catch (error) {
+      if (isPolygonRateLimitError(error)) {
+        const remaining = candidates.length - i;
+        skipped += remaining;
+        notes.push(
+          `Rate limited (HTTP 429) after ${i} enrichment attempt(s); deferred ${remaining}. Free tier is ~5 req/min — upgrade or wait for next cron.`,
+        );
+        break;
+      }
+
+      if (isPolygonPlanTimeframeError(error)) {
+        await markImpact(row.id, {
+          provider: "polygon",
+          status: "unavailable",
+          date: day,
+          reason: "plan_timeframe",
+        });
+        skipped++;
+        if (notes.length < 3) {
+          notes.push(
+            `Plan timeframe blocked ${ticker} @ ${day} (403 NOT_AUTHORIZED).`,
+          );
+        }
+        continue;
+      }
+
       errors++;
+      if (notes.length < 3) {
+        notes.push(
+          error instanceof Error ? error.message : String(error ?? "failed"),
+        );
+      }
     }
   }
 
@@ -202,6 +325,7 @@ export async function enrichHistoricalImpact(options?: {
     source: "polygon-prices",
     configured: true,
     status: "ok",
+    message: notes.length ? notes.join(" ") : undefined,
     fetched: candidates.length,
     inserted,
     skipped,
