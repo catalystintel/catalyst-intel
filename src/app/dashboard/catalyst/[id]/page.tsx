@@ -13,6 +13,14 @@ import {
   extractArticleBody,
   resolveArticleSummary,
 } from "@/lib/catalysts/article-content";
+import {
+  isEarningsCatalyst,
+  resolveArticleDetailCards,
+} from "@/lib/catalysts/article-detail";
+import {
+  fetchLatestEarningsForTicker,
+  needsEarningsEnrichment,
+} from "@/lib/catalysts/enrich-earnings";
 import { toFeedCatalyst } from "@/lib/catalysts/feed-catalyst";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
@@ -101,6 +109,34 @@ export default async function CatalystArticlePage({ params }: PageProps) {
     rawContent: row.rawContent,
   });
 
+  const earningsMeta = {
+    eventCategory: row.eventCategory,
+    subcategory: row.subcategory,
+    type: row.type,
+    headline: row.headline,
+    title: row.title,
+    ticker: row.ticker,
+    companyName: row.companyName,
+    provider: row.sourceProvider,
+    tags: catalyst.tags,
+    itemCodes: catalyst.items,
+    rawContent: row.rawContent,
+  };
+
+  let enrichedEarnings = null;
+  if (
+    isEarningsCatalyst(earningsMeta) &&
+    row.ticker &&
+    needsEarningsEnrichment(row.rawContent)
+  ) {
+    enrichedEarnings = await fetchLatestEarningsForTicker(row.ticker);
+  }
+
+  const detailCards = resolveArticleDetailCards({
+    ...earningsMeta,
+    enrichedEarnings,
+  });
+
   return (
     <AppShell
       user={{
@@ -118,6 +154,7 @@ export default async function CatalystArticlePage({ params }: PageProps) {
           summaryGenerated={generated}
           body={body}
           bodySource={bodySource}
+          detailCards={detailCards}
         />
       </PageEnter>
     </AppShell>
