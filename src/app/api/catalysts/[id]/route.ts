@@ -9,6 +9,14 @@ import {
   extractArticleBody,
   resolveArticleSummary,
 } from "@/lib/catalysts/article-content";
+import {
+  isEarningsCatalyst,
+  resolveArticleDetailCards,
+} from "@/lib/catalysts/article-detail";
+import {
+  fetchLatestEarningsForTicker,
+  needsEarningsEnrichment,
+} from "@/lib/catalysts/enrich-earnings";
 import { getClientIp } from "@/lib/http/client-ip";
 import { RATE_LIMITS, checkRateLimit } from "@/lib/http/rate-limit";
 import {
@@ -103,6 +111,54 @@ export async function GET(request: NextRequest, context: RouteContext) {
     title: row.title,
     headline: row.headline,
     body,
+    ticker: row.ticker,
+    companyName: row.companyName,
+    eventCategory: row.eventCategory,
+    subcategory: row.subcategory,
+    type: row.type,
+    itemCodes: Array.isArray(row.itemCodes)
+      ? (row.itemCodes as Array<{
+          code?: string | null;
+          label?: string | null;
+        }>)
+      : null,
+    provider: row.sourceProvider,
+    rawContent: row.rawContent,
+  });
+
+  const tags = Array.isArray(row.tags)
+    ? row.tags.filter((t): t is string => typeof t === "string")
+    : [];
+  const itemCodes = Array.isArray(row.itemCodes)
+    ? (row.itemCodes as Array<{ code?: string | null; label?: string | null }>)
+    : null;
+
+  const detailInput = {
+    eventCategory: row.eventCategory,
+    subcategory: row.subcategory,
+    type: row.type,
+    headline: row.headline,
+    title: row.title,
+    ticker: row.ticker,
+    companyName: row.companyName,
+    provider: row.sourceProvider,
+    tags,
+    itemCodes,
+    rawContent: row.rawContent,
+  };
+
+  let enrichedEarnings = null;
+  if (
+    isEarningsCatalyst(detailInput) &&
+    row.ticker &&
+    needsEarningsEnrichment(row.rawContent)
+  ) {
+    enrichedEarnings = await fetchLatestEarningsForTicker(row.ticker);
+  }
+
+  const detailCards = resolveArticleDetailCards({
+    ...detailInput,
+    enrichedEarnings,
   });
 
   const catalyst = {
@@ -134,6 +190,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
         summaryGenerated,
         body,
         bodySource,
+        detailCards,
       },
     }),
     limitResult,

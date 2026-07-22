@@ -11,6 +11,10 @@ import {
   originalSourceLabel,
   type ArticleBodySource,
 } from "@/lib/catalysts/article-content";
+import type {
+  ArticleDetailCard,
+  DetailTone,
+} from "@/lib/catalysts/article-detail";
 import { formatTimeDate } from "@/lib/format/relative-time";
 import { CATEGORY_LABELS } from "@/lib/jobs/parse-8k-items";
 import { cn } from "@/lib/utils";
@@ -21,6 +25,7 @@ export interface CatalystArticleViewProps {
   summaryGenerated: boolean;
   body: string;
   bodySource: ArticleBodySource;
+  detailCards?: ArticleDetailCard[];
 }
 
 /**
@@ -33,6 +38,7 @@ export function CatalystArticleView({
   summaryGenerated,
   body,
   bodySource,
+  detailCards = [],
 }: CatalystArticleViewProps) {
   const source = sourceDisplay(catalyst);
   const originalLabel = originalSourceLabel(catalyst.sourceProvider);
@@ -136,6 +142,19 @@ export function CatalystArticleView({
         </p>
       </section>
 
+      {detailCards.length > 0 ? (
+        <section className="flex flex-col gap-3">
+          <h2 className="font-mono text-[0.65rem] tracking-[0.14em] text-[var(--desk-text-dim)] uppercase">
+            Detail
+          </h2>
+          <div className="flex flex-col gap-3">
+            {detailCards.map((card) => (
+              <DetailCardPanel key={card.id} card={card} />
+            ))}
+          </div>
+        </section>
+      ) : null}
+
       <section className="flex flex-col gap-2">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
           <h2 className="font-mono text-[0.65rem] tracking-[0.14em] text-[var(--desk-text-dim)] uppercase">
@@ -228,6 +247,56 @@ function MetaCell({
       </dd>
     </div>
   );
+}
+
+function DetailCardPanel({ card }: { card: ArticleDetailCard }) {
+  return (
+    <div className="rounded-sm border border-[var(--desk-border)] bg-white/[0.02] px-4 py-4">
+      <h3 className="font-mono text-[0.7rem] tracking-[0.12em] text-[var(--desk-text)] uppercase">
+        {card.title}
+      </h3>
+      {card.intro ? (
+        <p className="mt-2 text-sm leading-relaxed text-[var(--desk-text-secondary)]">
+          {card.intro}
+        </p>
+      ) : null}
+      {card.fields.length > 0 ? (
+        <dl className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+          {card.fields.map((field) => (
+            <div
+              key={`${card.id}-${field.label}`}
+              className="flex flex-col gap-0.5 border-t border-[var(--desk-border)] pt-2 first:border-t-0 first:pt-0 sm:first:border-t sm:first:pt-2"
+            >
+              <dt className="font-mono text-[0.6rem] tracking-[0.12em] text-[var(--desk-text-dim)] uppercase">
+                {field.label}
+              </dt>
+              <dd
+                className={cn(
+                  "text-sm text-[var(--desk-text)] tabular-nums",
+                  toneClass(field.tone),
+                )}
+              >
+                {field.value}
+              </dd>
+            </div>
+          ))}
+        </dl>
+      ) : null}
+    </div>
+  );
+}
+
+function toneClass(tone?: DetailTone): string {
+  switch (tone) {
+    case "positive":
+      return "text-[var(--desk-live)]";
+    case "negative":
+      return "text-red-400";
+    case "neutral":
+      return "text-[var(--desk-text)]";
+    default:
+      return "text-[var(--desk-text)]";
+  }
 }
 
 function bodySourceLabel(source: ArticleBodySource): string {
