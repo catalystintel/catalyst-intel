@@ -13,9 +13,10 @@ Sign in with Google before checking authenticated surfaces.
 
 - [ ] Live feed (`/dashboard`) shows **ticker** and **event type** (headline / category) within one soft-poll cycle (~20s when tab focused) after a new SEC ingest.
 - [ ] Each row shows a **materiality / impact** badge (High / Medium / Low + numeric score). Scores are rule-based from event category when AI scoring is absent.
-- [ ] **Act** opens (or focuses) the detail drawer for that catalyst.
+- [ ] **Read** (amber) opens the **in-app article** at `/dashboard/catalyst/[id]` (not an external tab).
+- [ ] Clicking the row **Title** also navigates to the in-app article.
 - [ ] **Dismiss** removes the row from the feed for this browser (local dismiss list); it does not delete the DB row.
-- [ ] Drawer repeats ticker, event category, and materiality for the same filing.
+- [ ] Article page shows ticker, category, summary, and best-available stored body; secondary CTA opens the original source.
 
 ---
 
@@ -29,11 +30,12 @@ Sign in with Google before checking authenticated surfaces.
 
 ---
 
-## JTBD 3 — Headline → one-click EDGAR proof
+## JTBD 3 — Headline → in-app article + original proof
 
-- [ ] Every feed row has a visible **EDGAR / Proof** control (desktop Proof column; mobile under the title).
-- [ ] Clicking Proof opens the stored SEC accession URL in a new tab and does **not** only open the drawer.
-- [ ] Drawer always shows a **Proof (EDGAR)** section (link or explicit “No EDGAR link” stub — never hidden).
+- [ ] Every feed row has a visible **Proof / original source** control (desktop Proof column; mobile under the title).
+- [ ] Clicking Proof opens the stored vendor URL in a new tab (SEC EDGAR when applicable) and does **not** replace the in-app reader.
+- [ ] Title / **Read** open `/dashboard/catalyst/[id]` with summary + stored body inside the app.
+- [ ] Article page secondary CTA is **Original on SEC/source** (or provider-specific label).
 
 ---
 

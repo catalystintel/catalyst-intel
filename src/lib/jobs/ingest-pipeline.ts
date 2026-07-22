@@ -2,6 +2,7 @@ import { eq } from "drizzle-orm";
 
 import { db } from "@/db/client";
 import { catalysts, companies, rawSources } from "@/db/schema";
+import { ensureIngestSummary } from "@/lib/catalysts/article-content";
 import { scoreFromCategory } from "@/lib/catalysts/materiality";
 import {
   isEventCategoryKey,
@@ -137,6 +138,13 @@ export async function ingestNormalizedCatalysts(
         typeof item.impactScore === "number"
           ? item.impactScore
           : scoreFromCategory(category);
+      const summary = ensureIngestSummary({
+        summary: item.summary,
+        title: item.title,
+        headline: item.headline,
+        provider: item.provider,
+        rawContent: item.rawContent,
+      });
 
       await db
         .insert(catalysts)
@@ -152,7 +160,7 @@ export async function ingestNormalizedCatalysts(
           itemCodes: item.itemCodes ?? null,
           timestamp,
           rawSourceId: rawRow.id,
-          summary: item.summary ?? null,
+          summary,
           impactScore,
           confidence: item.confidence ?? null,
           tags: item.tags ?? null,
