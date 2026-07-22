@@ -8,6 +8,7 @@ import { db } from "@/db/client";
 import { isLibsqlConfigured } from "@/db/env";
 import { nyseListings, rawSources } from "@/db/schema";
 import { getCurrentAppUser } from "@/lib/auth/current-user";
+import { withDbRetry } from "@/lib/db/with-db-retry";
 import { isFinnhubConfigured } from "@/lib/jobs/finnhub-env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
@@ -43,25 +44,27 @@ export default async function AdminPage() {
   // time. Each await here is a network hop to Turso, and sequencing them was
   // a meaningful chunk of this page's load latency.
   const [lastFetch, sourceCountRow, providerCounts, nyseCountRow] =
-    await Promise.all([
-      db
-        .select({ fetchedAt: rawSources.fetchedAt })
-        .from(rawSources)
-        .orderBy(desc(rawSources.fetchedAt))
-        .limit(1)
-        .get(),
-      db.select({ value: count() }).from(rawSources).get(),
-      db
-        .select({
-          provider: rawSources.provider,
-          value: count(),
-        })
-        .from(rawSources)
-        .groupBy(rawSources.provider)
-        .orderBy(sql`count(*) desc`)
-        .all(),
-      db.select({ value: count() }).from(nyseListings).get(),
-    ]);
+    await withDbRetry(() =>
+      Promise.all([
+        db
+          .select({ fetchedAt: rawSources.fetchedAt })
+          .from(rawSources)
+          .orderBy(desc(rawSources.fetchedAt))
+          .limit(1)
+          .get(),
+        db.select({ value: count() }).from(rawSources).get(),
+        db
+          .select({
+            provider: rawSources.provider,
+            value: count(),
+          })
+          .from(rawSources)
+          .groupBy(rawSources.provider)
+          .orderBy(sql`count(*) desc`)
+          .all(),
+        db.select({ value: count() }).from(nyseListings).get(),
+      ]),
+    );
   const sourceCount = sourceCountRow?.value ?? 0;
   const nyseCount = nyseCountRow?.value ?? 0;
   const finnhubConfigured = isFinnhubConfigured();

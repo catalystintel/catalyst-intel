@@ -10,6 +10,7 @@ import { isLibsqlConfigured } from "@/db/env";
 import { catalysts, companies, rawSources } from "@/db/schema";
 import { getCurrentAppUser } from "@/lib/auth/current-user";
 import { toFeedCatalyst } from "@/lib/catalysts/feed-catalyst";
+import { withDbRetry } from "@/lib/db/with-db-retry";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 
@@ -33,33 +34,35 @@ export default async function DashboardPage() {
     redirect("/login?next=/dashboard");
   }
 
-  const recentCatalysts = await db
-    .select({
-      id: catalysts.id,
-      ticker: catalysts.ticker,
-      companyName: catalysts.companyName,
-      type: catalysts.type,
-      title: catalysts.title,
-      headline: catalysts.headline,
-      eventCategory: catalysts.eventCategory,
-      subcategory: catalysts.subcategory,
-      itemCodes: catalysts.itemCodes,
-      timestamp: catalysts.timestamp,
-      summary: catalysts.summary,
-      impactScore: catalysts.impactScore,
-      confidence: catalysts.confidence,
-      tags: catalysts.tags,
-      historicalImpact: catalysts.historicalImpact,
-      sourceUrl: rawSources.url,
-      sourceProvider: rawSources.provider,
-      sector: companies.sector,
-    })
-    .from(catalysts)
-    .leftJoin(rawSources, eq(catalysts.rawSourceId, rawSources.id))
-    .leftJoin(companies, eq(catalysts.companyId, companies.id))
-    .orderBy(desc(catalysts.timestamp))
-    .limit(200)
-    .all();
+  const recentCatalysts = await withDbRetry(() =>
+    db
+      .select({
+        id: catalysts.id,
+        ticker: catalysts.ticker,
+        companyName: catalysts.companyName,
+        type: catalysts.type,
+        title: catalysts.title,
+        headline: catalysts.headline,
+        eventCategory: catalysts.eventCategory,
+        subcategory: catalysts.subcategory,
+        itemCodes: catalysts.itemCodes,
+        timestamp: catalysts.timestamp,
+        summary: catalysts.summary,
+        impactScore: catalysts.impactScore,
+        confidence: catalysts.confidence,
+        tags: catalysts.tags,
+        historicalImpact: catalysts.historicalImpact,
+        sourceUrl: rawSources.url,
+        sourceProvider: rawSources.provider,
+        sector: companies.sector,
+      })
+      .from(catalysts)
+      .leftJoin(rawSources, eq(catalysts.rawSourceId, rawSources.id))
+      .leftJoin(companies, eq(catalysts.companyId, companies.id))
+      .orderBy(desc(catalysts.timestamp))
+      .limit(200)
+      .all(),
+  );
 
   return (
     <AppShell
