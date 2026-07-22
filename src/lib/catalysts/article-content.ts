@@ -11,6 +11,11 @@ import {
   isEventCategoryKey,
   type EventCategoryKey,
 } from "@/lib/catalysts/taxonomy";
+import {
+  buildEarningsIntro,
+  isEarningsCatalyst,
+  parseEarningsFromRaw,
+} from "@/lib/catalysts/article-detail";
 
 const SENTENCE_SPLIT = /(?<=[.!?])\s+(?=[A-Z0-9"'(])/;
 
@@ -429,7 +434,29 @@ export function synthesizeReadableSummary(input: ArticleSummaryInput): string {
   const subcategory = input.subcategory?.trim()?.replace(/_/g, " ") || null;
   const provider = input.provider?.trim() || null;
 
-  if (provider === "nasdaq-halts") {
+  if (
+    isEarningsCatalyst({
+      eventCategory: input.eventCategory,
+      subcategory: input.subcategory,
+      type: input.type,
+      headline: input.headline,
+      title: input.title,
+      provider: input.provider,
+      itemCodes: input.itemCodes,
+    })
+  ) {
+    const figures = parseEarningsFromRaw(input.rawContent);
+    if (figures) {
+      sentences.push(
+        buildEarningsIntro(figures, {
+          ticker: input.ticker,
+          companyName: input.companyName,
+        }),
+      );
+    } else {
+      sentences.push(`${subject} has an earnings-related catalyst: ${event}.`);
+    }
+  } else if (provider === "nasdaq-halts") {
     const haltVerb = /resum/i.test(event)
       ? "trading resumed after a halt"
       : /halt/i.test(event)
@@ -460,7 +487,20 @@ export function synthesizeReadableSummary(input: ArticleSummaryInput): string {
 
   const detail = rawDetailSentence(provider, input.rawContent);
   if (detail && !sentences.some((s) => s.includes(detail.slice(0, 40)))) {
-    sentences.push(detail.endsWith(".") ? detail : `${detail}.`);
+    // Avoid duplicating EPS/revenue lines already covered by earnings intro.
+    const earningsAlready =
+      isEarningsCatalyst({
+        eventCategory: input.eventCategory,
+        subcategory: input.subcategory,
+        type: input.type,
+        headline: input.headline,
+        title: input.title,
+        provider: input.provider,
+        itemCodes: input.itemCodes,
+      }) && /Key figures:/i.test(detail);
+    if (!earningsAlready) {
+      sentences.push(detail.endsWith(".") ? detail : `${detail}.`);
+    }
   }
 
   const context = providerContextSentence(
