@@ -302,19 +302,19 @@ async function fetchRelatedFromDb(
       .limit(RELATED_LIMIT)
       .all();
 
-    return rows
-      .map((row) => {
-        const title = (row.headline || row.title || "").trim();
-        if (!title) return null;
-        return {
-          title,
-          url: row.sourceUrl?.trim() || null,
-          publishedAt: row.timestamp || null,
-          source: row.sourceProvider?.trim() || "Catalyst",
-          catalystId: row.id,
-        } satisfies ArticleRelatedHeadline;
-      })
-      .filter((h): h is ArticleRelatedHeadline => h != null);
+    const out: ArticleRelatedHeadline[] = [];
+    for (const row of rows) {
+      const title = (row.headline || row.title || "").trim();
+      if (!title) continue;
+      out.push({
+        title,
+        url: row.sourceUrl?.trim() || null,
+        publishedAt: row.timestamp || null,
+        source: row.sourceProvider?.trim() || "Catalyst",
+        catalystId: row.id,
+      });
+    }
+    return out;
   } catch {
     return [];
   }
@@ -331,23 +331,23 @@ async function fetchFinnhubCompanyNews(
   });
   if (!Array.isArray(rows)) return [];
 
-  return rows
-    .map((row) => {
-      const title = row.headline?.trim();
-      if (!title) return null;
-      return {
-        title,
-        url: row.url?.trim() || null,
-        publishedAt:
-          typeof row.datetime === "number" && row.datetime > 0
-            ? new Date(row.datetime * 1000).toISOString()
-            : null,
-        source: row.source?.trim() || "Finnhub",
-        catalystId: null,
-      } satisfies ArticleRelatedHeadline;
-    })
-    .filter((h): h is ArticleRelatedHeadline => h != null)
-    .slice(0, RELATED_LIMIT);
+  const out: ArticleRelatedHeadline[] = [];
+  for (const row of rows) {
+    if (out.length >= RELATED_LIMIT) break;
+    const title = row.headline?.trim();
+    if (!title) continue;
+    out.push({
+      title,
+      url: row.url?.trim() || null,
+      publishedAt:
+        typeof row.datetime === "number" && row.datetime > 0
+          ? new Date(row.datetime * 1000).toISOString()
+          : null,
+      source: row.source?.trim() || "Finnhub",
+      catalystId: null,
+    });
+  }
+  return out;
 }
 
 async function fetchPolygonTickerNews(
@@ -365,20 +365,20 @@ async function fetchPolygonTickerNews(
     },
   );
 
-  return (payload?.results ?? [])
-    .map((article) => {
-      const title = article.title?.trim();
-      if (!title) return null;
-      return {
-        title,
-        url: article.article_url?.trim() || null,
-        publishedAt: article.published_utc?.trim() || null,
-        source: article.publisher?.name?.trim() || "Polygon",
-        catalystId: null,
-      } satisfies ArticleRelatedHeadline;
-    })
-    .filter((h): h is ArticleRelatedHeadline => h != null)
-    .slice(0, RELATED_LIMIT);
+  const out: ArticleRelatedHeadline[] = [];
+  for (const article of payload?.results ?? []) {
+    if (out.length >= RELATED_LIMIT) break;
+    const title = article.title?.trim();
+    if (!title) continue;
+    out.push({
+      title,
+      url: article.article_url?.trim() || null,
+      publishedAt: article.published_utc?.trim() || null,
+      source: article.publisher?.name?.trim() || "Polygon",
+      catalystId: null,
+    });
+  }
+  return out;
 }
 
 function headlineKey(title: string): string {
