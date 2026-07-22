@@ -101,7 +101,14 @@ export function AppShell({ user, active, children }: AppShellProps) {
           />
         </header>
 
-        <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+        {/*
+          overflow-y-auto (not overflow-hidden) makes this the scroll
+          container for pages whose content is taller than the viewport
+          (e.g. /admin, /profile). Pages that manage their own internal
+          scroll region (e.g. the Live feed) already size to 100% of this
+          element via flex + min-h-0, so they aren't affected.
+        */}
+        <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden overflow-y-auto overscroll-contain">
           {children}
         </main>
       </div>
