@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect } from "react";
-import { Check, XIcon } from "lucide-react";
+import Link from "next/link";
+import { BookOpen, Check, XIcon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { CategoryBadge } from "@/components/category-badge";
@@ -111,10 +112,18 @@ export function CatalystDetailDrawer({
               </div>
 
               <div className="flex flex-wrap gap-2">
+                <Link
+                  href={`/dashboard/catalyst/${catalyst.id}`}
+                  onClick={onClose}
+                  className="inline-flex items-center gap-1.5 rounded-sm bg-[var(--desk-live)] px-3 py-1.5 font-mono text-xs font-semibold tracking-wide text-[#121212] uppercase hover:brightness-110"
+                >
+                  <BookOpen className="size-3.5" />
+                  Read article
+                </Link>
                 <button
                   type="button"
                   onClick={() => onAct?.()}
-                  className="inline-flex items-center gap-1.5 rounded-sm bg-[var(--desk-live)] px-3 py-1.5 font-mono text-xs font-semibold tracking-wide text-[#121212] uppercase hover:brightness-110"
+                  className="inline-flex items-center gap-1.5 rounded-sm border border-[var(--desk-border-strong)] px-3 py-1.5 font-mono text-xs tracking-wide text-[var(--desk-text-muted)] uppercase hover:bg-white/[0.05] hover:text-[var(--desk-text)]"
                 >
                   <Check className="size-3.5" />
                   Act
@@ -238,10 +247,13 @@ export function CatalystDetailDrawer({
 
               <div>
                 <p className="font-mono text-[0.65rem] tracking-[0.14em] text-[var(--desk-text-dim)] uppercase">
-                  Proof
+                  Original source
                 </p>
                 <div className="mt-2">
-                  <EdgarProofLink url={catalyst.sourceUrl} />
+                  <EdgarProofLink
+                    url={catalyst.sourceUrl}
+                    provider={catalyst.sourceProvider}
+                  />
                 </div>
               </div>
 

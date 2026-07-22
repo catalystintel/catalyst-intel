@@ -8,7 +8,8 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { Check, ChevronDown, ListFilter, RefreshCw, X } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { BookOpen, ChevronDown, ListFilter, RefreshCw, X } from "lucide-react";
 
 import { CatalystDetailDrawer } from "@/components/catalyst-detail-drawer";
 import { EdgarProofLink } from "@/components/edgar-proof-link";
@@ -98,6 +99,7 @@ export function LiveCatalystFeed({
   initialCatalysts: FeedCatalyst[];
   isAdmin: boolean;
 }) {
+  const router = useRouter();
   const [catalysts, setCatalysts] = useState(initialCatalysts);
   const [presence, setPresence] = useState<Presence>("active");
   const [lastFetchedAt, setLastFetchedAt] = useState<string | null>(null);
@@ -286,6 +288,13 @@ export function LiveCatalystFeed({
     setSelectedId((cur) => (cur === id ? null : cur));
   }, []);
 
+  const openArticle = useCallback(
+    (id: number) => {
+      router.push(`/dashboard/catalyst/${id}`);
+    },
+    [router],
+  );
+
   const categoryOptions = useMemo(() => {
     const counts = new Map<EventCategoryKey, number>();
     for (const c of catalysts) {
@@ -460,8 +469,8 @@ export function LiveCatalystFeed({
           catalysts={filtered}
           flashIds={flashIds}
           selectedId={selectedId}
-          onSelect={setSelectedId}
-          onAct={setSelectedId}
+          onSelect={openArticle}
+          onAct={openArticle}
           onDismiss={dismissCatalyst}
         />
       )}
@@ -470,7 +479,7 @@ export function LiveCatalystFeed({
         catalyst={selected}
         onClose={() => setSelectedId(null)}
         onAct={() => {
-          if (selectedId !== null) setSelectedId(selectedId);
+          if (selectedId !== null) openArticle(selectedId);
         }}
         onDismiss={() => {
           if (selectedId !== null) dismissCatalyst(selectedId);
@@ -714,7 +723,11 @@ function CatalystFeedList({
                     score={catalyst.impactScore}
                     category={catalyst.eventCategory}
                   />
-                  <EdgarProofLink url={catalyst.sourceUrl} compact />
+                  <EdgarProofLink
+                    url={catalyst.sourceUrl}
+                    provider={catalyst.sourceProvider}
+                    compact
+                  />
                   <time
                     dateTime={catalyst.timestamp}
                     className="ml-auto font-mono text-[0.72rem] font-medium tracking-tight text-[var(--desk-text-muted)] tabular-nums"
@@ -732,8 +745,8 @@ function CatalystFeedList({
                     onClick={() => onAct(catalyst.id)}
                     className="inline-flex items-center gap-1 rounded-sm bg-[var(--desk-live)] px-2 py-0.5 font-mono text-[0.65rem] font-semibold tracking-wide text-[#121212] uppercase hover:brightness-110"
                   >
-                    <Check className="size-3" />
-                    Act
+                    <BookOpen className="size-3" />
+                    Read
                   </button>
                   <button
                     type="button"
@@ -751,7 +764,11 @@ function CatalystFeedList({
                 className="hidden min-w-0 sm:block"
                 onClick={(e) => e.stopPropagation()}
               >
-                <EdgarProofLink url={catalyst.sourceUrl} compact />
+                <EdgarProofLink
+                  url={catalyst.sourceUrl}
+                  provider={catalyst.sourceProvider}
+                  compact
+                />
               </div>
 
               <div role="cell" className="hidden min-w-0 text-right sm:block">
@@ -773,8 +790,10 @@ function CatalystFeedList({
                   type="button"
                   onClick={() => onAct(catalyst.id)}
                   className="inline-flex items-center gap-1 rounded-sm bg-[var(--desk-live)] px-2 py-0.5 font-mono text-[0.65rem] font-semibold tracking-wide text-[#121212] uppercase hover:brightness-110"
+                  title="Open article inside Catalyst"
                 >
-                  Act
+                  <BookOpen className="size-3" />
+                  Read
                 </button>
                 <button
                   type="button"
