@@ -59,9 +59,14 @@ const DISMISS_STORAGE_KEY = "ci.dismissed-catalyst-ids";
 
 type Presence = "active" | "blurred" | "hidden";
 
-/** Blotter: Ticker · Event · Impact · Title · Time · Action (hover toolbar) */
+/**
+ * Blotter: Ticker · Event · Impact · Title · Time · Action (hover toolbar).
+ * Time is reserved wide enough for `formatTimeDate` (`10:23 AM · Jul 20, 2026`).
+ * Action reserves room for Read/Act/Dismiss/Quiet so hover buttons never overflow
+ * left over Time.
+ */
 const FEED_GRID =
-  "grid-cols-1 sm:grid-cols-[72px_88px_78px_minmax(0,1fr)_72px] lg:grid-cols-[80px_96px_84px_minmax(0,1fr)_78px_minmax(168px,auto)]";
+  "grid-cols-1 sm:grid-cols-[72px_88px_78px_minmax(0,1fr)_156px] lg:grid-cols-[80px_96px_84px_minmax(0,1fr)_160px_minmax(268px,max-content)]";
 
 function readPresence(): Presence {
   if (typeof document === "undefined") return "active";
@@ -779,12 +784,12 @@ function CatalystFeedList({
                   />
                   <time
                     dateTime={catalyst.timestamp}
-                    className="ml-auto font-mono text-[0.72rem] font-medium tracking-tight text-[var(--desk-text-muted)] tabular-nums"
+                    className="ml-auto shrink-0 font-mono text-[0.72rem] font-medium tracking-tight whitespace-nowrap text-[var(--desk-text-muted)] tabular-nums"
                   >
                     {formatClockTime(catalyst.timestamp)}
                   </time>
                 </span>
-                {/* Touch: always-visible Read (do not rely on hover alone). */}
+                {/* Touch: always-visible actions below meta/date (never same-line overlap). */}
                 <div
                   className="mt-2 flex flex-wrap items-center gap-1.5 lg:hidden"
                   onClick={(e) => e.stopPropagation()}
@@ -829,25 +834,29 @@ function CatalystFeedList({
                 </div>
               </div>
 
-              <div role="cell" className="hidden min-w-0 text-right sm:block">
+              <div
+                role="cell"
+                className="relative z-[1] hidden min-w-0 text-right sm:block"
+              >
                 <time
                   dateTime={catalyst.timestamp}
-                  className="inline-block font-mono text-[0.72rem] font-medium tracking-tight whitespace-nowrap text-[var(--desk-text-dim)] tabular-nums"
+                  className="inline-block max-w-full font-mono text-[0.72rem] font-medium tracking-tight whitespace-nowrap text-[var(--desk-text-dim)] tabular-nums"
+                  title={formatTimeDate(catalyst.timestamp)}
                 >
                   {formatTimeDate(catalyst.timestamp)}
                 </time>
               </div>
 
-              {/* Desktop: hover / focus-within reveals action toolbar */}
+              {/* Desktop: hover / focus-within reveals action toolbar in its own column */}
               <div
                 role="cell"
-                className="hidden justify-end lg:flex"
+                className="relative z-0 hidden min-w-0 justify-end overflow-hidden lg:flex"
                 onClick={(e) => e.stopPropagation()}
                 onKeyDown={(e) => e.stopPropagation()}
               >
                 <div
                   className={cn(
-                    "flex items-center justify-end gap-1 opacity-0 transition-opacity duration-150",
+                    "flex w-full min-w-0 flex-nowrap items-center justify-end gap-1 opacity-0 transition-opacity duration-150",
                     "pointer-events-none group-hover:pointer-events-auto group-hover:opacity-100",
                     "group-focus-within:pointer-events-auto group-focus-within:opacity-100",
                     selected && "pointer-events-auto opacity-100",
