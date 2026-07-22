@@ -60,13 +60,13 @@ const DISMISS_STORAGE_KEY = "ci.dismissed-catalyst-ids";
 type Presence = "active" | "blurred" | "hidden";
 
 /**
- * Blotter: Ticker · Event · Impact · Title · Time · Action (hover toolbar).
+ * Blotter: Title · Time · Event · Ticker · Impact · Action (hover toolbar).
  * Time is reserved wide enough for `formatTimeDate` (`10:23 AM · Jul 20, 2026`).
  * Action reserves room for Read/Act/Dismiss/Quiet so hover buttons never overflow
  * left over Time.
  */
 const FEED_GRID =
-  "grid-cols-1 sm:grid-cols-[72px_88px_78px_minmax(0,1fr)_156px] lg:grid-cols-[80px_96px_84px_minmax(0,1fr)_160px_minmax(268px,max-content)]";
+  "grid-cols-1 sm:grid-cols-[minmax(0,1fr)_156px_88px_72px_78px] lg:grid-cols-[minmax(0,1fr)_160px_96px_80px_84px_minmax(268px,max-content)]";
 
 function readPresence(): Presence {
   if (typeof document === "undefined") return "active";
@@ -683,20 +683,20 @@ function CatalystFeedList({
           FEED_GRID,
         )}
       >
-        <div role="columnheader" className="hidden sm:block">
-          Ticker
-        </div>
-        <div role="columnheader" className="hidden sm:block">
-          Event
-        </div>
-        <div role="columnheader" className="hidden sm:block">
-          Impact
-        </div>
         <div role="columnheader" className="col-span-1">
           Title
         </div>
         <div role="columnheader" className="hidden text-right sm:block">
           Time
+        </div>
+        <div role="columnheader" className="hidden sm:block">
+          Event
+        </div>
+        <div role="columnheader" className="hidden sm:block">
+          Ticker
+        </div>
+        <div role="columnheader" className="hidden sm:block">
+          Impact
         </div>
         <div role="columnheader" className="hidden text-right lg:block">
           Action
@@ -735,32 +735,6 @@ function CatalystFeedList({
               )}
               style={{ animationDelay: `${Math.min(index, 28) * 22}ms` }}
             >
-              <div role="cell" className="hidden min-w-0 sm:block">
-                <span className="truncate font-mono text-[0.88rem] font-semibold tracking-tight text-[var(--desk-text)] transition-colors group-hover:text-[var(--desk-live)]">
-                  {catalyst.ticker ?? "—"}
-                </span>
-              </div>
-
-              <div role="cell" className="hidden min-w-0 sm:block">
-                <span
-                  className="inline-flex max-w-full truncate rounded-sm border border-[var(--desk-border-strong)] bg-white/[0.04] px-1.5 py-0.5 font-mono text-[0.68rem] text-[var(--desk-text-secondary)]"
-                  title={
-                    catalyst.eventCategory
-                      ? CATEGORY_LABELS[catalyst.eventCategory]
-                      : undefined
-                  }
-                >
-                  {eventLabel}
-                </span>
-              </div>
-
-              <div role="cell" className="hidden min-w-0 sm:block">
-                <MaterialityBadge
-                  score={catalyst.impactScore}
-                  category={catalyst.eventCategory}
-                />
-              </div>
-
               <div role="cell" className="min-w-0">
                 <span className="block text-[0.86rem] font-medium tracking-tight text-[var(--desk-text-secondary)] transition-colors group-hover:text-[var(--desk-text)] group-focus-visible:text-[var(--desk-text)] max-sm:line-clamp-2 sm:truncate">
                   {titleLine(catalyst)}
@@ -771,24 +745,27 @@ function CatalystFeedList({
                     ? ` · ${catalyst.tags.slice(0, 3).join(" · ")}`
                     : ""}
                 </span>
-                <span className="mt-1.5 flex flex-wrap items-center gap-2 sm:hidden">
-                  <span className="font-mono text-[0.8rem] font-semibold text-[var(--desk-text)]">
-                    {catalyst.ticker ?? "—"}
-                  </span>
-                  <span className="font-mono text-[0.68rem] text-[var(--desk-text-dim)]">
-                    {eventLabel}
-                  </span>
-                  <MaterialityBadge
-                    score={catalyst.impactScore}
-                    category={catalyst.eventCategory}
-                  />
+                {/* Mobile: Title → Time → Event, then ticker/impact/actions */}
+                <div className="mt-1.5 flex flex-col gap-1 sm:hidden">
                   <time
                     dateTime={catalyst.timestamp}
-                    className="ml-auto shrink-0 font-mono text-[0.72rem] font-medium tracking-tight whitespace-nowrap text-[var(--desk-text-muted)] tabular-nums"
+                    className="font-mono text-[0.72rem] font-medium tracking-tight whitespace-nowrap text-[var(--desk-text-muted)] tabular-nums"
                   >
                     {formatClockTime(catalyst.timestamp)}
                   </time>
-                </span>
+                  <span className="font-mono text-[0.68rem] text-[var(--desk-text-dim)]">
+                    {eventLabel}
+                  </span>
+                  <span className="flex flex-wrap items-center gap-2">
+                    <span className="font-mono text-[0.8rem] font-semibold text-[var(--desk-text)]">
+                      {catalyst.ticker ?? "—"}
+                    </span>
+                    <MaterialityBadge
+                      score={catalyst.impactScore}
+                      category={catalyst.eventCategory}
+                    />
+                  </span>
+                </div>
                 {/* Touch: always-visible actions below meta/date (never same-line overlap). */}
                 <div
                   className="mt-2 flex flex-wrap items-center gap-1.5 lg:hidden"
@@ -845,6 +822,32 @@ function CatalystFeedList({
                 >
                   {formatTimeDate(catalyst.timestamp)}
                 </time>
+              </div>
+
+              <div role="cell" className="hidden min-w-0 sm:block">
+                <span
+                  className="inline-flex max-w-full truncate rounded-sm border border-[var(--desk-border-strong)] bg-white/[0.04] px-1.5 py-0.5 font-mono text-[0.68rem] text-[var(--desk-text-secondary)]"
+                  title={
+                    catalyst.eventCategory
+                      ? CATEGORY_LABELS[catalyst.eventCategory]
+                      : undefined
+                  }
+                >
+                  {eventLabel}
+                </span>
+              </div>
+
+              <div role="cell" className="hidden min-w-0 sm:block">
+                <span className="truncate font-mono text-[0.88rem] font-semibold tracking-tight text-[var(--desk-text)] transition-colors group-hover:text-[var(--desk-live)]">
+                  {catalyst.ticker ?? "—"}
+                </span>
+              </div>
+
+              <div role="cell" className="hidden min-w-0 sm:block">
+                <MaterialityBadge
+                  score={catalyst.impactScore}
+                  category={catalyst.eventCategory}
+                />
               </div>
 
               {/* Desktop: hover / focus-within reveals action toolbar in its own column */}
