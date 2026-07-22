@@ -114,9 +114,18 @@ function settledToResult(
   };
 }
 
+const POLYGON_SOURCE_IDS = new Set<CatalystSourceId>([
+  "polygon-news",
+  "polygon-prices",
+]);
+
 /**
  * Multi-source orchestrator: runs selected (or all) ingest jobs via
  * Promise.allSettled so one vendor outage never blocks the rest.
+ *
+ * Polygon news + prices share one free-tier REST budget (~5 req/min), so those
+ * two sources always run sequentially (news then prices) even when others are
+ * parallel.
  */
 export async function fetchAllCatalystSources(options?: {
   sources?: CatalystSourceId[];
@@ -126,9 +135,36 @@ export async function fetchAllCatalystSources(options?: {
     ? options.sources
     : [...CATALYST_SOURCE_IDS];
 
-  const settled = await Promise.allSettled(selected.map((id) => runSource(id)));
-  const sources = settled.map((result, i) =>
-    settledToResult(selected[i], result),
+  const parallelIds = selected.filter((id) => !POLYGON_SOURCE_IDS.has(id));
+  const polygonIds = selected.filter((id) => POLYGON_SOURCE_IDS.has(id));
+
+  const parallelSettled = await Promise.allSettled(
+    parallelIds.map((id) => runSource(id)),
+  );
+  const byId = new Map<string, SourceFetchResult>();
+  for (let i = 0; i < parallelIds.length; i++) {
+    byId.set(
+      parallelIds[i],
+      settledToResult(parallelIds[i], parallelSettled[i]),
+    );
+  }
+
+  // Preserve CATALYST_SOURCE_IDS order: news before prices.
+  for (const id of polygonIds) {
+    try {
+      byId.set(id, await runSource(id));
+    } catch (error) {
+      byId.set(id, settledToResult(id, { status: "rejected", reason: error }));
+    }
+  }
+
+  const sources = selected.map(
+    (id) =>
+      byId.get(id) ??
+      settledToResult(id, {
+        status: "rejected",
+        reason: new Error("Source did not run"),
+      }),
   );
 
   if (options?.includeLaterStubs) {

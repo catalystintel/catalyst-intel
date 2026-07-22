@@ -28,22 +28,22 @@ Three environments, one app:
 
 ### Local (`.env.local` on your machine)
 
-| Variable                           | Required? | Notes                                                                                 |
-| ---------------------------------- | --------- | ------------------------------------------------------------------------------------- |
-| `DATABASE_URL`                     | Yes       | `file:./local.db` (default is fine)                                                   |
-| `NEXT_PUBLIC_SUPABASE_URL`         | Yes       | Supabase Project Settings → API                                                       |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY`    | Yes       | Supabase Project Settings → API                                                       |
-| `SEC_EDGAR_USER_AGENT`             | Yes       | e.g. `you@email.com CatalystIntel/0.1`                                                |
-| `CRON_INTERVAL_MINUTES`            | No        | Default `2` for `npm run cron`                                                        |
-| `NEXT_PUBLIC_POSTHOG_KEY`          | No        | PostHog Project API key; omit to disable analytics                                    |
-| `NEXT_PUBLIC_POSTHOG_HOST`         | No        | Default `https://us.i.posthog.com`                                                    |
-| `ADMIN_EMAILS`                     | No        | Comma-separated admin emails; defaults to `zhbar10@gmail.com,omer.nachshon@gmail.com` |
-| `FINNHUB_API_KEY`                  | No        | Finnhub: NYSE listings, earnings/FDA calendars, news (soft-fail)                      |
-| `POLYGON_API_KEY`                  | No        | Polygon/Massive news + historical_impact enrichment (soft-fail)                       |
-| `MASSIVE_API_KEY`                  | No        | Alias for `POLYGON_API_KEY`                                                           |
-| `FORM4_API_KEY`                    | No        | Optional Form4API enrichment (EDGAR Form 4 still works without it)                    |
-| `LIBSQL_URL` / `LIBSQL_AUTH_TOKEN` | No        | Leave unset locally - use the SQLite file                                             |
-| `CRON_SECRET`                      | No        | Only needed for remote cron callers                                                   |
+| Variable                           | Required? | Notes                                                                                                   |
+| ---------------------------------- | --------- | ------------------------------------------------------------------------------------------------------- |
+| `DATABASE_URL`                     | Yes       | `file:./local.db` (default is fine)                                                                     |
+| `NEXT_PUBLIC_SUPABASE_URL`         | Yes       | Supabase Project Settings → API                                                                         |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY`    | Yes       | Supabase Project Settings → API                                                                         |
+| `SEC_EDGAR_USER_AGENT`             | Yes       | e.g. `you@email.com CatalystIntel/0.1`                                                                  |
+| `CRON_INTERVAL_MINUTES`            | No        | Default `2` for `npm run cron`                                                                          |
+| `NEXT_PUBLIC_POSTHOG_KEY`          | No        | PostHog Project API key; omit to disable analytics                                                      |
+| `NEXT_PUBLIC_POSTHOG_HOST`         | No        | Default `https://us.i.posthog.com`                                                                      |
+| `ADMIN_EMAILS`                     | No        | Comma-separated admin emails; defaults to `zhbar10@gmail.com,omer.nachshon@gmail.com`                   |
+| `FINNHUB_API_KEY`                  | No        | Finnhub: NYSE listings, earnings/FDA calendars, news (soft-fail)                                        |
+| `POLYGON_API_KEY`                  | No        | Polygon/Massive news + historical_impact enrichment (soft-fail; free tier ~5 req/min, no same-day aggs) |
+| `MASSIVE_API_KEY`                  | No        | Alias for `POLYGON_API_KEY`                                                                             |
+| `FORM4_API_KEY`                    | No        | Optional Form4API enrichment (EDGAR Form 4 still works without it)                                      |
+| `LIBSQL_URL` / `LIBSQL_AUTH_TOKEN` | No        | Leave unset locally - use the SQLite file                                                               |
+| `CRON_SECRET`                      | No        | Only needed for remote cron callers                                                                     |
 
 Auth is **Google OAuth only** via Supabase. Passwords are never collected or stored in our DB
 (our `users` table only has id / supabase user id / email / role / subscription).
@@ -233,15 +233,15 @@ node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 After **Fetch all sources now** (or a successful GHA cron run), the admin per-source
 breakdown and `raw_sources.provider` counts should include:
 
-| Provider                          | Expected status                     | Notes                                    |
-| --------------------------------- | ----------------------------------- | ---------------------------------------- |
-| `sec-edgar`                       | `ok` (Form 4 via Atom `type=4`)     | Needs `SEC_EDGAR_USER_AGENT`             |
-| `nasdaq-halts`                    | `ok`                                | No key                                   |
-| `openfda`                         | `ok` (recent AP submissions only)   | No key; dates inside 30-day retention    |
-| `clinicaltrials`                  | `ok`                                | No key                                   |
-| `finnhub`                         | `skipped` without `FINNHUB_API_KEY` | Soft-fail OK                             |
-| `polygon-news` / `polygon-prices` | `skipped` without `POLYGON_API_KEY` | Soft-fail OK                             |
-| `form4api`                        | `skipped` without `FORM4_API_KEY`   | EDGAR Form 4 still works via `sec-edgar` |
+| Provider                          | Expected status                     | Notes                                                                                                                                             |
+| --------------------------------- | ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `sec-edgar`                       | `ok` (Form 4 via Atom `type=4`)     | Needs `SEC_EDGAR_USER_AGENT`                                                                                                                      |
+| `nasdaq-halts`                    | `ok`                                | No key                                                                                                                                            |
+| `openfda`                         | `ok` (recent AP submissions only)   | No key; dates inside 30-day retention                                                                                                             |
+| `clinicaltrials`                  | `ok`                                | No key                                                                                                                                            |
+| `finnhub`                         | `skipped` without `FINNHUB_API_KEY` | Soft-fail OK                                                                                                                                      |
+| `polygon-news` / `polygon-prices` | `skipped` without `POLYGON_API_KEY` | Soft-fail OK. Free tier: ~5 REST req/min; same-day aggs often 403 timeframe — prices enrich prior sessions in small batches and soft-skip 429/403 |
+| `form4api`                        | `skipped` without `FORM4_API_KEY`   | EDGAR Form 4 still works via `sec-edgar`                                                                                                          |
 
 On `/dashboard`, Source column should show **SEC EDGAR**, **Nasdaq Halts**, **openFDA**,
 and/or **ClinicalTrials** (not only SEC).
