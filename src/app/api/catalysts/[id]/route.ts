@@ -17,6 +17,7 @@ import {
   fetchLatestEarningsForTicker,
   needsEarningsEnrichment,
 } from "@/lib/catalysts/enrich-earnings";
+import { fetchArticleEnrichment } from "@/lib/catalysts/enrich-article";
 import { getClientIp } from "@/lib/http/client-ip";
 import { RATE_LIMITS, checkRateLimit } from "@/lib/http/rate-limit";
 import {
@@ -161,6 +162,11 @@ export async function GET(request: NextRequest, context: RouteContext) {
     enrichedEarnings,
   });
 
+  const enrichment = await fetchArticleEnrichment({
+    ticker: row.ticker,
+    excludeCatalystId: row.id,
+  });
+
   const catalyst = {
     id: row.id,
     ticker: row.ticker,
@@ -191,6 +197,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
         body,
         bodySource,
         detailCards,
+        enrichment,
       },
     }),
     limitResult,

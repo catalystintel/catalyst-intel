@@ -23,7 +23,9 @@ import {
   type HighlightSegment,
   type HighlightTone,
 } from "@/lib/catalysts/article-funnel";
-import { formatTimeDate } from "@/lib/format/relative-time";
+import type { ArticleEnrichment } from "@/lib/catalysts/enrich-article";
+import { formatMarketCapMillions } from "@/lib/catalysts/enrich-article";
+import { formatRelativeAge, formatTimeDate } from "@/lib/format/relative-time";
 import { CATEGORY_LABELS } from "@/lib/jobs/parse-8k-items";
 import { cn } from "@/lib/utils";
 
@@ -41,6 +43,8 @@ export interface CatalystArticleViewProps {
   relatedTickers?: string[];
   thumbUrl?: string | null;
   deltaSincePublish?: DeltaSincePublish | null;
+  /** Soft-fail vendor enrichment (profile / related / quote). */
+  enrichment?: ArticleEnrichment | null;
 }
 
 /**
@@ -60,6 +64,7 @@ export function CatalystArticleView({
   relatedTickers = [],
   thumbUrl = null,
   deltaSincePublish = null,
+  enrichment = null,
 }: CatalystArticleViewProps) {
   const source = sourceDisplay(catalyst);
   const originalLabel = originalSourceLabel(catalyst.sourceProvider);
@@ -253,6 +258,179 @@ export function CatalystArticleView({
           </p>
         )}
       </section>
+
+      {enrichment?.profile ? (
+        <section className="flex flex-col gap-2">
+          <h2 className="font-mono text-[0.65rem] tracking-[0.14em] text-[var(--desk-text-dim)] uppercase">
+            About the company
+          </h2>
+          <dl className="grid grid-cols-2 gap-3 font-mono text-xs sm:grid-cols-4">
+            <MetaCell
+              label="Name"
+              value={enrichment.profile.name || catalyst.companyName || "—"}
+            />
+            <MetaCell
+              label="Industry"
+              value={enrichment.profile.industry || "—"}
+            />
+            <MetaCell
+              label="Exchange"
+              value={
+                [enrichment.profile.exchange, enrichment.profile.country]
+                  .filter(Boolean)
+                  .join(" · ") || "—"
+              }
+            />
+            <MetaCell
+              label="Market cap"
+              value={
+                formatMarketCapMillions(enrichment.profile.marketCapMillions) ||
+                "—"
+              }
+            />
+          </dl>
+          {enrichment.profile.webUrl ? (
+            <a
+              href={enrichment.profile.webUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex w-fit items-center gap-1.5 font-mono text-[0.7rem] tracking-wide text-[var(--desk-text-muted)] uppercase transition-colors hover:text-[var(--desk-text)]"
+            >
+              <ExternalLink className="size-3" />
+              Company site
+            </a>
+          ) : null}
+        </section>
+      ) : null}
+
+      {enrichment && enrichment.relatedHeadlines.length > 0 ? (
+        <section className="flex flex-col gap-2">
+          <h2 className="font-mono text-[0.65rem] tracking-[0.14em] text-[var(--desk-text-dim)] uppercase">
+            Related headlines
+          </h2>
+          <ul className="flex list-none flex-col gap-2 pl-0">
+            {enrichment.relatedHeadlines.map((item, i) => {
+              const age = item.publishedAt
+                ? formatRelativeAge(item.publishedAt)
+                : null;
+              const meta = [item.source, age].filter(Boolean).join(" · ");
+              const inner = (
+                <>
+                  <span className="text-sm leading-snug text-[var(--desk-text)]">
+                    {item.title}
+                  </span>
+                  {meta ? (
+                    <span className="mt-0.5 font-mono text-[0.65rem] tracking-wide text-[var(--desk-text-dim)]">
+                      {meta}
+                    </span>
+                  ) : null}
+                </>
+              );
+              return (
+                <li
+                  key={`related-${item.catalystId ?? i}-${item.title.slice(0, 24)}`}
+                  className="border-t border-[var(--desk-border)] pt-2 first:border-t-0 first:pt-0"
+                >
+                  {item.catalystId != null ? (
+                    <Link
+                      href={`/dashboard/catalyst/${item.catalystId}`}
+                      className="flex flex-col transition-colors hover:opacity-90"
+                    >
+                      {inner}
+                    </Link>
+                  ) : item.url ? (
+                    <a
+                      href={item.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex flex-col transition-colors hover:opacity-90"
+                    >
+                      {inner}
+                    </a>
+                  ) : (
+                    <div className="flex flex-col">{inner}</div>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      ) : null}
+
+      {enrichment?.quote ? (
+        <section className="flex flex-col gap-2">
+          <h2 className="font-mono text-[0.65rem] tracking-[0.14em] text-[var(--desk-text-dim)] uppercase">
+            Market context
+          </h2>
+          <dl className="grid grid-cols-2 gap-3 font-mono text-xs sm:grid-cols-4">
+            <MetaCell
+              label="Last"
+              value={
+                enrichment.quote.price != null
+                  ? `$${enrichment.quote.price.toFixed(2)}`
+                  : "—"
+              }
+              tabular
+            />
+            <div>
+              <dt className="tracking-[0.14em] text-[var(--desk-text-dim)] uppercase">
+                Session
+              </dt>
+              <dd
+                className={cn(
+                  "mt-1 text-sm tabular-nums",
+                  (enrichment.quote.changePercent ?? 0) > 0 &&
+                    "text-[var(--desk-live)]",
+                  (enrichment.quote.changePercent ?? 0) < 0 && "text-red-400",
+                  (enrichment.quote.changePercent ?? 0) === 0 &&
+                    "text-[var(--desk-text)]",
+                )}
+              >
+                {enrichment.quote.changePercent != null
+                  ? `${enrichment.quote.changePercent > 0 ? "+" : ""}${enrichment.quote.changePercent.toFixed(2)}%`
+                  : "—"}
+                {enrichment.quote.change != null ? (
+                  <span className="ml-1.5 text-[var(--desk-text-dim)]">
+                    ({enrichment.quote.change > 0 ? "+" : ""}
+                    {enrichment.quote.change.toFixed(2)})
+                  </span>
+                ) : null}
+              </dd>
+            </div>
+            <MetaCell
+              label="Open / prev"
+              value={
+                [
+                  enrichment.quote.open != null
+                    ? `$${enrichment.quote.open.toFixed(2)}`
+                    : null,
+                  enrichment.quote.previousClose != null
+                    ? `$${enrichment.quote.previousClose.toFixed(2)}`
+                    : null,
+                ]
+                  .filter(Boolean)
+                  .join(" / ") || "—"
+              }
+              tabular
+            />
+            <MetaCell
+              label="Range"
+              value={
+                enrichment.quote.low != null && enrichment.quote.high != null
+                  ? `$${enrichment.quote.low.toFixed(2)} – $${enrichment.quote.high.toFixed(2)}`
+                  : "—"
+              }
+              tabular
+            />
+          </dl>
+          <p className="font-mono text-[0.6rem] tracking-wide text-[var(--desk-text-dim)] uppercase">
+            Via {enrichment.quote.provider}
+            {enrichment.quote.asOf
+              ? ` · ${formatRelativeAge(enrichment.quote.asOf)}`
+              : ""}
+          </p>
+        </section>
+      ) : null}
 
       {detailCards.length > 0 ? (
         <section className="flex flex-col gap-3">
