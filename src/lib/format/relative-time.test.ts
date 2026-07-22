@@ -37,8 +37,14 @@ describe("isWithinWindow", () => {
     expect(isWithinWindow("2020-01-01T00:00:00.000Z", null, now)).toBe(true);
   });
 
-  it("filters by hours", () => {
-    expect(isWithinWindow("2026-07-19T10:00:00.000Z", 4, now)).toBe(true);
-    expect(isWithinWindow("2026-07-19T06:00:00.000Z", 4, now)).toBe(false);
+  it("filters by minutes", () => {
+    // 4h = 240 minutes
+    expect(isWithinWindow("2026-07-19T10:00:00.000Z", 240, now)).toBe(true);
+    expect(isWithinWindow("2026-07-19T06:00:00.000Z", 240, now)).toBe(false);
+  });
+
+  it("supports Recent-length windows (30m)", () => {
+    expect(isWithinWindow("2026-07-19T11:45:00.000Z", 30, now)).toBe(true);
+    expect(isWithinWindow("2026-07-19T11:20:00.000Z", 30, now)).toBe(false);
   });
 });
