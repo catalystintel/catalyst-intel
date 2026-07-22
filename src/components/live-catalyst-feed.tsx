@@ -33,6 +33,11 @@ import {
   type EventCategoryKey,
 } from "@/lib/jobs/parse-8k-items";
 import {
+  FEED_TIME_WINDOWS,
+  feedLimitForTimeWindow,
+  type FeedTimeWindow,
+} from "@/lib/catalysts/feed-time-window";
+import {
   formatClockTime,
   formatTimeDate,
   isWithinWindow,
@@ -46,15 +51,6 @@ const BLURRED_POLL_MS = 90_000;
 const DISMISS_STORAGE_KEY = "ci.dismissed-catalyst-ids";
 
 type Presence = "active" | "blurred" | "hidden";
-type TimeWindow = "1h" | "4h" | "24h" | "all";
-
-const TIME_WINDOWS: { id: TimeWindow; label: string; hours: number | null }[] =
-  [
-    { id: "1h", label: "1h", hours: 1 },
-    { id: "4h", label: "4h", hours: 4 },
-    { id: "24h", label: "24h", hours: 24 },
-    { id: "all", label: "All", hours: null },
-  ];
 
 /** Blotter: Ticker · Event · Impact · Title · Proof · Time · Action */
 const FEED_GRID =
@@ -110,7 +106,7 @@ export function LiveCatalystFeed({
   const [categoryFilter, setCategoryFilter] = useState<EventCategoryKey | null>(
     null,
   );
-  const [timeWindow, setTimeWindow] = useState<TimeWindow>("all");
+  const [timeWindow, setTimeWindow] = useState<FeedTimeWindow>("all");
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [nowTick, setNowTick] = useState(() => Date.now());
   const [dismissedIds, setDismissedIds] = useState<Set<number>>(() =>
@@ -172,7 +168,11 @@ export function LiveCatalystFeed({
     if (inFlight.current) return;
     inFlight.current = true;
     try {
-      const res = await fetch("/api/catalysts?limit=50", {
+      const params = new URLSearchParams({
+        window: timeWindow,
+        limit: String(feedLimitForTimeWindow(timeWindow)),
+      });
+      const res = await fetch(`/api/catalysts?${params}`, {
         method: "GET",
         credentials: "same-origin",
         cache: "no-store",
@@ -216,7 +216,7 @@ export function LiveCatalystFeed({
     } finally {
       inFlight.current = false;
     }
-  }, []);
+  }, [timeWindow]);
 
   useEffect(() => {
     const syncPresence = () => setPresence(readPresence());
@@ -306,31 +306,36 @@ export function LiveCatalystFeed({
       .map(([category, count]) => ({ category, count }));
   }, [catalysts]);
 
-  const windowHours =
-    TIME_WINDOWS.find((w) => w.id === timeWindow)?.hours ?? null;
+  const windowMinutes =
+    FEED_TIME_WINDOWS.find((w) => w.id === timeWindow)?.minutes ?? null;
 
   const filtered = useMemo(() => {
     const q = tickerQuery.trim().toUpperCase();
-    return catalysts.filter((c) => {
-      if (dismissedIds.has(c.id)) return false;
-      if (
-        !matchesQuietPlaybook(
-          { ticker: c.ticker, eventCategory: c.eventCategory },
-          { quietMode, watchlistTickers, playbookCategories },
-        )
-      ) {
-        return false;
-      }
-      if (categoryFilter && c.eventCategory !== categoryFilter) return false;
-      if (q && !(c.ticker ?? "").toUpperCase().includes(q)) return false;
-      if (!isWithinWindow(c.timestamp, windowHours, nowTick)) return false;
-      return true;
-    });
+    return catalysts
+      .filter((c) => {
+        if (dismissedIds.has(c.id)) return false;
+        if (
+          !matchesQuietPlaybook(
+            { ticker: c.ticker, eventCategory: c.eventCategory },
+            { quietMode, watchlistTickers, playbookCategories },
+          )
+        ) {
+          return false;
+        }
+        if (categoryFilter && c.eventCategory !== categoryFilter) return false;
+        if (q && !(c.ticker ?? "").toUpperCase().includes(q)) return false;
+        if (!isWithinWindow(c.timestamp, windowMinutes, nowTick)) return false;
+        return true;
+      })
+      .sort(
+        (a, b) =>
+          new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
+      );
   }, [
     catalysts,
     categoryFilter,
     tickerQuery,
-    windowHours,
+    windowMinutes,
     nowTick,
     dismissedIds,
     quietMode,
@@ -495,8 +500,8 @@ interface FeedFiltersProps {
   categoryFilter: EventCategoryKey | null;
   onCategoryFilter: (v: EventCategoryKey | null) => void;
   categoryOptions: { category: EventCategoryKey; count: number }[];
-  timeWindow: TimeWindow;
-  onTimeWindow: (v: TimeWindow) => void;
+  timeWindow: FeedTimeWindow;
+  onTimeWindow: (v: FeedTimeWindow) => void;
   quietMode: boolean;
   watchlistCount: number;
   playbookCount: number;
@@ -532,8 +537,12 @@ function FeedFilters({
           aria-label="Filter by ticker"
           className="h-8 w-36 border-[var(--desk-border-strong)] bg-white/[0.02] font-mono text-xs tracking-wide uppercase md:text-xs"
         />
-        <div className="flex flex-wrap items-center gap-1">
-          {TIME_WINDOWS.map((w) => (
+        <div
+          className="flex flex-wrap items-center gap-1"
+          role="group"
+          aria-label="Filter by article posting time"
+        >
+          {FEED_TIME_WINDOWS.map((w) => (
             <FilterChip
               key={w.id}
               active={timeWindow === w.id}
