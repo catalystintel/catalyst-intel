@@ -9,7 +9,15 @@ import {
   type ReactNode,
 } from "react";
 import { useRouter } from "next/navigation";
-import { BookOpen, ChevronDown, ListFilter, RefreshCw, X } from "lucide-react";
+import {
+  BookOpen,
+  Check,
+  ChevronDown,
+  ListFilter,
+  Plus,
+  RefreshCw,
+  X,
+} from "lucide-react";
 
 import { CatalystDetailDrawer } from "@/components/catalyst-detail-drawer";
 import { MaterialityBadge } from "@/components/materiality-badge";
@@ -51,9 +59,9 @@ const DISMISS_STORAGE_KEY = "ci.dismissed-catalyst-ids";
 
 type Presence = "active" | "blurred" | "hidden";
 
-/** Blotter: Ticker · Event · Impact · Title · Time · Action (Read primary) */
+/** Blotter: Ticker · Event · Impact · Title · Time · Action (hover toolbar) */
 const FEED_GRID =
-  "grid-cols-1 sm:grid-cols-[72px_88px_78px_minmax(0,1fr)_72px] lg:grid-cols-[80px_96px_84px_minmax(0,1fr)_78px_118px]";
+  "grid-cols-1 sm:grid-cols-[72px_88px_78px_minmax(0,1fr)_72px] lg:grid-cols-[80px_96px_84px_minmax(0,1fr)_78px_minmax(168px,auto)]";
 
 function readPresence(): Presence {
   if (typeof document === "undefined") return "active";
@@ -294,6 +302,36 @@ export function LiveCatalystFeed({
     [router],
   );
 
+  /** Act = quick triage drawer (Read still opens full article depth). */
+  const openActDrawer = useCallback((id: number) => {
+    setSelectedId(id);
+  }, []);
+
+  const quietAddTicker = useCallback(
+    async (ticker: string | null) => {
+      const t = ticker?.trim().toUpperCase();
+      if (!t) return;
+      if (watchlistTickers.includes(t)) return;
+      setWatchlistTickers((prev) =>
+        prev.includes(t) ? prev : [...prev, t].sort(),
+      );
+      try {
+        const res = await fetch("/api/watchlist", {
+          method: "POST",
+          credentials: "same-origin",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ticker: t }),
+        });
+        if (!res.ok) {
+          setWatchlistTickers((prev) => prev.filter((x) => x !== t));
+        }
+      } catch {
+        setWatchlistTickers((prev) => prev.filter((x) => x !== t));
+      }
+    },
+    [watchlistTickers],
+  );
+
   const categoryOptions = useMemo(() => {
     const counts = new Map<EventCategoryKey, number>();
     for (const c of catalysts) {
@@ -473,9 +511,12 @@ export function LiveCatalystFeed({
           catalysts={filtered}
           flashIds={flashIds}
           selectedId={selectedId}
+          watchlistTickers={watchlistTickers}
           onSelect={openArticle}
-          onAct={openArticle}
+          onRead={openArticle}
+          onAct={openActDrawer}
           onDismiss={dismissCatalyst}
+          onQuietAdd={quietAddTicker}
         />
       )}
 
@@ -607,16 +648,22 @@ function CatalystFeedList({
   catalysts,
   flashIds,
   selectedId,
+  watchlistTickers,
   onSelect,
+  onRead,
   onAct,
   onDismiss,
+  onQuietAdd,
 }: {
   catalysts: FeedCatalyst[];
   flashIds: Set<number>;
   selectedId: number | null;
+  watchlistTickers: string[];
   onSelect: (id: number) => void;
+  onRead: (id: number) => void;
   onAct: (id: number) => void;
   onDismiss: (id: number) => void;
+  onQuietAdd: (ticker: string | null) => void;
 }) {
   return (
     <div
@@ -657,6 +704,10 @@ function CatalystFeedList({
           const selected = selectedId === catalyst.id;
           const eventLabel = feedEventLabel(catalyst);
           const source = sourceDisplay(catalyst);
+          const onWatchlist = Boolean(
+            catalyst.ticker &&
+            watchlistTickers.includes(catalyst.ticker.toUpperCase()),
+          );
           return (
             <article
               key={catalyst.id}
@@ -670,16 +721,17 @@ function CatalystFeedList({
                 }
               }}
               className={cn(
-                "feed-row group grid min-h-[56px] cursor-pointer items-center gap-2 border-b border-white/[0.06] px-4 py-3 transition-colors duration-100 outline-none sm:gap-3 sm:px-5 sm:py-0",
+                "feed-row group relative grid min-h-[56px] cursor-pointer items-center gap-2 border-b border-white/[0.06] px-4 py-3 transition-colors duration-150 outline-none sm:gap-3 sm:px-5 sm:py-0",
                 FEED_GRID,
                 "hover:bg-white/[0.04] focus-visible:bg-white/[0.04] focus-visible:shadow-[inset_2px_0_0_var(--desk-live)]",
+                "hover:shadow-[inset_2px_0_0_rgba(240,193,75,0.35)]",
                 selected && "bg-white/[0.05]",
                 flashing && "row-flash",
               )}
               style={{ animationDelay: `${Math.min(index, 28) * 22}ms` }}
             >
               <div role="cell" className="hidden min-w-0 sm:block">
-                <span className="truncate font-mono text-[0.88rem] font-semibold tracking-tight text-[var(--desk-text)]">
+                <span className="truncate font-mono text-[0.88rem] font-semibold tracking-tight text-[var(--desk-text)] transition-colors group-hover:text-[var(--desk-live)]">
                   {catalyst.ticker ?? "—"}
                 </span>
               </div>
@@ -705,7 +757,7 @@ function CatalystFeedList({
               </div>
 
               <div role="cell" className="min-w-0">
-                <span className="block text-[0.86rem] font-medium tracking-tight text-[var(--desk-text-secondary)] group-hover:text-[var(--desk-text)] group-focus-visible:text-[var(--desk-text)] max-sm:line-clamp-2 sm:truncate">
+                <span className="block text-[0.86rem] font-medium tracking-tight text-[var(--desk-text-secondary)] transition-colors group-hover:text-[var(--desk-text)] group-focus-visible:text-[var(--desk-text)] max-sm:line-clamp-2 sm:truncate">
                   {titleLine(catalyst)}
                 </span>
                 <span className="mt-0.5 hidden truncate font-mono text-[0.62rem] tracking-wide text-[var(--desk-text-dim)] sm:block">
@@ -732,27 +784,48 @@ function CatalystFeedList({
                     {formatClockTime(catalyst.timestamp)}
                   </time>
                 </span>
+                {/* Touch: always-visible Read (do not rely on hover alone). */}
                 <div
                   className="mt-2 flex flex-wrap items-center gap-1.5 lg:hidden"
                   onClick={(e) => e.stopPropagation()}
                   onKeyDown={(e) => e.stopPropagation()}
                 >
-                  <button
-                    type="button"
-                    onClick={() => onAct(catalyst.id)}
-                    className="inline-flex items-center gap-1 rounded-sm bg-[var(--desk-live)] px-2 py-0.5 font-mono text-[0.65rem] font-semibold tracking-wide text-[#121212] uppercase hover:brightness-110"
+                  <FeedActionButton
+                    variant="primary"
+                    onClick={() => onRead(catalyst.id)}
+                    title="Open article inside Catalyst"
                   >
                     <BookOpen className="size-3" />
                     Read
-                  </button>
-                  <button
-                    type="button"
+                  </FeedActionButton>
+                  <FeedActionButton
+                    onClick={() => onAct(catalyst.id)}
+                    title="Quick triage drawer"
+                  >
+                    <Check className="size-3" />
+                    Act
+                  </FeedActionButton>
+                  <FeedActionButton
                     onClick={() => onDismiss(catalyst.id)}
-                    className="inline-flex items-center gap-1 rounded-sm border border-[var(--desk-border-strong)] px-2 py-0.5 font-mono text-[0.65rem] tracking-wide text-[var(--desk-text-muted)] uppercase hover:bg-white/[0.05] hover:text-[var(--desk-text)]"
+                    title="Dismiss from tape"
                   >
                     <X className="size-3" />
                     Dismiss
-                  </button>
+                  </FeedActionButton>
+                  {catalyst.ticker ? (
+                    <FeedActionButton
+                      onClick={() => onQuietAdd(catalyst.ticker)}
+                      title={
+                        onWatchlist
+                          ? "Already on quiet watchlist"
+                          : "Add ticker to quiet watchlist"
+                      }
+                      disabled={onWatchlist}
+                    >
+                      <Plus className="size-3" />
+                      Quiet
+                    </FeedActionButton>
+                  ) : null}
                 </div>
               </div>
 
@@ -765,33 +838,96 @@ function CatalystFeedList({
                 </time>
               </div>
 
+              {/* Desktop: hover / focus-within reveals action toolbar */}
               <div
                 role="cell"
-                className="hidden justify-end gap-1.5 lg:flex"
+                className="hidden justify-end lg:flex"
                 onClick={(e) => e.stopPropagation()}
                 onKeyDown={(e) => e.stopPropagation()}
               >
-                <button
-                  type="button"
-                  onClick={() => onAct(catalyst.id)}
-                  className="inline-flex items-center gap-1 rounded-sm bg-[var(--desk-live)] px-2 py-0.5 font-mono text-[0.65rem] font-semibold tracking-wide text-[#121212] uppercase hover:brightness-110"
-                  title="Open article inside Catalyst"
+                <div
+                  className={cn(
+                    "flex items-center justify-end gap-1 opacity-0 transition-opacity duration-150",
+                    "pointer-events-none group-hover:pointer-events-auto group-hover:opacity-100",
+                    "group-focus-within:pointer-events-auto group-focus-within:opacity-100",
+                    selected && "pointer-events-auto opacity-100",
+                  )}
                 >
-                  <BookOpen className="size-3" />
-                  Read
-                </button>
-                <button
-                  type="button"
-                  onClick={() => onDismiss(catalyst.id)}
-                  className="inline-flex items-center gap-1 rounded-sm border border-[var(--desk-border-strong)] px-2 py-0.5 font-mono text-[0.65rem] tracking-wide text-[var(--desk-text-muted)] uppercase hover:bg-white/[0.05] hover:text-[var(--desk-text)]"
-                >
-                  Dismiss
-                </button>
+                  <FeedActionButton
+                    variant="primary"
+                    onClick={() => onRead(catalyst.id)}
+                    title="Open article inside Catalyst"
+                  >
+                    <BookOpen className="size-3" />
+                    Read
+                  </FeedActionButton>
+                  <FeedActionButton
+                    onClick={() => onAct(catalyst.id)}
+                    title="Quick triage drawer"
+                  >
+                    <Check className="size-3" />
+                    Act
+                  </FeedActionButton>
+                  <FeedActionButton
+                    onClick={() => onDismiss(catalyst.id)}
+                    title="Dismiss from tape"
+                  >
+                    <X className="size-3" />
+                    Dismiss
+                  </FeedActionButton>
+                  {catalyst.ticker ? (
+                    <FeedActionButton
+                      onClick={() => onQuietAdd(catalyst.ticker)}
+                      title={
+                        onWatchlist
+                          ? "Already on quiet watchlist"
+                          : "Add ticker to quiet watchlist"
+                      }
+                      disabled={onWatchlist}
+                    >
+                      <Plus className="size-3" />
+                      Quiet
+                    </FeedActionButton>
+                  ) : null}
+                </div>
               </div>
             </article>
           );
         })}
       </div>
     </div>
+  );
+}
+
+function FeedActionButton({
+  children,
+  onClick,
+  title,
+  variant = "ghost",
+  disabled = false,
+}: {
+  children: ReactNode;
+  onClick: () => void;
+  title?: string;
+  variant?: "primary" | "ghost";
+  disabled?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      title={title}
+      disabled={disabled}
+      onClick={onClick}
+      className={cn(
+        "inline-flex items-center gap-1 rounded-sm px-2 py-0.5 font-mono text-[0.65rem] font-semibold tracking-wide uppercase transition-[background-color,border-color,color,filter,opacity] duration-100",
+        variant === "primary"
+          ? "bg-[var(--desk-live)] text-[#121212] hover:brightness-110"
+          : "border border-[var(--desk-border-strong)] text-[var(--desk-text-muted)] hover:border-white/25 hover:bg-white/[0.05] hover:text-[var(--desk-text)]",
+        disabled &&
+          "cursor-default opacity-45 hover:bg-transparent hover:brightness-100",
+      )}
+    >
+      {children}
+    </button>
   );
 }
