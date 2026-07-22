@@ -80,6 +80,18 @@ so iOS Safari does not lose the verifier the way a Server Action `redirect()` so
 and is **not** the source of truth — do not rely on `npm run make-admin` alone. Manual fetch
 via `/admin` uses the same allowlist; GitHub Actions cron still uses `x-cron-secret`.
 
+## Multi-source fetch order
+
+Canonical Must → Should order and phased runtime are documented in
+**[FETCH-ORDER.md](FETCH-ORDER.md)** (`src/lib/jobs/catalyst-sources.ts`).
+
+**Display order:** SEC EDGAR → Nasdaq Halts → Finnhub → openFDA → ClinicalTrials →
+Polygon news → Polygon prices → Form4API (optional).
+
+**Runtime phases:** A keyless parallel → B Finnhub + Form4API → C Polygon news
+then prices (sequential). `POST /api/admin/fetch/all` returns `fetchOrder`,
+`phases`, and ordered `sources`.
+
 ### API rate limiting
 
 Per-IP fixed-window limits live in `src/lib/http/rate-limit.ts` (in-memory Map):

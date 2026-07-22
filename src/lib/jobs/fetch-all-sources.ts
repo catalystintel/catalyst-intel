@@ -14,18 +14,50 @@ import type { SourceFetchResult } from "@/lib/jobs/ingest-pipeline";
 import { toSourceResult } from "@/lib/jobs/ingest-pipeline";
 import { formatSecFetchError } from "@/lib/jobs/sec-edgar-http";
 import {
+  CATALYST_SOURCE_CATALOG,
   CATALYST_SOURCE_IDS,
+  FETCH_PHASES,
   type CatalystSourceId,
+  type FetchPhaseDef,
+  type FetchPhaseId,
 } from "@/lib/jobs/catalyst-sources";
 
 export {
+  CATALYST_SOURCE_CATALOG,
   CATALYST_SOURCE_IDS,
+  FETCH_PHASES,
+  getCatalystSourceMeta,
   isCatalystSourceId,
   type CatalystSourceId,
+  type CatalystSourceMeta,
+  type FetchPhaseDef,
+  type FetchPhaseId,
+  type FetchPriority,
 } from "@/lib/jobs/catalyst-sources";
+
+export interface FetchOrderEntry {
+  order: number;
+  id: CatalystSourceId;
+  label: string;
+  priority: "must" | "should";
+  phase: FetchPhaseId;
+  contributes: string;
+}
+
+export interface FetchPhasePlan {
+  id: FetchPhaseId;
+  label: string;
+  mode: "parallel" | "sequential";
+  sources: CatalystSourceId[];
+}
 
 export interface FetchAllSourcesResult {
   ranAt: string;
+  /** Documented Must→Should display order (always full catalog order) */
+  fetchOrder: FetchOrderEntry[];
+  /** Phases that actually ran (subset when `sources` filter is set) */
+  phases: FetchPhasePlan[];
+  /** Per-source results in CATALYST_SOURCE_IDS / Must→Should order */
   sources: SourceFetchResult[];
   totals: {
     fetched: number;
@@ -114,18 +146,36 @@ function settledToResult(
   };
 }
 
-const POLYGON_SOURCE_IDS = new Set<CatalystSourceId>([
-  "polygon-news",
-  "polygon-prices",
-]);
+function buildFetchOrder(): FetchOrderEntry[] {
+  return CATALYST_SOURCE_CATALOG.map((s) => ({
+    order: s.order,
+    id: s.id,
+    label: s.label,
+    priority: s.priority,
+    phase: s.phase,
+    contributes: s.contributes,
+  }));
+}
+
+function phasesForSelection(selected: CatalystSourceId[]): FetchPhasePlan[] {
+  const selectedSet = new Set(selected);
+  return FETCH_PHASES.map((phase: FetchPhaseDef) => ({
+    id: phase.id,
+    label: phase.label,
+    mode: phase.mode,
+    sources: phase.sources.filter((id) => selectedSet.has(id)),
+  })).filter((phase) => phase.sources.length > 0);
+}
 
 /**
- * Multi-source orchestrator: runs selected (or all) ingest jobs via
- * Promise.allSettled so one vendor outage never blocks the rest.
+ * Multi-source orchestrator with documented phased parallel order:
  *
- * Polygon news + prices share one free-tier REST budget (~5 req/min), so those
- * two sources always run sequentially (news then prices) even when others are
- * parallel.
+ * - Phase A — keyless Must sources in parallel (SEC, Nasdaq, openFDA, CT)
+ * - Phase B — optional-key Should sources in parallel (Finnhub, Form4API)
+ * - Phase C — Polygon news then prices sequentially (shared ~5 req/min budget)
+ *
+ * Per-source results are always returned in CATALYST_SOURCE_IDS (Must→Should)
+ * display order. See FETCH-ORDER.md.
  */
 export async function fetchAllCatalystSources(options?: {
   sources?: CatalystSourceId[];
@@ -134,30 +184,38 @@ export async function fetchAllCatalystSources(options?: {
   const selected = options?.sources?.length
     ? options.sources
     : [...CATALYST_SOURCE_IDS];
-
-  const parallelIds = selected.filter((id) => !POLYGON_SOURCE_IDS.has(id));
-  const polygonIds = selected.filter((id) => POLYGON_SOURCE_IDS.has(id));
-
-  const parallelSettled = await Promise.allSettled(
-    parallelIds.map((id) => runSource(id)),
-  );
+  const selectedSet = new Set(selected);
   const byId = new Map<string, SourceFetchResult>();
-  for (let i = 0; i < parallelIds.length; i++) {
-    byId.set(
-      parallelIds[i],
-      settledToResult(parallelIds[i], parallelSettled[i]),
-    );
-  }
+  const phases = phasesForSelection(selected);
 
-  // Preserve CATALYST_SOURCE_IDS order: news before prices.
-  for (const id of polygonIds) {
-    try {
-      byId.set(id, await runSource(id));
-    } catch (error) {
-      byId.set(id, settledToResult(id, { status: "rejected", reason: error }));
+  for (const phase of phases) {
+    if (phase.mode === "parallel") {
+      const settled = await Promise.allSettled(
+        phase.sources.map((id) => runSource(id)),
+      );
+      for (let i = 0; i < phase.sources.length; i++) {
+        byId.set(
+          phase.sources[i],
+          settledToResult(phase.sources[i], settled[i]),
+        );
+      }
+      continue;
+    }
+
+    // Sequential (Polygon news → prices)
+    for (const id of phase.sources) {
+      try {
+        byId.set(id, await runSource(id));
+      } catch (error) {
+        byId.set(
+          id,
+          settledToResult(id, { status: "rejected", reason: error }),
+        );
+      }
     }
   }
 
+  // Preserve Must→Should display order from CATALYST_SOURCE_IDS.
   const sources = selected.map(
     (id) =>
       byId.get(id) ??
@@ -192,6 +250,8 @@ export async function fetchAllCatalystSources(options?: {
 
   const totals = sources.reduce(
     (acc, s) => {
+      // Only count selected catalog sources toward totals (not later stubs)
+      if (!selectedSet.has(s.source as CatalystSourceId)) return acc;
       acc.fetched += s.fetched;
       acc.inserted += s.inserted;
       acc.skipped += s.skipped;
@@ -203,6 +263,8 @@ export async function fetchAllCatalystSources(options?: {
 
   return {
     ranAt: new Date().toISOString(),
+    fetchOrder: buildFetchOrder(),
+    phases,
     sources,
     totals,
   };

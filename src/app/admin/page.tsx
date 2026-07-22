@@ -101,9 +101,9 @@ export default async function AdminPage() {
                 Multi-source ingest
               </h2>
               <p className="mt-1 text-sm text-muted-foreground">
-                Orchestrated fetch across SEC, Nasdaq halts, Finnhub, Polygon,
-                openFDA, and ClinicalTrials. Soft-skips when optional keys are
-                missing.
+                Phased fetch (A keyless → B Finnhub/Form4API → C Polygon news
+                then prices). Results listed Must→Should. Soft-skips when
+                optional keys are missing. See FETCH-ORDER.md.
               </p>
             </div>
             <dl className="grid grid-cols-2 gap-x-8 gap-y-1 font-mono text-xs">

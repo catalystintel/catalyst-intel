@@ -4,7 +4,11 @@ import { useState } from "react";
 import posthog from "posthog-js";
 
 import { Button } from "@/components/ui/button";
-import { CATALYST_SOURCE_IDS } from "@/lib/jobs/catalyst-sources";
+import {
+  CATALYST_SOURCE_CATALOG,
+  CATALYST_SOURCE_IDS,
+  FETCH_PHASES,
+} from "@/lib/jobs/catalyst-sources";
 
 interface SourceResult {
   source: string;
@@ -17,8 +21,26 @@ interface SourceResult {
   errors: number;
 }
 
+interface FetchOrderEntry {
+  order: number;
+  id: string;
+  label: string;
+  priority: "must" | "should";
+  phase: string;
+  contributes: string;
+}
+
+interface FetchPhasePlan {
+  id: string;
+  label: string;
+  mode: "parallel" | "sequential";
+  sources: string[];
+}
+
 interface FetchAllResult {
   ranAt: string;
+  fetchOrder?: FetchOrderEntry[];
+  phases?: FetchPhasePlan[];
   sources: SourceResult[];
   totals: {
     fetched: number;
@@ -142,13 +164,30 @@ export function FetchTrigger() {
         >
           {loading ? "Fetching…" : "Fetch all sources now"}
         </Button>
-        <p className="max-w-xl text-sm text-[var(--desk-text-muted)]">
-          Keyless (always attempted with{" "}
-          <code className="font-mono text-[0.8em]">SEC_EDGAR_USER_AGENT</code>
-          ): SEC EDGAR (+ Form 4), Nasdaq halts, openFDA, ClinicalTrials.gov.
-          Optional keys soft-skip: Finnhub, Polygon, Form4API. Via{" "}
-          <code className="font-mono text-[0.8em]">Promise.allSettled</code>.
-        </p>
+        <div className="max-w-2xl space-y-2 text-sm text-[var(--desk-text-muted)]">
+          <p>
+            Documented order (Must → Should). Runtime is phased: A keyless
+            parallel, B Finnhub + Form4API, C Polygon news then prices.
+          </p>
+          <ol className="list-decimal space-y-1 pl-5 font-mono text-xs text-[var(--desk-text-secondary)]">
+            {CATALYST_SOURCE_CATALOG.map((s) => (
+              <li key={s.id}>
+                <span className="text-[var(--desk-text)]">{s.label}</span>
+                {" · "}
+                {s.priority}
+                {" · Phase "}
+                {s.phase}
+              </li>
+            ))}
+          </ol>
+          <ul className="space-y-0.5 font-mono text-[0.7rem] text-[var(--desk-text-muted)]">
+            {FETCH_PHASES.map((p) => (
+              <li key={p.id}>
+                Phase {p.id} ({p.mode}): {p.sources.join(" → ")}
+              </li>
+            ))}
+          </ul>
+        </div>
         {error ? (
           <p className="font-mono text-sm text-destructive">{error}</p>
         ) : null}
@@ -166,18 +205,33 @@ export function FetchTrigger() {
                 {new Date(result.ranAt).toLocaleTimeString()}
               </dd>
             </dl>
+            {result.phases && result.phases.length > 0 ? (
+              <p className="font-mono text-[0.7rem] text-[var(--desk-text-muted)]">
+                Ran phases:{" "}
+                {result.phases
+                  .map((p) => `${p.id}(${p.mode}:${p.sources.join(",")})`)
+                  .join(" · ")}
+              </p>
+            ) : null}
             <ul className="flex flex-col gap-1 font-mono text-xs text-[var(--desk-text-muted)]">
-              {result.sources.map((s) => (
-                <li key={s.source}>
-                  <span className="text-[var(--desk-text-secondary)]">
-                    {s.source}
-                  </span>
-                  {" · "}
-                  {s.status}
-                  {" · "}+{s.inserted}/skip{s.skipped}/err{s.errors}
-                  {s.message ? ` — ${s.message}` : ""}
-                </li>
-              ))}
+              {result.sources.map((s, idx) => {
+                const meta =
+                  result.fetchOrder?.find((o) => o.id === s.source) ??
+                  CATALYST_SOURCE_CATALOG.find((c) => c.id === s.source);
+                const rank = meta?.order ?? idx + 1;
+                const label = meta && "label" in meta ? meta.label : s.source;
+                return (
+                  <li key={s.source}>
+                    <span className="text-[var(--desk-text-secondary)]">
+                      {rank}. {label}
+                    </span>
+                    {" · "}
+                    {s.status}
+                    {" · "}+{s.inserted}/skip{s.skipped}/err{s.errors}
+                    {s.message ? ` — ${s.message}` : ""}
+                  </li>
+                );
+              })}
             </ul>
           </div>
         ) : null}
@@ -185,20 +239,26 @@ export function FetchTrigger() {
 
       <div className="border-t border-[var(--desk-border)] pt-6">
         <h3 className="font-mono text-sm tracking-wide text-[var(--desk-text)]">
-          Per-source
+          Per-source (Must→Should order)
         </h3>
         <div className="mt-3 flex flex-wrap gap-2">
-          {CATALYST_SOURCE_IDS.map((source) => (
-            <Button
-              key={source}
-              onClick={() => void handleFetchSource(source)}
-              disabled={loading || sourceLoading !== null}
-              variant="outline"
-              className="btn-press border-[var(--desk-border-strong)] bg-transparent font-mono text-xs text-[var(--desk-text)] hover:bg-white/[0.05]"
-            >
-              {sourceLoading === source ? "…" : source}
-            </Button>
-          ))}
+          {CATALYST_SOURCE_IDS.map((source) => {
+            const meta = CATALYST_SOURCE_CATALOG.find((c) => c.id === source);
+            return (
+              <Button
+                key={source}
+                onClick={() => void handleFetchSource(source)}
+                disabled={loading || sourceLoading !== null}
+                variant="outline"
+                className="btn-press border-[var(--desk-border-strong)] bg-transparent font-mono text-xs text-[var(--desk-text)] hover:bg-white/[0.05]"
+                title={meta?.contributes}
+              >
+                {sourceLoading === source
+                  ? "…"
+                  : `${meta?.order ?? ""}. ${source}`}
+              </Button>
+            );
+          })}
         </div>
       </div>
 
