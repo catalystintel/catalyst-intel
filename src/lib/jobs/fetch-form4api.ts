@@ -80,6 +80,13 @@ export async function fetchForm4Api(): Promise<SourceFetchResult> {
       row.transactionType?.trim() ||
       "Insider filing";
 
+    const title = `${ticker ?? company ?? "Issuer"} — Form 4`;
+    const summaryParts = [
+      headline,
+      company,
+      row.filedAt ? `Filed ${row.filedAt}` : null,
+    ].filter(Boolean);
+
     normalized.push({
       provider: "form4api",
       externalId: `form4api:${id}`,
@@ -88,11 +95,12 @@ export async function fetchForm4Api(): Promise<SourceFetchResult> {
       ticker,
       companyName: company,
       type: "Form 4",
-      title: `${ticker ?? company ?? "Issuer"} — Form 4`,
+      title,
       headline,
       eventCategory: "insider",
       subcategory: "form4api",
       timestamp,
+      summary: summaryParts.join(" · ") || title,
       confidence: 80,
       tags: ["form4", "insider", "form4api"],
     });
