@@ -42,13 +42,17 @@ export function formatTimeDate(iso: string): string {
   return `${time} · ${day}`;
 }
 
+/**
+ * Whether `iso` falls within the last `windowMinutes` relative to `now`.
+ * Pass `null` for unbounded (All).
+ */
 export function isWithinWindow(
   iso: string,
-  windowHours: number | null,
+  windowMinutes: number | null,
   now = Date.now(),
 ): boolean {
-  if (windowHours === null) return true;
+  if (windowMinutes === null) return true;
   const then = new Date(iso).getTime();
   if (Number.isNaN(then)) return false;
-  return now - then <= windowHours * 3_600_000;
+  return now - then <= windowMinutes * 60_000;
 }

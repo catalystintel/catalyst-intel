@@ -1,10 +1,15 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { desc, eq } from "drizzle-orm";
+import { desc, eq, gte } from "drizzle-orm";
 
 import { LIBSQL_SETUP_HINT, isLibsqlConfigured } from "@/db/env";
 import { db } from "@/db/client";
 import { catalysts, companies, rawSources } from "@/db/schema";
 import { getCurrentAppUser } from "@/lib/auth/current-user";
+import {
+  feedLimitForTimeWindow,
+  parseFeedTimeWindow,
+  sinceIsoForFeedTimeWindow,
+} from "@/lib/catalysts/feed-time-window";
 import { getClientIp } from "@/lib/http/client-ip";
 import { RATE_LIMITS, checkRateLimit } from "@/lib/http/rate-limit";
 import {
@@ -19,9 +24,23 @@ import {
   shouldTriggerBackgroundRefetch,
 } from "@/lib/jobs/ingestion-freshness";
 
+const MAX_LIMIT = 500;
+
+function parseSinceParam(raw: string | null): string | null {
+  if (!raw) return null;
+  const ms = Date.parse(raw);
+  if (Number.isNaN(ms)) return null;
+  return new Date(ms).toISOString();
+}
+
 /**
  * Authenticated catalyst list for the Live feed soft-refetch.
  * Rate-limited per IP (loose) so focus-aware polling stays safe.
+ *
+ * Query params:
+ * - `window` — recent | 1h | 4h | 12h | 24h | all (filters by article `timestamp`)
+ * - `since` — ISO lower bound on `timestamp` (overrides `window` when valid)
+ * - `limit` — page size (default depends on window; max 500)
  *
  * Also acts as a self-healing ETL backstop: GitHub Actions cron is
  * best-effort and can drift far past its configured interval (see
@@ -51,12 +70,22 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const limitParam = Number(request.nextUrl.searchParams.get("limit") ?? "50");
-  const limit = Number.isFinite(limitParam)
-    ? Math.min(100, Math.max(1, Math.floor(limitParam)))
-    : 50;
+  const timeWindow = parseFeedTimeWindow(
+    request.nextUrl.searchParams.get("window"),
+  );
+  const since =
+    parseSinceParam(request.nextUrl.searchParams.get("since")) ??
+    sinceIsoForFeedTimeWindow(timeWindow);
 
-  const rows = await db
+  const defaultLimit = feedLimitForTimeWindow(timeWindow);
+  const limitParam = Number(
+    request.nextUrl.searchParams.get("limit") ?? String(defaultLimit),
+  );
+  const limit = Number.isFinite(limitParam)
+    ? Math.min(MAX_LIMIT, Math.max(1, Math.floor(limitParam)))
+    : defaultLimit;
+
+  const baseQuery = db
     .select({
       id: catalysts.id,
       ticker: catalysts.ticker,
@@ -79,10 +108,15 @@ export async function GET(request: NextRequest) {
     })
     .from(catalysts)
     .leftJoin(rawSources, eq(catalysts.rawSourceId, rawSources.id))
-    .leftJoin(companies, eq(catalysts.companyId, companies.id))
-    .orderBy(desc(catalysts.timestamp))
-    .limit(limit)
-    .all();
+    .leftJoin(companies, eq(catalysts.companyId, companies.id));
+
+  const rows = since
+    ? await baseQuery
+        .where(gte(catalysts.timestamp, since))
+        .orderBy(desc(catalysts.timestamp))
+        .limit(limit)
+        .all()
+    : await baseQuery.orderBy(desc(catalysts.timestamp)).limit(limit).all();
 
   await triggerBackgroundRefetchIfStale();
 
@@ -90,6 +124,8 @@ export async function GET(request: NextRequest) {
     NextResponse.json({
       catalysts: rows,
       fetchedAt: new Date().toISOString(),
+      window: timeWindow,
+      since,
     }),
     limitResult,
   );

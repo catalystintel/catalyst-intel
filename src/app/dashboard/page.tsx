@@ -58,7 +58,7 @@ export default async function DashboardPage() {
     .leftJoin(rawSources, eq(catalysts.rawSourceId, rawSources.id))
     .leftJoin(companies, eq(catalysts.companyId, companies.id))
     .orderBy(desc(catalysts.timestamp))
-    .limit(50)
+    .limit(200)
     .all();
 
   return (
