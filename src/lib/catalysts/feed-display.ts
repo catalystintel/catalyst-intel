@@ -75,9 +75,124 @@ export function sectorLabel(c: FeedCatalyst): string {
   return c.type?.trim() || "Other";
 }
 
-/** Primary title cell — headline preferred, then filing title. */
+/**
+ * Known provider / wire labels that must never appear as the title cell.
+ * News ingest often stores publisher in `headline` and the real story in `title`.
+ */
+const SOURCE_DISPLAY_NAMES = [
+  ...Object.values(PROVIDER_DISPLAY).map((p) => p.name),
+  "Benzinga",
+  "Benzinga Wire",
+  "SEC",
+  "EDGAR",
+  "Massive",
+  "Yahoo",
+  "Reuters",
+  "Bloomberg",
+  "CNBC",
+  "MarketWatch",
+  "Seeking Alpha",
+  "Company news",
+  "Market News",
+];
+
+const SOURCE_NAME_RE = new RegExp(
+  [
+    "SEC\\s*EDGAR",
+    "SEC",
+    "EDGAR",
+    "Finnhub",
+    "Benzinga(?:\\s+Wire)?",
+    "openFDA",
+    "Polygon",
+    "Massive",
+    "Nasdaq\\s+Halts?",
+    "ClinicalTrials(?:\\.gov)?",
+    "Form4API",
+    "Macro(?:\\s+Calendar)?",
+    "Yahoo",
+    "Reuters",
+    "Bloomberg",
+    "CNBC",
+    "MarketWatch",
+    "Seeking\\s+Alpha",
+  ].join("|"),
+  "i",
+);
+
+function normalizeDisplayText(text: string): string {
+  return text.replace(/\s+/g, " ").trim();
+}
+
+/** True when the whole string is essentially a source / publisher label. */
+export function looksLikeSourceLabel(text: string): boolean {
+  const t = normalizeDisplayText(text);
+  if (!t) return false;
+  const lower = t.toLowerCase();
+  if (SOURCE_DISPLAY_NAMES.some((name) => name.toLowerCase() === lower)) {
+    return true;
+  }
+  // Entire token is a known source (not a longer headline that merely mentions one)
+  return new RegExp(`^(?:${SOURCE_NAME_RE.source})$`, "i").test(t);
+}
+
+/**
+ * Strip provider prefixes/suffixes from a displayed title
+ * (e.g. "Foo — SEC EDGAR", "Finnhub: Foo", "Bar — SEC").
+ */
+export function stripSourceNames(text: string): string {
+  let out = normalizeDisplayText(text);
+  if (!out) return out;
+
+  // Leading "Source: …" / "Source — …"
+  out = out.replace(
+    new RegExp(`^(?:${SOURCE_NAME_RE.source})\\s*[:—–\\-]\\s*`, "i"),
+    "",
+  );
+  // Trailing "… — Source" / "… | Source" / "… - Source"
+  out = out.replace(
+    new RegExp(`\\s*[—–\\-|]\\s*(?:${SOURCE_NAME_RE.source})\\s*$`, "i"),
+    "",
+  );
+  // Bare trailing source token after whitespace
+  out = out.replace(
+    new RegExp(`\\s+(?:${SOURCE_NAME_RE.source})\\s*$`, "i"),
+    "",
+  );
+
+  out = normalizeDisplayText(out);
+  return out || normalizeDisplayText(text);
+}
+
+/**
+ * Primary title cell — real story text, never a source/publisher label.
+ * Prefers non-source headline, then title; always strips provider chrome.
+ */
 export function titleLine(c: FeedCatalyst): string {
-  return c.headline?.trim() || c.title?.trim() || c.type;
+  const headline = normalizeDisplayText(c.headline ?? "");
+  const title = normalizeDisplayText(c.title ?? "");
+
+  let raw = "";
+  if (headline && !looksLikeSourceLabel(headline)) {
+    raw = headline;
+  } else if (title) {
+    raw = title;
+  } else if (headline) {
+    raw = headline;
+  } else {
+    raw = c.type;
+  }
+
+  const cleaned = stripSourceNames(raw);
+  if ((!cleaned || looksLikeSourceLabel(cleaned)) && title && title !== raw) {
+    const fromTitle = stripSourceNames(title);
+    if (fromTitle && !looksLikeSourceLabel(fromTitle)) return fromTitle;
+  }
+
+  if (cleaned && !looksLikeSourceLabel(cleaned)) return cleaned;
+  if (title && !looksLikeSourceLabel(title))
+    return stripSourceNames(title) || title;
+  return cleaned || title || c.type;
 }
 
 /** Event cell: subcategory when present, else type / category. */

@@ -8,7 +8,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 
 const PREVIEW_GRID =
-  "grid-cols-1 sm:grid-cols-[72px_72px_72px_minmax(0,1fr)] lg:grid-cols-[80px_80px_80px_minmax(0,1fr)_78px]";
+  "grid-cols-1 sm:grid-cols-[minmax(0,1fr)_78px_72px_72px] lg:grid-cols-[minmax(0,1fr)_78px_80px_80px_80px]";
 
 const DEMO_ROWS: {
   ticker: string;
@@ -164,18 +164,18 @@ export default async function Home() {
                 PREVIEW_GRID,
               )}
             >
-              <div role="columnheader" className="hidden sm:block">
-                Ticker
+              <div role="columnheader">Title</div>
+              <div role="columnheader" className="hidden text-right sm:block">
+                Time
               </div>
               <div role="columnheader" className="hidden sm:block">
                 Event
               </div>
               <div role="columnheader" className="hidden sm:block">
-                Impact
+                Ticker
               </div>
-              <div role="columnheader">Title</div>
-              <div role="columnheader" className="hidden text-right lg:block">
-                Time
+              <div role="columnheader" className="hidden sm:block">
+                Impact
               </div>
             </div>
 
@@ -189,6 +189,36 @@ export default async function Home() {
                 )}
                 style={{ animationDelay: `${index * 70}ms` }}
               >
+                <div role="cell" className="min-w-0">
+                  <span className="line-clamp-2 text-[0.88rem] font-medium text-[var(--desk-text-secondary)] sm:line-clamp-1">
+                    {row.title}
+                  </span>
+                  <div className="mt-1.5 flex flex-col gap-1 sm:hidden">
+                    <time className="font-mono text-[0.7rem] text-[var(--desk-text-muted)] tabular-nums">
+                      {row.time}
+                    </time>
+                    <span className="font-mono text-[0.68rem] text-[var(--desk-text-dim)]">
+                      {row.event}
+                    </span>
+                    <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                      <span className="font-mono text-[0.75rem] font-semibold text-[var(--desk-text)]">
+                        {row.ticker}
+                      </span>
+                      <ImpactChip impact={row.impact} />
+                    </span>
+                  </div>
+                </div>
+                <div
+                  role="cell"
+                  className="hidden text-right font-mono text-[0.72rem] text-[var(--desk-text-dim)] tabular-nums sm:block"
+                >
+                  <time>{row.time}</time>
+                </div>
+                <div role="cell" className="hidden sm:block">
+                  <span className="rounded-sm border border-[var(--desk-border-strong)] bg-white/[0.04] px-1.5 py-0.5 font-mono text-[0.68rem] text-[var(--desk-text-secondary)]">
+                    {row.event}
+                  </span>
+                </div>
                 <div
                   role="cell"
                   className="hidden font-mono text-[0.88rem] font-semibold text-[var(--desk-text)] sm:block"
@@ -196,32 +226,7 @@ export default async function Home() {
                   {row.ticker}
                 </div>
                 <div role="cell" className="hidden sm:block">
-                  <span className="rounded-sm border border-[var(--desk-border-strong)] bg-white/[0.04] px-1.5 py-0.5 font-mono text-[0.68rem] text-[var(--desk-text-secondary)]">
-                    {row.event}
-                  </span>
-                </div>
-                <div role="cell" className="hidden sm:block">
                   <ImpactChip impact={row.impact} />
-                </div>
-                <div role="cell" className="min-w-0">
-                  <span className="line-clamp-2 text-[0.88rem] font-medium text-[var(--desk-text-secondary)] sm:line-clamp-1">
-                    {row.title}
-                  </span>
-                  <span className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 sm:hidden">
-                    <span className="font-mono text-[0.75rem] font-semibold text-[var(--desk-text)]">
-                      {row.ticker}
-                    </span>
-                    <ImpactChip impact={row.impact} />
-                    <time className="font-mono text-[0.7rem] text-[var(--desk-text-muted)] tabular-nums">
-                      {row.time}
-                    </time>
-                  </span>
-                </div>
-                <div
-                  role="cell"
-                  className="hidden text-right font-mono text-[0.72rem] text-[var(--desk-text-dim)] tabular-nums lg:block"
-                >
-                  <time>{row.time}</time>
                 </div>
               </article>
             ))}
