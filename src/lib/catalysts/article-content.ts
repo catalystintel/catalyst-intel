@@ -245,6 +245,19 @@ export interface ArticleSummaryInput {
   rawContent?: unknown;
 }
 
+/** True when text looks like real prose (not a title join or abbreviation dump). */
+function hasRealSentence(text: string): boolean {
+  if (/[.!?]\s+[A-Z0-9"'(]/.test(text)) return true;
+  if (
+    /[.!?]$/.test(text) &&
+    text.split(/\s+/).filter(Boolean).length >= 12 &&
+    !/\b(Inc|Ltd|Corp|Co|LLC|LLP)\.\s*$/i.test(text)
+  ) {
+    return true;
+  }
+  return false;
+}
+
 /** True when text is too thin or code-like for a reader to understand alone. */
 export function isWeakSummary(text: string | null | undefined): boolean {
   const cleaned = text?.trim() ? stripHtml(text) : "";
@@ -255,10 +268,13 @@ export function isWeakSummary(text: string | null | undefined): boolean {
   const wordCount = cleaned.split(/\s+/).filter(Boolean).length;
   if (wordCount < 8) return true;
 
+  // Title/headline joins and other non-prose blobs without a real sentence.
+  if (!hasRealSentence(cleaned) && cleaned.length < 280) return true;
+
   // Item-code dumps / tag soup without a real sentence.
   const looksLikeItemDump =
     /^(item\s+\d+\.\d+\b.*?){1,}$/i.test(cleaned) &&
-    !/[.!?].+\s/.test(cleaned) &&
+    !hasRealSentence(cleaned) &&
     wordCount < 16;
   if (looksLikeItemDump) return true;
 
@@ -425,15 +441,16 @@ export function synthesizeReadableSummary(input: ArticleSummaryInput): string {
     }
   } else if (provider === "sec-edgar") {
     const form = input.type?.trim() || "SEC filing";
+    const formArticle = /^[aeiou0-9]/i.test(form) ? "an" : "a";
     sentences.push(
-      `${subject} filed a ${form} covering ${event.toLowerCase()}.`,
+      `${subject} filed ${formArticle} ${form} covering ${event.toLowerCase()}.`,
     );
   } else if (provider === "polygon") {
     sentences.push(`${subject} appears in market news: ${event}.`);
   } else if (provider === "finnhub") {
-    sentences.push(
-      `${subject} has a ${cat?.toLowerCase() || "scheduled"} catalyst: ${event}.`,
-    );
+    const catLower = cat?.toLowerCase() || "scheduled";
+    const article = /^[aeiou]/i.test(catLower) ? "an" : "a";
+    sentences.push(`${subject} has ${article} ${catLower} catalyst: ${event}.`);
   } else {
     sentences.push(`${subject} — ${event}.`);
   }
