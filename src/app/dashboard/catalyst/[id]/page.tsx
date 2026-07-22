@@ -91,6 +91,14 @@ export default async function CatalystArticlePage({ params }: PageProps) {
     title: row.title,
     headline: row.headline,
     body,
+    ticker: row.ticker,
+    companyName: row.companyName,
+    eventCategory: row.eventCategory,
+    subcategory: row.subcategory,
+    type: row.type,
+    itemCodes: catalyst.items,
+    provider: row.sourceProvider,
+    rawContent: row.rawContent,
   });
 
   return (

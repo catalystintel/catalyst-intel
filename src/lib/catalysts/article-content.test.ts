@@ -4,9 +4,11 @@ import {
   ensureIngestSummary,
   extractArticleBody,
   extractiveSummary,
+  isWeakSummary,
   originalSourceLabel,
   resolveArticleSummary,
   stripHtml,
+  synthesizeReadableSummary,
 } from "./article-content";
 
 describe("stripHtml", () => {
@@ -83,6 +85,19 @@ describe("extractArticleBody", () => {
   });
 });
 
+describe("isWeakSummary", () => {
+  it("flags empty, short, and jargon-only blurbs", () => {
+    expect(isWeakSummary(null)).toBe(true);
+    expect(isWeakSummary("Trading halt")).toBe(true);
+    expect(isWeakSummary("AAPL — 8-K")).toBe(true);
+    expect(
+      isWeakSummary(
+        "The company disclosed a material agreement with a strategic partner and expects closing next quarter.",
+      ),
+    ).toBe(false);
+  });
+});
+
 describe("resolveArticleSummary", () => {
   it("uses a substantial stored summary as-is (extractive)", () => {
     const stored =
@@ -103,15 +118,38 @@ describe("resolveArticleSummary", () => {
     expect(result.generated).toBe(true);
     expect(result.summary).toContain("Trading resumed");
   });
+
+  it("synthesizes when both summary and body are empty but metadata exists", () => {
+    const result = resolveArticleSummary({
+      summary: null,
+      body: null,
+      title: "AAPL — 8-K filing",
+      headline: "Earnings / results",
+      ticker: "AAPL",
+      companyName: "Apple Inc",
+      eventCategory: "earnings",
+      type: "8-K",
+      provider: "sec-edgar",
+      itemCodes: [{ code: "2.02", label: "Earnings / results" }],
+    });
+    expect(result.generated).toBe(true);
+    expect(result.summary.length).toBeGreaterThan(40);
+    expect(result.summary).toMatch(/Apple|AAPL/i);
+    expect(result.summary).toMatch(/Item 2\.02|earnings/i);
+  });
 });
 
-describe("ensureIngestSummary", () => {
+describe("ensureIngestSummary / provider samples", () => {
   it("fills summary for Form 4-style rows with no vendor summary", () => {
     const summary = ensureIngestSummary({
       summary: null,
       title: "AAPL — Form 4",
       headline: "Open market purchase",
       provider: "form4api",
+      ticker: "AAPL",
+      companyName: "Apple Inc",
+      eventCategory: "insider",
+      type: "Form 4",
       rawContent: {
         transactionType: "Purchase",
         companyName: "Apple Inc",
@@ -119,7 +157,107 @@ describe("ensureIngestSummary", () => {
       },
     });
     expect(summary).toBeTruthy();
-    expect(summary!).toMatch(/Purchase|Apple/i);
+    expect(summary!).toMatch(/Purchase|Apple|AAPL|insider/i);
+  });
+
+  it("SEC empty Atom still yields understandable item-based summary", () => {
+    const summary = ensureIngestSummary({
+      summary: null,
+      title: "Tesla, Inc. — 8-K filing",
+      headline: "Officer / director change",
+      provider: "sec-edgar",
+      ticker: "TSLA",
+      companyName: "Tesla, Inc.",
+      eventCategory: "management",
+      type: "8-K",
+      itemCodes: [{ code: "5.02", label: "Officer / director change" }],
+      rawContent: { title: "8-K", summary: "" },
+    });
+    expect(summary).toBeTruthy();
+    expect(summary!).toMatch(/Tesla|TSLA/i);
+    expect(summary!).toMatch(/Item 5\.02|officer|director|management/i);
+    expect(isWeakSummary(summary)).toBe(false);
+  });
+
+  it("Nasdaq halt with thin description still explains the halt", () => {
+    const summary = ensureIngestSummary({
+      summary: "XYZ",
+      title: "XYZ — Trading halt",
+      headline: "Trading halt",
+      provider: "nasdaq-halts",
+      ticker: "XYZ",
+      companyName: "XYZ",
+      eventCategory: "trading_halt",
+      subcategory: "halt",
+      type: "Trading Halt",
+      rawContent: {
+        title: "XYZ Trading Halt",
+        description: "LULD",
+      },
+    });
+    expect(summary).toBeTruthy();
+    expect(summary!).toMatch(/XYZ/i);
+    expect(summary!).toMatch(/halt/i);
+    expect(summary!.length).toBeGreaterThan(40);
+    expect(isWeakSummary(summary)).toBe(false);
+  });
+
+  it("Finnhub earnings with null summary still includes EPS context", () => {
+    const summary = ensureIngestSummary({
+      summary: null,
+      title: "NVDA — Earnings 2026-08-01",
+      headline: "Earnings",
+      provider: "finnhub",
+      ticker: "NVDA",
+      companyName: "NVIDIA Corp",
+      eventCategory: "earnings",
+      type: "Earnings",
+      rawContent: {
+        symbol: "NVDA",
+        date: "2026-08-01",
+        epsEstimate: 0.96,
+        epsActual: 1.01,
+      },
+    });
+    expect(summary).toBeTruthy();
+    expect(summary!).toMatch(/NVDA|NVIDIA/i);
+    expect(summary!).toMatch(/EPS|earnings/i);
+    expect(isWeakSummary(summary)).toBe(false);
+  });
+
+  it("Polygon empty description still yields readable news summary", () => {
+    const summary = ensureIngestSummary({
+      summary: null,
+      title: "Acme wins major defense contract",
+      headline: "Defense contract win",
+      provider: "polygon",
+      ticker: "ACME",
+      companyName: "Acme Dynamics",
+      eventCategory: "news",
+      type: "News",
+      rawContent: {
+        title: "Acme wins major defense contract",
+        description: "",
+      },
+    });
+    expect(summary).toBeTruthy();
+    expect(summary!).toMatch(/ACME|Acme/i);
+    expect(summary!).toMatch(/news|contract|article/i);
+    expect(isWeakSummary(summary)).toBe(false);
+  });
+});
+
+describe("synthesizeReadableSummary", () => {
+  it("never returns empty when ticker + category exist", () => {
+    const text = synthesizeReadableSummary({
+      ticker: "MSFT",
+      eventCategory: "disclosure",
+      title: "MSFT — 8-K",
+      provider: "sec-edgar",
+      type: "8-K",
+    });
+    expect(text.length).toBeGreaterThan(20);
+    expect(text).toMatch(/MSFT/i);
   });
 });
 

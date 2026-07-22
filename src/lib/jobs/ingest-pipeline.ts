@@ -144,6 +144,12 @@ export async function ingestNormalizedCatalysts(
         headline: item.headline,
         provider: item.provider,
         rawContent: item.rawContent,
+        ticker,
+        companyName,
+        eventCategory: category,
+        subcategory: item.subcategory,
+        type: item.type,
+        itemCodes: item.itemCodes,
       });
 
       await db
