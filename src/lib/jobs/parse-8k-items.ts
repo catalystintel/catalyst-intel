@@ -181,7 +181,7 @@ export function classifySecFormType(formType: string): {
       category: "insider",
       headline: "Form 4 insider transaction",
       subcategory: "form4",
-      tags: ["form4", "insider"],
+      tags: ["form4", "insider", "bz:insiders"],
     };
   }
   if (form.startsWith("S-3") || form.startsWith("424B")) {
@@ -191,7 +191,7 @@ export function classifySecFormType(formType: string): {
         ? "Prospectus / offering (424B)"
         : "Shelf registration (S-3)",
       subcategory: form.startsWith("424B") ? "424b" : "s3",
-      tags: ["offering", "capital"],
+      tags: ["offering", "capital", "bz:secondary_offerings"],
     };
   }
   if (form.includes("13D")) {
@@ -199,7 +199,7 @@ export function classifySecFormType(formType: string): {
       category: "deals",
       headline: "Beneficial ownership (13D)",
       subcategory: "13d",
-      tags: ["13d", "ownership"],
+      tags: ["13d", "ownership", "bz:ma"],
     };
   }
   if (form.includes("13G")) {
@@ -207,7 +207,7 @@ export function classifySecFormType(formType: string): {
       category: "governance",
       headline: "Beneficial ownership (13G)",
       subcategory: "13g",
-      tags: ["13g", "ownership"],
+      tags: ["13g", "ownership", "bz:sec_filings"],
     };
   }
   if (form.startsWith("8-K")) {
@@ -215,7 +215,7 @@ export function classifySecFormType(formType: string): {
       category: "disclosure",
       headline: "8-K filing",
       subcategory: "8k",
-      tags: ["8k"],
+      tags: ["8k", "bz:sec_filings"],
     };
   }
 
@@ -223,6 +223,6 @@ export function classifySecFormType(formType: string): {
     category: "other",
     headline: `${formType} filing`,
     subcategory: form.toLowerCase().replace(/\s+/g, "_"),
-    tags: ["sec"],
+    tags: ["sec", "bz:sec_filings"],
   };
 }
