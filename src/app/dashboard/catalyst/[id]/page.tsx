@@ -28,6 +28,7 @@ import {
   fetchLatestEarningsForTicker,
   needsEarningsEnrichment,
 } from "@/lib/catalysts/enrich-earnings";
+import { fetchArticleEnrichment } from "@/lib/catalysts/enrich-article";
 import { toFeedCatalyst } from "@/lib/catalysts/feed-catalyst";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
@@ -144,6 +145,12 @@ export default async function CatalystArticlePage({ params }: PageProps) {
     enrichedEarnings,
   });
 
+  // Soft-fail vendor enrichment (profile / related headlines / quote).
+  const enrichment = await fetchArticleEnrichment({
+    ticker: row.ticker,
+    excludeCatalystId: row.id,
+  });
+
   const deltaSincePublish = parseDeltaSincePublish(row.historicalImpact);
 
   const whyMoving = deriveWhyMoving({
@@ -184,6 +191,7 @@ export default async function CatalystArticlePage({ params }: PageProps) {
           relatedTickers={relatedTickers}
           thumbUrl={thumbUrl}
           deltaSincePublish={deltaSincePublish}
+          enrichment={enrichment}
         />
       </PageEnter>
     </AppShell>
