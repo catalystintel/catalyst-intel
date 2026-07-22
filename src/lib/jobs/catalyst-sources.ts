@@ -9,6 +9,7 @@
 export const CATALYST_SOURCE_IDS = [
   "sec-edgar",
   "nasdaq-halts",
+  "macro-calendar",
   "finnhub",
   "openfda",
   "clinicaltrials",
@@ -56,18 +57,27 @@ export const CATALYST_SOURCE_CATALOG: readonly CatalystSourceMeta[] = [
     contributes: "Trading halt / resume events from Nasdaq (keyless)",
   },
   {
-    id: "finnhub",
+    id: "macro-calendar",
     order: 3,
+    label: "Macro calendar",
+    priority: "must",
+    phase: "A",
+    contributes:
+      "CPI / NFP / FOMC dates for day traders (keyless; embedded BLS + Fed schedule)",
+  },
+  {
+    id: "finnhub",
+    order: 4,
     label: "Finnhub",
     priority: "should",
     phase: "B",
     contributes:
-      "Earnings calendar, FDA calendar, company news (needs FINNHUB_API_KEY)",
+      "Earnings + FDA calendars, company news, recommendation trends + price targets (needs FINNHUB_API_KEY)",
     keyEnv: "FINNHUB_API_KEY",
   },
   {
     id: "openfda",
-    order: 4,
+    order: 5,
     label: "openFDA",
     priority: "must",
     phase: "A",
@@ -75,7 +85,7 @@ export const CATALYST_SOURCE_CATALOG: readonly CatalystSourceMeta[] = [
   },
   {
     id: "clinicaltrials",
-    order: 5,
+    order: 6,
     label: "ClinicalTrials.gov",
     priority: "must",
     phase: "A",
@@ -83,17 +93,17 @@ export const CATALYST_SOURCE_CATALOG: readonly CatalystSourceMeta[] = [
   },
   {
     id: "polygon-news",
-    order: 6,
+    order: 7,
     label: "Polygon news",
     priority: "should",
     phase: "C",
     contributes:
-      "Market/Benzinga-style news via Polygon/Massive (needs POLYGON_API_KEY)",
+      "Market/Benzinga Wire-tagged news via Polygon/Massive (needs POLYGON_API_KEY)",
     keyEnv: "POLYGON_API_KEY",
   },
   {
     id: "polygon-prices",
-    order: 7,
+    order: 8,
     label: "Polygon prices",
     priority: "should",
     phase: "C",
@@ -103,7 +113,7 @@ export const CATALYST_SOURCE_CATALOG: readonly CatalystSourceMeta[] = [
   },
   {
     id: "form4api",
-    order: 8,
+    order: 9,
     label: "Form4API",
     priority: "should",
     phase: "B",
@@ -132,7 +142,13 @@ export const FETCH_PHASES: readonly FetchPhaseDef[] = [
     id: "A",
     label: "Keyless (parallel)",
     mode: "parallel",
-    sources: ["sec-edgar", "nasdaq-halts", "openfda", "clinicaltrials"],
+    sources: [
+      "sec-edgar",
+      "nasdaq-halts",
+      "macro-calendar",
+      "openfda",
+      "clinicaltrials",
+    ],
   },
   {
     id: "B",

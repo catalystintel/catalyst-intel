@@ -6,6 +6,7 @@ import { ArrowLeft, BookOpen, ExternalLink } from "lucide-react";
 import { CategoryBadge } from "@/components/category-badge";
 import { MaterialityBadge } from "@/components/materiality-badge";
 import type { FeedCatalyst } from "@/lib/catalysts/feed-catalyst";
+import { benzingaPanelForCategory } from "@/lib/catalysts/benzinga-analogs";
 import { sourceDisplay, titleLine } from "@/lib/catalysts/feed-display";
 import {
   originalSourceLabel,
@@ -66,6 +67,7 @@ export function CatalystArticleView({
     ? CATEGORY_LABELS[catalyst.eventCategory]
     : null;
   const subcategory = catalyst.subcategory?.replace(/_/g, " ") || null;
+  const panelAnalog = benzingaPanelForCategory(catalyst.eventCategory);
 
   return (
     <article className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-6 pb-10">
@@ -152,6 +154,9 @@ export function CatalystArticleView({
             value={formatTimeDate(catalyst.timestamp)}
             tabular
           />
+          {panelAnalog ? (
+            <MetaCell label="BZ panel" value={panelAnalog} />
+          ) : null}
         </dl>
 
         {(thumbUrl || deltaSincePublish) && (

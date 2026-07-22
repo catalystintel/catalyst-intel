@@ -3,6 +3,7 @@ import { fetchClinicalTrials } from "@/lib/jobs/fetch-clinicaltrials";
 import { fetchFinnhubCatalysts } from "@/lib/jobs/fetch-finnhub-catalysts";
 import { fetchForm4Api } from "@/lib/jobs/fetch-form4api";
 import { listLaterSourceStubs } from "@/lib/jobs/fetch-later-stubs";
+import { fetchMacroCalendar } from "@/lib/jobs/fetch-macro-calendar";
 import { fetchNasdaqHalts } from "@/lib/jobs/fetch-nasdaq-halts";
 import { fetchOpenFda } from "@/lib/jobs/fetch-openfda";
 import {
@@ -93,6 +94,8 @@ async function runSource(id: CatalystSourceId): Promise<SourceFetchResult> {
     }
     case "nasdaq-halts":
       return fetchNasdaqHalts();
+    case "macro-calendar":
+      return fetchMacroCalendar();
     case "finnhub":
       return fetchFinnhubCatalysts();
     case "polygon-news":

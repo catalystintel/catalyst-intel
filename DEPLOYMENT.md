@@ -249,13 +249,14 @@ breakdown and `raw_sources.provider` counts should include:
 | --------------------------------- | ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `sec-edgar`                       | `ok` (Form 4 via Atom `type=4`)     | Needs `SEC_EDGAR_USER_AGENT`                                                                                                                      |
 | `nasdaq-halts`                    | `ok`                                | No key                                                                                                                                            |
+| `macro-calendar`                  | `ok` (CPI / NFP / FOMC)             | No key; embedded BLS + Fed schedule                                                                                                               |
 | `openfda`                         | `ok` (recent AP submissions only)   | No key; dates inside 30-day retention                                                                                                             |
 | `clinicaltrials`                  | `ok`                                | No key                                                                                                                                            |
 | `finnhub`                         | `skipped` without `FINNHUB_API_KEY` | Soft-fail OK                                                                                                                                      |
 | `polygon-news` / `polygon-prices` | `skipped` without `POLYGON_API_KEY` | Soft-fail OK. Free tier: ~5 REST req/min; same-day aggs often 403 timeframe — prices enrich prior sessions in small batches and soft-skip 429/403 |
 | `form4api`                        | `skipped` without `FORM4_API_KEY`   | EDGAR Form 4 still works via `sec-edgar`                                                                                                          |
 
-On `/dashboard`, Source column should show **SEC EDGAR**, **Nasdaq Halts**, **openFDA**,
+On `/dashboard`, Source column should show **SEC EDGAR**, **Nasdaq Halts**, **Macro**, **openFDA**,
 and/or **ClinicalTrials** (not only SEC).
 
 ## Database migrations in CI/CD

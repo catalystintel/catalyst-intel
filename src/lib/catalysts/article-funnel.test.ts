@@ -35,6 +35,16 @@ describe("deriveWhyMoving", () => {
     expect(why).toContain("raised full-year guidance");
     expect(why).not.toContain("Analysts remain mixed");
   });
+
+  it("appends session delta when present (WIIM-lite)", () => {
+    const why = deriveWhyMoving({
+      summary: "Acme raised full-year guidance after a strong quarter.",
+      delta: { pctChange: -2.4, date: "2026-07-21" },
+    });
+    expect(why).toContain("raised full-year guidance");
+    expect(why).toMatch(/Session -2\.4%/);
+    expect(why).toContain("2026-07-21");
+  });
 });
 
 describe("deriveTakeaways", () => {
