@@ -8,8 +8,10 @@ import {
 } from "@/lib/posthog-server";
 
 /**
- * Multi-source ingest orchestrator. Runs all catalyst sources via
- * Promise.allSettled. Accepts admin session or x-cron-secret.
+ * Multi-source ingest orchestrator. Runs sources in documented phases
+ * (A keyless parallel → B optional keys → C Polygon sequential). Response
+ * includes `fetchOrder`, `phases`, and per-source results in Must→Should
+ * order. Accepts admin session or x-cron-secret. See FETCH-ORDER.md.
  */
 export async function POST(request: NextRequest) {
   const auth = await authorizeAdminFetch(request, "admin-fetch-all");
