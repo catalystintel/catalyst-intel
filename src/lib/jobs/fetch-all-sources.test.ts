@@ -25,6 +25,7 @@ describe("fetch order catalog", () => {
     expect([...CATALYST_SOURCE_IDS]).toEqual([
       "sec-edgar",
       "nasdaq-halts",
+      "macro-calendar",
       "finnhub",
       "openfda",
       "clinicaltrials",
@@ -39,7 +40,7 @@ describe("fetch order catalog", () => {
       ...CATALYST_SOURCE_IDS,
     ]);
     expect(CATALYST_SOURCE_CATALOG.map((s) => s.order)).toEqual([
-      1, 2, 3, 4, 5, 6, 7, 8,
+      1, 2, 3, 4, 5, 6, 7, 8, 9,
     ]);
   });
 
@@ -47,7 +48,13 @@ describe("fetch order catalog", () => {
     expect(FETCH_PHASES.map((p) => p.id)).toEqual(["A", "B", "C"]);
     expect(FETCH_PHASES[0]).toMatchObject({
       mode: "parallel",
-      sources: ["sec-edgar", "nasdaq-halts", "openfda", "clinicaltrials"],
+      sources: [
+        "sec-edgar",
+        "nasdaq-halts",
+        "macro-calendar",
+        "openfda",
+        "clinicaltrials",
+      ],
     });
     expect(FETCH_PHASES[1]).toMatchObject({
       mode: "parallel",

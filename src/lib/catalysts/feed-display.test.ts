@@ -50,6 +50,23 @@ describe("sourceDisplay", () => {
       ),
     ).toMatchObject({ name: "Nasdaq Halts", initial: "N" });
   });
+
+  it("labels Polygon Benzinga wire as Wire", () => {
+    expect(
+      sourceDisplay(
+        base({
+          sourceProvider: "polygon",
+          type: "Wire",
+          headline: "Benzinga Wire",
+          subcategory: "benzinga_wire",
+        }),
+      ),
+    ).toMatchObject({
+      name: "Benzinga Wire",
+      initial: "B",
+      tone: "wire",
+    });
+  });
 });
 
 describe("sectorLabel", () => {

@@ -2,6 +2,7 @@ import { and, desc, eq, isNull, isNotNull, lt } from "drizzle-orm";
 
 import { db } from "@/db/client";
 import { catalysts } from "@/db/schema";
+import { categorizeNewsHeadline } from "@/lib/catalysts/news-category";
 import {
   ingestNormalizedCatalysts,
   skippedSourceResult,
@@ -124,6 +125,10 @@ async function polygonGet<T>(
   return (await res.json()) as T;
 }
 
+function isBenzingaPublisher(name: string): boolean {
+  return /benzinga/i.test(name);
+}
+
 function newsToNormalized(
   article: PolygonNewsArticle,
 ): NormalizedCatalyst | null {
@@ -136,26 +141,37 @@ function newsToNormalized(
     .filter(Boolean);
   const ticker = tickers[0] ?? null;
   const publisher = article.publisher?.name?.trim() || "Polygon";
+  const wire = isBenzingaPublisher(publisher);
   const timestamp = article.published_utc
     ? new Date(article.published_utc).toISOString()
     : new Date().toISOString();
+  const classified = categorizeNewsHeadline(title);
 
   return {
     provider: "polygon",
     externalId: `polygon:news:${id}`,
     url: article.article_url ?? null,
-    rawContent: article,
+    rawContent: {
+      ...article,
+      wireSource: wire ? "benzinga" : "other",
+      publisherName: publisher,
+    },
     ticker,
     companyName: ticker,
-    type: "Benzinga / News",
+    type: wire ? "Wire" : "Market News",
     title,
-    headline: publisher,
-    eventCategory: "news",
-    subcategory: "benzinga_news",
+    headline: wire ? "Benzinga Wire" : publisher,
+    eventCategory: classified.eventCategory,
+    subcategory: wire ? "benzinga_wire" : classified.subcategory,
     timestamp,
     summary: article.description?.trim() || null,
-    confidence: 60,
-    tags: ["polygon", "benzinga", "news", ...tickers.slice(0, 3)],
+    confidence: wire ? 70 : 60,
+    tags: [
+      "polygon",
+      ...(wire ? (["benzinga", "wire"] as const) : (["news"] as const)),
+      ...classified.tags,
+      ...tickers.slice(0, 3),
+    ],
   };
 }
 

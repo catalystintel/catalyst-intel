@@ -144,11 +144,14 @@ export default async function CatalystArticlePage({ params }: PageProps) {
     enrichedEarnings,
   });
 
+  const deltaSincePublish = parseDeltaSincePublish(row.historicalImpact);
+
   const whyMoving = deriveWhyMoving({
     summary,
     headline: row.headline,
     title: row.title,
     detailCards,
+    delta: deltaSincePublish,
   });
   const takeaways = deriveTakeaways(summary, body);
   const relatedTickers = extractRelatedTickers(
@@ -157,7 +160,6 @@ export default async function CatalystArticlePage({ params }: PageProps) {
     catalyst.tags,
   );
   const thumbUrl = extractArticleThumbUrl(row.rawContent);
-  const deltaSincePublish = parseDeltaSincePublish(row.historicalImpact);
 
   return (
     <AppShell

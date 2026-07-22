@@ -6,6 +6,7 @@ import {
   type SourceFetchResult,
 } from "@/lib/jobs/ingest-pipeline";
 import { getFinnhubApiKey } from "@/lib/jobs/vendor-env";
+import { categorizeNewsHeadline } from "@/lib/catalysts/news-category";
 
 const BASE = "https://finnhub.io/api/v1";
 
@@ -49,6 +50,28 @@ interface ProfileRow {
   marketCapitalization?: number;
   weburl?: string;
 }
+
+interface RecommendationRow {
+  buy?: number;
+  hold?: number;
+  period?: string;
+  sell?: number;
+  strongBuy?: number;
+  strongSell?: number;
+  symbol?: string;
+}
+
+interface PriceTargetRow {
+  lastUpdated?: string;
+  symbol?: string;
+  targetHigh?: number;
+  targetLow?: number;
+  targetMean?: number;
+  targetMedian?: number;
+}
+
+/** Fallback liquid names when earnings calendar is empty (free-tier probe). */
+const DEFAULT_ANALYST_SYMBOLS = ["AAPL", "MSFT", "NVDA", "AMZN", "META"];
 
 async function finnhubGet<T>(
   path: string,
@@ -157,6 +180,7 @@ function newsToNormalized(row: NewsRow): NormalizedCatalyst | null {
   const timestamp = row.datetime
     ? new Date(row.datetime * 1000).toISOString()
     : new Date().toISOString();
+  const classified = categorizeNewsHeadline(row.headline, row.category);
 
   return {
     provider: "finnhub",
@@ -168,28 +192,140 @@ function newsToNormalized(row: NewsRow): NormalizedCatalyst | null {
     type: "Company News",
     title: row.headline,
     headline: row.source?.trim() || "Company news",
-    eventCategory: "news",
-    subcategory: row.category?.trim() || "company_news",
+    eventCategory: classified.eventCategory,
+    subcategory: classified.subcategory,
     timestamp,
     summary: row.summary?.trim() || null,
     confidence: 55,
-    tags: ["finnhub", "news", ...(related ?? []).slice(0, 3)],
+    tags: [
+      "finnhub",
+      "news",
+      ...classified.tags,
+      ...(related ?? []).slice(0, 3),
+    ],
   };
 }
 
+/** @internal exported for unit tests */
+export function recommendationToNormalized(
+  symbol: string,
+  row: RecommendationRow,
+): NormalizedCatalyst | null {
+  const period = row.period?.trim();
+  if (!period) return null;
+
+  const strongBuy = row.strongBuy ?? 0;
+  const buy = row.buy ?? 0;
+  const hold = row.hold ?? 0;
+  const sell = row.sell ?? 0;
+  const strongSell = row.strongSell ?? 0;
+  const bullish = strongBuy + buy;
+  const bearish = sell + strongSell;
+  const stance =
+    bullish > bearish + hold
+      ? "Bullish skew"
+      : bearish > bullish + hold
+        ? "Bearish skew"
+        : "Mixed / hold-heavy";
+
+  return {
+    provider: "finnhub",
+    externalId: `finnhub:rec:${symbol}:${period}`,
+    url: `https://finnhub.io/quote/${symbol}`,
+    rawContent: { ...row, symbol },
+    ticker: symbol,
+    companyName: symbol,
+    type: "Analyst Actions",
+    title: `${symbol} — Recommendation trend (${period})`,
+    headline: "Analyst ratings (consensus)",
+    eventCategory: "analyst",
+    subcategory: "recommendation_trend",
+    timestamp: new Date(`${period}T12:00:00.000Z`).toISOString(),
+    summary: `${stance} · SB ${strongBuy} / Buy ${buy} / Hold ${hold} / Sell ${sell} / SS ${strongSell}`,
+    confidence: 60,
+    tags: [
+      "finnhub",
+      "analyst",
+      "ratings",
+      "recommendation",
+      "bz:analyst_ratings",
+    ],
+  };
+}
+
+/** @internal exported for unit tests */
+export function priceTargetToNormalized(
+  symbol: string,
+  row: PriceTargetRow,
+): NormalizedCatalyst | null {
+  if (
+    row.targetMean == null &&
+    row.targetMedian == null &&
+    row.targetHigh == null
+  ) {
+    return null;
+  }
+  const updated = row.lastUpdated?.trim() || todayIsoDate();
+  const mean = row.targetMean;
+  const median = row.targetMedian;
+
+  return {
+    provider: "finnhub",
+    externalId: `finnhub:pt:${symbol}:${updated}`,
+    url: `https://finnhub.io/quote/${symbol}`,
+    rawContent: { ...row, symbol },
+    ticker: symbol,
+    companyName: symbol,
+    type: "Analyst Actions",
+    title: `${symbol} — Price target`,
+    headline: "Price target (Street)",
+    eventCategory: "analyst",
+    subcategory: "price_target",
+    timestamp: new Date(`${updated}T12:00:00.000Z`).toISOString(),
+    summary: [
+      mean != null ? `Mean $${mean}` : null,
+      median != null ? `Median $${median}` : null,
+      row.targetHigh != null ? `High $${row.targetHigh}` : null,
+      row.targetLow != null ? `Low $${row.targetLow}` : null,
+    ]
+      .filter(Boolean)
+      .join(" · "),
+    confidence: 58,
+    tags: ["finnhub", "analyst", "price_target", "bz:analyst_ratings"],
+  };
+}
+
+function uniqueSymbols(
+  rows: Array<{ symbol?: string }>,
+  extras: string[],
+  limit: number,
+): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const row of [...rows, ...extras.map((symbol) => ({ symbol }))]) {
+    const sym = row.symbol?.trim().toUpperCase();
+    if (!sym || seen.has(sym)) continue;
+    seen.add(sym);
+    out.push(sym);
+    if (out.length >= limit) break;
+  }
+  return out;
+}
+
 /**
- * Finnhub earnings + FDA calendars, general/company news sample, and a
- * light profile upsert path (profiles enrich company names when present).
+ * Finnhub earnings + FDA calendars, company/general news, and partial
+ * Analyst Actions (recommendation trends + price targets on free tier).
  * Soft-fails when FINNHUB_API_KEY is unset.
  */
 export async function fetchFinnhubCatalysts(options?: {
   newsSymbols?: string[];
+  analystSymbols?: string[];
 }): Promise<SourceFetchResult> {
   const apiKey = getFinnhubApiKey();
   if (!apiKey) {
     return skippedSourceResult(
       "finnhub",
-      "FINNHUB_API_KEY is not set. Add it to enable Finnhub earnings/FDA/news ingest.",
+      "FINNHUB_API_KEY is not set. Add it to enable Finnhub earnings/FDA/news/analyst ingest.",
     );
   }
 
@@ -274,6 +410,47 @@ export async function fetchFinnhubCatalysts(options?: {
           error instanceof Error ? error.message : error,
         );
       }
+    }
+  }
+
+  // Partial Analyst Actions: recommendation trends + price targets (free tier).
+  // Cap symbols to stay inside Finnhub rate limits during cron.
+  const analystSymbols =
+    options?.analystSymbols?.slice(0, 8) ??
+    uniqueSymbols(earnings, DEFAULT_ANALYST_SYMBOLS, 8);
+
+  for (const symbol of analystSymbols) {
+    try {
+      const recs = await finnhubGet<RecommendationRow[]>(
+        "/stock/recommendation",
+        apiKey,
+        { symbol },
+      );
+      const latest = (recs ?? [])[0];
+      if (latest) {
+        const item = recommendationToNormalized(symbol, latest);
+        if (item) normalized.push(item);
+      }
+    } catch (error) {
+      console.warn(
+        `Finnhub recommendation for ${symbol} unavailable:`,
+        error instanceof Error ? error.message : error,
+      );
+    }
+
+    try {
+      const pt = await finnhubGet<PriceTargetRow>(
+        "/stock/price-target",
+        apiKey,
+        { symbol },
+      );
+      const item = priceTargetToNormalized(symbol, pt);
+      if (item) normalized.push(item);
+    } catch (error) {
+      console.warn(
+        `Finnhub price-target for ${symbol} unavailable:`,
+        error instanceof Error ? error.message : error,
+      );
     }
   }
 

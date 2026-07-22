@@ -133,6 +133,9 @@ export function extractArticleBody(input: {
     case "nasdaq-halts":
       fromRaw = stringField(raw, "description", "summary", "title");
       break;
+    case "macro-calendar":
+      fromRaw = stringField(raw, "summary", "title");
+      break;
     case "polygon":
       fromRaw = stringField(raw, "description", "summary", "title");
       break;
@@ -562,6 +565,8 @@ export function originalSourceLabel(provider?: string | null): string {
       return "Original on Nasdaq";
     case "polygon":
       return "Original article";
+    case "macro-calendar":
+      return "Official release calendar";
     case "finnhub":
       return "Original on source";
     case "openfda":

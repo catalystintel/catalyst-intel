@@ -66,36 +66,61 @@ function normalizeTicker(value: string): string | null {
 
 /**
  * One-line “why it’s moving” from earnings intro, summary lead, or headline.
+ * Optionally appends session Δ from Polygon historical_impact (WIIM-lite).
  */
 export function deriveWhyMoving(input: {
   summary?: string | null;
   headline?: string | null;
   title?: string | null;
   detailCards?: ArticleDetailCard[];
+  delta?: DeltaSincePublish | null;
 }): string | null {
   const earnings = input.detailCards?.find((c) => c.kind === "earnings");
+  let base: string | null = null;
+
   if (earnings?.intro?.trim()) {
     const intro = earnings.intro.trim();
     // Prefer a compact causality clause when long.
-    if (intro.length <= 160) return intro;
-    const first = intro.split(SENTENCE_SPLIT)[0]?.trim();
-    if (first)
-      return first.length > 180 ? `${first.slice(0, 177).trim()}…` : first;
-  }
-
-  const summary = input.summary?.trim() ? stripHtml(input.summary) : "";
-  if (summary) {
-    const first = summary.split(SENTENCE_SPLIT)[0]?.trim();
-    if (first && first.length >= 24) {
-      return first.length > 180 ? `${first.slice(0, 177).trim()}…` : first;
+    if (intro.length <= 160) {
+      base = intro;
+    } else {
+      const first = intro.split(SENTENCE_SPLIT)[0]?.trim();
+      if (first)
+        base = first.length > 180 ? `${first.slice(0, 177).trim()}…` : first;
     }
   }
 
-  const headline = input.headline?.trim() ? stripHtml(input.headline) : "";
-  const title = input.title?.trim() ? stripHtml(input.title) : "";
-  const fallback = headline || title;
-  if (!fallback || fallback.length < 12) return null;
-  return fallback.length > 180 ? `${fallback.slice(0, 177).trim()}…` : fallback;
+  if (!base) {
+    const summary = input.summary?.trim() ? stripHtml(input.summary) : "";
+    if (summary) {
+      const first = summary.split(SENTENCE_SPLIT)[0]?.trim();
+      if (first && first.length >= 24) {
+        base = first.length > 180 ? `${first.slice(0, 177).trim()}…` : first;
+      }
+    }
+  }
+
+  if (!base) {
+    const headline = input.headline?.trim() ? stripHtml(input.headline) : "";
+    const title = input.title?.trim() ? stripHtml(input.title) : "";
+    const fallback = headline || title;
+    if (!fallback || fallback.length < 12) return null;
+    base =
+      fallback.length > 180 ? `${fallback.slice(0, 177).trim()}…` : fallback;
+  }
+
+  const deltaBit = formatDeltaClause(input.delta);
+  if (!deltaBit) return base;
+  const combined = `${base.replace(/[.!?]?$/, "")}. ${deltaBit}`;
+  return combined.length > 220 ? `${combined.slice(0, 217).trim()}…` : combined;
+}
+
+function formatDeltaClause(delta?: DeltaSincePublish | null): string | null {
+  if (!delta || !Number.isFinite(delta.pctChange)) return null;
+  const sign = delta.pctChange > 0 ? "+" : "";
+  const pct = `${sign}${delta.pctChange.toFixed(1)}%`;
+  const dateBit = delta.date ? ` (${delta.date})` : "";
+  return `Session ${pct}${dateBit}`;
 }
 
 /**
