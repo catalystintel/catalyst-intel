@@ -9,7 +9,6 @@ import { CategoryBadge } from "@/components/category-badge";
 import { EdgarProofLink } from "@/components/edgar-proof-link";
 import { MaterialityBadge } from "@/components/materiality-badge";
 import type { FeedCatalyst } from "@/lib/catalysts/feed-catalyst";
-import { sourceDisplay } from "@/lib/catalysts/feed-display";
 import { formatRelativeAge } from "@/lib/format/relative-time";
 import { CATEGORY_LABELS } from "@/lib/jobs/parse-8k-items";
 import { cn } from "@/lib/utils";
@@ -140,14 +139,6 @@ export function CatalystDetailDrawer({
               <dl className="grid grid-cols-2 gap-4 font-mono text-xs">
                 <div>
                   <dt className="tracking-[0.14em] text-[var(--desk-text-dim)] uppercase">
-                    Source
-                  </dt>
-                  <dd className="mt-1 text-sm text-[var(--desk-text)]">
-                    {sourceDisplay(catalyst).name}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="tracking-[0.14em] text-[var(--desk-text-dim)] uppercase">
                     Category
                   </dt>
                   <dd className="mt-1 text-sm text-[var(--desk-text)]">
@@ -195,6 +186,17 @@ export function CatalystDetailDrawer({
                 </div>
               </dl>
 
+              <div>
+                <p className="font-mono text-[0.65rem] tracking-[0.14em] text-[var(--desk-text-dim)] uppercase">
+                  Summary
+                </p>
+                <p className="mt-2 text-sm leading-relaxed text-[var(--desk-text-secondary)]">
+                  {catalyst.summary?.trim() ||
+                    catalyst.headline?.trim() ||
+                    catalyst.title}
+                </p>
+              </div>
+
               {catalyst.tags.length > 0 ? (
                 <div>
                   <p className="font-mono text-[0.65rem] tracking-[0.14em] text-[var(--desk-text-dim)] uppercase">
@@ -234,16 +236,7 @@ export function CatalystDetailDrawer({
                     ))}
                   </ul>
                 </div>
-              ) : (
-                <div>
-                  <p className="font-mono text-[0.65rem] tracking-[0.14em] text-[var(--desk-text-dim)] uppercase">
-                    Summary
-                  </p>
-                  <p className="mt-2 text-sm leading-relaxed text-[var(--desk-text-secondary)]">
-                    {catalyst.summary?.trim() || catalyst.title}
-                  </p>
-                </div>
-              )}
+              ) : null}
 
               <div>
                 <p className="font-mono text-[0.65rem] tracking-[0.14em] text-[var(--desk-text-dim)] uppercase">

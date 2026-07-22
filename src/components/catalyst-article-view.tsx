@@ -82,7 +82,7 @@ export function CatalystArticleView({
         ) : null}
 
         <dl className="grid grid-cols-2 gap-3 font-mono text-xs sm:grid-cols-4">
-          <MetaCell label="Source" value={source.name} />
+          <MetaCell label="Provider" value={source.name} />
           <MetaCell
             label="Category"
             value={
