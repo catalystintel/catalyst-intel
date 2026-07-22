@@ -8,7 +8,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 
 const PREVIEW_GRID =
-  "grid-cols-1 sm:grid-cols-[72px_72px_72px_minmax(0,1fr)_64px] lg:grid-cols-[80px_80px_80px_minmax(0,1fr)_72px_78px]";
+  "grid-cols-1 sm:grid-cols-[72px_72px_72px_minmax(0,1fr)] lg:grid-cols-[80px_80px_80px_minmax(0,1fr)_78px]";
 
 const DEMO_ROWS: {
   ticker: string;
@@ -98,7 +98,7 @@ export default async function Home() {
           </h1>
           <p className="mt-4 max-w-lg text-base text-pretty text-[var(--desk-text-secondary)] sm:text-lg">
             Material SEC filings on a black-and-white trading blotter — Ticker,
-            Event, Impact, Title, Proof, Time. Act or dismiss in seconds.
+            Event, Impact, Title, Time. Open Read for a plain-language summary.
           </p>
           <div className="mt-8 flex flex-col items-start gap-3 sm:flex-row sm:flex-wrap sm:items-center">
             <Link
@@ -174,9 +174,6 @@ export default async function Home() {
                 Impact
               </div>
               <div role="columnheader">Title</div>
-              <div role="columnheader" className="hidden sm:block">
-                Proof
-              </div>
               <div role="columnheader" className="hidden text-right lg:block">
                 Time
               </div>
@@ -219,12 +216,6 @@ export default async function Home() {
                       {row.time}
                     </time>
                   </span>
-                </div>
-                <div
-                  role="cell"
-                  className="hidden font-mono text-[0.72rem] text-[var(--desk-text-muted)] sm:block"
-                >
-                  EDGAR
                 </div>
                 <div
                   role="cell"

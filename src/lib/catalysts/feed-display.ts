@@ -22,7 +22,7 @@ const PROVIDER_DISPLAY: Record<string, Omit<SourceDisplay, "meta">> = {
 };
 
 /**
- * Maps a catalyst's provider / filing type into the Source column (name + muted meta).
+ * Maps a catalyst's provider / filing type into a display name for muted meta.
  */
 export function sourceDisplay(c: FeedCatalyst): SourceDisplay {
   const known = c.sourceProvider

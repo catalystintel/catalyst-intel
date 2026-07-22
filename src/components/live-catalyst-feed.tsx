@@ -12,7 +12,6 @@ import { useRouter } from "next/navigation";
 import { BookOpen, ChevronDown, ListFilter, RefreshCw, X } from "lucide-react";
 
 import { CatalystDetailDrawer } from "@/components/catalyst-detail-drawer";
-import { EdgarProofLink } from "@/components/edgar-proof-link";
 import { MaterialityBadge } from "@/components/materiality-badge";
 import { Input } from "@/components/ui/input";
 import {
@@ -52,9 +51,9 @@ const DISMISS_STORAGE_KEY = "ci.dismissed-catalyst-ids";
 
 type Presence = "active" | "blurred" | "hidden";
 
-/** Blotter: Ticker · Event · Impact · Title · Proof · Time · Action */
+/** Blotter: Ticker · Event · Impact · Title · Time · Action (Read primary) */
 const FEED_GRID =
-  "grid-cols-1 sm:grid-cols-[72px_88px_78px_minmax(0,1fr)_64px_72px] lg:grid-cols-[80px_96px_84px_minmax(0,1fr)_72px_78px_118px]";
+  "grid-cols-1 sm:grid-cols-[72px_88px_78px_minmax(0,1fr)_72px] lg:grid-cols-[80px_96px_84px_minmax(0,1fr)_78px_118px]";
 
 function readPresence(): Presence {
   if (typeof document === "undefined") return "active";
@@ -644,9 +643,6 @@ function CatalystFeedList({
         <div role="columnheader" className="col-span-1">
           Title
         </div>
-        <div role="columnheader" className="hidden sm:block">
-          Proof
-        </div>
         <div role="columnheader" className="hidden text-right sm:block">
           Time
         </div>
@@ -725,17 +721,9 @@ function CatalystFeedList({
                   <span className="font-mono text-[0.68rem] text-[var(--desk-text-dim)]">
                     {eventLabel}
                   </span>
-                  <span className="font-mono text-[0.62rem] text-[var(--desk-text-dim)]">
-                    {source.name}
-                  </span>
                   <MaterialityBadge
                     score={catalyst.impactScore}
                     category={catalyst.eventCategory}
-                  />
-                  <EdgarProofLink
-                    url={catalyst.sourceUrl}
-                    provider={catalyst.sourceProvider}
-                    compact
                   />
                   <time
                     dateTime={catalyst.timestamp}
@@ -766,18 +754,6 @@ function CatalystFeedList({
                     Dismiss
                   </button>
                 </div>
-              </div>
-
-              <div
-                role="cell"
-                className="hidden min-w-0 sm:block"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <EdgarProofLink
-                  url={catalyst.sourceUrl}
-                  provider={catalyst.sourceProvider}
-                  compact
-                />
               </div>
 
               <div role="cell" className="hidden min-w-0 text-right sm:block">

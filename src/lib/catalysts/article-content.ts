@@ -1,8 +1,16 @@
 /**
  * Article body + summary helpers for the in-app catalyst reader.
  * Prefers stored vendor text (summary / description / Atom abstract) over
- * scraping arbitrary URLs. Heuristic extractive summary until Groq is wired.
+ * scraping arbitrary URLs. Heuristic extractive + metadata synthesis until
+ * Groq is wired — never leave the reader with a blank or jargon-only blurb
+ * when ticker / category / item codes exist.
  */
+
+import {
+  CATEGORY_LABELS,
+  isEventCategoryKey,
+  type EventCategoryKey,
+} from "@/lib/catalysts/taxonomy";
 
 const SENTENCE_SPLIT = /(?<=[.!?])\s+(?=[A-Z0-9"'(])/;
 
@@ -78,11 +86,22 @@ function joinFields(
   return cleaned.length > 0 ? cleaned.join(sep) : null;
 }
 
+function categoryLabel(value?: string | null): string | null {
+  if (!value) return null;
+  if (isEventCategoryKey(value)) return CATEGORY_LABELS[value];
+  return value.replace(/_/g, " ");
+}
+
 export type ArticleBodySource = "raw" | "summary" | "title" | "empty";
 
 export interface ArticleBodyResult {
   body: string;
   source: ArticleBodySource;
+}
+
+export interface SummaryItemCode {
+  code?: string | null;
+  label?: string | null;
 }
 
 /**
@@ -211,24 +230,256 @@ export interface ArticleSummaryResult {
   generated: boolean;
 }
 
-/**
- * Prefer the stored catalyst.summary; otherwise extract 2–3 sentences from
- * body / title / headline for the in-app reader.
- */
-export function resolveArticleSummary(input: {
+export interface ArticleSummaryInput {
   summary?: string | null;
   title?: string | null;
   headline?: string | null;
   body?: string | null;
-}): ArticleSummaryResult {
+  ticker?: string | null;
+  companyName?: string | null;
+  eventCategory?: string | null;
+  subcategory?: string | null;
+  type?: string | null;
+  itemCodes?: SummaryItemCode[] | null;
+  provider?: string | null;
+  rawContent?: unknown;
+}
+
+/** True when text is too thin or code-like for a reader to understand alone. */
+export function isWeakSummary(text: string | null | undefined): boolean {
+  const cleaned = text?.trim() ? stripHtml(text) : "";
+  if (!cleaned) return true;
+  if (cleaned.length < 48) return true;
+
+  const lower = cleaned.toLowerCase();
+  const wordCount = cleaned.split(/\s+/).filter(Boolean).length;
+  if (wordCount < 8) return true;
+
+  // Item-code dumps / tag soup without a real sentence.
+  const looksLikeItemDump =
+    /^(item\s+\d+\.\d+\b.*?){1,}$/i.test(cleaned) &&
+    !/[.!?].+\s/.test(cleaned) &&
+    wordCount < 16;
+  if (looksLikeItemDump) return true;
+
+  // Pure ticker / form labels.
+  if (/^[A-Z]{1,5}\s*[—-]\s*(8-?K|Form\s*4|10-?[KQ]).*$/i.test(cleaned)) {
+    return true;
+  }
+  if (
+    /^(trading halt|halt resumed|earnings|news)$/i.test(cleaned) ||
+    lower === "n/a" ||
+    lower === "null"
+  ) {
+    return true;
+  }
+
+  return false;
+}
+
+function subjectPhrase(input: ArticleSummaryInput): string {
+  const ticker = input.ticker?.trim().toUpperCase() || null;
+  const company = input.companyName?.trim() || null;
+  if (ticker && company && company.toUpperCase() !== ticker) {
+    return `${company} (${ticker})`;
+  }
+  if (ticker) return ticker;
+  if (company) return company;
+  return "This issuer";
+}
+
+function eventPhrase(input: ArticleSummaryInput): string {
+  const headline = input.headline?.trim() || null;
+  const sub = input.subcategory?.trim()?.replace(/_/g, " ") || null;
+  const type = input.type?.trim() || null;
+  const cat = categoryLabel(input.eventCategory);
+  return headline || sub || type || cat || "a market catalyst";
+}
+
+function itemSentence(itemCodes?: SummaryItemCode[] | null): string | null {
+  if (!Array.isArray(itemCodes) || itemCodes.length === 0) return null;
+  const parts = itemCodes
+    .map((item) => {
+      const code = item.code?.trim();
+      const label = item.label?.trim();
+      if (code && label) return `Item ${code} (${label})`;
+      if (label) return label;
+      if (code) return `Item ${code}`;
+      return null;
+    })
+    .filter((p): p is string => Boolean(p))
+    .slice(0, 3);
+  if (parts.length === 0) return null;
+  if (parts.length === 1) {
+    return `The filing highlights ${parts[0]}.`;
+  }
+  const last = parts[parts.length - 1];
+  return `The filing highlights ${parts.slice(0, -1).join(", ")} and ${last}.`;
+}
+
+function providerContextSentence(
+  provider?: string | null,
+  category?: string | null,
+): string | null {
+  switch (provider?.trim()) {
+    case "sec-edgar":
+      return "This is a current SEC disclosure traders watch for material company news.";
+    case "nasdaq-halts":
+      return "Exchange trading-halt events can pause liquidity until trading resumes.";
+    case "polygon":
+      return "This is market news coverage; open the original article for the full write-up.";
+    case "finnhub":
+      if (category === "earnings") {
+        return "This is a scheduled earnings calendar entry with estimate or actual figures when available.";
+      }
+      if (category === "clinical" || category === "regulatory") {
+        return "This is a biotech or regulatory calendar entry from Finnhub.";
+      }
+      return "This is a Finnhub catalyst calendar entry.";
+    case "form4api":
+      return "Form 4 filings report insider buys, sells, or related equity changes.";
+    case "openfda":
+      return "This reflects an FDA-side regulatory record.";
+    case "clinicaltrials":
+      return "This reflects a ClinicalTrials.gov study update.";
+    default:
+      return null;
+  }
+}
+
+function rawDetailSentence(
+  provider: string | null | undefined,
+  rawContent: unknown,
+): string | null {
+  const raw = asRecord(rawContent);
+  if (!raw) return null;
+
+  switch (provider?.trim()) {
+    case "nasdaq-halts": {
+      const reason =
+        stringField(raw, "description", "summary") || stringField(raw, "title");
+      if (!reason) return null;
+      // Avoid repeating a one-word title.
+      if (reason.length < 24) return null;
+      return `Exchange detail: ${extractiveSummary(reason, { maxSentences: 2, maxChars: 220 })}`;
+    }
+    case "finnhub": {
+      const bits = joinFields([
+        stringField(raw, "indication"),
+        stringField(raw, "status"),
+        stringField(raw, "catalyst"),
+        raw.epsEstimate != null && raw.epsEstimate !== ""
+          ? `EPS estimate ${String(raw.epsEstimate)}`
+          : null,
+        raw.epsActual != null && raw.epsActual !== ""
+          ? `EPS actual ${String(raw.epsActual)}`
+          : null,
+        raw.revenueEstimate != null && raw.revenueEstimate !== ""
+          ? `Revenue estimate ${String(raw.revenueEstimate)}`
+          : null,
+        raw.revenueActual != null && raw.revenueActual !== ""
+          ? `Revenue actual ${String(raw.revenueActual)}`
+          : null,
+      ]);
+      return bits ? `Key figures: ${bits}.` : null;
+    }
+    case "polygon": {
+      const desc = stringField(raw, "description", "summary");
+      if (!desc || desc.length < 40) return null;
+      return extractiveSummary(desc, { maxSentences: 2, maxChars: 280 });
+    }
+    case "sec-edgar": {
+      const atom = stringField(raw, "summary", "description");
+      if (!atom || atom.length < 40) return null;
+      // Prefer plain language over dumping raw Item legalese twice.
+      if (/^item\s+\d+\.\d+/i.test(atom) && atom.length < 120) return null;
+      return extractiveSummary(atom, { maxSentences: 2, maxChars: 260 });
+    }
+    default:
+      return null;
+  }
+}
+
+/**
+ * Build 2–4 plain-language sentences from catalyst metadata when vendor text
+ * is missing or too opaque for a trader to understand at a glance.
+ */
+export function synthesizeReadableSummary(input: ArticleSummaryInput): string {
+  const subject = subjectPhrase(input);
+  const event = eventPhrase(input);
+  const cat = categoryLabel(input.eventCategory);
+  const sentences: string[] = [];
+
+  const subcategory = input.subcategory?.trim()?.replace(/_/g, " ") || null;
+  const provider = input.provider?.trim() || null;
+
+  if (provider === "nasdaq-halts") {
+    const haltVerb = /resum/i.test(event)
+      ? "trading resumed after a halt"
+      : /halt/i.test(event)
+        ? "was placed under a trading halt"
+        : "has an exchange trading-halt update";
+    sentences.push(`${subject} ${haltVerb} on Nasdaq.`);
+    if (subcategory && !/halt/i.test(event)) {
+      sentences.push(`Status: ${subcategory}.`);
+    }
+  } else if (provider === "sec-edgar") {
+    const form = input.type?.trim() || "SEC filing";
+    sentences.push(
+      `${subject} filed a ${form} covering ${event.toLowerCase()}.`,
+    );
+  } else if (provider === "polygon") {
+    sentences.push(`${subject} appears in market news: ${event}.`);
+  } else if (provider === "finnhub") {
+    sentences.push(
+      `${subject} has a ${cat?.toLowerCase() || "scheduled"} catalyst: ${event}.`,
+    );
+  } else {
+    sentences.push(`${subject} — ${event}.`);
+  }
+
+  const items = itemSentence(input.itemCodes);
+  if (items) sentences.push(items);
+
+  const detail = rawDetailSentence(provider, input.rawContent);
+  if (detail && !sentences.some((s) => s.includes(detail.slice(0, 40)))) {
+    sentences.push(detail.endsWith(".") ? detail : `${detail}.`);
+  }
+
+  const context = providerContextSentence(
+    provider,
+    input.eventCategory as EventCategoryKey | null,
+  );
+  if (context) sentences.push(context);
+
+  // Cap at 4 sentences for scanability.
+  const out = sentences.slice(0, 4).join(" ").replace(/\s+/g, " ").trim();
+  return out;
+}
+
+/**
+ * Prefer a substantial stored catalyst.summary; otherwise extract from body
+ * or synthesize plain-language text from ticker / category / items / raw.
+ */
+export function resolveArticleSummary(
+  input: ArticleSummaryInput,
+): ArticleSummaryResult {
   const stored = input.summary?.trim() ? stripHtml(input.summary) : "";
-  if (stored.length >= 40) {
+  if (!isWeakSummary(stored)) {
     return { summary: extractiveSummary(stored), generated: false };
   }
 
   const body = input.body?.trim() ? stripHtml(input.body) : "";
-  if (body.length >= 40) {
+  if (!isWeakSummary(body) && body !== stored) {
     return { summary: extractiveSummary(body), generated: true };
+  }
+
+  const synthesized = synthesizeReadableSummary({
+    ...input,
+    body: body || stored || input.body,
+  });
+  if (synthesized) {
+    return { summary: synthesized, generated: true };
   }
 
   if (stored) {
@@ -277,6 +528,12 @@ export function ensureIngestSummary(input: {
   headline?: string | null;
   provider?: string | null;
   rawContent?: unknown;
+  ticker?: string | null;
+  companyName?: string | null;
+  eventCategory?: string | null;
+  subcategory?: string | null;
+  type?: string | null;
+  itemCodes?: SummaryItemCode[] | null;
 }): string | null {
   const body = extractArticleBody({
     provider: input.provider,
@@ -290,6 +547,14 @@ export function ensureIngestSummary(input: {
     title: input.title,
     headline: input.headline,
     body,
+    ticker: input.ticker,
+    companyName: input.companyName,
+    eventCategory: input.eventCategory,
+    subcategory: input.subcategory,
+    type: input.type,
+    itemCodes: input.itemCodes,
+    provider: input.provider,
+    rawContent: input.rawContent,
   });
   return resolved.summary || null;
 }
