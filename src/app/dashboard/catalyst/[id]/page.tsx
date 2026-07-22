@@ -18,6 +18,13 @@ import {
   resolveArticleDetailCards,
 } from "@/lib/catalysts/article-detail";
 import {
+  deriveTakeaways,
+  deriveWhyMoving,
+  extractArticleThumbUrl,
+  extractRelatedTickers,
+  parseDeltaSincePublish,
+} from "@/lib/catalysts/article-funnel";
+import {
   fetchLatestEarningsForTicker,
   needsEarningsEnrichment,
 } from "@/lib/catalysts/enrich-earnings";
@@ -137,6 +144,21 @@ export default async function CatalystArticlePage({ params }: PageProps) {
     enrichedEarnings,
   });
 
+  const whyMoving = deriveWhyMoving({
+    summary,
+    headline: row.headline,
+    title: row.title,
+    detailCards,
+  });
+  const takeaways = deriveTakeaways(summary, body);
+  const relatedTickers = extractRelatedTickers(
+    row.rawContent,
+    row.ticker,
+    catalyst.tags,
+  );
+  const thumbUrl = extractArticleThumbUrl(row.rawContent);
+  const deltaSincePublish = parseDeltaSincePublish(row.historicalImpact);
+
   return (
     <AppShell
       user={{
@@ -155,6 +177,11 @@ export default async function CatalystArticlePage({ params }: PageProps) {
           body={body}
           bodySource={bodySource}
           detailCards={detailCards}
+          whyMoving={whyMoving}
+          takeaways={takeaways}
+          relatedTickers={relatedTickers}
+          thumbUrl={thumbUrl}
+          deltaSincePublish={deltaSincePublish}
         />
       </PageEnter>
     </AppShell>

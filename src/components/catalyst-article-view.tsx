@@ -15,6 +15,13 @@ import type {
   ArticleDetailCard,
   DetailTone,
 } from "@/lib/catalysts/article-detail";
+import {
+  segmentBeatMissWords,
+  segmentCatalystHighlights,
+  type DeltaSincePublish,
+  type HighlightSegment,
+  type HighlightTone,
+} from "@/lib/catalysts/article-funnel";
 import { formatTimeDate } from "@/lib/format/relative-time";
 import { CATEGORY_LABELS } from "@/lib/jobs/parse-8k-items";
 import { cn } from "@/lib/utils";
@@ -26,11 +33,19 @@ export interface CatalystArticleViewProps {
   body: string;
   bodySource: ArticleBodySource;
   detailCards?: ArticleDetailCard[];
+  /** WIIM-style one-liner (already derived server-side). */
+  whyMoving?: string | null;
+  /** Up to three takeaway bullets. */
+  takeaways?: string[];
+  relatedTickers?: string[];
+  thumbUrl?: string | null;
+  deltaSincePublish?: DeltaSincePublish | null;
 }
 
 /**
  * Full-page in-app article reader for a single catalyst.
  * Primary path stays inside Catalyst; original vendor URL is secondary.
+ * Depth features follow Benzinga Pro funnel IA without a visual rebrand.
  */
 export function CatalystArticleView({
   catalyst,
@@ -39,6 +54,11 @@ export function CatalystArticleView({
   body,
   bodySource,
   detailCards = [],
+  whyMoving = null,
+  takeaways = [],
+  relatedTickers = [],
+  thumbUrl = null,
+  deltaSincePublish = null,
 }: CatalystArticleViewProps) {
   const source = sourceDisplay(catalyst);
   const originalLabel = originalSourceLabel(catalyst.sourceProvider);
@@ -68,6 +88,22 @@ export function CatalystArticleView({
           <span className="font-mono text-2xl font-semibold tracking-tight text-[var(--desk-text)] sm:text-3xl">
             {catalyst.ticker ?? "—"}
           </span>
+          {relatedTickers.length > 0 ? (
+            <div
+              className="flex flex-wrap items-center gap-1.5"
+              aria-label="Related tickers"
+            >
+              {relatedTickers.map((t) => (
+                <span
+                  key={t}
+                  className="rounded-sm border border-[var(--desk-border-strong)] bg-white/[0.03] px-1.5 py-0.5 font-mono text-[0.7rem] tracking-wide text-[var(--desk-text-secondary)] transition-colors hover:border-white/25 hover:text-[var(--desk-text)]"
+                  title={`Related · ${t}`}
+                >
+                  {t}
+                </span>
+              ))}
+            </div>
+          ) : null}
           {catalyst.eventCategory ? (
             <CategoryBadge category={catalyst.eventCategory} />
           ) : null}
@@ -87,6 +123,21 @@ export function CatalystArticleView({
           </p>
         ) : null}
 
+        {whyMoving ? (
+          <div
+            className="rounded-sm border border-[var(--desk-border-strong)] bg-white/[0.03] px-3 py-2.5 transition-colors hover:border-white/20"
+            role="note"
+            aria-label="Why it's moving"
+          >
+            <p className="font-mono text-[0.62rem] tracking-[0.14em] text-[var(--desk-live)] uppercase">
+              Why it&apos;s moving
+            </p>
+            <p className="mt-1 text-sm leading-snug text-[var(--desk-text)]">
+              {whyMoving}
+            </p>
+          </div>
+        ) : null}
+
         <dl className="grid grid-cols-2 gap-3 font-mono text-xs sm:grid-cols-4">
           <MetaCell label="Provider" value={source.name} />
           <MetaCell
@@ -102,6 +153,45 @@ export function CatalystArticleView({
             tabular
           />
         </dl>
+
+        {(thumbUrl || deltaSincePublish) && (
+          <div className="flex flex-wrap items-end gap-4">
+            {thumbUrl ? (
+              // Optional compact source still — only when vendor stored a URL.
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={thumbUrl}
+                alt=""
+                width={180}
+                height={101}
+                className="h-[72px] w-[128px] rounded-sm border border-[var(--desk-border)] object-cover opacity-90 transition-opacity hover:opacity-100"
+              />
+            ) : null}
+            {deltaSincePublish ? (
+              <p className="font-mono text-xs tracking-wide text-[var(--desk-text-secondary)] tabular-nums">
+                <span className="text-[var(--desk-text-dim)] uppercase">
+                  Δ since publish
+                </span>
+                <span className="mx-1.5 text-[var(--desk-text-dim)]">·</span>
+                <span
+                  className={cn(
+                    deltaSincePublish.pctChange > 0 &&
+                      "text-[var(--desk-live)]",
+                    deltaSincePublish.pctChange < 0 && "text-red-400",
+                  )}
+                >
+                  {deltaSincePublish.pctChange > 0 ? "+" : ""}
+                  {deltaSincePublish.pctChange.toFixed(2)}%
+                </span>
+                {deltaSincePublish.date ? (
+                  <span className="ml-1.5 text-[var(--desk-text-dim)]">
+                    {deltaSincePublish.date}
+                  </span>
+                ) : null}
+              </p>
+            ) : null}
+          </div>
+        )}
 
         <div className="flex flex-wrap gap-2">
           <span className="inline-flex items-center gap-1.5 rounded-sm bg-[var(--desk-live)] px-3 py-1.5 font-mono text-xs font-semibold tracking-wide text-[#121212] uppercase">
@@ -129,7 +219,7 @@ export function CatalystArticleView({
       <section className="flex flex-col gap-2">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
           <h2 className="font-mono text-[0.65rem] tracking-[0.14em] text-[var(--desk-text-dim)] uppercase">
-            Summary
+            {takeaways.length > 0 ? "Takeaways" : "Summary"}
           </h2>
           {summaryGenerated ? (
             <span className="font-mono text-[0.6rem] tracking-wide text-[var(--desk-text-dim)] uppercase">
@@ -137,9 +227,26 @@ export function CatalystArticleView({
             </span>
           ) : null}
         </div>
-        <p className="text-[0.95rem] leading-relaxed text-[var(--desk-text-secondary)]">
-          {summary || "No summary available for this catalyst yet."}
-        </p>
+        {takeaways.length > 0 ? (
+          <ul className="flex list-none flex-col gap-1.5 pl-0">
+            {takeaways.map((bullet, i) => (
+              <li
+                key={`takeaway-${i}`}
+                className="flex gap-2 text-[0.95rem] leading-relaxed text-[var(--desk-text-secondary)]"
+              >
+                <span
+                  className="mt-2 size-1 shrink-0 rounded-full bg-[var(--desk-live)]"
+                  aria-hidden
+                />
+                <span>{bullet}</span>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="text-[0.95rem] leading-relaxed text-[var(--desk-text-secondary)]">
+            {summary || "No summary available for this catalyst yet."}
+          </p>
+        )}
       </section>
 
       {detailCards.length > 0 ? (
@@ -170,7 +277,7 @@ export function CatalystArticleView({
               "rounded-sm border border-[var(--desk-border)] bg-white/[0.02] px-4 py-4 text-[0.92rem] leading-relaxed whitespace-pre-wrap text-[var(--desk-text-secondary)]",
             )}
           >
-            {body}
+            <HighlightedText text={body} />
           </div>
         ) : (
           <p className="rounded-sm border border-dashed border-[var(--desk-border-strong)] px-4 py-4 text-sm text-[var(--desk-text-muted)]">
@@ -251,13 +358,13 @@ function MetaCell({
 
 function DetailCardPanel({ card }: { card: ArticleDetailCard }) {
   return (
-    <div className="rounded-sm border border-[var(--desk-border)] bg-white/[0.02] px-4 py-4">
+    <div className="rounded-sm border border-[var(--desk-border)] bg-white/[0.02] px-4 py-4 transition-colors hover:border-white/15">
       <h3 className="font-mono text-[0.7rem] tracking-[0.12em] text-[var(--desk-text)] uppercase">
         {card.title}
       </h3>
       {card.intro ? (
         <p className="mt-2 text-sm leading-relaxed text-[var(--desk-text-secondary)]">
-          {card.intro}
+          <HighlightedText text={card.intro} />
         </p>
       ) : null}
       {card.fields.length > 0 ? (
@@ -270,13 +377,8 @@ function DetailCardPanel({ card }: { card: ArticleDetailCard }) {
               <dt className="font-mono text-[0.6rem] tracking-[0.12em] text-[var(--desk-text-dim)] uppercase">
                 {field.label}
               </dt>
-              <dd
-                className={cn(
-                  "text-sm text-[var(--desk-text)] tabular-nums",
-                  toneClass(field.tone),
-                )}
-              >
-                {field.value}
+              <dd className={cn("text-sm tabular-nums", toneClass(field.tone))}>
+                <BeatMissFieldValue value={field.value} tone={field.tone} />
               </dd>
             </div>
           ))}
@@ -284,6 +386,61 @@ function DetailCardPanel({ card }: { card: ArticleDetailCard }) {
       ) : null}
     </div>
   );
+}
+
+function BeatMissFieldValue({
+  value,
+  tone,
+}: {
+  value: string;
+  tone?: DetailTone;
+}) {
+  // Only accent literal Beat/Miss words; keep numeric tone via parent class.
+  const segs = segmentBeatMissWords(value);
+  const hasAccent = segs.some((s) => s.type === "accent");
+  if (!hasAccent) {
+    return <span className={toneClass(tone)}>{value}</span>;
+  }
+  return (
+    <span>
+      {segs.map((seg, i) =>
+        seg.type === "text" ? (
+          <span key={i}>{seg.value}</span>
+        ) : (
+          <span key={i} className={accentClass(seg.tone)}>
+            {seg.value}
+          </span>
+        ),
+      )}
+    </span>
+  );
+}
+
+function HighlightedText({ text }: { text: string }) {
+  const segs = segmentCatalystHighlights(text);
+  return <>{segs.map((seg, i) => renderSegment(seg, i))}</>;
+}
+
+function renderSegment(seg: HighlightSegment, key: number) {
+  if (seg.type === "text") {
+    return <span key={key}>{seg.value}</span>;
+  }
+  return (
+    <span key={key} className={accentClass(seg.tone)}>
+      {seg.value}
+    </span>
+  );
+}
+
+function accentClass(tone: HighlightTone): string {
+  switch (tone) {
+    case "positive":
+      return "font-medium text-[var(--desk-live)]";
+    case "negative":
+      return "font-medium text-red-400";
+    default:
+      return "font-medium text-[var(--desk-text)]";
+  }
 }
 
 function toneClass(tone?: DetailTone): string {
