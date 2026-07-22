@@ -64,11 +64,17 @@ export async function updateSession(request: NextRequest) {
     },
   );
 
+  // `getSession()` reads/refreshes the JWT from the cookie locally instead of
+  // making a network round-trip to Supabase's auth server the way `getUser()`
+  // does. That round-trip (on top of the one `getCurrentAppUser()` already
+  // makes with `getUser()` for the real check) was adding real latency to
+  // every navigation. Safe here because this redirect is optimistic, not the
+  // security boundary - see the module comment and `getCurrentAppUser()`.
   const {
-    data: { user },
-  } = await supabase.auth.getUser();
+    data: { session },
+  } = await supabase.auth.getSession();
 
-  if (isProtected && !user) {
+  if (isProtected && !session) {
     const loginUrl = request.nextUrl.clone();
     loginUrl.pathname = "/login";
     loginUrl.searchParams.set("next", request.nextUrl.pathname);

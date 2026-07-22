@@ -13,6 +13,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 
 import { FetchTrigger } from "./fetch-trigger";
+import { MigrateTrigger } from "./migrate-trigger";
 
 export default async function AdminPage() {
   if (!isLibsqlConfigured()) {
@@ -38,35 +39,30 @@ export default async function AdminPage() {
     redirect("/dashboard");
   }
 
-  const lastFetch = await db
-    .select({
-      fetchedAt: rawSources.fetchedAt,
-    })
-    .from(rawSources)
-    .orderBy(desc(rawSources.fetchedAt))
-    .limit(1)
-    .get();
-
-  const sourceCountRow = await db
-    .select({ value: count() })
-    .from(rawSources)
-    .get();
+  // Independent reads - run them concurrently instead of one round-trip at a
+  // time. Each await here is a network hop to Turso, and sequencing them was
+  // a meaningful chunk of this page's load latency.
+  const [lastFetch, sourceCountRow, providerCounts, nyseCountRow] =
+    await Promise.all([
+      db
+        .select({ fetchedAt: rawSources.fetchedAt })
+        .from(rawSources)
+        .orderBy(desc(rawSources.fetchedAt))
+        .limit(1)
+        .get(),
+      db.select({ value: count() }).from(rawSources).get(),
+      db
+        .select({
+          provider: rawSources.provider,
+          value: count(),
+        })
+        .from(rawSources)
+        .groupBy(rawSources.provider)
+        .orderBy(sql`count(*) desc`)
+        .all(),
+      db.select({ value: count() }).from(nyseListings).get(),
+    ]);
   const sourceCount = sourceCountRow?.value ?? 0;
-
-  const providerCounts = await db
-    .select({
-      provider: rawSources.provider,
-      value: count(),
-    })
-    .from(rawSources)
-    .groupBy(rawSources.provider)
-    .orderBy(sql`count(*) desc`)
-    .all();
-
-  const nyseCountRow = await db
-    .select({ value: count() })
-    .from(nyseListings)
-    .get();
   const nyseCount = nyseCountRow?.value ?? 0;
   const finnhubConfigured = isFinnhubConfigured();
 
@@ -136,6 +132,25 @@ export default async function AdminPage() {
           ) : null}
           <div className="px-4 py-4 sm:px-5">
             <FetchTrigger />
+          </div>
+        </section>
+
+        <section className="overflow-hidden rounded-xl border border-[var(--desk-border)] bg-[var(--desk-panel)]">
+          <div className="flex flex-wrap items-start justify-between gap-4 border-b border-border/60 px-4 py-4 sm:px-5">
+            <div>
+              <h2 className="font-mono text-sm tracking-wide text-foreground">
+                Database migrations
+              </h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Migrations already run automatically on every deploy (`npm run
+                build`, and via the CI/CD migrate workflow — see DEPLOYMENT.md).
+                Use this to apply pending migrations to this environment right
+                now without waiting on a deploy.
+              </p>
+            </div>
+          </div>
+          <div className="px-4 py-4 sm:px-5">
+            <MigrateTrigger />
           </div>
         </section>
 

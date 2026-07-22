@@ -1,0 +1,39 @@
+name: Deploy migration
+
+# Explicit, visible-in-Actions migration step for each deploy, in addition to
+# the migration Vercel's own build already runs (`npm run build` =
+# `drizzle-kit migrate && next build` - see package.json + DEPLOYMENT.md).
+# Running it here too means a schema change shows up as its own checked step
+# in the Actions log for every push to `dev` (staging) / `main` (production),
+# independent of Vercel's build output. Both are safe to run against the same
+# DB - drizzle tracks applied migrations and skips ones already applied.
+on:
+  push:
+    branches: [main, dev]
+  workflow_dispatch: {} # allows manually re-running a migration from the Actions tab
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          cache: "npm"
+
+      - run: npm ci
+
+      - name: Apply pending migrations
+        env:
+          LIBSQL_URL: ${{ github.ref_name == 'main' && secrets.PROD_LIBSQL_URL || secrets.STAGING_LIBSQL_URL }}
+          LIBSQL_AUTH_TOKEN: ${{ github.ref_name == 'main' && secrets.PROD_LIBSQL_AUTH_TOKEN || secrets.STAGING_LIBSQL_AUTH_TOKEN }}
+        run: |
+          if [ -z "$LIBSQL_URL" ] || [ -z "$LIBSQL_AUTH_TOKEN" ]; then
+            echo "${{ github.ref_name }}: PROD_LIBSQL_URL/PROD_LIBSQL_AUTH_TOKEN or STAGING_LIBSQL_URL/STAGING_LIBSQL_AUTH_TOKEN repo secrets are not set yet - see DEPLOYMENT.md."
+            echo "This is expected until those secrets are configured; skipping without failing the workflow (Vercel's build-time migration still applies)."
+            exit 0
+          fi
+
+          npm run db:migrate
