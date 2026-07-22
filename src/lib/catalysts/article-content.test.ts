@@ -91,6 +91,9 @@ describe("isWeakSummary", () => {
     expect(isWeakSummary("Trading halt")).toBe(true);
     expect(isWeakSummary("AAPL — 8-K")).toBe(true);
     expect(
+      isWeakSummary("Officer / director change — Tesla, Inc. — 8-K filing"),
+    ).toBe(true);
+    expect(
       isWeakSummary(
         "The company disclosed a material agreement with a strategic partner and expects closing next quarter.",
       ),
@@ -176,6 +179,8 @@ describe("ensureIngestSummary / provider samples", () => {
     expect(summary).toBeTruthy();
     expect(summary!).toMatch(/Tesla|TSLA/i);
     expect(summary!).toMatch(/Item 5\.02|officer|director|management/i);
+    expect(summary!).toMatch(/\./);
+    expect(summary!.split(/(?<=[.!?])\s+/).length).toBeGreaterThanOrEqual(2);
     expect(isWeakSummary(summary)).toBe(false);
   });
 
@@ -199,6 +204,7 @@ describe("ensureIngestSummary / provider samples", () => {
     expect(summary!).toMatch(/XYZ/i);
     expect(summary!).toMatch(/halt/i);
     expect(summary!.length).toBeGreaterThan(40);
+    expect(summary!.split(/(?<=[.!?])\s+/).length).toBeGreaterThanOrEqual(2);
     expect(isWeakSummary(summary)).toBe(false);
   });
 
@@ -222,6 +228,7 @@ describe("ensureIngestSummary / provider samples", () => {
     expect(summary).toBeTruthy();
     expect(summary!).toMatch(/NVDA|NVIDIA/i);
     expect(summary!).toMatch(/EPS|earnings/i);
+    expect(summary!.split(/(?<=[.!?])\s+/).length).toBeGreaterThanOrEqual(2);
     expect(isWeakSummary(summary)).toBe(false);
   });
 
@@ -243,6 +250,7 @@ describe("ensureIngestSummary / provider samples", () => {
     expect(summary).toBeTruthy();
     expect(summary!).toMatch(/ACME|Acme/i);
     expect(summary!).toMatch(/news|contract|article/i);
+    expect(summary!.split(/(?<=[.!?])\s+/).length).toBeGreaterThanOrEqual(2);
     expect(isWeakSummary(summary)).toBe(false);
   });
 });
