@@ -2,21 +2,33 @@
 
 import { ExternalLink } from "lucide-react";
 
+import { originalSourceLabel } from "@/lib/catalysts/article-content";
 import { cn } from "@/lib/utils";
 
 /**
- * Always-visible one-click EDGAR proof link (JTBD 3).
- * Renders a muted stub when no URL is stored so the control never disappears.
+ * Secondary “view original source” control (JTBD proof).
+ * Primary reading should use the in-app article route; this stays external.
  */
 export function EdgarProofLink({
   url,
+  provider = null,
   className,
   compact = false,
 }: {
   url: string | null;
+  /** raw_sources.provider — drives the CTA label. */
+  provider?: string | null;
   className?: string;
   compact?: boolean;
 }) {
+  const label = originalSourceLabel(provider);
+  const shortLabel =
+    provider === "sec-edgar"
+      ? "EDGAR"
+      : provider === "nasdaq-halts"
+        ? "Nasdaq"
+        : "Source";
+
   if (!url) {
     return (
       <span
@@ -24,10 +36,10 @@ export function EdgarProofLink({
           "inline-flex items-center gap-1 font-mono text-[0.68rem] text-[var(--desk-text-dim)]",
           className,
         )}
-        title="No EDGAR accession URL stored for this row"
+        title="No original source URL stored for this row"
       >
         <ExternalLink className="size-3 opacity-50" />
-        {compact ? "—" : "No EDGAR link"}
+        {compact ? "—" : "No source link"}
       </span>
     );
   }
@@ -42,10 +54,10 @@ export function EdgarProofLink({
         "inline-flex items-center gap-1.5 rounded-md border border-[var(--desk-border-strong)] bg-white/[0.03] px-2 py-1 font-mono text-[0.68rem] text-[var(--desk-accent-fg)] transition-colors hover:border-[var(--desk-accent)]/50 hover:bg-[var(--desk-accent)]/10",
         className,
       )}
-      title="Open EDGAR filing (proof)"
+      title={label}
     >
       <ExternalLink className="size-3 shrink-0" />
-      {compact ? "EDGAR" : "Open EDGAR proof"}
+      {compact ? shortLabel : label}
     </a>
   );
 }
