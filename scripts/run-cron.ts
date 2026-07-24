@@ -3,8 +3,9 @@
  * running in its own terminal while you develop - it re-fetches all catalyst
  * sources on an interval so the dashboard always has fresh data.
  *
- * In production this same job is instead triggered by a GitHub Actions
- * schedule hitting `/api/admin/fetch/all` - see DEPLOYMENT.md.
+ * In production the same job is triggered by cron-job.org every 1 minute
+ * hitting `/api/admin/fetch/all` (optional GHA backup) — see ARCHITECTURE.md
+ * and DEPLOYMENT.md.
  */
 async function main() {
   try {
@@ -19,7 +20,7 @@ async function main() {
   const { fetchAllCatalystSources } =
     await import("@/lib/jobs/fetch-all-sources");
 
-  const intervalMinutes = Number(process.env.CRON_INTERVAL_MINUTES ?? 2);
+  const intervalMinutes = Number(process.env.CRON_INTERVAL_MINUTES ?? 1);
   const intervalMs = intervalMinutes * 60 * 1000;
 
   let running = false;
