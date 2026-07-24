@@ -17,6 +17,14 @@ describe("classifyDbError", () => {
     );
   });
 
+  it("flags browser file: / URL_SCHEME_NOT_SUPPORTED as not-configured", () => {
+    expect(
+      classifyDbError(
+        "LibsqlError: URL_SCHEME_NOT_SUPPORTED: The client that uses Web standard APIs supports only 'libsql:', 'wss:', 'ws:', 'https:' and 'http:' URLs, got 'file:'.",
+      ),
+    ).toBe("not-configured");
+  });
+
   it("flags a real libSQL client connection error as transient, not a config problem", () => {
     // Regression: this exact class of error (a live Turso database that's
     // configured correctly but briefly unreachable) used to be shown with

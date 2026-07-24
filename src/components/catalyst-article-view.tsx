@@ -24,7 +24,7 @@ import {
   type HighlightTone,
 } from "@/lib/catalysts/article-funnel";
 import type { ArticleEnrichment } from "@/lib/catalysts/enrich-article";
-import { formatMarketCapMillions } from "@/lib/catalysts/enrich-article";
+import { formatMarketCapMillions } from "@/lib/catalysts/enrich-article-format";
 import { formatRelativeAge, formatTimeDate } from "@/lib/format/relative-time";
 import { CATEGORY_LABELS } from "@/lib/jobs/parse-8k-items";
 import { cn } from "@/lib/utils";

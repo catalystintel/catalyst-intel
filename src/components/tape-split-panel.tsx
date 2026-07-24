@@ -14,7 +14,7 @@ import type {
   ArticleCompanyProfile,
   ArticleMarketQuote,
 } from "@/lib/catalysts/enrich-article";
-import { toTradingViewSymbol } from "@/lib/catalysts/enrich-article";
+import { toTradingViewSymbol } from "@/lib/catalysts/enrich-article-format";
 import { formatEventTime, formatRelativeAge } from "@/lib/format/relative-time";
 import { CATEGORY_LABELS } from "@/lib/jobs/parse-8k-items";
 import { cn } from "@/lib/utils";

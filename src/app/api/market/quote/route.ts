@@ -1,10 +1,8 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { getCurrentAppUser } from "@/lib/auth/current-user";
-import {
-  fetchMarketQuoteBundle,
-  toTradingViewSymbol,
-} from "@/lib/catalysts/enrich-article";
+import { fetchMarketQuoteBundle } from "@/lib/catalysts/enrich-article";
+import { toTradingViewSymbol } from "@/lib/catalysts/enrich-article-format";
 import { getClientIp } from "@/lib/http/client-ip";
 import { RATE_LIMITS, checkRateLimit } from "@/lib/http/rate-limit";
 import {

@@ -13,12 +13,17 @@ export type DbErrorKind = "not-configured" | "transient" | "unknown";
  * a phantom setup issue, so the two cases get distinct copy.
  */
 export function classifyDbError(message: string): DbErrorKind {
-  if (/local\.db|Database is not configured/i.test(message)) {
+  // file: URLs / web-client scheme errors mean the DB module leaked into a
+  // browser/edge bundle or Turso env is missing — not a transient blip.
+  if (
+    /local\.db|Database is not configured|URL_SCHEME_NOT_SUPPORTED|got ['"]file:/i.test(
+      message,
+    )
+  ) {
     return "not-configured";
   }
-  // Vercel Hobby function timeouts ("Task timed out after 10 seconds") used
-  // to match a bare `timeout` pattern and get mislabeled as a Turso outage.
-  // Keep those as unknown so ops look at function budget, not env vars.
+  // Vercel Hobby function timeouts used to match a bare `timeout` pattern and
+  // get mislabeled as a Turso outage.
   if (
     /FUNCTION_INVOCATION_TIMEOUT|Task timed out after|RUNTIME_TIMEOUT/i.test(
       message,
