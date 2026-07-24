@@ -9,6 +9,7 @@ import { db } from "@/db/client";
 import { isLibsqlConfigured } from "@/db/env";
 import { catalysts, companies, rawSources } from "@/db/schema";
 import { getCurrentAppUser } from "@/lib/auth/current-user";
+import { withDbRetry } from "@/lib/db/with-db-retry";
 import {
   extractArticleBody,
   resolveArticleSummary,
@@ -62,33 +63,35 @@ export default async function CatalystArticlePage({ params }: PageProps) {
     redirect(`/login?next=/dashboard/catalyst/${id}`);
   }
 
-  const row = await db
-    .select({
-      id: catalysts.id,
-      ticker: catalysts.ticker,
-      companyName: catalysts.companyName,
-      type: catalysts.type,
-      title: catalysts.title,
-      headline: catalysts.headline,
-      eventCategory: catalysts.eventCategory,
-      subcategory: catalysts.subcategory,
-      itemCodes: catalysts.itemCodes,
-      timestamp: catalysts.timestamp,
-      summary: catalysts.summary,
-      impactScore: catalysts.impactScore,
-      confidence: catalysts.confidence,
-      tags: catalysts.tags,
-      historicalImpact: catalysts.historicalImpact,
-      sourceUrl: rawSources.url,
-      sourceProvider: rawSources.provider,
-      rawContent: rawSources.rawContent,
-      sector: companies.sector,
-    })
-    .from(catalysts)
-    .leftJoin(rawSources, eq(catalysts.rawSourceId, rawSources.id))
-    .leftJoin(companies, eq(catalysts.companyId, companies.id))
-    .where(eq(catalysts.id, id))
-    .get();
+  const row = await withDbRetry(() =>
+    db
+      .select({
+        id: catalysts.id,
+        ticker: catalysts.ticker,
+        companyName: catalysts.companyName,
+        type: catalysts.type,
+        title: catalysts.title,
+        headline: catalysts.headline,
+        eventCategory: catalysts.eventCategory,
+        subcategory: catalysts.subcategory,
+        itemCodes: catalysts.itemCodes,
+        timestamp: catalysts.timestamp,
+        summary: catalysts.summary,
+        impactScore: catalysts.impactScore,
+        confidence: catalysts.confidence,
+        tags: catalysts.tags,
+        historicalImpact: catalysts.historicalImpact,
+        sourceUrl: rawSources.url,
+        sourceProvider: rawSources.provider,
+        rawContent: rawSources.rawContent,
+        sector: companies.sector,
+      })
+      .from(catalysts)
+      .leftJoin(rawSources, eq(catalysts.rawSourceId, rawSources.id))
+      .leftJoin(companies, eq(catalysts.companyId, companies.id))
+      .where(eq(catalysts.id, id))
+      .get(),
+  );
 
   if (!row) {
     notFound();

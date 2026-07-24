@@ -22,6 +22,7 @@ import {
 import { CatalystDetailDrawer } from "@/components/catalyst-detail-drawer";
 import { MaterialityBadge } from "@/components/materiality-badge";
 import { Input } from "@/components/ui/input";
+import { useAutoFocusScrollRegion } from "@/hooks/use-auto-focus-scroll-region";
 import {
   toFeedCatalyst,
   type FeedCatalyst,
@@ -55,6 +56,7 @@ export type { FeedCatalyst };
 
 const ACTIVE_POLL_MS = 20_000;
 const BLURRED_POLL_MS = 90_000;
+const RETRY_DELAY_MS = 3_000;
 const DISMISS_STORAGE_KEY = "ci.dismissed-catalyst-ids";
 
 type Presence = "active" | "blurred" | "hidden";
@@ -130,8 +132,16 @@ export function LiveCatalystFeed({
   >(DEFAULT_PLAYBOOK_CATEGORIES);
   const [quietMode, setQuietMode] = useState(false);
   const [prefsLoaded, setPrefsLoaded] = useState(false);
+  const [manualRefreshing, setManualRefreshing] = useState(false);
   const inFlight = useRef(false);
+  const abortRef = useRef<AbortController | null>(null);
+  const retryTimeoutRef = useRef<number | null>(null);
   const knownIds = useRef(new Set(initialCatalysts.map((c) => c.id)));
+  // Lets the retry path below call "the latest softRefetch" without
+  // capturing it in its own closure (which would be a self-reference).
+  const softRefetchRef = useRef<((isRetry?: boolean) => Promise<void>) | null>(
+    null,
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -176,59 +186,108 @@ export function LiveCatalystFeed({
     };
   }, []);
 
-  const softRefetch = useCallback(async () => {
-    if (inFlight.current) return;
-    inFlight.current = true;
-    try {
-      const params = new URLSearchParams({
-        window: timeWindow,
-        limit: String(feedLimitForTimeWindow(timeWindow)),
-      });
-      const res = await fetch(`/api/catalysts?${params}`, {
-        method: "GET",
-        credentials: "same-origin",
-        cache: "no-store",
-      });
-      const data = await res.json();
-      if (res.status === 429) {
-        setPollError(data.error ?? "Rate limited — polling will retry.");
-        return;
+  const softRefetch = useCallback(
+    async (isRetry = false) => {
+      if (retryTimeoutRef.current !== null) {
+        window.clearTimeout(retryTimeoutRef.current);
+        retryTimeoutRef.current = null;
       }
-      if (!res.ok) {
-        throw new Error(data.error ?? "Could not refresh feed.");
-      }
-      const next: FeedCatalyst[] = (data.catalysts ?? []).map(toFeedCatalyst);
-      const fresh = next
-        .filter((c) => !knownIds.current.has(c.id))
-        .map((c) => c.id);
-      if (fresh.length > 0) {
-        for (const id of next.map((c) => c.id)) knownIds.current.add(id);
-        setFlashIds((prev) => {
-          const merged = new Set(prev);
-          for (const id of fresh) merged.add(id);
-          return merged;
+      // A stale in-flight request (e.g. from a time-window switch a moment
+      // ago) should never win a race against this newer one - abort it
+      // instead of skipping this call, so filter changes always feel snappy
+      // rather than occasionally "stuck" waiting for the old request.
+      abortRef.current?.abort();
+      const controller = new AbortController();
+      abortRef.current = controller;
+      inFlight.current = true;
+      try {
+        const params = new URLSearchParams({
+          window: timeWindow,
+          limit: String(feedLimitForTimeWindow(timeWindow)),
         });
-        window.setTimeout(() => {
+        const res = await fetch(`/api/catalysts?${params}`, {
+          method: "GET",
+          credentials: "same-origin",
+          cache: "no-store",
+          signal: controller.signal,
+        });
+        const data = await res.json();
+        if (res.status === 429) {
+          setPollError(data.error ?? "Rate limited — polling will retry.");
+          return;
+        }
+        if (!res.ok) {
+          throw new Error(data.error ?? "Could not refresh feed.");
+        }
+        const next: FeedCatalyst[] = (data.catalysts ?? []).map(toFeedCatalyst);
+        const fresh = next
+          .filter((c) => !knownIds.current.has(c.id))
+          .map((c) => c.id);
+        if (fresh.length > 0) {
+          for (const id of next.map((c) => c.id)) knownIds.current.add(id);
           setFlashIds((prev) => {
-            const nextSet = new Set(prev);
-            for (const id of fresh) nextSet.delete(id);
-            return nextSet;
+            const merged = new Set(prev);
+            for (const id of fresh) merged.add(id);
+            return merged;
           });
-        }, 1600);
-      } else {
-        for (const id of next.map((c) => c.id)) knownIds.current.add(id);
+          window.setTimeout(() => {
+            setFlashIds((prev) => {
+              const nextSet = new Set(prev);
+              for (const id of fresh) nextSet.delete(id);
+              return nextSet;
+            });
+          }, 1600);
+        } else {
+          for (const id of next.map((c) => c.id)) knownIds.current.add(id);
+        }
+        setCatalysts(next);
+        setLastFetchedAt(data.fetchedAt ?? new Date().toISOString());
+        setPollError(null);
+      } catch (err) {
+        if (err instanceof DOMException && err.name === "AbortError") {
+          // Superseded by a newer request - not a real failure, so don't
+          // flash a transient error at the user.
+          return;
+        }
+        // A single quick, silent retry absorbs one-off network blips
+        // instead of leaving a stale feed (and a visible error) for up to
+        // a full poll interval.
+        if (!isRetry) {
+          retryTimeoutRef.current = window.setTimeout(() => {
+            void softRefetchRef.current?.(true);
+          }, RETRY_DELAY_MS);
+          return;
+        }
+        setPollError(
+          err instanceof Error ? err.message : "Could not refresh feed.",
+        );
+      } finally {
+        inFlight.current = false;
       }
-      setCatalysts(next);
-      setLastFetchedAt(data.fetchedAt ?? new Date().toISOString());
-      setPollError(null);
-    } catch (err) {
-      setPollError(
-        err instanceof Error ? err.message : "Could not refresh feed.",
+    },
+    [timeWindow],
+  );
+
+  useEffect(() => {
+    softRefetchRef.current = softRefetch;
+  }, [softRefetch]);
+
+  const handleManualRefresh = useCallback(() => {
+    if (manualRefreshing) return;
+    setManualRefreshing(true);
+    // Keep the spin visible for a minimum stretch even when the request
+    // resolves near-instantly, so the click always reads as "doing
+    // something" instead of a flash too quick to notice.
+    const minSpinMs = 500;
+    const startedAt = Date.now();
+    void softRefetch().finally(() => {
+      const elapsed = Date.now() - startedAt;
+      window.setTimeout(
+        () => setManualRefreshing(false),
+        Math.max(0, minSpinMs - elapsed),
       );
-    } finally {
-      inFlight.current = false;
-    }
-  }, [timeWindow]);
+    });
+  }, [manualRefreshing, softRefetch]);
 
   useEffect(() => {
     const syncPresence = () => setPresence(readPresence());
@@ -266,6 +325,15 @@ export function LiveCatalystFeed({
       window.clearInterval(id);
     };
   }, [presence, softRefetch]);
+
+  useEffect(() => {
+    return () => {
+      abortRef.current?.abort();
+      if (retryTimeoutRef.current !== null) {
+        window.clearTimeout(retryTimeoutRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     const id = window.setInterval(() => setNowTick(Date.now()), 15_000);
@@ -461,10 +529,14 @@ export function LiveCatalystFeed({
           <button
             type="button"
             aria-label="Refresh"
-            onClick={() => void softRefetch()}
-            className="grid size-[34px] place-items-center rounded-lg border border-[var(--desk-border-strong)] text-[var(--desk-text-muted)] transition-colors hover:bg-white/[0.05] hover:text-[var(--desk-text)]"
+            aria-busy={manualRefreshing}
+            onClick={handleManualRefresh}
+            disabled={manualRefreshing}
+            className="btn-press grid size-[34px] place-items-center rounded-lg border border-[var(--desk-border-strong)] text-[var(--desk-text-muted)] transition-colors hover:bg-white/[0.05] hover:text-[var(--desk-text)] disabled:cursor-default disabled:opacity-70"
           >
-            <RefreshCw className="size-4" />
+            <RefreshCw
+              className={cn("size-4", manualRefreshing && "animate-spin")}
+            />
           </button>
         </div>
       </div>
@@ -670,9 +742,17 @@ function CatalystFeedList({
   onDismiss: (id: number) => void;
   onQuietAdd: (ticker: string | null) => void;
 }) {
+  const listRef = useRef<HTMLDivElement | null>(null);
+  // The feed's own scroll region (not `<main>` - it's sized to fit exactly,
+  // see app-shell.tsx) needs to be focusable + focused on mount so Page
+  // Up/Down/Home/End scroll it immediately, without requiring a prior click.
+  useAutoFocusScrollRegion(listRef);
+
   return (
     <div
-      className="flex min-h-0 flex-1 flex-col overflow-auto"
+      ref={listRef}
+      tabIndex={-1}
+      className="flex min-h-0 flex-1 flex-col overflow-auto outline-none"
       role="table"
       aria-label="News feed"
     >

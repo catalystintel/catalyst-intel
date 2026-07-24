@@ -2,6 +2,8 @@
 
 import { useEffect } from "react";
 
+import { classifyDbError } from "@/lib/errors/classify-db-error";
+
 export default function AppError({
   error,
   reset,
@@ -13,21 +15,24 @@ export default function AppError({
     console.error(error);
   }, [error]);
 
-  const looksLikeDb =
-    /local\.db|LIBSQL|Turso|Database is not configured|ConnectionFailed/i.test(
-      error.message,
-    );
+  const dbErrorKind = classifyDbError(error.message);
 
   return (
     <div className="flex flex-1 items-center justify-center px-4 py-16">
       <div className="w-full max-w-lg rounded-lg border border-border p-6 text-sm">
         <h1 className="text-base font-semibold tracking-tight">
-          {looksLikeDb ? "Database unavailable" : "Something went wrong"}
+          {dbErrorKind === "not-configured"
+            ? "Database not configured"
+            : dbErrorKind === "transient"
+              ? "Database temporarily unreachable"
+              : "Something went wrong"}
         </h1>
         <p className="mt-2 text-muted-foreground">
-          {looksLikeDb
+          {dbErrorKind === "not-configured"
             ? "This deployment needs a hosted Turso database. Set LIBSQL_URL and LIBSQL_AUTH_TOKEN in Vercel, migrate, and redeploy (see DEPLOYMENT.md)."
-            : error.message || "An unexpected error occurred."}
+            : dbErrorKind === "transient"
+              ? "This looks like a brief connection hiccup to the database, not a configuration problem. Please try again in a moment."
+              : error.message || "An unexpected error occurred."}
         </p>
         <button
           type="button"

@@ -253,6 +253,37 @@
   .btn-press:active:not(:disabled) {
     transform: translateY(1px);
   }
+
+  /* Instant click feedback on sidebar nav items - see useLinkStatus in
+     app-sidebar.tsx. Reserves space (always rendered) but stays invisible
+     until a navigation is actually pending, so a fast/prefetched nav never
+     flashes it. */
+  .nav-pending-hint {
+    opacity: 0;
+    visibility: hidden;
+  }
+
+  .nav-pending-hint-active {
+    visibility: visible;
+    animation:
+      nav-pending-fade-in 160ms ease forwards,
+      nav-pending-pulse 900ms ease-in-out 160ms infinite;
+    animation-delay: 90ms;
+  }
+
+  /* Route `loading.tsx` placeholders: a soft sheen sweeping left-to-right
+     signals "still loading" without the harsh flat-gray look of a static
+     skeleton, matching the dark trading-desk theme. */
+  .skeleton-shimmer {
+    background-image: linear-gradient(
+      100deg,
+      rgba(255, 255, 255, 0.05) 20%,
+      rgba(255, 255, 255, 0.12) 40%,
+      rgba(255, 255, 255, 0.05) 60%
+    );
+    background-size: 200% 100%;
+    animation: skeleton-shimmer 1.6s ease-in-out infinite;
+  }
 }
 
 @keyframes page-enter {
@@ -309,6 +340,27 @@
   }
 }
 
+@keyframes nav-pending-fade-in {
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes nav-pending-pulse {
+  50% {
+    opacity: 0.35;
+  }
+}
+
+@keyframes skeleton-shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .page-enter,
   .feed-row,
@@ -316,7 +368,9 @@
   .live-pulse,
   .landing-feed,
   .btn-press,
-  .drawer-panel {
+  .drawer-panel,
+  .skeleton-shimmer,
+  .nav-pending-hint-active {
     animation: none !important;
     transition: none !important;
   }

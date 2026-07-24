@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import Link, { useLinkStatus } from "next/link";
 import { PanelLeftClose } from "lucide-react";
 
 import { getPrimaryNav, type NavItem, type NavKey } from "@/lib/nav/nav-items";
@@ -187,6 +187,26 @@ function SidebarEntry({
     >
       <Icon className="size-[17px] shrink-0 opacity-90" />
       {!collapsed ? <span className="truncate">{item.label}</span> : null}
+      <NavPendingHint />
     </Link>
+  );
+}
+
+/**
+ * Fixed-size dot that fades in only once a click's navigation has been
+ * pending for a moment - confirms the click landed even on the rare
+ * destination that isn't fully prefetched yet, without adding layout shift
+ * or flashing on the common instant case (see `useLinkStatus` docs).
+ */
+function NavPendingHint() {
+  const { pending } = useLinkStatus();
+  return (
+    <span
+      aria-hidden
+      className={cn(
+        "nav-pending-hint ml-auto size-1.5 shrink-0 rounded-full bg-[var(--desk-live)]",
+        pending && "nav-pending-hint-active",
+      )}
+    />
   );
 }
