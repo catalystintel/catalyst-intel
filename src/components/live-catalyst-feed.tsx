@@ -65,7 +65,7 @@ import { cn } from "@/lib/utils";
 
 export type { FeedCatalyst };
 
-const ACTIVE_POLL_MS = 12_000;
+const ACTIVE_POLL_MS = 15_000;
 const BLURRED_POLL_MS = 90_000;
 const RETRY_DELAY_MS = 3_000;
 const DISMISS_STORAGE_KEY = "ci.dismissed-catalyst-ids";
