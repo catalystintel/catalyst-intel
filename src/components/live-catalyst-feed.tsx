@@ -30,6 +30,7 @@ import {
 import {
   titleLine,
   eventLabel as feedEventLabel,
+  matchesFeedSearchQuery,
   sourceDisplay,
 } from "@/lib/catalysts/feed-display";
 import {
@@ -561,7 +562,7 @@ export function LiveCatalystFeed({
     FEED_TIME_WINDOWS.find((w) => w.id === timeWindow)?.minutes ?? null;
 
   const filtered = useMemo(() => {
-    const q = tickerQuery.trim().toUpperCase();
+    const q = tickerQuery.trim();
     const impactFloor = minScoreForFeedImpactFloor(minImpact);
     return catalysts
       .filter((c) => {
@@ -575,7 +576,7 @@ export function LiveCatalystFeed({
           return false;
         }
         if (categoryFilter && c.eventCategory !== categoryFilter) return false;
-        if (q && !(c.ticker ?? "").toUpperCase().includes(q)) return false;
+        if (q && !matchesFeedSearchQuery(c, q)) return false;
         if (!isWithinWindow(c.timestamp, windowMinutes, nowTick)) return false;
         if (
           materialityFromScore(c.impactScore, c.eventCategory).score <
@@ -840,9 +841,9 @@ function FeedFilters({
         <Input
           value={tickerQuery}
           onChange={(e) => onTickerQuery(e.target.value)}
-          placeholder="Ticker…"
-          aria-label="Filter by ticker"
-          className="h-8 w-36 border-[var(--desk-border-strong)] bg-[var(--desk-overlay-soft)] font-mono text-xs tracking-wide uppercase md:text-xs"
+          placeholder="Ticker, company, title…"
+          aria-label="Search by ticker, company, or title"
+          className="h-8 w-52 border-[var(--desk-border-strong)] bg-[var(--desk-overlay-soft)] font-mono text-xs tracking-wide md:text-xs"
         />
         <div
           className="flex flex-wrap items-center gap-1"
