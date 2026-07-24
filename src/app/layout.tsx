@@ -1,21 +1,20 @@
 import type { Metadata, Viewport } from "next";
-import { DM_Sans, IBM_Plex_Mono } from "next/font/google";
+import { Inter, Roboto } from "next/font/google";
 
 import { PostHogProvider } from "@/components/posthog-provider";
 import { ThemeProvider } from "@/components/theme-provider";
 
 import "./globals.css";
 
-const dmSans = DM_Sans({
-  variable: "--font-dm-sans",
+const inter = Inter({
+  variable: "--font-inter",
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
 });
 
-const plexMono = IBM_Plex_Mono({
-  variable: "--font-plex-mono",
+const roboto = Roboto({
+  variable: "--font-roboto",
   subsets: ["latin"],
-  weight: ["400", "500"],
+  weight: ["400", "500", "700"],
 });
 
 export const metadata: Metadata = {
@@ -39,7 +38,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${dmSans.variable} ${plexMono.variable} h-full overflow-x-hidden antialiased`}
+      className={`${inter.variable} ${roboto.variable} h-full overflow-x-hidden antialiased`}
       suppressHydrationWarning
     >
       <body className="flex min-h-dvh flex-col overflow-x-hidden font-sans">
