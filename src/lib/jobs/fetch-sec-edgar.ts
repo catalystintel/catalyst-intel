@@ -127,6 +127,11 @@ function entryToNormalized(
   const ticker = parsedTitle
     ? (tickerByCik.get(parsedTitle.cik) ?? null)
     : null;
+  const tickerSource = parsedTitle
+    ? ticker
+      ? "sec-cik-map"
+      : "unresolved"
+    : null;
 
   const is8k = /^8-?K/i.test(formType);
   const formMeta = classifySecFormType(formType);
@@ -158,6 +163,7 @@ function entryToNormalized(
       formType,
     },
     ticker,
+    tickerSource,
     companyName,
     type: formType,
     title: `${companyName} \u2014 ${formType} filing`,

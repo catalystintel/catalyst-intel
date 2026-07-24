@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  formatEventTime,
   formatRelativeAge,
   formatTimeDate,
   isWithinWindow,
@@ -20,13 +21,19 @@ describe("formatRelativeAge", () => {
   });
 });
 
-describe("formatTimeDate", () => {
-  it("formats time · date for the feed TIME column", () => {
-    // Fixed UTC instant → en-US wall clock depends on runner TZ; assert structure.
-    const formatted = formatTimeDate("2026-07-20T14:23:00.000Z");
-    expect(formatted).toMatch(
-      /^\d{1,2}:\d{2} (AM|PM) · [A-Z][a-z]{2} \d{1,2}, 2026$/,
+describe("formatTimeDate / formatEventTime", () => {
+  it("formats event occurrence in ET (not DB insert time)", () => {
+    // 14:23 UTC on Jul 20 = 10:23 AM EDT
+    expect(formatTimeDate("2026-07-20T14:23:00.000Z")).toBe(
+      "10:23 AM ET · Jul 20, 2026",
     );
+    expect(formatEventTime("2026-07-20T14:23:00.000Z")).toBe(
+      "10:23 AM ET · Jul 20, 2026",
+    );
+  });
+
+  it("returns em dash for invalid ISO", () => {
+    expect(formatEventTime("not-a-date")).toBe("—");
   });
 });
 

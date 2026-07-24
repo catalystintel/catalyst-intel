@@ -1,5 +1,6 @@
 import type { AlertChannel, AlertRuleConditions } from "@/db/schema";
 import { classifySession, sessionMatches } from "@/lib/alerts/session";
+import { validateWebhookUrl } from "@/lib/alerts/webhook-url";
 
 export interface AlertCatalystPayload {
   id: number;
@@ -32,6 +33,7 @@ export interface DeliveryResult {
 function conditionsMatch(
   catalyst: AlertCatalystPayload,
   conditions: AlertRuleConditions,
+  watchlistTickers?: Set<string>,
 ): boolean {
   const cats = conditions.categories ?? [];
   if (cats.length > 0) {
@@ -48,6 +50,11 @@ function conditionsMatch(
 
   const filingSession = classifySession(catalyst.timestamp);
   if (!sessionMatches(filingSession, conditions.sessions)) return false;
+
+  if (conditions.watchlistOnly) {
+    const ticker = catalyst.ticker?.toUpperCase();
+    if (!ticker || !watchlistTickers?.has(ticker)) return false;
+  }
 
   return true;
 }
@@ -72,12 +79,19 @@ async function deliverWebhook(
   url: string,
   body: unknown,
 ): Promise<{ ok: boolean; detail: string }> {
+  const validated = validateWebhookUrl(url);
+  if (!validated.ok) {
+    return { ok: false, detail: validated.reason };
+  }
+
   try {
-    const res = await fetch(url, {
+    const res = await fetch(validated.url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
       signal: AbortSignal.timeout(8_000),
+      // Avoid open-redirect bounce to an internal host after hostname checks.
+      redirect: "error",
     });
     if (!res.ok) {
       return { ok: false, detail: `Webhook HTTP ${res.status}` };
@@ -159,11 +173,22 @@ export async function deliverAlertRules(options: {
   rules: DeliverableRule[];
   /** When true, skip condition matching (admin test fire). */
   force?: boolean;
+  /**
+   * Uppercase tickers on the rule owner's watchlist — required for
+   * `watchlistOnly` conditions to match. Omit = treat as empty watchlist.
+   */
+  watchlistTickers?: string[];
 }): Promise<DeliveryResult[]> {
   const results: DeliveryResult[] = [];
+  const watchlistSet = new Set(
+    (options.watchlistTickers ?? []).map((t) => t.toUpperCase()),
+  );
 
   for (const rule of options.rules) {
-    if (!options.force && !conditionsMatch(options.catalyst, rule.conditions)) {
+    if (
+      !options.force &&
+      !conditionsMatch(options.catalyst, rule.conditions, watchlistSet)
+    ) {
       results.push({
         ruleId: rule.id,
         channel: rule.channel,

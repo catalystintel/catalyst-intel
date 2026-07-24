@@ -6,6 +6,7 @@ import { Menu, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { AccountMenu } from "@/components/account-menu";
 import { AppSidebar } from "@/components/app-sidebar";
 import { LiveHeaderStatus } from "@/components/live-header-status";
+import { Toaster } from "@/components/ui/toaster";
 import { useAutoFocusScrollRegion } from "@/hooks/use-auto-focus-scroll-region";
 import type { NavKey } from "@/lib/nav/nav-items";
 
@@ -34,6 +35,7 @@ export function AppShell({ user, active, children }: AppShellProps) {
 
   return (
     <div className="flex h-dvh max-h-dvh min-h-0 flex-1 overflow-hidden overscroll-none bg-[var(--desk-app)]">
+      <Toaster />
       <aside className="hidden md:block">
         <div className="sticky top-0 h-full max-h-dvh">
           <AppSidebar
@@ -71,7 +73,7 @@ export function AppShell({ user, active, children }: AppShellProps) {
               type="button"
               aria-label="Open navigation"
               onClick={() => setMobileOpen(true)}
-              className="inline-flex size-11 items-center justify-center rounded-lg text-[var(--desk-text-muted)] transition-colors hover:bg-white/[0.05] hover:text-[var(--desk-text)] md:hidden"
+              className="inline-flex size-11 items-center justify-center rounded-lg text-[var(--desk-text-muted)] transition-colors hover:bg-[var(--desk-overlay-strong)] hover:text-[var(--desk-text)] md:hidden"
             >
               <Menu className="size-5" />
             </button>
@@ -79,7 +81,7 @@ export function AppShell({ user, active, children }: AppShellProps) {
               type="button"
               aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
               onClick={() => setCollapsed((prev) => !prev)}
-              className="hidden rounded-lg p-1.5 text-[var(--desk-text-muted)] transition-colors hover:bg-white/[0.05] hover:text-[var(--desk-text)] md:block"
+              className="hidden rounded-lg p-1.5 text-[var(--desk-text-muted)] transition-colors hover:bg-[var(--desk-overlay-strong)] hover:text-[var(--desk-text)] md:block"
             >
               {collapsed ? (
                 <PanelLeftOpen className="size-4" />

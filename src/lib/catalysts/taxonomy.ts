@@ -19,6 +19,7 @@ export type EventCategoryKey =
   | "clinical"
   | "macro"
   | "analyst"
+  | "cyber"
   | "news"
   | "other";
 
@@ -38,6 +39,7 @@ export const CATEGORY_LABELS: Record<EventCategoryKey, string> = {
   clinical: "Clinical",
   macro: "Economics / Macro",
   analyst: "Analyst Actions",
+  cyber: "Cybersecurity",
   news: "News",
   other: "Other",
 };
@@ -49,6 +51,7 @@ export const CATEGORY_LABELS: Record<EventCategoryKey, string> = {
 export const CATEGORY_PRIORITY: Record<EventCategoryKey, number> = {
   distress: 90,
   trading_halt: 88,
+  cyber: 87,
   earnings: 85,
   regulatory: 82,
   deals: 80,

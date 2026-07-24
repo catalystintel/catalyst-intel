@@ -29,6 +29,12 @@ export interface NavItem {
   href?: string;
   comingSoon?: boolean;
   adminOnly?: boolean;
+  /**
+   * One-line teaser shown on hover for `comingSoon` entries, so "Soon" reads
+   * as a preview of what's next rather than a dead end (see `SidebarEntry`'s
+   * `title` attribute in app-sidebar.tsx).
+   */
+  comingSoonHint?: string;
 }
 
 const PRIMARY_NAV: NavItem[] = [
@@ -38,15 +44,27 @@ const PRIMARY_NAV: NavItem[] = [
     icon: LayoutDashboard,
     href: "/dashboard",
   },
-  { key: "news", label: "News Feed", icon: Newspaper, comingSoon: true },
+  {
+    key: "news",
+    label: "News Feed",
+    icon: Newspaper,
+    comingSoon: true,
+    comingSoonHint: "A dedicated headline stream, separate from the tape.",
+  },
   { key: "alerts", label: "Alerts", icon: Bell, href: "/alerts" },
   { key: "watchlist", label: "Watchlists", icon: Star, href: "/watchlist" },
-  { key: "reports", label: "Reports", icon: Bookmark, comingSoon: true },
+  {
+    key: "reports",
+    label: "Reports",
+    icon: Bookmark,
+    comingSoon: true,
+    comingSoonHint: "Saved, shareable digests of catalysts you're tracking.",
+  },
   {
     key: "analytics",
     label: "Analytics",
     icon: ChartNoAxesCombined,
-    comingSoon: true,
+    href: "/analytics",
   },
   { key: "profile", label: "Settings", icon: Settings, href: "/profile" },
 ];

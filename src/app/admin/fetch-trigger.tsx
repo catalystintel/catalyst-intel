@@ -250,7 +250,7 @@ export function FetchTrigger() {
                 onClick={() => void handleFetchSource(source)}
                 disabled={loading || sourceLoading !== null}
                 variant="outline"
-                className="btn-press border-[var(--desk-border-strong)] bg-transparent font-mono text-xs text-[var(--desk-text)] hover:bg-white/[0.05]"
+                className="btn-press border-[var(--desk-border-strong)] bg-transparent font-mono text-xs text-[var(--desk-text)] hover:bg-[var(--desk-overlay-strong)]"
                 title={meta?.contributes}
               >
                 {sourceLoading === source
@@ -278,7 +278,7 @@ export function FetchTrigger() {
             onClick={handleNyseFetch}
             disabled={nyseLoading}
             variant="outline"
-            className="btn-press w-fit border-[var(--desk-border-strong)] bg-transparent text-[var(--desk-text)] hover:bg-white/[0.05]"
+            className="btn-press w-fit border-[var(--desk-border-strong)] bg-transparent text-[var(--desk-text)] hover:bg-[var(--desk-overlay-strong)]"
           >
             {nyseLoading ? "Fetching…" : "Fetch NYSE listings now"}
           </Button>
@@ -304,7 +304,7 @@ export function FetchTrigger() {
                 </dd>
               </dl>
             ) : (
-              <p className="max-w-lg rounded-md border border-[var(--desk-border-strong)] bg-white/[0.03] px-3 py-2 text-sm text-[var(--desk-text-muted)]">
+              <p className="max-w-lg rounded-md border border-[var(--desk-border-strong)] bg-[var(--desk-overlay-soft)] px-3 py-2 text-sm text-[var(--desk-text-muted)]">
                 {nyseResult.message ??
                   "FINNHUB_API_KEY is not set. Add it to enable NYSE listings."}
               </p>

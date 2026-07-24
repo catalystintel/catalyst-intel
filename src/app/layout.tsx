@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { DM_Sans, IBM_Plex_Mono } from "next/font/google";
 
 import { PostHogProvider } from "@/components/posthog-provider";
+import { ThemeProvider } from "@/components/theme-provider";
 
 import "./globals.css";
 
@@ -38,10 +39,18 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`dark ${dmSans.variable} ${plexMono.variable} h-full overflow-x-hidden antialiased`}
+      className={`${dmSans.variable} ${plexMono.variable} h-full overflow-x-hidden antialiased`}
+      suppressHydrationWarning
     >
       <body className="flex min-h-dvh flex-col overflow-x-hidden font-sans">
-        <PostHogProvider>{children}</PostHogProvider>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="light"
+          enableSystem={false}
+          storageKey="ci.theme"
+        >
+          <PostHogProvider>{children}</PostHogProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

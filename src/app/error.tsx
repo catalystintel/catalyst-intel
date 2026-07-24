@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect } from "react";
+import posthog from "posthog-js";
 
 import { classifyDbError } from "@/lib/errors/classify-db-error";
+import { isPostHogConfigured } from "@/lib/posthog/env";
 
 export default function AppError({
   error,
@@ -13,6 +15,13 @@ export default function AppError({
 }) {
   useEffect(() => {
     console.error(error);
+    if (isPostHogConfigured()) {
+      try {
+        posthog.captureException(error);
+      } catch {
+        // Observability must never break the error UI.
+      }
+    }
   }, [error]);
 
   const dbErrorKind = classifyDbError(error.message);
@@ -32,7 +41,7 @@ export default function AppError({
             ? "This deployment needs a hosted Turso database. Set LIBSQL_URL and LIBSQL_AUTH_TOKEN in Vercel, migrate, and redeploy (see DEPLOYMENT.md)."
             : dbErrorKind === "transient"
               ? "This looks like a brief connection hiccup to the database, not a configuration problem. Please try again in a moment."
-              : error.message || "An unexpected error occurred."}
+              : "An unexpected error occurred. Try again, and if it keeps happening check Vercel logs / PostHog exceptions."}
         </p>
         <button
           type="button"

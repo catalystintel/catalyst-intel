@@ -2,6 +2,7 @@ import { type NextRequest } from "next/server";
 
 import { authorizeAdminFetch, jsonWithAuth } from "@/lib/auth/admin-fetch";
 import { fetchAllCatalystSources } from "@/lib/jobs/fetch-all-sources";
+import { recordIngestionRun } from "@/lib/jobs/record-ingestion-run";
 import {
   getPostHogClient,
   isPostHogServerConfigured,
@@ -17,7 +18,15 @@ export async function POST(request: NextRequest) {
   const auth = await authorizeAdminFetch(request, "admin-fetch-all");
   if (!auth.ok) return auth.response;
 
+  const startedAt = Date.now();
   const result = await fetchAllCatalystSources({ includeLaterStubs: false });
+  const durationMs = Date.now() - startedAt;
+
+  await recordIngestionRun({
+    result,
+    trigger: auth.isCron ? "cron" : "admin",
+    durationMs,
+  });
 
   if (isPostHogServerConfigured()) {
     const posthog = getPostHogClient();
@@ -28,6 +37,7 @@ export async function POST(request: NextRequest) {
         ...result.totals,
         source_count: result.sources.length,
         trigger: auth.isCron ? "cron" : "admin_ui",
+        duration_ms: durationMs,
       },
     });
     await posthog.flush();

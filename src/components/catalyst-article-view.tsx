@@ -103,7 +103,7 @@ export function CatalystArticleView({
               {relatedTickers.map((t) => (
                 <span
                   key={t}
-                  className="rounded-sm border border-[var(--desk-border-strong)] bg-white/[0.03] px-1.5 py-0.5 font-mono text-[0.7rem] tracking-wide text-[var(--desk-text-secondary)] transition-colors hover:border-white/25 hover:text-[var(--desk-text)]"
+                  className="rounded-sm border border-[var(--desk-border-strong)] bg-[var(--desk-overlay-soft)] px-1.5 py-0.5 font-mono text-[0.7rem] tracking-wide text-[var(--desk-text-secondary)] transition-colors hover:border-[var(--desk-text-dim)] hover:text-[var(--desk-text)]"
                   title={`Related · ${t}`}
                 >
                   {t}
@@ -132,7 +132,7 @@ export function CatalystArticleView({
 
         {whyMoving ? (
           <div
-            className="rounded-sm border border-[var(--desk-border-strong)] bg-white/[0.03] px-3 py-2.5 transition-colors hover:border-white/20"
+            className="rounded-sm border border-[var(--desk-border-strong)] bg-[var(--desk-overlay-soft)] px-3 py-2.5 transition-colors hover:border-[var(--desk-text-dim)]"
             role="note"
             aria-label="Why it's moving"
           >
@@ -155,7 +155,7 @@ export function CatalystArticleView({
           />
           <MetaCell label="Type" value={catalyst.type || "—"} />
           <MetaCell
-            label="Time"
+            label="Event time"
             value={formatTimeDate(catalyst.timestamp)}
             tabular
           />
@@ -213,7 +213,7 @@ export function CatalystArticleView({
               href={catalyst.sourceUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 rounded-sm border border-[var(--desk-border-strong)] bg-white/[0.03] px-3 py-1.5 font-mono text-xs tracking-wide text-[var(--desk-text-secondary)] uppercase transition-colors hover:border-white/30 hover:text-[var(--desk-text)]"
+              className="inline-flex items-center gap-1.5 rounded-sm border border-[var(--desk-border-strong)] bg-[var(--desk-overlay-soft)] px-3 py-1.5 font-mono text-xs tracking-wide text-[var(--desk-text-secondary)] uppercase transition-colors hover:border-[var(--desk-text-dim)] hover:text-[var(--desk-text)]"
             >
               <ExternalLink className="size-3.5" />
               {originalLabel}
@@ -457,7 +457,7 @@ export function CatalystArticleView({
         {body ? (
           <div
             className={cn(
-              "rounded-sm border border-[var(--desk-border)] bg-white/[0.02] px-4 py-4 text-[0.92rem] leading-relaxed whitespace-pre-wrap text-[var(--desk-text-secondary)]",
+              "rounded-sm border border-[var(--desk-border)] bg-[var(--desk-overlay-soft)] px-4 py-4 text-[0.92rem] leading-relaxed whitespace-pre-wrap text-[var(--desk-text-secondary)]",
             )}
           >
             <HighlightedText text={body} />
@@ -541,7 +541,7 @@ function MetaCell({
 
 function DetailCardPanel({ card }: { card: ArticleDetailCard }) {
   return (
-    <div className="rounded-sm border border-[var(--desk-border)] bg-white/[0.02] px-4 py-4 transition-colors hover:border-white/15">
+    <div className="rounded-sm border border-[var(--desk-border)] bg-[var(--desk-overlay-soft)] px-4 py-4 transition-colors hover:border-[var(--desk-text-dim)]">
       <h3 className="font-mono text-[0.7rem] tracking-[0.12em] text-[var(--desk-text)] uppercase">
         {card.title}
       </h3>

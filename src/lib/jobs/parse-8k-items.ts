@@ -44,6 +44,7 @@ const ITEM_CATALOG: Record<string, ItemMeta> = {
   "1.02": { label: "Agreement terminated", category: "deals" },
   "1.03": { label: "Bankruptcy / receivership", category: "distress" },
   "1.04": { label: "Mine safety", category: "other" },
+  "1.05": { label: "Material cybersecurity incident", category: "cyber" },
   "2.01": { label: "Acquisition / disposition closed", category: "deals" },
   "2.02": { label: "Earnings / results", category: "earnings" },
   "2.03": { label: "New financial obligation", category: "capital" },

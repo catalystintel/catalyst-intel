@@ -2,12 +2,15 @@ import { eq } from "drizzle-orm";
 
 import { db } from "@/db/client";
 import { catalysts, companies, rawSources } from "@/db/schema";
+import type { SentimentLean, TickerSource } from "@/db/schema";
 import { ensureIngestSummary } from "@/lib/catalysts/article-content";
-import { scoreFromCategory } from "@/lib/catalysts/materiality";
+import { computeMateriality } from "@/lib/catalysts/materiality";
+import { evaluateCatalystQuality } from "@/lib/catalysts/quality-gate";
 import {
   isEventCategoryKey,
   type EventCategoryKey,
 } from "@/lib/catalysts/taxonomy";
+import { classifySession } from "@/lib/alerts/session";
 import type { ParsedItem } from "@/lib/jobs/parse-8k-items";
 
 import { purgeStaleCatalysts } from "./data-retention";
@@ -35,6 +38,10 @@ export interface NormalizedCatalyst {
   confidence?: number | null;
   tags?: string[] | null;
   historicalImpact?: unknown | null;
+  /** How `ticker` was resolved — see ticker-resolver.ts. Null = not applicable / vendor-native. */
+  tickerSource?: TickerSource | null;
+  sentiment?: SentimentLean | null;
+  sentimentReasoning?: string | null;
 }
 
 export interface IngestPipelineResult {
@@ -59,19 +66,21 @@ function normalizeTicker(ticker: string | null | undefined): string | null {
   return t || null;
 }
 
-async function resolveCompanyId(
+async function resolveCompany(
   ticker: string | null,
   companyName: string | null | undefined,
-): Promise<number | null> {
-  if (!ticker) return null;
+): Promise<{ id: number | null; marketCapMillions: number | null }> {
+  if (!ticker) return { id: null, marketCapMillions: null };
 
   const existing = await db
-    .select({ id: companies.id })
+    .select({ id: companies.id, marketCap: companies.marketCap })
     .from(companies)
     .where(eq(companies.ticker, ticker))
     .get();
 
-  if (existing) return existing.id;
+  if (existing) {
+    return { id: existing.id, marketCapMillions: existing.marketCap };
+  }
 
   const name = companyName?.trim() || ticker;
   const inserted = await db
@@ -79,7 +88,7 @@ async function resolveCompanyId(
     .values({ name, ticker })
     .returning({ id: companies.id })
     .get();
-  return inserted.id;
+  return { id: inserted.id, marketCapMillions: null };
 }
 
 /**
@@ -104,6 +113,17 @@ export async function ingestNormalizedCatalysts(
       const category = isEventCategoryKey(item.eventCategory)
         ? item.eventCategory
         : "other";
+
+      // Quality-first: drop firehose / boilerplate / unresolved orphans before
+      // we burn a raw_sources row. Prefer less gold over spam volume.
+      const gated = evaluateCatalystQuality({
+        ...item,
+        eventCategory: category,
+      });
+      if (gated.decision === "drop") {
+        skipped++;
+        continue;
+      }
 
       const alreadyStored = await db
         .select({ id: rawSources.id })
@@ -133,11 +153,29 @@ export async function ingestNormalizedCatalysts(
         .returning({ id: rawSources.id })
         .get();
 
-      const companyId = await resolveCompanyId(ticker, companyName);
-      const impactScore =
-        typeof item.impactScore === "number"
-          ? item.impactScore
-          : scoreFromCategory(category);
+      const { id: companyId, marketCapMillions } = await resolveCompany(
+        ticker,
+        companyName,
+      );
+
+      let impactScore: number;
+      let materialityReasons: string[] | null;
+      if (typeof item.impactScore === "number") {
+        impactScore = item.impactScore;
+        materialityReasons = null;
+      } else {
+        const session = classifySession(timestamp);
+        const computed = computeMateriality({
+          eventCategory: category,
+          itemCodes: item.itemCodes,
+          marketCapMillions,
+          session,
+          sentiment: item.sentiment,
+        });
+        impactScore = computed.score;
+        materialityReasons = computed.reasons;
+      }
+
       const summary = ensureIngestSummary({
         summary: item.summary,
         title: item.title,
@@ -171,6 +209,10 @@ export async function ingestNormalizedCatalysts(
           confidence: item.confidence ?? null,
           tags: item.tags ?? null,
           historicalImpact: item.historicalImpact ?? null,
+          tickerSource: item.tickerSource ?? null,
+          sentiment: item.sentiment ?? null,
+          sentimentReasoning: item.sentimentReasoning ?? null,
+          materialityReasons,
         })
         .run();
 

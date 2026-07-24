@@ -38,8 +38,9 @@ function parseSinceParam(raw: string | null): string | null {
  * Rate-limited per IP (loose) so focus-aware polling stays safe.
  *
  * Query params:
- * - `window` — recent | 1h | 4h | 12h | 24h | all (filters by article `timestamp`)
- * - `since` — ISO lower bound on `timestamp` (overrides `window` when valid)
+ * - `window` — recent | 1h | 4h | 12h | 24h | all (filters by event
+ *   occurrence `catalysts.timestamp`, never `createdAt`)
+ * - `since` — ISO lower bound on event `timestamp` (overrides `window` when valid)
  * - `limit` — page size (default depends on window; max 500)
  *
  * Also acts as a self-healing ETL backstop: GitHub Actions cron is

@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 28 28" width="28" height="28">
+  <title>Catalyst Intel</title>
+  <defs>
+    <linearGradient id="tile" x1="15%" y1="8%" x2="85%" y2="92%">
+      <stop offset="0%" stop-color="#3a3a3a" />
+      <stop offset="100%" stop-color="#141414" />
+    </linearGradient>
+  </defs>
+  <rect x="0.5" y="0.5" width="27" height="27" rx="6.5" fill="url(#tile)" stroke="rgba(255,255,255,0.14)" />
+  <g transform="translate(17,14) skewX(-12) translate(-17,-14)">
+    <polyline points="22,7 22,21 12,21" fill="none" stroke="#f0c14b" stroke-width="2.5" stroke-linejoin="miter" stroke-linecap="butt" />
+  </g>
+</svg>

@@ -1,7 +1,12 @@
 import { and, desc, eq, isNull, isNotNull, lt } from "drizzle-orm";
 
 import { db } from "@/db/client";
-import { catalysts } from "@/db/schema";
+import {
+  catalysts,
+  type SentimentLean,
+  type SessionContext,
+} from "@/db/schema";
+import { classifySession } from "@/lib/alerts/session";
 import { categorizeNewsHeadline } from "@/lib/catalysts/news-category";
 import {
   ingestNormalizedCatalysts,
@@ -17,6 +22,12 @@ const BASE = "https://api.polygon.io";
 /** Free-tier Massive/Polygon REST budget is ~5 req/min; leave headroom for news. */
 const DEFAULT_PRICE_ENRICH_LIMIT = 4;
 
+interface PolygonNewsInsight {
+  ticker?: string;
+  sentiment?: string;
+  sentiment_reasoning?: string;
+}
+
 interface PolygonNewsArticle {
   id?: string;
   title?: string;
@@ -26,7 +37,7 @@ interface PolygonNewsArticle {
   description?: string;
   tickers?: string[];
   publisher?: { name?: string };
-  insights?: unknown;
+  insights?: PolygonNewsInsight[];
 }
 
 interface AggBar {
@@ -129,6 +140,35 @@ function isBenzingaPublisher(name: string): boolean {
   return /benzinga/i.test(name);
 }
 
+const SENTIMENT_MAP: Record<string, SentimentLean> = {
+  positive: "bullish",
+  negative: "bearish",
+  neutral: "neutral",
+};
+
+/**
+ * Polygon news `insights[]` is per-ticker sentiment the vendor already
+ * computed but this app previously stored in rawContent and never surfaced.
+ * Prefers the insight matching our resolved ticker; falls back to the first.
+ */
+export function extractSentiment(
+  insights: PolygonNewsInsight[] | undefined,
+  ticker: string | null,
+): { sentiment: SentimentLean; reasoning: string | null } | null {
+  if (!insights?.length) return null;
+
+  const match =
+    (ticker &&
+      insights.find((i) => i.ticker?.trim().toUpperCase() === ticker)) ||
+    insights[0];
+  if (!match?.sentiment) return null;
+
+  const sentiment = SENTIMENT_MAP[match.sentiment.trim().toLowerCase()];
+  if (!sentiment) return null;
+
+  return { sentiment, reasoning: match.sentiment_reasoning?.trim() || null };
+}
+
 function newsToNormalized(
   article: PolygonNewsArticle,
 ): NormalizedCatalyst | null {
@@ -146,6 +186,7 @@ function newsToNormalized(
     ? new Date(article.published_utc).toISOString()
     : new Date().toISOString();
   const classified = categorizeNewsHeadline(title);
+  const sentiment = extractSentiment(article.insights, ticker);
 
   return {
     provider: "polygon",
@@ -166,6 +207,8 @@ function newsToNormalized(
     timestamp,
     summary: article.description?.trim() || null,
     confidence: wire ? 70 : 60,
+    sentiment: sentiment?.sentiment ?? null,
+    sentimentReasoning: sentiment?.reasoning ?? null,
     tags: [
       "polygon",
       ...(wire ? (["benzinga", "wire"] as const) : (["news"] as const)),
@@ -196,7 +239,9 @@ export async function fetchPolygonNews(): Promise<SourceFetchResult> {
 
   const normalized = (payload.results ?? [])
     .map(newsToNormalized)
-    .filter((n): n is NormalizedCatalyst => n !== null);
+    .filter((n): n is NormalizedCatalyst => n !== null)
+    // Quality-first: drop generic news before ingest; gate also enforces this.
+    .filter((n) => n.eventCategory !== "news");
 
   const result = await ingestNormalizedCatalysts(normalized, { purge: false });
   return toSourceResult("polygon-news", result);
@@ -210,10 +255,14 @@ function pctChange(open: number, close: number): number {
 async function markImpact(
   id: number,
   impact: Record<string, unknown>,
+  sessionContext?: SessionContext | null,
 ): Promise<void> {
   await db
     .update(catalysts)
-    .set({ historicalImpact: impact })
+    .set({
+      historicalImpact: impact,
+      ...(sessionContext !== undefined ? { sessionContext } : {}),
+    })
     .where(eq(catalysts.id, id))
     .run();
 }
@@ -251,6 +300,8 @@ export async function enrichHistoricalImpact(options?: {
       ticker: catalysts.ticker,
       timestamp: catalysts.timestamp,
       historicalImpact: catalysts.historicalImpact,
+      impactScore: catalysts.impactScore,
+      materialityReasons: catalysts.materialityReasons,
     })
     .from(catalysts)
     .where(
@@ -291,16 +342,52 @@ export async function enrichHistoricalImpact(options?: {
         continue;
       }
 
-      await markImpact(row.id, {
+      const changePercent = Number(pctChange(bar.o, bar.c).toFixed(3));
+      const session = classifySession(row.timestamp);
+      const sessionContext: SessionContext = {
+        session,
         provider: "polygon",
         date: day,
-        open: bar.o,
-        close: bar.c,
-        high: bar.h ?? null,
-        low: bar.l ?? null,
-        volume: bar.v ?? null,
-        pctChange: Number(pctChange(bar.o, bar.c).toFixed(3)),
-      });
+        price: bar.c,
+        changePercent,
+        asOf: new Date().toISOString(),
+      };
+
+      await markImpact(
+        row.id,
+        {
+          provider: "polygon",
+          date: day,
+          open: bar.o,
+          close: bar.c,
+          high: bar.h ?? null,
+          low: bar.l ?? null,
+          volume: bar.v ?? null,
+          pctChange: changePercent,
+        },
+        sessionContext,
+      );
+
+      // A large already-realized move is itself new materiality signal —
+      // bump the score post-hoc rather than leaving it stuck at ingest-time.
+      if (Math.abs(changePercent) >= 5 && typeof row.impactScore === "number") {
+        const bump = Math.abs(changePercent) >= 10 ? 15 : 10;
+        const reasons = Array.isArray(row.materialityReasons)
+          ? [...(row.materialityReasons as string[])]
+          : [];
+        reasons.push(
+          `Already moved ${changePercent.toFixed(1)}% since publish (+${bump})`,
+        );
+        await db
+          .update(catalysts)
+          .set({
+            impactScore: Math.min(100, row.impactScore + bump),
+            materialityReasons: reasons,
+          })
+          .where(eq(catalysts.id, row.id))
+          .run();
+      }
+
       inserted++;
     } catch (error) {
       if (isPolygonRateLimitError(error)) {

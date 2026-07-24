@@ -4,6 +4,7 @@ import {
   type EventCategoryKey,
   type ParsedItem,
 } from "@/lib/jobs/parse-8k-items";
+import { normalizeMaterialityReasons } from "@/lib/catalysts/materiality-reasons";
 
 /** A single catalyst as consumed by the Live feed UI. */
 export interface FeedCatalyst {
@@ -16,12 +17,18 @@ export interface FeedCatalyst {
   eventCategory: EventCategoryKey | null;
   subcategory: string | null;
   items: ParsedItem[];
+  /**
+   * When the event occurred / was filed / published / is scheduled
+   * (`catalysts.timestamp`). Never DB `createdAt` — that is ingest metadata.
+   */
   timestamp: string;
   summary: string | null;
   impactScore: number | null;
   confidence: number | null;
   tags: string[];
   historicalImpact: unknown | null;
+  /** Plain-language reasons behind impactScore (rule-based). */
+  materialityReasons: string[];
   sourceUrl: string | null;
   /** raw_sources.provider, e.g. "sec-edgar". */
   sourceProvider: string | null;
@@ -46,6 +53,7 @@ export interface RawCatalystRow {
   confidence?: number | null;
   tags?: unknown;
   historicalImpact?: unknown;
+  materialityReasons?: unknown;
   sourceUrl: string | null;
   sourceProvider?: string | null;
   sector?: string | null;
@@ -94,6 +102,7 @@ export function toFeedCatalyst(row: RawCatalystRow): FeedCatalyst {
         : null,
     tags: normalizeTags(row.tags),
     historicalImpact: row.historicalImpact ?? null,
+    materialityReasons: normalizeMaterialityReasons(row.materialityReasons),
     sourceUrl: row.sourceUrl,
     sourceProvider: row.sourceProvider ?? null,
     sector: row.sector ?? null,

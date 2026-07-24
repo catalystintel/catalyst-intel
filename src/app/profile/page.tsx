@@ -5,6 +5,7 @@ import { AppShell } from "@/components/app-shell";
 import { DatabaseSetupNotice } from "@/components/database-setup-notice";
 import { PageEnter } from "@/components/page-enter";
 import { ProfileNameForm } from "@/components/profile-name-form";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { isLibsqlConfigured } from "@/db/env";
 import { logout, signOutEverywhere } from "@/app/login/actions";
@@ -84,7 +85,7 @@ export default async function ProfilePage() {
                 {user.email}
               </p>
             </div>
-            <span className="ml-auto rounded-sm border border-[var(--desk-border-strong)] bg-white/[0.03] px-2 py-1 font-mono text-[0.6rem] tracking-[0.12em] text-[var(--desk-text-dim)] uppercase">
+            <span className="ml-auto rounded-sm border border-[var(--desk-border-strong)] bg-[var(--desk-overlay-soft)] px-2 py-1 font-mono text-[0.6rem] tracking-[0.12em] text-[var(--desk-text-dim)] uppercase">
               {user.isAdmin ? "Admin" : "Member"} · {user.subscription}
             </span>
           </div>
@@ -92,6 +93,18 @@ export default async function ProfilePage() {
           <div className="border-t border-[var(--desk-border)] pt-5">
             <ProfileNameForm currentName={user.displayName} />
           </div>
+        </section>
+
+        <section className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-[var(--desk-border)] bg-[var(--desk-panel)] p-5">
+          <div>
+            <h2 className="text-sm font-semibold text-[var(--desk-text)]">
+              Appearance
+            </h2>
+            <p className="mt-1 text-sm text-[var(--desk-text-muted)]">
+              Light is the default. Your choice is saved on this device.
+            </p>
+          </div>
+          <ThemeToggle />
         </section>
 
         <section className="rounded-xl border border-[var(--desk-border)] bg-[var(--desk-panel)] p-5">

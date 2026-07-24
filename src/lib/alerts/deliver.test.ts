@@ -36,20 +36,40 @@ describe("deliverAlertRules", () => {
     expect(results[0].detail.toLowerCase()).toContain("coming soon");
   });
 
-  it("skips when conditions do not match", async () => {
+  it("skips when watchlistOnly and ticker not on watchlist", async () => {
     const results = await deliverAlertRules({
       catalyst,
+      watchlistTickers: ["AAPL"],
       rules: [
         {
-          id: 2,
-          name: "Distress only",
+          id: 3,
+          name: "Watchlist bombs",
           channel: "webhook",
           webhookUrl: "https://example.com/hook",
           emailTo: null,
-          conditions: { categories: ["distress"] },
+          conditions: { watchlistOnly: true, minImpact: 70 },
         },
       ],
     });
     expect(results[0].skipped).toBe(true);
+  });
+
+  it("rejects private webhook URLs (SSRF guard)", async () => {
+    const results = await deliverAlertRules({
+      catalyst,
+      force: true,
+      rules: [
+        {
+          id: 4,
+          name: "Bad hook",
+          channel: "webhook",
+          webhookUrl: "https://127.0.0.1/hook",
+          emailTo: null,
+          conditions: {},
+        },
+      ],
+    });
+    expect(results[0].ok).toBe(false);
+    expect(results[0].detail.toLowerCase()).toMatch(/private|local|metadata/);
   });
 });

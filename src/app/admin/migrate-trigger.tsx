@@ -42,7 +42,7 @@ export function MigrateTrigger() {
         onClick={handleMigrate}
         disabled={loading}
         variant="outline"
-        className="btn-press w-fit border-[var(--desk-border-strong)] bg-transparent text-[var(--desk-text)] hover:bg-white/[0.05]"
+        className="btn-press w-fit border-[var(--desk-border-strong)] bg-transparent text-[var(--desk-text)] hover:bg-[var(--desk-overlay-strong)]"
       >
         {loading ? "Migrating…" : "Run pending migrations"}
       </Button>

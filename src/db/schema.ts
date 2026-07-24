@@ -24,7 +24,13 @@ export const companies = sqliteTable("companies", {
   name: text("name").notNull(),
   ticker: text("ticker").unique(),
   sector: text("sector"),
+  // Millions of USD; from vendor profile enrichment (e.g. Finnhub profile2).
   marketCap: integer("market_cap"),
+  // Primary listing venue, e.g. "NASDAQ" / "NYSE" (vendor profile enrichment).
+  exchange: text("exchange"),
+  logoUrl: text("logo_url"),
+  // Last time sector/marketCap/exchange/logoUrl were refreshed from a vendor.
+  enrichedAt: text("enriched_at"),
   createdAt: text("created_at")
     .notNull()
     .default(sql`(current_timestamp)`),
@@ -42,6 +48,39 @@ export const rawSources = sqliteTable("raw_sources", {
     .notNull()
     .default(sql`(current_timestamp)`),
 });
+
+export type AlertSession = "AH" | "PM" | "RTH" | "any";
+
+export const TICKER_SOURCE_VALUES = [
+  "vendor",
+  "sec-cik-map",
+  "sec-name-exact",
+  "sec-name-fuzzy",
+  "finnhub-search",
+  "unresolved",
+] as const;
+export type TickerSource = (typeof TICKER_SOURCE_VALUES)[number];
+
+export const SENTIMENT_VALUES = ["bullish", "bearish", "neutral"] as const;
+export type SentimentLean = (typeof SENTIMENT_VALUES)[number];
+
+export const AI_LEAN_VALUES = [
+  "bullish",
+  "bearish",
+  "neutral",
+  "uncertain",
+] as const;
+export type AiLean = (typeof AI_LEAN_VALUES)[number];
+
+/** Session-time price snapshot captured alongside historicalImpact enrichment. */
+export interface SessionContext {
+  session: AlertSession;
+  provider: "polygon";
+  date: string;
+  price: number | null;
+  changePercent: number | null;
+  asOf: string;
+}
 
 export const catalysts = sqliteTable("catalysts", {
   id: integer("id").primaryKey({ autoIncrement: true }),
@@ -65,7 +104,7 @@ export const catalysts = sqliteTable("catalysts", {
     .references(() => rawSources.id),
   // Filled in by the later AI processing phase - null until then.
   summary: text("summary"),
-  // Rule-based materiality (0–100) until AI scoring; see materiality.ts.
+  // Rule-based materiality (0–100); see materiality.ts computeMateriality.
   impactScore: integer("impact_score"),
   // Ingest confidence 0–100 (feed quality / parser certainty).
   confidence: integer("confidence"),
@@ -73,6 +112,40 @@ export const catalysts = sqliteTable("catalysts", {
   tags: text("tags", { mode: "json" }),
   // Optional price-move enrichment from Polygon (or notes as JSON/text).
   historicalImpact: text("historical_impact", { mode: "json" }),
+  // How `ticker` was resolved — explainability for entity resolution (see ticker-resolver.ts).
+  tickerSource: text("ticker_source", { enum: TICKER_SOURCE_VALUES }),
+  // Directional lean from vendor-provided sentiment (e.g. Polygon news insights).
+  sentiment: text("sentiment", { enum: SENTIMENT_VALUES }),
+  sentimentReasoning: text("sentiment_reasoning"),
+  // Plain-language reasons behind impactScore v2 (category, item, liquidity, session, etc.).
+  materialityReasons: text("materiality_reasons", { mode: "json" }),
+  // Session-time price/% snapshot; see SessionContext.
+  sessionContext: text("session_context", { mode: "json" }),
+  // Grounded LLM triage (Groq) — 3 short bullets, never inventing facts. Null until triaged.
+  aiBullets: text("ai_bullets", { mode: "json" }),
+  aiLean: text("ai_lean", { enum: AI_LEAN_VALUES }),
+  aiUncertain: integer("ai_uncertain", { mode: "boolean" }),
+  // Cross-source event merge (same ticker, near-simultaneous) — see cluster-events.ts.
+  clusterId: integer("cluster_id").references(() => eventClusters.id),
+  createdAt: text("created_at")
+    .notNull()
+    .default(sql`(current_timestamp)`),
+});
+
+/**
+ * Groups catalysts from different sources/tickers that fire within a short
+ * window (e.g. halt + 8-K + wire on the same name) into one decision object.
+ * Only materialized when 2+ catalysts actually merge — see cluster-events.ts.
+ */
+export const eventClusters = sqliteTable("event_clusters", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  ticker: text("ticker").notNull(),
+  category: text("category"),
+  windowStart: text("window_start").notNull(),
+  windowEnd: text("window_end").notNull(),
+  memberCount: integer("member_count").notNull().default(1),
+  // Highest-materiality member; the row the UI should render as the headline.
+  primaryCatalystId: integer("primary_catalyst_id"),
   createdAt: text("created_at")
     .notNull()
     .default(sql`(current_timestamp)`),
@@ -112,8 +185,6 @@ export const playbookSettings = sqliteTable("playbook_settings", {
 
 export type AlertChannel = "email" | "webhook" | "push";
 
-export type AlertSession = "AH" | "PM" | "RTH" | "any";
-
 export interface AlertRuleConditions {
   /** Empty / omitted = any category. */
   categories?: string[];
@@ -121,7 +192,26 @@ export interface AlertRuleConditions {
   minImpact?: number;
   /** Session filter for AH/PM bombs; default any. */
   sessions?: AlertSession[];
+  /** When true, only fire for catalysts whose ticker is on the user's watchlist. */
+  watchlistOnly?: boolean;
 }
+
+/**
+ * Per-user tape dismissals (JTBD Act/Dismiss). Survives device changes —
+ * localStorage was only a stopgap until this table shipped.
+ */
+export const dismissedCatalysts = sqliteTable("dismissed_catalysts", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: integer("user_id")
+    .notNull()
+    .references(() => users.id),
+  catalystId: integer("catalyst_id")
+    .notNull()
+    .references(() => catalysts.id),
+  dismissedAt: text("dismissed_at")
+    .notNull()
+    .default(sql`(current_timestamp)`),
+});
 
 /** User-defined delivery rules (email / webhook MVP; push stubbed). */
 export const alertRules = sqliteTable("alert_rules", {
@@ -135,6 +225,50 @@ export const alertRules = sqliteTable("alert_rules", {
   webhookUrl: text("webhook_url"),
   emailTo: text("email_to"),
   conditions: text("conditions", { mode: "json" }).notNull(),
+  createdAt: text("created_at")
+    .notNull()
+    .default(sql`(current_timestamp)`),
+});
+
+/**
+ * One row per multi-source `/api/admin/fetch/all` orchestration.
+ * Written after each cron / admin trigger so ops can audit cadence and results.
+ */
+export const ingestionRuns = sqliteTable("ingestion_runs", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  ranAt: text("ran_at").notNull(),
+  /** Who triggered the orchestrator. */
+  trigger: text("trigger", { enum: ["cron", "admin"] }).notNull(),
+  /** Aggregate outcome derived from per-source results. */
+  status: text("status", { enum: ["ok", "partial", "failed"] }).notNull(),
+  fetched: integer("fetched").notNull().default(0),
+  inserted: integer("inserted").notNull().default(0),
+  skipped: integer("skipped").notNull().default(0),
+  errors: integer("errors").notNull().default(0),
+  durationMs: integer("duration_ms").notNull().default(0),
+  /** Compact per-source results for drill-down in Admin. */
+  sourcesJson: text("sources_json", { mode: "json" }).notNull(),
+  createdAt: text("created_at")
+    .notNull()
+    .default(sql`(current_timestamp)`),
+});
+
+/**
+ * Audit trail + dedup guard for auto-fired alerts (one row per rule×catalyst
+ * delivery attempt). Lets the ingest pipeline evaluate rules on every fetch
+ * without re-notifying the same catalyst twice — see alerts/auto-fire.ts.
+ */
+export const alertDeliveries = sqliteTable("alert_deliveries", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  alertRuleId: integer("alert_rule_id")
+    .notNull()
+    .references(() => alertRules.id),
+  catalystId: integer("catalyst_id")
+    .notNull()
+    .references(() => catalysts.id),
+  channel: text("channel", { enum: ["email", "webhook", "push"] }).notNull(),
+  status: text("status", { enum: ["sent", "failed", "skipped"] }).notNull(),
+  detail: text("detail"),
   createdAt: text("created_at")
     .notNull()
     .default(sql`(current_timestamp)`),
