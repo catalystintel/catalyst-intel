@@ -344,9 +344,23 @@ function itemSentence(itemCodes?: SummaryItemCode[] | null): string | null {
 function providerContextSentence(
   provider?: string | null,
   category?: string | null,
+  subcategory?: string | null,
 ): string | null {
   switch (provider?.trim()) {
     case "sec-edgar":
+      if (category === "insider") {
+        const sub = subcategory?.trim();
+        if (sub === "insider_buy") {
+          return "This Form 4 filing reports insider share purchases — a signal traders watch for bullish conviction.";
+        }
+        if (sub === "insider_sell") {
+          return "This Form 4 filing reports insider share sales — context for ownership changes, not always bearish.";
+        }
+        if (sub === "form4_mixed") {
+          return "This Form 4 filing includes both insider buys and sells in the same report.";
+        }
+        return "Form 4 filings report insider buys, sells, or related equity changes.";
+      }
       return "This is a current SEC disclosure traders watch for material company news.";
     case "nasdaq-halts":
       return "Exchange trading-halt events can pause liquidity until trading resumes.";
@@ -358,6 +372,12 @@ function providerContextSentence(
       }
       if (category === "clinical" || category === "regulatory") {
         return "This is a biotech or regulatory calendar entry from Finnhub.";
+      }
+      if (category === "analyst") {
+        return "This reflects analyst coverage — upgrades, downgrades, or recent price-target context.";
+      }
+      if (category === "capital") {
+        return "This reflects capital-markets activity such as offerings or IPO calendar entries.";
       }
       return "This is a Finnhub catalyst calendar entry.";
     case "form4api":
@@ -509,6 +529,7 @@ export function synthesizeReadableSummary(input: ArticleSummaryInput): string {
   const context = providerContextSentence(
     provider,
     input.eventCategory as EventCategoryKey | null,
+    input.subcategory,
   );
   if (context) sentences.push(context);
 

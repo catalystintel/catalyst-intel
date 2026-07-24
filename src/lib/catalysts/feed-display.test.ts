@@ -181,8 +181,24 @@ describe("stripSourceNames / looksLikeSourceLabel", () => {
 describe("eventLabel", () => {
   it("prefers subcategory", () => {
     expect(eventLabel(base({ subcategory: "halt_resumed" }))).toBe(
-      "halt resumed",
+      "Halt resumed",
     );
+  });
+
+  it("maps known subcategories to readable labels", () => {
+    expect(eventLabel(base({ subcategory: "insider_buy" }))).toBe(
+      "Insider buy",
+    );
+    expect(eventLabel(base({ subcategory: "insider_sell" }))).toBe(
+      "Insider sell",
+    );
+    expect(eventLabel(base({ subcategory: "upgrade" }))).toBe("Upgrade");
+    expect(eventLabel(base({ subcategory: "downgrade" }))).toBe("Downgrade");
+    expect(eventLabel(base({ subcategory: "price_target" }))).toBe(
+      "Price target",
+    );
+    expect(eventLabel(base({ subcategory: "ipo_priced" }))).toBe("IPO priced");
+    expect(eventLabel(base({ subcategory: "ipo_filed" }))).toBe("IPO filed");
   });
 });
 

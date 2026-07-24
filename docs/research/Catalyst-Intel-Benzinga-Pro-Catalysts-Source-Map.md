@@ -10,13 +10,15 @@
 
 ### Applied in product (checklist)
 
-Shipped in `feat/benzinga-catalyst-parity`:
+Shipped in `feat/benzinga-catalyst-parity` + POC `feat/poc-catalyst-coverage`:
 
 - **dev PR:** https://github.com/zhbar10/catalyst-intel/pull/66 (merged)
 - **main promote:** https://github.com/zhbar10/catalyst-intel/pull/67 (merged)
 
-- [x] **Finnhub** earnings / FDA / news classified into Benzinga-like panels (`earnings`, `regulatory`, `deals`, `capital`, `analyst`, `macro`, …)
-- [x] **Finnhub Analyst Actions (partial)** — `/stock/recommendation` + `/stock/price-target` on earnings-calendar symbols (cap 8) → `eventCategory: analyst` (**Analyst Actions**); free-tier soft-fail per symbol
+- [x] **Finnhub** earnings / FDA / **classified news** into Benzinga-like panels (`earnings`, `regulatory`, `deals`, `capital`, `analyst`, `macro`, …)
+- [x] **Finnhub Analyst Actions (partial)** — classified headlines (upgrade/downgrade/PT) + **recent** `/stock/price-target` within retention; consensus `/stock/recommendation` still dropped
+- [x] **Finnhub IPO calendar (thin)** — `/calendar/ipo` → `capital` / `ipo*`
+- [x] **SEC Form 4 buy/sell** — ownership XML enrichment → `insider_buy` / `insider_sell` / `form4_mixed`
 - [x] **SEC forms** tagged with Benzinga calendar analogs (`bz:sec_filings`, `bz:secondary_offerings`, `bz:ma`, `bz:insiders`); Read view shows **BZ panel** analog
 - [x] **Nasdaq halts** unchanged (already Halts-parity)
 - [x] **openFDA + ClinicalTrials** unchanged (already FDA calendar path)
@@ -25,6 +27,24 @@ Shipped in `feat/benzinga-catalyst-parity`:
 - [x] **Macro calendar** (keyless): CPI / NFP / FOMC → `eventCategory: macro` (Economics panel analog). FRED live prints = Should later
 - [x] Taxonomy: **`macro`** + **`analyst`** categories with day-trader priorities
 - [x] Honest docs: no Squawk / UOA / Wire-exclusive claims without a real vendor
+
+### POC email checklist → source id
+
+| Email catalyst         | Status  | CI source(s)                                                 |
+| ---------------------- | ------- | ------------------------------------------------------------ |
+| FDA / openFDA          | Covered | `openfda`, `finnhub` (FDA calendar)                          |
+| Clinical trials        | Covered | `clinicaltrials`                                             |
+| Earnings               | Covered | `finnhub`, `sec-edgar` (8-K 2.02)                            |
+| SEC 8-K                | Covered | `sec-edgar`                                                  |
+| Form 4 buy / sell      | Covered | `sec-edgar` (ownership XML → `insider_buy` / `insider_sell`) |
+| Offerings (S-3 / 424B) | Covered | `sec-edgar`                                                  |
+| 13D / 13G              | Covered | `sec-edgar`                                                  |
+| Nasdaq halt / resume   | Covered | `nasdaq-halts`                                               |
+| Macro CPI / NFP / FOMC | Covered | `macro-calendar`                                             |
+| Analyst up/down + PT   | Partial | `finnhub` (classified news + recent PT), `polygon-news`      |
+| General market news    | Partial | `polygon-news` (classified); Finnhub generic news dropped    |
+| IPO / listings         | Thin    | `finnhub` (`/calendar/ipo` → `capital` / `ipo*`)             |
+| Article enrichment     | Mostly  | In-app reader (WIIM-lite, profile, quote, related)           |
 
 ### Suggested only (do not fake)
 
@@ -45,16 +65,16 @@ Shipped in `feat/benzinga-catalyst-parity`:
 
 ### Apply now (free / keyless / existing soft-fail keys)
 
-| Lane                                   | What                                                                                | Status in CI                              |
-| -------------------------------------- | ----------------------------------------------------------------------------------- | ----------------------------------------- |
-| SEC EDGAR 8-K / 4 / S-3 / 424B / 13D·G | Material filings → Newsfeed + Calendar SEC / M&A / Offerings / Insiders             | **Working**                               |
-| Nasdaq Trade Halt RSS                  | Halts / resumes                                                                     | **Working**                               |
-| openFDA + ClinicalTrials.gov           | FDA approvals + trial updates                                                       | **Working**                               |
-| Macro calendar (embedded BLS + Fed)    | CPI / NFP / FOMC dates                                                              | **Working (new)**                         |
-| Finnhub (if `FINNHUB_API_KEY`)         | Earnings + FDA + news + **recommendation trends / price targets** → Analyst Actions | **Working when keyed**                    |
-| Polygon news (if `POLYGON_API_KEY`)    | Wire-tagged when publisher is Benzinga; else Market News                            | **Working when keyed**                    |
-| Polygon prices (same key)              | Session % move for WIIM-lite / Δ since publish                                      | **Working when keyed (free-tier limits)** |
-| Form4API (optional)                    | Insider enrichment                                                                  | Soft-skip without key                     |
+| Lane                                   | What                                                                                        | Status in CI                                              |
+| -------------------------------------- | ------------------------------------------------------------------------------------------- | --------------------------------------------------------- |
+| SEC EDGAR 8-K / 4 / S-3 / 424B / 13D·G | Material filings → Newsfeed + Calendar SEC / M&A / Offerings / Insiders                     | **Working**                                               |
+| Nasdaq Trade Halt RSS                  | Halts / resumes                                                                             | **Working**                                               |
+| openFDA + ClinicalTrials.gov           | FDA approvals + trial updates                                                               | **Working**                                               |
+| Macro calendar (embedded BLS + Fed)    | CPI / NFP / FOMC dates                                                                      | **Working (new)**                                         |
+| Finnhub (if `FINNHUB_API_KEY`)         | Earnings + FDA + **classified news** + recent PT + IPO calendar → Analyst Actions (partial) | **Working when keyed**                                    |
+| Polygon news (if `POLYGON_API_KEY`)    | Wire-tagged when publisher is Benzinga; else Market News                                    | **Working when keyed**                                    |
+| Polygon prices (same key)              | Session % move for WIIM-lite / Δ since publish                                              | **Working when keyed (free-tier limits)**                 |
+| Form4API (optional)                    | Insider enrichment                                                                          | **Skipped** — EDGAR Form 4 + buy/sell XML covers insiders |
 
 ### Needs paid / redistribute license (do not treat individual packs as SaaS rights)
 
@@ -103,17 +123,17 @@ Shipped in `feat/benzinga-catalyst-parity`:
 
 ## 3. What Catalyst Intel already has working
 
-| Source id        | Contributes                                                               | Benzinga analog                                           |
-| ---------------- | ------------------------------------------------------------------------- | --------------------------------------------------------- |
-| `sec-edgar`      | 8-K items, Form 4, S-3, 424B, SC 13D·G                                    | SEC / M&A / Offerings / Insiders / Earnings filings       |
-| `nasdaq-halts`   | Halt / resume                                                             | Halts                                                     |
-| `macro-calendar` | CPI, NFP, FOMC                                                            | Calendar — Economics                                      |
-| `finnhub`        | Earnings + FDA + categorized news + recommendation trends / price targets | Earnings / FDA / Newsfeed / **Analyst Actions (partial)** |
-| `openfda`        | Drug approval submissions                                                 | Calendar — FDA                                            |
-| `clinicaltrials` | Trial updates                                                             | Calendar — FDA / biotech                                  |
-| `polygon-news`   | Market news; **Benzinga Wire** when publisher matches                     | Newsfeed (Wire-like when keyed)                           |
-| `polygon-prices` | Session impact / Δ                                                        | WIIM-lite building block                                  |
-| `form4api`       | Form 4 enrichment                                                         | Insiders                                                  |
+| Source id        | Contributes                                                     | Benzinga analog                                           |
+| ---------------- | --------------------------------------------------------------- | --------------------------------------------------------- |
+| `sec-edgar`      | 8-K items, Form 4 **buy/sell**, S-3, 424B, SC 13D·G             | SEC / M&A / Offerings / Insiders / Earnings filings       |
+| `nasdaq-halts`   | Halt / resume                                                   | Halts                                                     |
+| `macro-calendar` | CPI, NFP, FOMC                                                  | Calendar — Economics                                      |
+| `finnhub`        | Earnings + FDA + **classified news** + recent PT + IPO calendar | Earnings / FDA / Newsfeed / **Analyst Actions (partial)** |
+| `openfda`        | Drug approval submissions                                       | Calendar — FDA                                            |
+| `clinicaltrials` | Trial updates                                                   | Calendar — FDA / biotech                                  |
+| `polygon-news`   | Market news; **Benzinga Wire** when publisher matches           | Newsfeed (Wire-like when keyed)                           |
+| `polygon-prices` | Session impact / Δ                                              | WIIM-lite building block                                  |
+| `form4api`       | Form 4 enrichment                                               | **Skipped** (EDGAR covers insiders)                       |
 
 Feed filters use shared taxonomy (`earnings`, `regulatory`, `clinical`, `macro`, `analyst`, `trading_halt`, `deals`, `capital`, `insider`, `news`, …). Read view surfaces provider + **BZ panel** analog + WIIM-lite.
 

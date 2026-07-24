@@ -141,7 +141,7 @@ From `Catalyst-Intel-Benzinga-Pro-Catalysts-Source-Map.md`:
 | Nasdaq halts                                                                                            | Applied (Halts parity)                        | Keep halt/resume pairing                     |
 | Polygon Benzinga publisher → **Benzinga Wire** label                                                    | Applied when `POLYGON_API_KEY`                | License honesty: DIY packs ≠ redistribute    |
 | **WIIM-lite** (`deriveWhyMoving` + optional session Δ)                                                  | Applied (lite)                                | Improve quality before buying editorial WIIM |
-| Analyst Actions (partial) via Finnhub rec/PT                                                            | Partial                                       | Not a Street ratings firehose                |
+| Analyst Actions (partial) via Finnhub classified news + recent PT + Polygon headlines                   | Partial                                       | Not a Street ratings firehose                |
 | Macro calendar CPI / NFP / FOMC                                                                         | Applied (keyless schedule)                    | FRED live prints = later                     |
 
 ### Borrow for UX (article / feed IA) — relevant, not chrome
