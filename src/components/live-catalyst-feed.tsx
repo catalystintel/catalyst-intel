@@ -21,7 +21,6 @@ import {
 import { toast } from "sonner";
 
 import { CatalystDetailDrawer } from "@/components/catalyst-detail-drawer";
-import { MaterialityBadge } from "@/components/materiality-badge";
 import { Input } from "@/components/ui/input";
 import { useAutoFocusScrollRegion } from "@/hooks/use-auto-focus-scroll-region";
 import {
@@ -74,14 +73,14 @@ const DISMISS_STORAGE_KEY = "ci.dismissed-catalyst-ids";
 type Presence = "active" | "blurred" | "hidden";
 
 /**
- * Blotter: Title · Time · Event · Ticker · Impact · Action (hover toolbar).
+ * Blotter: Title · Time · Event · Ticker · Action (hover toolbar).
  * Time is event occurrence (`catalysts.timestamp` in ET), never DB insert
  * time. Wide enough for `formatTimeDate` (`10:23 AM ET · Jul 20, 2026`).
  * Action reserves room for Read/Act/Dismiss/Quiet so hover buttons never overflow
- * left over Time.
+ * left over Time. Impact column is intentionally hidden for now.
  */
 const FEED_GRID =
-  "grid-cols-1 sm:grid-cols-[minmax(0,1fr)_156px_88px_72px_78px] lg:grid-cols-[minmax(0,1fr)_160px_96px_80px_84px_minmax(268px,max-content)]";
+  "grid-cols-1 sm:grid-cols-[minmax(0,1fr)_156px_88px_72px] lg:grid-cols-[minmax(0,1fr)_160px_96px_80px_minmax(268px,max-content)]";
 
 function readPresence(): Presence {
   if (typeof document === "undefined") return "active";
@@ -1042,9 +1041,6 @@ function CatalystFeedList({
         <div role="columnheader" className="hidden sm:block">
           Ticker
         </div>
-        <div role="columnheader" className="hidden sm:block">
-          Impact
-        </div>
         <div role="columnheader" className="hidden text-right lg:block">
           Action
         </div>
@@ -1114,7 +1110,7 @@ function CatalystFeedList({
                     ? ` · ${catalyst.tags.slice(0, 3).join(" · ")}`
                     : ""}
                 </span>
-                {/* Mobile: Title → Time → Event, then ticker/impact/actions */}
+                {/* Mobile: Title → Time → Event, then ticker/actions */}
                 <div className="mt-1.5 flex flex-col gap-1 sm:hidden">
                   <time
                     dateTime={catalyst.timestamp}
@@ -1125,14 +1121,8 @@ function CatalystFeedList({
                   <span className="font-mono text-[0.68rem] text-[var(--desk-text-dim)]">
                     {eventLabel}
                   </span>
-                  <span className="flex flex-wrap items-center gap-2">
-                    <span className="font-mono text-[0.8rem] font-semibold text-[var(--desk-text)]">
-                      {catalyst.ticker ?? "—"}
-                    </span>
-                    <MaterialityBadge
-                      score={catalyst.impactScore}
-                      category={catalyst.eventCategory}
-                    />
+                  <span className="font-mono text-[0.8rem] font-semibold text-[var(--desk-text)]">
+                    {catalyst.ticker ?? "—"}
                   </span>
                 </div>
                 {/* Touch: always-visible actions below meta/date (never same-line overlap). */}
@@ -1210,13 +1200,6 @@ function CatalystFeedList({
                 <span className="truncate font-mono text-[0.88rem] font-semibold tracking-tight text-[var(--desk-text)] transition-colors group-hover:text-[var(--desk-live)]">
                   {catalyst.ticker ?? "—"}
                 </span>
-              </div>
-
-              <div role="cell" className="hidden min-w-0 sm:block">
-                <MaterialityBadge
-                  score={catalyst.impactScore}
-                  category={catalyst.eventCategory}
-                />
               </div>
 
               {/* Desktop: hover / focus-within reveals action toolbar in its own column */}
