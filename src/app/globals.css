@@ -262,6 +262,11 @@
     animation: row-dismiss-out 240ms cubic-bezier(0.4, 0, 1, 1) both;
   }
 
+  /* Filter change: brief dim/return so the recalculated tape doesn't hard-cut. */
+  .feed-filter-recalc {
+    animation: feed-filter-recalc 280ms ease both;
+  }
+
   .live-pulse {
     animation: live-pulse 1.6s ease-in-out infinite;
     box-shadow: 0 0 0 0 rgba(240, 193, 75, 0.55);
@@ -363,6 +368,18 @@
   }
 }
 
+@keyframes feed-filter-recalc {
+  0% {
+    opacity: 1;
+  }
+  40% {
+    opacity: 0.35;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
 @keyframes live-pulse {
   0%,
   100% {
@@ -412,6 +429,7 @@
   .feed-row,
   .row-flash,
   .row-dismiss,
+  .feed-filter-recalc,
   .live-pulse,
   .landing-feed,
   .btn-press,
