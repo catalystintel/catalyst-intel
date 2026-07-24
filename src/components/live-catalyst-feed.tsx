@@ -1156,7 +1156,7 @@ function CatalystFeedList({
                   </FeedActionButton>
                   <FeedActionButton
                     onClick={() => onDismiss(catalyst.id)}
-                    title="Dismiss from tape"
+                    title="Dismiss from feed"
                   >
                     <X className="size-3" />
                     Dismiss
@@ -1242,7 +1242,7 @@ function CatalystFeedList({
                   </FeedActionButton>
                   <FeedActionButton
                     onClick={() => onDismiss(catalyst.id)}
-                    title="Dismiss from tape"
+                    title="Dismiss from feed"
                   >
                     <X className="size-3" />
                     Dismiss

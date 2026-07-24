@@ -144,7 +144,7 @@ export default async function Home() {
                 LIVE
               </span>
               <span className="hidden truncate text-[0.86rem] text-[var(--desk-text-muted)] sm:inline">
-                Live tape preview
+                Catalyst Feed preview
               </span>
             </div>
             <span className="font-mono text-[0.72rem] tracking-[0.08em] text-[var(--desk-text-dim)] uppercase">
