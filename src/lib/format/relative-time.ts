@@ -45,14 +45,20 @@ export function formatTimeDate(iso: string): string {
 /**
  * Whether `iso` falls within the last `windowMinutes` relative to `now`.
  * Pass `null` for unbounded (All).
+ *
+ * Catalysts dated in the future (e.g. a scheduled FOMC/earnings date) are
+ * never "within" a lookback window - a negative `now - then` used to pass
+ * every check here (any negative number is <= a positive one), which made
+ * a Nov 2026 macro event look like it just happened when scanning "Recent".
  */
 export function isWithinWindow(
   iso: string,
   windowMinutes: number | null,
   now = Date.now(),
 ): boolean {
-  if (windowMinutes === null) return true;
   const then = new Date(iso).getTime();
   if (Number.isNaN(then)) return false;
+  if (then > now) return false;
+  if (windowMinutes === null) return true;
   return now - then <= windowMinutes * 60_000;
 }

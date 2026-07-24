@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { desc, eq, gte } from "drizzle-orm";
+import { and, desc, eq, gte, lte } from "drizzle-orm";
 
 import { LIBSQL_SETUP_HINT, isLibsqlConfigured } from "@/db/env";
 import { db } from "@/db/client";
@@ -110,13 +110,21 @@ export async function GET(request: NextRequest) {
     .leftJoin(rawSources, eq(catalysts.rawSourceId, rawSources.id))
     .leftJoin(companies, eq(catalysts.companyId, companies.id));
 
-  const rows = since
-    ? await baseQuery
-        .where(gte(catalysts.timestamp, since))
-        .orderBy(desc(catalysts.timestamp))
-        .limit(limit)
-        .all()
-    : await baseQuery.orderBy(desc(catalysts.timestamp)).limit(limit).all();
+  // Calendar sources (macro-calendar, earnings/FDA calendars) store the
+  // *scheduled* event date as `timestamp`, sometimes months out. Without an
+  // upper bound, `ORDER BY timestamp DESC` always puts those ahead of real
+  // breaking news - a Nov 2026 FOMC date would out-rank everything that
+  // actually happened today. The Live tape only shows what has occurred.
+  const now = new Date().toISOString();
+  const rows = await baseQuery
+    .where(
+      since
+        ? and(gte(catalysts.timestamp, since), lte(catalysts.timestamp, now))
+        : lte(catalysts.timestamp, now),
+    )
+    .orderBy(desc(catalysts.timestamp))
+    .limit(limit)
+    .all();
 
   await triggerBackgroundRefetchIfStale();
 

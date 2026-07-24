@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { desc, eq } from "drizzle-orm";
+import { desc, eq, lte } from "drizzle-orm";
 
 import { AppShell } from "@/components/app-shell";
 import { LiveCatalystFeed } from "@/components/live-catalyst-feed";
@@ -59,6 +59,9 @@ export default async function DashboardPage() {
       .from(catalysts)
       .leftJoin(rawSources, eq(catalysts.rawSourceId, rawSources.id))
       .leftJoin(companies, eq(catalysts.companyId, companies.id))
+      // Exclude scheduled-future calendar entries (macro/earnings/FDA) - see
+      // the matching filter + comment in /api/catalysts/route.ts.
+      .where(lte(catalysts.timestamp, new Date().toISOString()))
       .orderBy(desc(catalysts.timestamp))
       .limit(200)
       .all(),

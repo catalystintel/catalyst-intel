@@ -47,4 +47,13 @@ describe("isWithinWindow", () => {
     expect(isWithinWindow("2026-07-19T11:45:00.000Z", 30, now)).toBe(true);
     expect(isWithinWindow("2026-07-19T11:20:00.000Z", 30, now)).toBe(false);
   });
+
+  it("rejects future timestamps even with an unbounded (All) window", () => {
+    // Regression: a negative `now - then` used to satisfy `<= windowMinutes`
+    // for *any* window, so a scheduled-future calendar event (e.g. a Nov
+    // 2026 FOMC date) looked "within" every lookback window, including
+    // Recent, while sitting in Jul 2026.
+    expect(isWithinWindow("2026-11-06T12:00:00.000Z", null, now)).toBe(false);
+    expect(isWithinWindow("2026-07-19T12:00:01.000Z", 30, now)).toBe(false);
+  });
 });
