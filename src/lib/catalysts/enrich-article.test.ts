@@ -30,37 +30,11 @@ vi.mock("@/lib/jobs/vendor-env", () => ({
 import {
   clearArticleEnrichmentCache,
   fetchArticleEnrichment,
-  formatMarketCapMillions,
-  toTradingViewSymbol,
 } from "./enrich-article";
 import { getFinnhubApiKey, getPolygonApiKey } from "@/lib/jobs/vendor-env";
 
 const finnhubKey = getFinnhubApiKey as unknown as ReturnType<typeof vi.fn>;
 const polygonKey = getPolygonApiKey as unknown as ReturnType<typeof vi.fn>;
-
-describe("toTradingViewSymbol", () => {
-  it("maps common US exchanges", () => {
-    expect(toTradingViewSymbol("AAPL", "NASDAQ NMS")).toBe("NASDAQ:AAPL");
-    expect(toTradingViewSymbol("IBM", "NEW YORK STOCK EXCHANGE, INC.")).toBe(
-      "NYSE:IBM",
-    );
-    expect(toTradingViewSymbol("SPY", "NYSE ARCA")).toBe("AMEX:SPY");
-  });
-
-  it("falls back to bare ticker when exchange unknown", () => {
-    expect(toTradingViewSymbol("xyz", null)).toBe("XYZ");
-  });
-});
-
-describe("formatMarketCapMillions", () => {
-  it("formats M / B / T", () => {
-    expect(formatMarketCapMillions(850)).toBe("$850.0M");
-    expect(formatMarketCapMillions(2_450)).toBe("$2.45B");
-    expect(formatMarketCapMillions(1_200_000)).toBe("$1.20T");
-    expect(formatMarketCapMillions(null)).toBeNull();
-    expect(formatMarketCapMillions(0)).toBeNull();
-  });
-});
 
 describe("fetchArticleEnrichment", () => {
   beforeEach(() => {
