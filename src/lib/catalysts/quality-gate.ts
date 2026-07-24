@@ -10,6 +10,7 @@
  */
 
 import type { ParsedItem } from "@/lib/jobs/parse-8k-items";
+import { RETENTION_DAYS } from "@/lib/jobs/data-retention";
 import {
   CATEGORY_PRIORITY,
   type EventCategoryKey,
@@ -31,6 +32,7 @@ export interface QualityGateInput {
   eventCategory: EventCategoryKey;
   subcategory?: string | null;
   itemCodes?: ParsedItem[] | null;
+  timestamp?: string | null;
 }
 
 /** Categories that are never "thin news" — they are the desk's job. */
@@ -107,15 +109,37 @@ export function evaluateCatalystQuality(
     };
   }
 
-  // Finnhub consensus snapshots are not events.
-  if (
-    provider === "finnhub" &&
-    (subcategory === "recommendation_trend" || subcategory === "price_target")
-  ) {
+  // Finnhub consensus trend snapshots are not events.
+  if (provider === "finnhub" && subcategory === "recommendation_trend") {
     return {
       decision: "drop",
       reason: "Stale analyst consensus snapshot — not a catalyst event",
     };
+  }
+
+  // Finnhub price-target rows: keep only when timestamp is recent (within retention).
+  if (provider === "finnhub" && subcategory === "price_target") {
+    const ts = item.timestamp?.trim();
+    if (!ts) {
+      return {
+        decision: "drop",
+        reason: "Price target without timestamp — stale snapshot",
+      };
+    }
+    const parsed = new Date(ts);
+    if (Number.isNaN(parsed.getTime())) {
+      return {
+        decision: "drop",
+        reason: "Price target timestamp unparseable",
+      };
+    }
+    const maxAgeMs = RETENTION_DAYS * 24 * 60 * 60 * 1000;
+    if (Date.now() - parsed.getTime() > maxAgeMs) {
+      return {
+        decision: "drop",
+        reason: `Price target older than ${RETENTION_DAYS}d retention`,
+      };
+    }
   }
 
   // Unclassified vendor news.

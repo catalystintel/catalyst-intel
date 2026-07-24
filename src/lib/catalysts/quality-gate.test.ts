@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 
+import { RETENTION_DAYS } from "@/lib/jobs/data-retention";
+
 import { evaluateCatalystQuality } from "./quality-gate";
 
 describe("evaluateCatalystQuality", () => {
@@ -24,7 +26,7 @@ describe("evaluateCatalystQuality", () => {
     ).toBe("keep");
   });
 
-  it("drops Finnhub recommendation / price-target snapshots", () => {
+  it("drops Finnhub recommendation trend snapshots", () => {
     expect(
       evaluateCatalystQuality({
         provider: "finnhub",
@@ -33,6 +35,37 @@ describe("evaluateCatalystQuality", () => {
         ticker: "AAPL",
       }).decision,
     ).toBe("drop");
+  });
+
+  it("keeps recent Finnhub price targets within retention", () => {
+    const recent = new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString();
+    expect(
+      evaluateCatalystQuality({
+        provider: "finnhub",
+        eventCategory: "analyst",
+        subcategory: "price_target",
+        ticker: "AAPL",
+        timestamp: recent,
+      }).decision,
+    ).toBe("keep");
+  });
+
+  it("drops stale Finnhub price targets outside retention", () => {
+    const stale = new Date(
+      Date.now() - (RETENTION_DAYS + 5) * 24 * 60 * 60 * 1000,
+    ).toISOString();
+    expect(
+      evaluateCatalystQuality({
+        provider: "finnhub",
+        eventCategory: "analyst",
+        subcategory: "price_target",
+        ticker: "AAPL",
+        timestamp: stale,
+      }).decision,
+    ).toBe("drop");
+  });
+
+  it("drops Finnhub price target without timestamp", () => {
     expect(
       evaluateCatalystQuality({
         provider: "finnhub",

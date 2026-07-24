@@ -210,14 +210,37 @@ export function matchesFeedSearchQuery(
   return fields.some((field) => (field ?? "").toLowerCase().includes(q));
 }
 
+/** Human-readable Event cell labels for known subcategories. */
+const SUBCATEGORY_LABELS: Record<string, string> = {
+  insider_buy: "Insider buy",
+  insider_sell: "Insider sell",
+  form4_mixed: "Mixed Form 4",
+  form4: "Form 4",
+  upgrade: "Upgrade",
+  downgrade: "Downgrade",
+  price_target: "Price target",
+  analyst_rating: "Analyst rating",
+  recommendation_trend: "Recommendation trend",
+  ipo: "IPO",
+  ipo_priced: "IPO priced",
+  ipo_filed: "IPO filed",
+  ipo_withdrawn: "IPO withdrawn",
+  ipo_news: "IPO news",
+  benzinga_wire: "Benzinga Wire",
+  halt_resumed: "Halt resumed",
+  halt: "Trading halt",
+  bmo: "Before market open",
+  amc: "After market close",
+};
+
 /** Event cell: subcategory when present, else type / category. */
 export function eventLabel(c: FeedCatalyst): string {
-  if (c.subcategory?.trim()) {
-    return c.subcategory.replace(/_/g, " ");
-  }
+  const sub = c.subcategory?.trim();
+  if (sub && SUBCATEGORY_LABELS[sub]) return SUBCATEGORY_LABELS[sub];
+  if (sub) return sub.replace(/_/g, " ");
   if (c.type?.trim()) return c.type.trim();
   if (c.eventCategory && c.eventCategory in CATEGORY_LABELS) {
-    return CATEGORY_LABELS[c.eventCategory];
+    return CATEGORY_LABELS[c.eventCategory as EventCategoryKey];
   }
   return "—";
 }

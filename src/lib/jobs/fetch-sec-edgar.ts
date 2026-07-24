@@ -9,6 +9,13 @@ import {
   classifySecFormType,
   parseFilingSummary,
 } from "@/lib/jobs/parse-8k-items";
+import {
+  accessionToFolder,
+  candidateForm4XmlUrls,
+  extractForm4XmlHrefsFromIndex,
+  isForm4Normalized,
+  parseForm4OwnershipXml,
+} from "@/lib/jobs/parse-form4";
 
 import {
   type SecFetchMode,
@@ -124,6 +131,7 @@ function entryToNormalized(
 
   const formType = parsedTitle?.formType ?? entry.category?.["@_term"] ?? "8-K";
   const companyName = parsedTitle?.companyName ?? rawTitle;
+  const cik = parsedTitle?.cik ?? null;
   const ticker = parsedTitle
     ? (tickerByCik.get(parsedTitle.cik) ?? null)
     : null;
@@ -161,6 +169,8 @@ function entryToNormalized(
       updated: entry.updated ?? null,
       link,
       formType,
+      accessionNumber,
+      cik,
     },
     ticker,
     tickerSource,
@@ -176,6 +186,81 @@ function entryToNormalized(
     confidence: is8k ? 85 : 75,
     tags,
   };
+}
+
+/**
+ * Cap-fetch Form 4 ownership XML to label insider buy / sell / mixed.
+ * Soft-fails per row — Atom entries still ingest as generic `form4`.
+ */
+export async function enrichForm4Directions(
+  items: NormalizedCatalyst[],
+  options: { userAgent: string; mode?: SecFetchMode },
+): Promise<void> {
+  const cap = options.mode === "background" ? 6 : 15;
+  let attempted = 0;
+
+  for (const item of items) {
+    if (!isForm4Normalized(item)) continue;
+    if (attempted >= cap) break;
+
+    const raw = item.rawContent as Record<string, unknown>;
+    const cik = raw.cik as number | undefined;
+    const accessionNumber = raw.accessionNumber as string | undefined;
+    if (!cik || !accessionNumber) {
+      continue;
+    }
+
+    attempted++;
+
+    try {
+      const folder = accessionToFolder(accessionNumber);
+      const indexUrl = `https://www.sec.gov/Archives/edgar/data/${cik}/${folder}/${accessionNumber}-index.htm`;
+      let xmlUrls = candidateForm4XmlUrls(cik, accessionNumber);
+
+      try {
+        const indexRes = await fetchSecUrl(indexUrl, {
+          userAgent: options.userAgent,
+          mode: options.mode ?? "primary",
+        });
+        if (indexRes.ok) {
+          const indexHtml = await indexRes.text();
+          const fromIndex = extractForm4XmlHrefsFromIndex(
+            indexHtml,
+            cik,
+            accessionNumber,
+          );
+          if (fromIndex.length > 0) {
+            xmlUrls = [...fromIndex, ...xmlUrls];
+          }
+        }
+      } catch {
+        // Index lookup is best-effort.
+      }
+
+      for (const url of xmlUrls) {
+        try {
+          const res = await fetchSecUrl(url, {
+            userAgent: options.userAgent,
+            mode: options.mode ?? "primary",
+          });
+          if (!res.ok) continue;
+          const xml = await res.text();
+          const direction = parseForm4OwnershipXml(xml);
+          if (!direction) continue;
+
+          item.subcategory = direction.subcategory;
+          item.headline = direction.headline;
+          item.tags = [...(item.tags ?? []), direction.subcategory];
+          raw.form4Direction = direction;
+          break;
+        } catch {
+          continue;
+        }
+      }
+    } catch {
+      // Keep generic form4 when XML enrichment fails.
+    }
+  }
 }
 
 /**
@@ -229,13 +314,14 @@ export async function fetchSecEdgar(
     feedStats.push({ type: feed.type, fetched, errors });
   }
 
-  // De-dupe within this run (same accession can appear across overlapping feeds).
   const seen = new Set<string>();
   const unique = normalized.filter((item) => {
     if (seen.has(item.externalId)) return false;
     seen.add(item.externalId);
     return true;
   });
+
+  await enrichForm4Directions(unique, { userAgent, mode });
 
   const result = await ingestNormalizedCatalysts(unique, {
     purge: options.purge !== false,

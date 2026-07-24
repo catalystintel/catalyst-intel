@@ -22,11 +22,35 @@ describe("categorizeNewsHeadline", () => {
       eventCategory: "deals",
       subcategory: "ma_news",
     });
+  });
+
+  it("prefers upgrade / downgrade / price target analyst subcategories", () => {
     expect(
       categorizeNewsHeadline("Analyst upgrades NVDA, raises PT"),
     ).toMatchObject({
       eventCategory: "analyst",
-      subcategory: "analyst_rating",
+      subcategory: "upgrade",
+    });
+    expect(
+      categorizeNewsHeadline("Street downgrades TSLA on demand concerns"),
+    ).toMatchObject({
+      eventCategory: "analyst",
+      subcategory: "downgrade",
+    });
+    expect(
+      categorizeNewsHeadline("Goldman raises PT to $300 on AAPL"),
+    ).toMatchObject({
+      eventCategory: "analyst",
+      subcategory: "price_target",
+    });
+  });
+
+  it("maps IPO language to capital / ipo_news", () => {
+    expect(
+      categorizeNewsHeadline("Widget Corp files for IPO on Nasdaq"),
+    ).toMatchObject({
+      eventCategory: "capital",
+      subcategory: "ipo_news",
     });
   });
 
