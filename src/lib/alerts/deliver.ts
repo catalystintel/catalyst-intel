@@ -33,6 +33,7 @@ export interface DeliveryResult {
 function conditionsMatch(
   catalyst: AlertCatalystPayload,
   conditions: AlertRuleConditions,
+  watchlistTickers?: Set<string>,
 ): boolean {
   const cats = conditions.categories ?? [];
   if (cats.length > 0) {
@@ -49,6 +50,11 @@ function conditionsMatch(
 
   const filingSession = classifySession(catalyst.timestamp);
   if (!sessionMatches(filingSession, conditions.sessions)) return false;
+
+  if (conditions.watchlistOnly) {
+    const ticker = catalyst.ticker?.toUpperCase();
+    if (!ticker || !watchlistTickers?.has(ticker)) return false;
+  }
 
   return true;
 }
@@ -167,11 +173,22 @@ export async function deliverAlertRules(options: {
   rules: DeliverableRule[];
   /** When true, skip condition matching (admin test fire). */
   force?: boolean;
+  /**
+   * Uppercase tickers on the rule owner's watchlist — required for
+   * `watchlistOnly` conditions to match. Omit = treat as empty watchlist.
+   */
+  watchlistTickers?: string[];
 }): Promise<DeliveryResult[]> {
   const results: DeliveryResult[] = [];
+  const watchlistSet = new Set(
+    (options.watchlistTickers ?? []).map((t) => t.toUpperCase()),
+  );
 
   for (const rule of options.rules) {
-    if (!options.force && !conditionsMatch(options.catalyst, rule.conditions)) {
+    if (
+      !options.force &&
+      !conditionsMatch(options.catalyst, rule.conditions, watchlistSet)
+    ) {
       results.push({
         ruleId: rule.id,
         channel: rule.channel,

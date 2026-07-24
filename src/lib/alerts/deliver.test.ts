@@ -36,17 +36,18 @@ describe("deliverAlertRules", () => {
     expect(results[0].detail.toLowerCase()).toContain("coming soon");
   });
 
-  it("skips when conditions do not match", async () => {
+  it("skips when watchlistOnly and ticker not on watchlist", async () => {
     const results = await deliverAlertRules({
       catalyst,
+      watchlistTickers: ["AAPL"],
       rules: [
         {
-          id: 2,
-          name: "Distress only",
+          id: 3,
+          name: "Watchlist bombs",
           channel: "webhook",
           webhookUrl: "https://example.com/hook",
           emailTo: null,
-          conditions: { categories: ["distress"] },
+          conditions: { watchlistOnly: true, minImpact: 70 },
         },
       ],
     });

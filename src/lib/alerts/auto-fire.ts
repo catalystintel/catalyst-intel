@@ -20,6 +20,7 @@ import {
   alertRules,
   catalysts,
   rawSources,
+  watchlistEntries,
 } from "@/db/schema";
 import {
   deliverAlertRules,
@@ -80,24 +81,42 @@ export async function runAlertAutoFire(options: {
     existing.map((d) => `${d.alertRuleId}:${d.catalystId}`),
   );
 
-  const rules: DeliverableRule[] = ruleRows.map((r) => ({
-    id: r.id,
-    name: r.name,
-    channel: r.channel,
-    webhookUrl: r.webhookUrl,
-    emailTo: r.emailTo,
-    conditions: normalizeAlertConditions(r.conditions),
-  }));
+  // Watchlists keyed by user — needed for `watchlistOnly` conditions.
+  const userIds = [...new Set(ruleRows.map((r) => r.userId))];
+  const watchlistRows = await db
+    .select({
+      userId: watchlistEntries.userId,
+      ticker: watchlistEntries.ticker,
+    })
+    .from(watchlistEntries)
+    .where(inArray(watchlistEntries.userId, userIds))
+    .all();
+  const watchlistsByUser = new Map<number, string[]>();
+  for (const row of watchlistRows) {
+    const list = watchlistsByUser.get(row.userId) ?? [];
+    list.push(row.ticker);
+    watchlistsByUser.set(row.userId, list);
+  }
+
+  const rulesByUser = new Map<number, DeliverableRule[]>();
+  for (const r of ruleRows) {
+    const rule: DeliverableRule = {
+      id: r.id,
+      name: r.name,
+      channel: r.channel,
+      webhookUrl: r.webhookUrl,
+      emailTo: r.emailTo,
+      conditions: normalizeAlertConditions(r.conditions),
+    };
+    const list = rulesByUser.get(r.userId) ?? [];
+    list.push(rule);
+    rulesByUser.set(r.userId, list);
+  }
 
   let delivered = 0;
   let failed = 0;
 
   for (const catalyst of catalystRows) {
-    const candidateRules = rules.filter(
-      (r) => !alreadyDelivered.has(`${r.id}:${catalyst.id}`),
-    );
-    if (candidateRules.length === 0) continue;
-
     const payload: AlertCatalystPayload = {
       id: catalyst.id,
       ticker: catalyst.ticker,
@@ -109,29 +128,37 @@ export async function runAlertAutoFire(options: {
       sourceUrl: catalyst.sourceUrl,
     };
 
-    const results = await deliverAlertRules({
-      catalyst: payload,
-      rules: candidateRules,
-    });
+    for (const [userId, userRules] of rulesByUser) {
+      const candidateRules = userRules.filter(
+        (r) => !alreadyDelivered.has(`${r.id}:${catalyst.id}`),
+      );
+      if (candidateRules.length === 0) continue;
 
-    for (const result of results) {
-      // Only persist real delivery attempts (conditions matched); leave
-      // condition-mismatches and push stubs un-logged (see file header).
-      if (result.skipped) continue;
+      const results = await deliverAlertRules({
+        catalyst: payload,
+        rules: candidateRules,
+        watchlistTickers: watchlistsByUser.get(userId) ?? [],
+      });
 
-      if (result.ok) delivered++;
-      else failed++;
+      for (const result of results) {
+        // Only persist real delivery attempts (conditions matched); leave
+        // condition-mismatches and push stubs un-logged (see file header).
+        if (result.skipped) continue;
 
-      await db
-        .insert(alertDeliveries)
-        .values({
-          alertRuleId: result.ruleId,
-          catalystId: catalyst.id,
-          channel: result.channel,
-          status: result.ok ? "sent" : "failed",
-          detail: result.detail,
-        })
-        .run();
+        if (result.ok) delivered++;
+        else failed++;
+
+        await db
+          .insert(alertDeliveries)
+          .values({
+            alertRuleId: result.ruleId,
+            catalystId: catalyst.id,
+            channel: result.channel,
+            status: result.ok ? "sent" : "failed",
+            detail: result.detail,
+          })
+          .run();
+      }
     }
   }
 

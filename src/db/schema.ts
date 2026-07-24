@@ -192,7 +192,26 @@ export interface AlertRuleConditions {
   minImpact?: number;
   /** Session filter for AH/PM bombs; default any. */
   sessions?: AlertSession[];
+  /** When true, only fire for catalysts whose ticker is on the user's watchlist. */
+  watchlistOnly?: boolean;
 }
+
+/**
+ * Per-user tape dismissals (JTBD Act/Dismiss). Survives device changes —
+ * localStorage was only a stopgap until this table shipped.
+ */
+export const dismissedCatalysts = sqliteTable("dismissed_catalysts", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: integer("user_id")
+    .notNull()
+    .references(() => users.id),
+  catalystId: integer("catalyst_id")
+    .notNull()
+    .references(() => catalysts.id),
+  dismissedAt: text("dismissed_at")
+    .notNull()
+    .default(sql`(current_timestamp)`),
+});
 
 /** User-defined delivery rules (email / webhook MVP; push stubbed). */
 export const alertRules = sqliteTable("alert_rules", {

@@ -22,10 +22,13 @@ export function normalizeAlertConditions(value: unknown): AlertRuleConditions {
     minImpact = Math.max(0, Math.min(100, Math.round(raw.minImpact)));
   }
 
+  const watchlistOnly = raw.watchlistOnly === true;
+
   return {
     ...(categories.length > 0 ? { categories } : {}),
     ...(sessions && sessions.length > 0 ? { sessions } : {}),
     ...(minImpact !== undefined ? { minImpact } : {}),
+    ...(watchlistOnly ? { watchlistOnly: true } : {}),
   };
 }
 
