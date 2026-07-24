@@ -66,3 +66,38 @@ export function ThemeToggle() {
     </div>
   );
 }
+
+/**
+ * Compact sun/moon control for the desk header (next to account menu).
+ * Instant theme flip; hover shows a tooltip.
+ */
+export function HeaderThemeToggle({ className }: { className?: string }) {
+  const { resolvedTheme, setTheme } = useTheme();
+  const mounted = useHasMounted();
+  const isDark = mounted && resolvedTheme === "dark";
+  const nextLabel = isDark ? "Light mode" : "Dark mode";
+
+  return (
+    <button
+      type="button"
+      onClick={() => setTheme(isDark ? "light" : "dark")}
+      aria-label={nextLabel}
+      className={cn(
+        "btn-press group relative inline-flex size-9 items-center justify-center rounded-lg text-[var(--desk-text-muted)] transition-colors hover:bg-[var(--desk-overlay-strong)] hover:text-[var(--desk-text)]",
+        className,
+      )}
+    >
+      {isDark ? (
+        <Sun className="size-4" aria-hidden />
+      ) : (
+        <Moon className="size-4" aria-hidden />
+      )}
+      <span
+        role="tooltip"
+        className="pointer-events-none absolute top-full right-0 z-50 mt-2 rounded-md border border-[var(--desk-border-strong)] bg-[var(--desk-panel)] px-2 py-1 font-mono text-[0.68rem] whitespace-nowrap text-[var(--desk-text-secondary)] opacity-0 shadow-[0_8px_24px_rgba(0,0,0,0.28)] transition-opacity duration-150 group-hover:opacity-100 group-focus-visible:opacity-100"
+      >
+        {nextLabel}
+      </span>
+    </button>
+  );
+}
