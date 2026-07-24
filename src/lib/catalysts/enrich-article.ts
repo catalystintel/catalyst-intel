@@ -120,7 +120,8 @@ async function finnhubGet<T>(
     const res = await fetch(url.toString(), {
       headers: { Accept: "application/json" },
       cache: "no-store",
-      signal: AbortSignal.timeout(8_000),
+      // Keep SSR budgets tight — article page must not wait on vendor blips.
+      signal: AbortSignal.timeout(2_500),
     });
     if (!res.ok) return null;
     return (await res.json()) as T;
@@ -144,7 +145,7 @@ async function polygonGet<T>(
     const res = await fetch(url.toString(), {
       headers: { Accept: "application/json" },
       cache: "no-store",
-      signal: AbortSignal.timeout(8_000),
+      signal: AbortSignal.timeout(2_500),
     });
     if (!res.ok) return null;
     return (await res.json()) as T;
@@ -411,6 +412,17 @@ function mergeRelatedHeadlines(
  * Always soft-fails to an empty enrichment object.
  */
 export async function fetchArticleEnrichment(options: {
+  ticker: string | null | undefined;
+  excludeCatalystId?: number | null;
+}): Promise<ArticleEnrichment> {
+  try {
+    return await fetchArticleEnrichmentInner(options);
+  } catch {
+    return emptyEnrichment();
+  }
+}
+
+async function fetchArticleEnrichmentInner(options: {
   ticker: string | null | undefined;
   excludeCatalystId?: number | null;
 }): Promise<ArticleEnrichment> {

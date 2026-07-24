@@ -3,6 +3,7 @@ import { eq } from "drizzle-orm";
 
 import { assertDatabaseConfigured, db } from "@/db/client";
 import { users } from "@/db/schema";
+import { withDbRetry } from "@/lib/db/with-db-retry";
 import {
   getPostHogClient,
   isPostHogServerConfigured,
@@ -29,29 +30,35 @@ export async function syncSupabaseUser(supabaseUser: User) {
 
   const role = adminRoleForEmail(email);
 
-  const existing = await db
-    .select()
-    .from(users)
-    .where(eq(users.supabaseUserId, supabaseUser.id))
-    .get();
+  const existing = await withDbRetry(() =>
+    db
+      .select()
+      .from(users)
+      .where(eq(users.supabaseUserId, supabaseUser.id))
+      .get(),
+  );
 
   if (existing) {
     if (existing.role !== role || existing.email !== email) {
-      await db
-        .update(users)
-        .set({ role, email })
-        .where(eq(users.supabaseUserId, supabaseUser.id))
-        .run();
+      await withDbRetry(async () => {
+        await db
+          .update(users)
+          .set({ role, email })
+          .where(eq(users.supabaseUserId, supabaseUser.id))
+          .run();
+      });
       return { ...existing, role, email };
     }
     return existing;
   }
 
-  await db
-    .insert(users)
-    .values({ supabaseUserId: supabaseUser.id, email, role })
-    .onConflictDoNothing()
-    .run();
+  await withDbRetry(async () => {
+    await db
+      .insert(users)
+      .values({ supabaseUserId: supabaseUser.id, email, role })
+      .onConflictDoNothing()
+      .run();
+  });
 
   if (isPostHogServerConfigured()) {
     const posthog = getPostHogClient();
@@ -63,9 +70,11 @@ export async function syncSupabaseUser(supabaseUser: User) {
     await posthog.flush();
   }
 
-  return db
-    .select()
-    .from(users)
-    .where(eq(users.supabaseUserId, supabaseUser.id))
-    .get();
+  return withDbRetry(() =>
+    db
+      .select()
+      .from(users)
+      .where(eq(users.supabaseUserId, supabaseUser.id))
+      .get(),
+  );
 }
