@@ -46,7 +46,7 @@ export async function authorizeAdminFetch(
 
   const ip = getClientIp(request);
   const limitResult = checkRateLimit({
-    key: rateLimitKey,
+    key: `${rateLimitKey}:${ip}`,
     ...RATE_LIMITS.adminWrite,
   });
 

@@ -25,3 +25,12 @@ updates:
         update-types:
           - "minor"
           - "patch"
+    # Next's lint stack is not ready for these majors yet:
+    # - eslint 10: eslint-plugin-react (via eslint-config-next) only peers eslint ^9
+    # - typescript 7: typescript-eslint requires typescript <6.1
+    # Revisit when eslint-config-next / typescript-eslint advertise support.
+    ignore:
+      - dependency-name: "eslint"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
