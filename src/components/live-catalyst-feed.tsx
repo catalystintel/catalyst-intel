@@ -131,6 +131,7 @@ export function LiveCatalystFeed({
   >(DEFAULT_PLAYBOOK_CATEGORIES);
   const [quietMode, setQuietMode] = useState(false);
   const [prefsLoaded, setPrefsLoaded] = useState(false);
+  const [manualRefreshing, setManualRefreshing] = useState(false);
   const inFlight = useRef(false);
   const abortRef = useRef<AbortController | null>(null);
   const retryTimeoutRef = useRef<number | null>(null);
@@ -269,6 +270,23 @@ export function LiveCatalystFeed({
   useEffect(() => {
     softRefetchRef.current = softRefetch;
   }, [softRefetch]);
+
+  const handleManualRefresh = useCallback(() => {
+    if (manualRefreshing) return;
+    setManualRefreshing(true);
+    // Keep the spin visible for a minimum stretch even when the request
+    // resolves near-instantly, so the click always reads as "doing
+    // something" instead of a flash too quick to notice.
+    const minSpinMs = 500;
+    const startedAt = Date.now();
+    void softRefetch().finally(() => {
+      const elapsed = Date.now() - startedAt;
+      window.setTimeout(
+        () => setManualRefreshing(false),
+        Math.max(0, minSpinMs - elapsed),
+      );
+    });
+  }, [manualRefreshing, softRefetch]);
 
   useEffect(() => {
     const syncPresence = () => setPresence(readPresence());
@@ -510,10 +528,14 @@ export function LiveCatalystFeed({
           <button
             type="button"
             aria-label="Refresh"
-            onClick={() => void softRefetch()}
-            className="grid size-[34px] place-items-center rounded-lg border border-[var(--desk-border-strong)] text-[var(--desk-text-muted)] transition-colors hover:bg-white/[0.05] hover:text-[var(--desk-text)]"
+            aria-busy={manualRefreshing}
+            onClick={handleManualRefresh}
+            disabled={manualRefreshing}
+            className="btn-press grid size-[34px] place-items-center rounded-lg border border-[var(--desk-border-strong)] text-[var(--desk-text-muted)] transition-colors hover:bg-white/[0.05] hover:text-[var(--desk-text)] disabled:cursor-default disabled:opacity-70"
           >
-            <RefreshCw className="size-4" />
+            <RefreshCw
+              className={cn("size-4", manualRefreshing && "animate-spin")}
+            />
           </button>
         </div>
       </div>
