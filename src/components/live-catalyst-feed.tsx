@@ -47,6 +47,17 @@ import {
   type FeedTimeWindow,
 } from "@/lib/catalysts/feed-time-window";
 import {
+  DEFAULT_FEED_FILTERS,
+  FEED_IMPACT_FLOORS,
+  isFiltersDefault,
+  minScoreForFeedImpactFloor,
+  readPersistedFeedFilters,
+  touchPersistedFeedFilters,
+  writePersistedFeedFilters,
+  type FeedImpactFloor,
+} from "@/lib/catalysts/feed-filter-persist";
+import { materialityFromScore } from "@/lib/catalysts/materiality";
+import {
   formatClockTime,
   formatTimeDate,
   isWithinWindow,
@@ -126,7 +137,12 @@ export function LiveCatalystFeed({
     null,
   );
   const [timeWindow, setTimeWindow] = useState<FeedTimeWindow>("all");
+  const [minImpact, setMinImpact] = useState<FeedImpactFloor>(
+    DEFAULT_FEED_FILTERS.minImpact,
+  );
   const [filtersOpen, setFiltersOpen] = useState(Boolean(initialTickerFilter));
+  const [filtersHydrated, setFiltersHydrated] = useState(false);
+  const [filterRecalc, setFilterRecalc] = useState(false);
   const [nowTick, setNowTick] = useState(() => Date.now());
   const [dismissedIds, setDismissedIds] = useState<Set<number>>(() =>
     readDismissedIds(),
@@ -141,6 +157,7 @@ export function LiveCatalystFeed({
   const [quietMode, setQuietMode] = useState(false);
   const [prefsLoaded, setPrefsLoaded] = useState(false);
   const [manualRefreshing, setManualRefreshing] = useState(false);
+  const skipFilterAnimRef = useRef(true);
   const inFlight = useRef(false);
   // Mirrors `pollError` synchronously (set alongside every `setPollError`
   // call below) so `handleManualRefresh` can read the latest value right
@@ -197,6 +214,84 @@ export function LiveCatalystFeed({
       cancelled = true;
     };
   }, []);
+
+  // Restore tape filters from localStorage after mount (avoids SSR/hydration
+  // mismatch). Deep-link `?ticker=` wins for the ticker field; other saved
+  // filters still apply when still within the idle window.
+  useEffect(() => {
+    const restoreId = window.setTimeout(() => {
+      const saved = readPersistedFeedFilters();
+      const urlTicker = initialTickerFilter?.trim() ?? "";
+      if (urlTicker) {
+        setTickerQuery(urlTicker);
+        setFiltersOpen(true);
+        if (saved) {
+          setCategoryFilter(saved.categoryFilter);
+          setTimeWindow(saved.timeWindow);
+          setMinImpact(saved.minImpact);
+        }
+      } else if (saved) {
+        setTickerQuery(saved.tickerQuery);
+        setCategoryFilter(saved.categoryFilter);
+        setTimeWindow(saved.timeWindow);
+        setMinImpact(saved.minImpact);
+        if (!isFiltersDefault(saved)) setFiltersOpen(true);
+      }
+      setFiltersHydrated(true);
+    }, 0);
+    return () => window.clearTimeout(restoreId);
+  }, [initialTickerFilter]);
+
+  // Persist filters while active; clear storage when back to product defaults.
+  useEffect(() => {
+    if (!filtersHydrated) return;
+    writePersistedFeedFilters({
+      tickerQuery,
+      categoryFilter,
+      timeWindow,
+      minImpact,
+    });
+  }, [tickerQuery, categoryFilter, timeWindow, minImpact, filtersHydrated]);
+
+  // Keep the idle clock alive while the tab is visible with non-default filters.
+  useEffect(() => {
+    if (!filtersHydrated) return;
+    if (
+      isFiltersDefault({ tickerQuery, categoryFilter, timeWindow, minImpact })
+    ) {
+      return;
+    }
+    const touch = () => {
+      if (document.visibilityState === "visible") {
+        touchPersistedFeedFilters();
+      }
+    };
+    const intervalId = window.setInterval(touch, 5 * 60 * 1000);
+    document.addEventListener("visibilitychange", touch);
+    return () => {
+      window.clearInterval(intervalId);
+      document.removeEventListener("visibilitychange", touch);
+    };
+  }, [tickerQuery, categoryFilter, timeWindow, minImpact, filtersHydrated]);
+
+  // Brief crossfade when the visible row set is recalculated from filters.
+  useEffect(() => {
+    if (!filtersHydrated) return;
+    if (skipFilterAnimRef.current) {
+      skipFilterAnimRef.current = false;
+      return;
+    }
+    setFilterRecalc(true);
+    const timeoutId = window.setTimeout(() => setFilterRecalc(false), 280);
+    return () => window.clearTimeout(timeoutId);
+  }, [
+    tickerQuery,
+    categoryFilter,
+    timeWindow,
+    minImpact,
+    quietMode,
+    filtersHydrated,
+  ]);
 
   const softRefetch = useCallback(
     async (isRetry = false) => {
@@ -461,6 +556,7 @@ export function LiveCatalystFeed({
 
   const filtered = useMemo(() => {
     const q = tickerQuery.trim().toUpperCase();
+    const impactFloor = minScoreForFeedImpactFloor(minImpact);
     return catalysts
       .filter((c) => {
         if (dismissedIds.has(c.id)) return false;
@@ -475,6 +571,12 @@ export function LiveCatalystFeed({
         if (categoryFilter && c.eventCategory !== categoryFilter) return false;
         if (q && !(c.ticker ?? "").toUpperCase().includes(q)) return false;
         if (!isWithinWindow(c.timestamp, windowMinutes, nowTick)) return false;
+        if (
+          materialityFromScore(c.impactScore, c.eventCategory).score <
+          impactFloor
+        ) {
+          return false;
+        }
         return true;
       })
       .sort(
@@ -485,6 +587,7 @@ export function LiveCatalystFeed({
     catalysts,
     categoryFilter,
     tickerQuery,
+    minImpact,
     windowMinutes,
     nowTick,
     dismissedIds,
@@ -497,11 +600,21 @@ export function LiveCatalystFeed({
     ? (catalysts.find((c) => c.id === selectedId) ?? null)
     : null;
 
-  const filtersActive =
-    Boolean(tickerQuery.trim()) ||
-    categoryFilter !== null ||
-    timeWindow !== "all" ||
-    quietMode;
+  const panelFilterState = {
+    tickerQuery,
+    categoryFilter,
+    timeWindow,
+    minImpact,
+  };
+  const panelFiltersActive = !isFiltersDefault(panelFilterState);
+  const filtersActive = panelFiltersActive || quietMode;
+
+  const clearPanelFilters = useCallback(() => {
+    setTickerQuery(DEFAULT_FEED_FILTERS.tickerQuery);
+    setCategoryFilter(DEFAULT_FEED_FILTERS.categoryFilter);
+    setTimeWindow(DEFAULT_FEED_FILTERS.timeWindow);
+    setMinImpact(DEFAULT_FEED_FILTERS.minImpact);
+  }, []);
 
   const lastUpdatedLabel = lastFetchedAt
     ? new Date(lastFetchedAt).toLocaleTimeString("en-US", {
@@ -561,6 +674,16 @@ export function LiveCatalystFeed({
               )}
             />
           </button>
+          {panelFiltersActive ? (
+            <button
+              type="button"
+              onClick={clearPanelFilters}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--desk-border-strong)] bg-[var(--desk-overlay-soft)] px-2.5 py-1.5 text-[0.82rem] font-medium text-[var(--desk-text-secondary)] transition-colors hover:bg-[var(--desk-overlay-strong)] hover:text-[var(--desk-text)]"
+            >
+              <X className="size-3.5 text-[var(--desk-text-muted)]" />
+              Clear filters
+            </button>
+          ) : null}
           {lastUpdatedLabel ? (
             <span className="hidden font-mono text-[0.78rem] text-[var(--desk-text-dim)] tabular-nums sm:inline">
               Last updated: {lastUpdatedLabel}
@@ -591,9 +714,13 @@ export function LiveCatalystFeed({
             categoryOptions={categoryOptions}
             timeWindow={timeWindow}
             onTimeWindow={setTimeWindow}
+            minImpact={minImpact}
+            onMinImpact={setMinImpact}
             quietMode={quietMode}
             watchlistCount={watchlistTickers.length}
             playbookCount={playbookCategories.length}
+            panelFiltersActive={panelFiltersActive}
+            onClearFilters={clearPanelFilters}
           />
         </div>
       ) : null}
@@ -604,39 +731,46 @@ export function LiveCatalystFeed({
         </p>
       ) : null}
 
-      {catalysts.length === 0 ? (
-        <div className="flex flex-1 flex-col items-center justify-center gap-2 px-6 py-16 text-center">
-          <p className="text-sm font-medium text-[var(--desk-text)]">
-            No catalysts yet
-          </p>
-          <p className="max-w-sm text-sm text-[var(--desk-text-muted)]">
-            {isAdmin
-              ? "Open Admin and run “Fetch all sources now” to populate the Live feed."
-              : "Filings appear here once an admin runs the first ingestion job."}
-          </p>
-        </div>
-      ) : filtered.length === 0 ? (
-        <div className="flex flex-1 items-center justify-center px-6 py-12 text-center">
-          <p className="font-mono text-sm text-[var(--desk-text-muted)]">
-            {quietMode
-              ? "Quiet playbook: no watchlist/playbook matches right now."
-              : "No rows match these filters."}
-          </p>
-        </div>
-      ) : (
-        <CatalystFeedList
-          catalysts={filtered}
-          flashIds={flashIds}
-          dismissingIds={dismissingIds}
-          selectedId={selectedId}
-          watchlistTickers={watchlistTickers}
-          onSelect={openArticle}
-          onRead={openArticle}
-          onAct={openActDrawer}
-          onDismiss={dismissCatalyst}
-          onQuietAdd={quietAddTicker}
-        />
-      )}
+      <div
+        className={cn(
+          "flex min-h-0 flex-1 flex-col",
+          filterRecalc && "feed-filter-recalc",
+        )}
+      >
+        {catalysts.length === 0 ? (
+          <div className="flex flex-1 flex-col items-center justify-center gap-2 px-6 py-16 text-center">
+            <p className="text-sm font-medium text-[var(--desk-text)]">
+              No catalysts yet
+            </p>
+            <p className="max-w-sm text-sm text-[var(--desk-text-muted)]">
+              {isAdmin
+                ? "Open Admin and run “Fetch all sources now” to populate the Live feed."
+                : "Filings appear here once an admin runs the first ingestion job."}
+            </p>
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="flex flex-1 items-center justify-center px-6 py-12 text-center">
+            <p className="font-mono text-sm text-[var(--desk-text-muted)]">
+              {quietMode
+                ? "Quiet playbook: no watchlist/playbook matches right now."
+                : "No rows match these filters."}
+            </p>
+          </div>
+        ) : (
+          <CatalystFeedList
+            catalysts={filtered}
+            flashIds={flashIds}
+            dismissingIds={dismissingIds}
+            selectedId={selectedId}
+            watchlistTickers={watchlistTickers}
+            onSelect={openArticle}
+            onRead={openArticle}
+            onAct={openActDrawer}
+            onDismiss={dismissCatalyst}
+            onQuietAdd={quietAddTicker}
+          />
+        )}
+      </div>
 
       <CatalystDetailDrawer
         catalyst={selected}
@@ -660,9 +794,13 @@ interface FeedFiltersProps {
   categoryOptions: { category: EventCategoryKey; count: number }[];
   timeWindow: FeedTimeWindow;
   onTimeWindow: (v: FeedTimeWindow) => void;
+  minImpact: FeedImpactFloor;
+  onMinImpact: (v: FeedImpactFloor) => void;
   quietMode: boolean;
   watchlistCount: number;
   playbookCount: number;
+  panelFiltersActive: boolean;
+  onClearFilters: () => void;
 }
 
 function FeedFilters({
@@ -673,9 +811,13 @@ function FeedFilters({
   categoryOptions,
   timeWindow,
   onTimeWindow,
+  minImpact,
+  onMinImpact,
   quietMode,
   watchlistCount,
   playbookCount,
+  panelFiltersActive,
+  onClearFilters,
 }: FeedFiltersProps) {
   return (
     <div className="flex flex-col gap-2.5">
@@ -698,6 +840,21 @@ function FeedFilters({
         <div
           className="flex flex-wrap items-center gap-1"
           role="group"
+          aria-label="Filter by impact"
+        >
+          {FEED_IMPACT_FLOORS.map((floor) => (
+            <FilterChip
+              key={floor.id}
+              active={minImpact === floor.id}
+              onClick={() => onMinImpact(floor.id)}
+            >
+              {floor.label}
+            </FilterChip>
+          ))}
+        </div>
+        <div
+          className="flex flex-wrap items-center gap-1"
+          role="group"
           aria-label="Filter by article posting time"
         >
           {FEED_TIME_WINDOWS.map((w) => (
@@ -710,6 +867,16 @@ function FeedFilters({
             </FilterChip>
           ))}
         </div>
+        {panelFiltersActive ? (
+          <button
+            type="button"
+            onClick={onClearFilters}
+            className="inline-flex h-8 items-center gap-1 rounded-md border border-[var(--desk-border)] px-2.5 font-mono text-[0.7rem] tracking-wide text-[var(--desk-text-muted)] transition-colors hover:border-[var(--desk-border-strong)] hover:text-[var(--desk-text)]"
+          >
+            <X className="size-3" />
+            Clear
+          </button>
+        ) : null}
       </div>
       {categoryOptions.length > 0 ? (
         <div className="flex flex-wrap items-center gap-1">
