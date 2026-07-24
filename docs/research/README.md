@@ -9,6 +9,8 @@ Shared architecture, UX/JTBD, sources/schema, and API research notes for collabo
 | File                                                                                                           | Topic                                                    |
 | -------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
 | [CATALYST-NEWS-CONVERSATION-SUBJECTS.md](./CATALYST-NEWS-CONVERSATION-SUBJECTS.md)                             | Conversation subjects relevant to catalysts/news product |
+| [ENGINEER-UX-UI-GUIDE-SIMPLE.md](./ENGINEER-UX-UI-GUIDE-SIMPLE.md)                                             | Simple PDF-style UX/UI guide (easy read)                 |
+| [ENGINEER-UX-UI-IMPLEMENTATION-GUIDE.md](./ENGINEER-UX-UI-IMPLEMENTATION-GUIDE.md)                             | Engineer UX/UI build guide (persona → checklist)         |
 | [ENGINEER-UX-FEATURE-ROADMAP.md](./ENGINEER-UX-FEATURE-ROADMAP.md)                                             | Engineer-facing UX/feature roadmap (synthesis)           |
 | [ENGINEER-UX-FEATURE-ROADMAP-VISUAL.md](./ENGINEER-UX-FEATURE-ROADMAP-VISUAL.md)                               | Visual companion (Mermaid diagrams, matrices)            |
 | [Catalyst-Intel-Client-Architecture-and-Flow.md](./Catalyst-Intel-Client-Architecture-and-Flow.md)             | Client architecture and data/UI flow                     |
