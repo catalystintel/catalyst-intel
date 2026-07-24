@@ -5,7 +5,7 @@ import { useActionState } from "react";
 import {
   updateDisplayName,
   type UpdateProfileState,
-} from "@/app/profile/actions";
+} from "@/app/(desk)/profile/actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";

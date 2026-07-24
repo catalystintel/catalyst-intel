@@ -21,10 +21,8 @@ export function Skeleton({ className }: { className?: string }) {
 }
 
 /**
- * Reproduces the static AppShell chrome (sidebar rail + header bar) with
- * placeholder blocks instead of real nav/account data, so the very first
- * frame after a sidebar click already has the right layout - no jump when
- * the real page swaps in a moment later.
+ * @deprecated Prefer the shared `(desk)` layout + content-only `loading.tsx`.
+ * Kept for any non-desk surfaces that still need a full-frame placeholder.
  */
 export function AppChromeSkeleton({ children }: { children: ReactNode }) {
   return (

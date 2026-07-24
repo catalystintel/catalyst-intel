@@ -9,11 +9,13 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 
 /**
- * Shared chrome for `/dashboard` and `/dashboard/catalyst/[id]`.
- * Keeps the real sidebar/header mounted across Live tape ↔ article navigations
- * so `loading.tsx` only skeletons the content pane (not the whole desk).
+ * Shared chrome for all authenticated desk routes
+ * (`/dashboard`, `/analytics`, `/admin`, `/alerts`, `/watchlist`, `/profile`).
+ *
+ * Keeps the real sidebar/header mounted across navigations so route
+ * `loading.tsx` files only skeleton the content pane — never the chrome.
  */
-export default async function DashboardLayout({
+export default async function DeskLayout({
   children,
 }: {
   children: ReactNode;
@@ -25,7 +27,7 @@ export default async function DashboardLayout({
         data: { user },
       } = await supabase.auth.getUser();
       if (!user) {
-        redirect("/login?next=/dashboard");
+        redirect("/login");
       }
     }
     return <DatabaseSetupNotice />;
@@ -33,7 +35,7 @@ export default async function DashboardLayout({
 
   const user = await getCurrentAppUser();
   if (!user) {
-    redirect("/login?next=/dashboard");
+    redirect("/login");
   }
 
   return (
@@ -44,7 +46,6 @@ export default async function DashboardLayout({
         displayName: user.displayName,
         avatarUrl: user.avatarUrl,
       }}
-      active="live"
     >
       {children}
     </AppShell>
