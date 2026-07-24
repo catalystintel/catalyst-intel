@@ -31,11 +31,26 @@ import {
   clearArticleEnrichmentCache,
   fetchArticleEnrichment,
   formatMarketCapMillions,
+  toTradingViewSymbol,
 } from "./enrich-article";
 import { getFinnhubApiKey, getPolygonApiKey } from "@/lib/jobs/vendor-env";
 
 const finnhubKey = getFinnhubApiKey as unknown as ReturnType<typeof vi.fn>;
 const polygonKey = getPolygonApiKey as unknown as ReturnType<typeof vi.fn>;
+
+describe("toTradingViewSymbol", () => {
+  it("maps common US exchanges", () => {
+    expect(toTradingViewSymbol("AAPL", "NASDAQ NMS")).toBe("NASDAQ:AAPL");
+    expect(toTradingViewSymbol("IBM", "NEW YORK STOCK EXCHANGE, INC.")).toBe(
+      "NYSE:IBM",
+    );
+    expect(toTradingViewSymbol("SPY", "NYSE ARCA")).toBe("AMEX:SPY");
+  });
+
+  it("falls back to bare ticker when exchange unknown", () => {
+    expect(toTradingViewSymbol("xyz", null)).toBe("XYZ");
+  });
+});
 
 describe("formatMarketCapMillions", () => {
   it("formats M / B / T", () => {
