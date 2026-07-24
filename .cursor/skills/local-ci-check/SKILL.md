@@ -18,11 +18,14 @@ unresolved work - fix it and re-run before saying the task is done.
 npm run format:check
 npm run lint
 npm test
+npm run db:check
 npm run build
 ```
 
 ## Notes
 
+- `npm run db:check` enforces Drizzle schema↔migration sync (also runs on
+  husky pre-commit). See `.cursor/skills/drizzle-migrations/SKILL.md`.
 - `npm run build` runs `drizzle-kit migrate && next build` - it also verifies
   every committed migration file applies cleanly, and needs enough
   placeholder env vars to not fail on missing config. If they aren't already

@@ -1,4 +1,7 @@
+import { runAlertAutoFire } from "@/lib/alerts/auto-fire";
+import { clusterRecentCatalysts } from "@/lib/jobs/cluster-events";
 import { purgeStaleCatalysts } from "@/lib/jobs/data-retention";
+import { runLlmTriageBatch } from "@/lib/jobs/llm-triage";
 import { fetchClinicalTrials } from "@/lib/jobs/fetch-clinicaltrials";
 import { fetchFinnhubCatalysts } from "@/lib/jobs/fetch-finnhub-catalysts";
 import { fetchForm4Api } from "@/lib/jobs/fetch-form4api";
@@ -65,6 +68,21 @@ export interface FetchAllSourcesResult {
     inserted: number;
     skipped: number;
     errors: number;
+  };
+  /**
+   * Post-ingest enrichment that runs once per orchestrator call, across all
+   * sources' output rather than per-source: cross-source clustering, LLM
+   * triage batch, and auto-fired alerts. Never throws — soft-fails to zeroed
+   * counts so a broken enrichment step can't take down ingestion itself.
+   */
+  enrichment: {
+    clustersCreated: number;
+    catalystsLinked: number;
+    llmTriaged: number;
+    llmSkipped: number;
+    alertsEvaluated: number;
+    alertsDelivered: number;
+    alertsFailed: number;
   };
 }
 
@@ -184,6 +202,7 @@ export async function fetchAllCatalystSources(options?: {
   sources?: CatalystSourceId[];
   includeLaterStubs?: boolean;
 }): Promise<FetchAllSourcesResult> {
+  const runStartIso = new Date().toISOString();
   const selected = options?.sources?.length
     ? options.sources
     : [...CATALYST_SOURCE_IDS];
@@ -264,13 +283,64 @@ export async function fetchAllCatalystSources(options?: {
     { fetched: 0, inserted: 0, skipped: 0, errors: 0 },
   );
 
+  const enrichment = await runPostIngestEnrichment(runStartIso);
+
   return {
     ranAt: new Date().toISOString(),
     fetchOrder: buildFetchOrder(),
     phases,
     sources,
     totals,
+    enrichment,
   };
+}
+
+/**
+ * Cross-source enrichment that only makes sense after all sources for this
+ * run have inserted: clustering (needs the full same-tick picture), LLM
+ * triage batch, and auto-fired alerts (`since: runStartIso`). Each step is
+ * independently soft-failed so one broken step never blocks the others or
+ * the orchestrator's own result.
+ */
+async function runPostIngestEnrichment(
+  runStartIso: string,
+): Promise<FetchAllSourcesResult["enrichment"]> {
+  const result: FetchAllSourcesResult["enrichment"] = {
+    clustersCreated: 0,
+    catalystsLinked: 0,
+    llmTriaged: 0,
+    llmSkipped: 0,
+    alertsEvaluated: 0,
+    alertsDelivered: 0,
+    alertsFailed: 0,
+  };
+
+  try {
+    const clustered = await clusterRecentCatalysts();
+    result.clustersCreated = clustered.clustersCreated;
+    result.catalystsLinked = clustered.catalystsLinked;
+  } catch (error) {
+    console.error("Event clustering failed:", error);
+  }
+
+  try {
+    const triaged = await runLlmTriageBatch();
+    result.llmTriaged = triaged.triaged;
+    result.llmSkipped = triaged.skipped;
+  } catch (error) {
+    console.error("LLM triage batch failed:", error);
+  }
+
+  try {
+    const fired = await runAlertAutoFire({ since: runStartIso });
+    result.alertsEvaluated = fired.evaluated;
+    result.alertsDelivered = fired.delivered;
+    result.alertsFailed = fired.failed;
+  } catch (error) {
+    console.error("Alert auto-fire failed:", error);
+  }
+
+  return result;
 }
 
 export async function fetchCatalystSource(

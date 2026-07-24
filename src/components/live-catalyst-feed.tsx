@@ -63,7 +63,8 @@ type Presence = "active" | "blurred" | "hidden";
 
 /**
  * Blotter: Title · Time · Event · Ticker · Impact · Action (hover toolbar).
- * Time is reserved wide enough for `formatTimeDate` (`10:23 AM · Jul 20, 2026`).
+ * Time is event occurrence (`catalysts.timestamp` in ET), never DB insert
+ * time. Wide enough for `formatTimeDate` (`10:23 AM ET · Jul 20, 2026`).
  * Action reserves room for Read/Act/Dismiss/Quiet so hover buttons never overflow
  * left over Time.
  */
@@ -766,7 +767,11 @@ function CatalystFeedList({
         <div role="columnheader" className="col-span-1">
           Title
         </div>
-        <div role="columnheader" className="hidden text-right sm:block">
+        <div
+          role="columnheader"
+          className="hidden text-right sm:block"
+          title="When the event occurred (ET) — not DB insert time"
+        >
           Time
         </div>
         <div role="columnheader" className="hidden sm:block">

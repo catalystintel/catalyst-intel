@@ -1,32 +1,42 @@
 import { describe, expect, it } from "vitest";
 
-import { materialityFromScore, scoreFromCategory } from "./materiality";
+import { computeMateriality, scoreFromCategory } from "./materiality";
 
-describe("scoreFromCategory", () => {
-  it("maps known categories to priority scores", () => {
-    expect(scoreFromCategory("distress")).toBe(90);
-    expect(scoreFromCategory("earnings")).toBe(85);
-    expect(scoreFromCategory("disclosure")).toBe(20);
+describe("computeMateriality", () => {
+  it("starts from category base score", () => {
+    const result = computeMateriality({ eventCategory: "earnings" });
+    expect(result.score).toBe(scoreFromCategory("earnings"));
+    expect(result.reasons[0]).toMatch(/Earnings/);
   });
 
-  it("falls back to other when missing", () => {
-    expect(scoreFromCategory(null)).toBe(10);
-    expect(scoreFromCategory(undefined)).toBe(10);
-  });
-});
-
-describe("materialityFromScore", () => {
-  it("tiers high / medium / low", () => {
-    expect(materialityFromScore(90).tier).toBe("high");
-    expect(materialityFromScore(55).tier).toBe("medium");
-    expect(materialityFromScore(20).tier).toBe("low");
-  });
-
-  it("uses category fallback when score is null", () => {
-    expect(materialityFromScore(null, "deals")).toMatchObject({
-      score: 80,
-      tier: "high",
-      label: "High",
+  it("adds item weight for restatement (4.02)", () => {
+    const result = computeMateriality({
+      eventCategory: "distress",
+      itemCodes: [{ code: "4.02" }],
     });
+    expect(result.score).toBe(scoreFromCategory("distress") + 10);
+    expect(result.reasons.some((r) => /High-weight/i.test(r))).toBe(true);
+  });
+
+  it("boosts microcaps and AH/PM sessions", () => {
+    const result = computeMateriality({
+      eventCategory: "capital",
+      marketCapMillions: 120,
+      session: "AH",
+    });
+    expect(result.score).toBe(scoreFromCategory("capital") + 6 + 8);
+  });
+
+  it("clamps to 0–100", () => {
+    const result = computeMateriality({
+      eventCategory: "distress",
+      itemCodes: [{ code: "4.02" }],
+      marketCapMillions: 50,
+      session: "PM",
+      sentiment: "bearish",
+      sessionDeltaPct: -12,
+    });
+    expect(result.score).toBeLessThanOrEqual(100);
+    expect(result.score).toBeGreaterThanOrEqual(0);
   });
 });

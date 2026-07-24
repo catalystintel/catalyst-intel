@@ -6,7 +6,7 @@ import {
   type SourceFetchResult,
 } from "@/lib/jobs/ingest-pipeline";
 import { getFinnhubApiKey } from "@/lib/jobs/vendor-env";
-import { categorizeNewsHeadline } from "@/lib/catalysts/news-category";
+import { upsertCompanyProfile } from "@/lib/jobs/company-enrichment";
 
 const BASE = "https://finnhub.io/api/v1";
 
@@ -30,17 +30,6 @@ interface FdaRow {
   catalyst?: string;
   status?: string;
   date?: string;
-}
-
-interface NewsRow {
-  category?: string;
-  datetime?: number;
-  headline?: string;
-  id?: number;
-  related?: string;
-  source?: string;
-  summary?: string;
-  url?: string;
 }
 
 interface ProfileRow {
@@ -170,43 +159,7 @@ function fdaToNormalized(row: FdaRow): NormalizedCatalyst | null {
   };
 }
 
-function newsToNormalized(row: NewsRow): NormalizedCatalyst | null {
-  if (!row.id || !row.headline) return null;
-  const related = row.related
-    ?.split(",")
-    .map((s) => s.trim().toUpperCase())
-    .filter(Boolean);
-  const ticker = related?.[0] ?? null;
-  const timestamp = row.datetime
-    ? new Date(row.datetime * 1000).toISOString()
-    : new Date().toISOString();
-  const classified = categorizeNewsHeadline(row.headline, row.category);
-
-  return {
-    provider: "finnhub",
-    externalId: `finnhub:news:${row.id}`,
-    url: row.url ?? null,
-    rawContent: row,
-    ticker,
-    companyName: ticker,
-    type: "Company News",
-    title: row.headline,
-    headline: row.source?.trim() || "Company news",
-    eventCategory: classified.eventCategory,
-    subcategory: classified.subcategory,
-    timestamp,
-    summary: row.summary?.trim() || null,
-    confidence: 55,
-    tags: [
-      "finnhub",
-      "news",
-      ...classified.tags,
-      ...(related ?? []).slice(0, 3),
-    ],
-  };
-}
-
-/** @internal exported for unit tests */
+/** @internal exported for unit tests — not ingested (quality-first). */
 export function recommendationToNormalized(
   symbol: string,
   row: RecommendationRow,
@@ -253,7 +206,7 @@ export function recommendationToNormalized(
   };
 }
 
-/** @internal exported for unit tests */
+/** @internal exported for unit tests — not ingested (quality-first). */
 export function priceTargetToNormalized(
   symbol: string,
   row: PriceTargetRow,
@@ -313,8 +266,12 @@ function uniqueSymbols(
 }
 
 /**
- * Finnhub earnings + FDA calendars, company/general news, and partial
- * Analyst Actions (recommendation trends + price targets on free tier).
+ * Finnhub earnings + FDA calendars + company profile enrichment.
+ *
+ * Quality-first: we intentionally do NOT ingest Finnhub general/company news
+ * or recommendation/price-target snapshots as catalyst rows — those are
+ * firehose / stale consensus and drown the tape. Profile2 still enriches
+ * `companies` (sector / market cap) for materiality scoring.
  * Soft-fails when FINNHUB_API_KEY is unset.
  */
 export async function fetchFinnhubCatalysts(options?: {
@@ -325,19 +282,20 @@ export async function fetchFinnhubCatalysts(options?: {
   if (!apiKey) {
     return skippedSourceResult(
       "finnhub",
-      "FINNHUB_API_KEY is not set. Add it to enable Finnhub earnings/FDA/news/analyst ingest.",
+      "FINNHUB_API_KEY is not set. Add it to enable Finnhub earnings/FDA ingest + profile enrichment.",
     );
   }
 
   const from = todayIsoDate();
-  const to = daysFromNowIso(14);
+  // Near-term only — distant calendar noise is not actionable today.
+  const to = daysFromNowIso(7);
   const normalized: NormalizedCatalyst[] = [];
 
   const earningsPayload = await finnhubGet<{
     earningsCalendar?: EarningsRow[];
   }>("/calendar/earnings", apiKey, { from, to });
   const earnings = earningsPayload.earningsCalendar ?? [];
-  for (const row of earnings.slice(0, 80)) {
+  for (const row of earnings.slice(0, 40)) {
     const item = earningsToNormalized(row);
     if (item) normalized.push(item);
   }
@@ -351,7 +309,7 @@ export async function fetchFinnhubCatalysts(options?: {
     const fdaRows = Array.isArray(fdaPayload)
       ? fdaPayload
       : (fdaPayload.data ?? []);
-    for (const row of fdaRows.slice(0, 40)) {
+    for (const row of fdaRows.slice(0, 25)) {
       const item = fdaToNormalized(row);
       if (item) normalized.push(item);
     }
@@ -362,93 +320,29 @@ export async function fetchFinnhubCatalysts(options?: {
     );
   }
 
-  const newsSymbols = options?.newsSymbols?.slice(0, 5) ?? [];
-  if (newsSymbols.length === 0) {
-    // Market news fallback when no watchlist symbols provided.
-    try {
-      const general = await finnhubGet<NewsRow[]>("/news", apiKey, {
-        category: "general",
-      });
-      for (const row of (general ?? []).slice(0, 25)) {
-        const item = newsToNormalized(row);
-        if (item) normalized.push(item);
-      }
-    } catch (error) {
-      console.warn(
-        "Finnhub general news unavailable:",
-        error instanceof Error ? error.message : error,
-      );
-    }
-  } else {
-    for (const symbol of newsSymbols) {
-      try {
-        const companyNews = await finnhubGet<NewsRow[]>(
-          "/company-news",
-          apiKey,
-          { symbol, from: daysFromNowIso(-3), to: from },
-        );
-        for (const row of (companyNews ?? []).slice(0, 10)) {
-          const item = newsToNormalized(row);
-          if (item) normalized.push(item);
-        }
-
-        const profile = await finnhubGet<ProfileRow>(
-          "/stock/profile2",
-          apiKey,
-          {
-            symbol,
-          },
-        );
-        if (profile?.name && profile.ticker) {
-          // Profile is enrichment metadata stored as a low-priority catalyst note
-          // only when we have no better signal — skip inserting profile-only rows.
-          void profile;
-        }
-      } catch (error) {
-        console.warn(
-          `Finnhub news/profile for ${symbol} failed:`,
-          error instanceof Error ? error.message : error,
-        );
-      }
-    }
-  }
-
-  // Partial Analyst Actions: recommendation trends + price targets (free tier).
-  // Cap symbols to stay inside Finnhub rate limits during cron.
-  const analystSymbols =
+  // Profile enrichment only (no news / consensus catalyst rows). Prefer
+  // earnings symbols + optional watchlist; fall back to liquid names.
+  const profileSymbols =
     options?.analystSymbols?.slice(0, 8) ??
+    options?.newsSymbols?.slice(0, 8) ??
     uniqueSymbols(earnings, DEFAULT_ANALYST_SYMBOLS, 8);
 
-  for (const symbol of analystSymbols) {
+  for (const symbol of profileSymbols) {
     try {
-      const recs = await finnhubGet<RecommendationRow[]>(
-        "/stock/recommendation",
-        apiKey,
-        { symbol },
-      );
-      const latest = (recs ?? [])[0];
-      if (latest) {
-        const item = recommendationToNormalized(symbol, latest);
-        if (item) normalized.push(item);
+      const profile = await finnhubGet<ProfileRow>("/stock/profile2", apiKey, {
+        symbol,
+      });
+      if (profile?.ticker) {
+        await upsertCompanyProfile({
+          ticker: profile.ticker,
+          name: profile.name,
+          industry: profile.finnhubIndustry,
+          marketCapMillions: profile.marketCapitalization,
+        });
       }
     } catch (error) {
       console.warn(
-        `Finnhub recommendation for ${symbol} unavailable:`,
-        error instanceof Error ? error.message : error,
-      );
-    }
-
-    try {
-      const pt = await finnhubGet<PriceTargetRow>(
-        "/stock/price-target",
-        apiKey,
-        { symbol },
-      );
-      const item = priceTargetToNormalized(symbol, pt);
-      if (item) normalized.push(item);
-    } catch (error) {
-      console.warn(
-        `Finnhub price-target for ${symbol} unavailable:`,
+        `Finnhub profile2 for ${symbol} unavailable:`,
         error instanceof Error ? error.message : error,
       );
     }

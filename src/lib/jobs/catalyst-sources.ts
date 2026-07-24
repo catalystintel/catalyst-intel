@@ -45,7 +45,7 @@ export const CATALYST_SOURCE_CATALOG: readonly CatalystSourceMeta[] = [
     priority: "must",
     phase: "A",
     contributes:
-      "8-K / Form 4 / S-3 / 424B / SC 13D·G filings (keyless; needs SEC_EDGAR_USER_AGENT)",
+      "8-K (tradeable items) / Form 4 / S-3 / 424B / SC 13D·G (keyless; needs SEC_EDGAR_USER_AGENT). Boilerplate 7.01/8.01/9.01-only dropped.",
     keyEnv: "SEC_EDGAR_USER_AGENT",
   },
   {
@@ -72,7 +72,7 @@ export const CATALYST_SOURCE_CATALOG: readonly CatalystSourceMeta[] = [
     priority: "should",
     phase: "B",
     contributes:
-      "Earnings + FDA calendars, company news, recommendation trends + price targets (needs FINNHUB_API_KEY)",
+      "Near-term earnings + FDA calendars + company profile enrichment (needs FINNHUB_API_KEY). News/consensus intentionally skipped (quality-first).",
     keyEnv: "FINNHUB_API_KEY",
   },
   {
@@ -81,7 +81,8 @@ export const CATALYST_SOURCE_CATALOG: readonly CatalystSourceMeta[] = [
     label: "openFDA",
     priority: "must",
     phase: "A",
-    contributes: "Recent FDA drug approval (AP) submissions (keyless)",
+    contributes:
+      "Recent FDA original (AP) approvals with sponsor→ticker resolution (keyless; unresolved dropped)",
   },
   {
     id: "clinicaltrials",
@@ -89,7 +90,8 @@ export const CATALYST_SOURCE_CATALOG: readonly CatalystSourceMeta[] = [
     label: "ClinicalTrials.gov",
     priority: "must",
     phase: "A",
-    contributes: "Recent clinical trial study updates (keyless)",
+    contributes:
+      "Material trial status changes (completed/terminated/suspended/withdrawn) with ticker (keyless; recruiting noise dropped)",
   },
   {
     id: "polygon-news",
@@ -98,7 +100,7 @@ export const CATALYST_SOURCE_CATALOG: readonly CatalystSourceMeta[] = [
     priority: "should",
     phase: "C",
     contributes:
-      "Market/Benzinga Wire-tagged news via Polygon/Massive (needs POLYGON_API_KEY)",
+      "Benzinga/wire + catalyst-classified articles only via Polygon/Massive (needs POLYGON_API_KEY). Generic news dropped.",
     keyEnv: "POLYGON_API_KEY",
   },
   {
@@ -108,7 +110,7 @@ export const CATALYST_SOURCE_CATALOG: readonly CatalystSourceMeta[] = [
     priority: "should",
     phase: "C",
     contributes:
-      "historical_impact enrichment from daily aggs (after news; free tier ~5 req/min)",
+      "historical_impact + session_context enrichment from daily aggs (after news; free tier ~5 req/min)",
     keyEnv: "POLYGON_API_KEY",
   },
   {
@@ -118,7 +120,7 @@ export const CATALYST_SOURCE_CATALOG: readonly CatalystSourceMeta[] = [
     priority: "should",
     phase: "B",
     contributes:
-      "Optional Form 4 enrichment (EDGAR Form 4 still works without FORM4_API_KEY)",
+      "Intentionally skipped (quality-first): duplicates SEC EDGAR Form 4 Atom",
     keyEnv: "FORM4_API_KEY",
   },
 ] as const;
