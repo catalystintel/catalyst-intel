@@ -12,30 +12,23 @@ interface Stat {
 }
 
 /**
- * Compact stat cards (catalysts in window, high-impact count, active
- * tickers, avg impact score) - the same "glance" role Benzinga Pro's panel
- * header stats play, just for a window instead of a single session.
+ * Compact glance stats for the analytics window (catalyst count + active
+ * tickers).
  */
 export function StatStrip({
   totalCount,
-  highImpactCount,
   activeTickerCount,
-  avgImpactScore,
 }: {
   totalCount: number;
-  highImpactCount: number;
   activeTickerCount: number;
-  avgImpactScore: number;
 }) {
   const stats: Stat[] = [
     { label: "Catalysts", value: totalCount },
-    { label: "High impact", value: highImpactCount, accent: true },
     { label: "Active tickers", value: activeTickerCount },
-    { label: "Avg impact", value: avgImpactScore, suffix: "/100" },
   ];
 
   return (
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+    <div className="grid grid-cols-2 gap-3">
       {stats.map((stat) => (
         <StatCard key={stat.label} {...stat} />
       ))}

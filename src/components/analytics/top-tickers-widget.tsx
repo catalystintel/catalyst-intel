@@ -2,13 +2,12 @@
 
 import Link from "next/link";
 
-import { MaterialityBadge } from "@/components/materiality-badge";
 import type { TickerStat } from "@/lib/catalysts/analytics";
 
 /**
- * Ranked ticker list (count + avg impact). Each row links into the Live
- * tape pre-filtered to that ticker, so Analytics acts as a jumping-off
- * point back into the tape rather than a dead-end summary.
+ * Ranked ticker list by catalyst count. Each row links into the Live tape
+ * pre-filtered to that ticker, so Analytics acts as a jumping-off point
+ * back into the tape rather than a dead-end summary.
  */
 export function TopTickersWidget({ tickers }: { tickers: TickerStat[] }) {
   if (tickers.length === 0) {
@@ -36,7 +35,6 @@ export function TopTickersWidget({ tickers }: { tickers: TickerStat[] }) {
             <span className="shrink-0 font-mono text-[0.72rem] text-[var(--desk-text-muted)] tabular-nums">
               {t.count} {t.count === 1 ? "catalyst" : "catalysts"}
             </span>
-            <MaterialityBadge score={t.avgImpact} className="shrink-0" />
           </Link>
         </li>
       ))}

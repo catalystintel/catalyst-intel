@@ -4,7 +4,6 @@ import Link from "next/link";
 import { ArrowLeft, BookOpen, ExternalLink } from "lucide-react";
 
 import { CategoryBadge } from "@/components/category-badge";
-import { MaterialityBadge } from "@/components/materiality-badge";
 import type { FeedCatalyst } from "@/lib/catalysts/feed-catalyst";
 import { benzingaPanelForCategory } from "@/lib/catalysts/benzinga-analogs";
 import { sourceDisplay, titleLine } from "@/lib/catalysts/feed-display";
@@ -27,6 +26,7 @@ import type { ArticleEnrichment } from "@/lib/catalysts/enrich-article";
 import { formatMarketCapMillions } from "@/lib/catalysts/enrich-article-format";
 import { formatRelativeAge, formatTimeDate } from "@/lib/format/relative-time";
 import { CATEGORY_LABELS } from "@/lib/jobs/parse-8k-items";
+import { dashboardHref } from "@/lib/nav/dashboard-href";
 import { cn } from "@/lib/utils";
 
 export interface CatalystArticleViewProps {
@@ -78,7 +78,7 @@ export function CatalystArticleView({
     <article className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-6 pb-10">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--desk-border)] pb-4">
         <Link
-          href="/dashboard"
+          href={dashboardHref({ catalystId: catalyst.id })}
           className="inline-flex items-center gap-1.5 font-mono text-[0.72rem] tracking-wide text-[var(--desk-text-muted)] uppercase transition-colors hover:text-[var(--desk-text)]"
         >
           <ArrowLeft className="size-3.5" />
@@ -114,10 +114,6 @@ export function CatalystArticleView({
           {catalyst.eventCategory ? (
             <CategoryBadge category={catalyst.eventCategory} />
           ) : null}
-          <MaterialityBadge
-            score={catalyst.impactScore}
-            category={catalyst.eventCategory}
-          />
         </div>
 
         <h1 className="text-xl font-semibold tracking-tight text-[var(--desk-text)] sm:text-2xl">

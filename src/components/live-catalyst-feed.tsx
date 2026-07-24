@@ -8,28 +8,29 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { useRouter } from "next/navigation";
 import {
   BookOpen,
   Check,
   ChevronDown,
   ListFilter,
+  Loader2,
   Plus,
   RefreshCw,
   X,
 } from "lucide-react";
 import { toast } from "sonner";
 
+import { FeedFilterMultiSelect } from "@/components/feed-filter-multi-select";
 import { TapeSplitPanel } from "@/components/tape-split-panel";
+import { TickerActionMenu } from "@/components/ticker-action-menu";
 import { Input } from "@/components/ui/input";
 import { useAutoFocusScrollRegion } from "@/hooks/use-auto-focus-scroll-region";
-import {
-  toFeedCatalyst,
-  type FeedCatalyst,
-} from "@/lib/catalysts/feed-catalyst";
+import { useLiveFeedQuery } from "@/hooks/use-live-feed-query";
+import { type FeedCatalyst } from "@/lib/catalysts/feed-catalyst";
 import {
   titleLine,
   eventLabel as feedEventLabel,
-  matchesFeedSearchQuery,
   sourceDisplay,
 } from "@/lib/catalysts/feed-display";
 import {
@@ -40,34 +41,27 @@ import {
   CATEGORY_LABELS,
   type EventCategoryKey,
 } from "@/lib/jobs/parse-8k-items";
+import { FEED_TIME_WINDOWS } from "@/lib/catalysts/feed-time-window";
 import {
-  FEED_TIME_WINDOWS,
-  feedLimitForTimeWindow,
-  type FeedTimeWindow,
-} from "@/lib/catalysts/feed-time-window";
-import {
-  DEFAULT_FEED_FILTERS,
-  FEED_IMPACT_FLOORS,
   isFiltersDefault,
-  minScoreForFeedImpactFloor,
   readPersistedFeedFilters,
   touchPersistedFeedFilters,
   writePersistedFeedFilters,
-  type FeedImpactFloor,
+  type FeedFilterState,
 } from "@/lib/catalysts/feed-filter-persist";
-import { materialityFromScore } from "@/lib/catalysts/materiality";
 import {
-  formatClockTime,
-  formatTimeDate,
-  isWithinWindow,
-} from "@/lib/format/relative-time";
+  FEED_FORM_LABELS,
+  type FeedFormFilter,
+} from "@/lib/catalysts/feed-form-filters";
+import type { FeedFacets } from "@/lib/catalysts/feed-query-types";
+import { gicsLabel, type GicsSectorKey } from "@/lib/companies/gics-sectors";
+import { formatClockTime, formatTimeDate } from "@/lib/format/relative-time";
 import { cn } from "@/lib/utils";
 
 export type { FeedCatalyst };
 
 const ACTIVE_POLL_MS = 15_000;
 const BLURRED_POLL_MS = 90_000;
-const RETRY_DELAY_MS = 3_000;
 const DISMISS_STORAGE_KEY = "ci.dismissed-catalyst-ids";
 
 type Presence = "active" | "blurred" | "hidden";
@@ -118,30 +112,44 @@ export function LiveCatalystFeed({
   initialCatalysts,
   isAdmin,
   initialTickerFilter,
+  initialSelectedId,
 }: {
   initialCatalysts: FeedCatalyst[];
   isAdmin: boolean;
   /** Pre-fills the ticker filter, e.g. arriving via `?ticker=` from Analytics. */
   initialTickerFilter?: string;
+  /** Re-opens the split panel, e.g. arriving via `?c=` after full article. */
+  initialSelectedId?: number;
 }) {
-  const [catalysts, setCatalysts] = useState(initialCatalysts);
+  const router = useRouter();
+  const query = useLiveFeedQuery(initialCatalysts, {
+    tickerQuery: initialTickerFilter?.trim() ?? "",
+  });
+  const {
+    catalysts,
+    total,
+    facets,
+    nextCursor,
+    loading,
+    loadingMore,
+    lastFetchedAt,
+    pollError,
+    filterState,
+    setFilterState,
+    patchFilters,
+    clearFilters,
+    refresh,
+    loadMore,
+  } = query;
+
   const [presence, setPresence] = useState<Presence>("active");
-  const [lastFetchedAt, setLastFetchedAt] = useState<string | null>(null);
-  const [pollError, setPollError] = useState<string | null>(null);
   const [flashIds, setFlashIds] = useState<Set<number>>(() => new Set());
-  const [selectedId, setSelectedId] = useState<number | null>(null);
-  const [tickerQuery, setTickerQuery] = useState(initialTickerFilter ?? "");
-  const [categoryFilter, setCategoryFilter] = useState<EventCategoryKey | null>(
-    null,
-  );
-  const [timeWindow, setTimeWindow] = useState<FeedTimeWindow>("all");
-  const [minImpact, setMinImpact] = useState<FeedImpactFloor>(
-    DEFAULT_FEED_FILTERS.minImpact,
+  const [selectedId, setSelectedId] = useState<number | null>(
+    initialSelectedId && initialSelectedId > 0 ? initialSelectedId : null,
   );
   const [filtersOpen, setFiltersOpen] = useState(Boolean(initialTickerFilter));
   const [filtersHydrated, setFiltersHydrated] = useState(false);
   const [filterRecalc, setFilterRecalc] = useState(false);
-  const [nowTick, setNowTick] = useState(() => Date.now());
   const [dismissedIds, setDismissedIds] = useState<Set<number>>(() =>
     readDismissedIds(),
   );
@@ -156,19 +164,9 @@ export function LiveCatalystFeed({
   const [prefsLoaded, setPrefsLoaded] = useState(false);
   const [manualRefreshing, setManualRefreshing] = useState(false);
   const skipFilterAnimRef = useRef(true);
-  const inFlight = useRef(false);
-  // Mirrors `pollError` synchronously (set alongside every `setPollError`
-  // call below) so `handleManualRefresh` can read the latest value right
-  // after its own `await`, without waiting on a React re-render.
-  const pollErrorRef = useRef<string | null>(null);
-  const abortRef = useRef<AbortController | null>(null);
-  const retryTimeoutRef = useRef<number | null>(null);
+  const skipFlashRef = useRef(false);
   const knownIds = useRef(new Set(initialCatalysts.map((c) => c.id)));
-  // Lets the retry path below call "the latest softRefetch" without
-  // capturing it in its own closure (which would be a self-reference).
-  const softRefetchRef = useRef<((isRetry?: boolean) => Promise<void>) | null>(
-    null,
-  );
+  const pollErrorRef = useRef<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -221,44 +219,39 @@ export function LiveCatalystFeed({
       const saved = readPersistedFeedFilters();
       const urlTicker = initialTickerFilter?.trim() ?? "";
       if (urlTicker) {
-        setTickerQuery(urlTicker);
+        setFilterState((prev) => ({
+          ...prev,
+          tickerQuery: urlTicker,
+          ...(saved
+            ? {
+                categoryFilters: saved.categoryFilters,
+                sectorFilters: saved.sectorFilters,
+                formFilters: saved.formFilters,
+                sourceFilters: saved.sourceFilters,
+                timeWindow: saved.timeWindow,
+              }
+            : {}),
+        }));
         setFiltersOpen(true);
-        if (saved) {
-          setCategoryFilter(saved.categoryFilter);
-          setTimeWindow(saved.timeWindow);
-          setMinImpact(saved.minImpact);
-        }
       } else if (saved) {
-        setTickerQuery(saved.tickerQuery);
-        setCategoryFilter(saved.categoryFilter);
-        setTimeWindow(saved.timeWindow);
-        setMinImpact(saved.minImpact);
+        setFilterState(saved);
         if (!isFiltersDefault(saved)) setFiltersOpen(true);
       }
       setFiltersHydrated(true);
     }, 0);
     return () => window.clearTimeout(restoreId);
-  }, [initialTickerFilter]);
+  }, [initialTickerFilter, setFilterState]);
 
   // Persist filters while active; clear storage when back to product defaults.
   useEffect(() => {
     if (!filtersHydrated) return;
-    writePersistedFeedFilters({
-      tickerQuery,
-      categoryFilter,
-      timeWindow,
-      minImpact,
-    });
-  }, [tickerQuery, categoryFilter, timeWindow, minImpact, filtersHydrated]);
+    writePersistedFeedFilters(filterState);
+  }, [filterState, filtersHydrated]);
 
   // Keep the idle clock alive while the tab is visible with non-default filters.
   useEffect(() => {
     if (!filtersHydrated) return;
-    if (
-      isFiltersDefault({ tickerQuery, categoryFilter, timeWindow, minImpact })
-    ) {
-      return;
-    }
+    if (isFiltersDefault(filterState)) return;
     const touch = () => {
       if (document.visibilityState === "visible") {
         touchPersistedFeedFilters();
@@ -270,9 +263,13 @@ export function LiveCatalystFeed({
       window.clearInterval(intervalId);
       document.removeEventListener("visibilitychange", touch);
     };
-  }, [tickerQuery, categoryFilter, timeWindow, minImpact, filtersHydrated]);
+  }, [filterState, filtersHydrated]);
 
   // Brief crossfade when the visible row set is recalculated from filters.
+  useEffect(() => {
+    skipFlashRef.current = true;
+  }, [filterState]);
+
   useEffect(() => {
     if (!filtersHydrated) return;
     if (skipFilterAnimRef.current) {
@@ -282,121 +279,48 @@ export function LiveCatalystFeed({
     setFilterRecalc(true);
     const timeoutId = window.setTimeout(() => setFilterRecalc(false), 280);
     return () => window.clearTimeout(timeoutId);
-  }, [
-    tickerQuery,
-    categoryFilter,
-    timeWindow,
-    minImpact,
-    quietMode,
-    filtersHydrated,
-  ]);
-
-  const softRefetch = useCallback(
-    async (isRetry = false) => {
-      if (retryTimeoutRef.current !== null) {
-        window.clearTimeout(retryTimeoutRef.current);
-        retryTimeoutRef.current = null;
-      }
-      // A stale in-flight request (e.g. from a time-window switch a moment
-      // ago) should never win a race against this newer one - abort it
-      // instead of skipping this call, so filter changes always feel snappy
-      // rather than occasionally "stuck" waiting for the old request.
-      abortRef.current?.abort();
-      const controller = new AbortController();
-      abortRef.current = controller;
-      inFlight.current = true;
-      try {
-        const params = new URLSearchParams({
-          window: timeWindow,
-          limit: String(feedLimitForTimeWindow(timeWindow)),
-        });
-        const res = await fetch(`/api/catalysts?${params}`, {
-          method: "GET",
-          credentials: "same-origin",
-          cache: "no-store",
-          signal: controller.signal,
-        });
-        const data = await res.json();
-        if (res.status === 429) {
-          const msg = data.error ?? "Rate limited — polling will retry.";
-          pollErrorRef.current = msg;
-          setPollError(msg);
-          return;
-        }
-        if (!res.ok) {
-          throw new Error(data.error ?? "Could not refresh feed.");
-        }
-        const next: FeedCatalyst[] = (data.catalysts ?? []).map(toFeedCatalyst);
-        const fresh = next
-          .filter((c) => !knownIds.current.has(c.id))
-          .map((c) => c.id);
-        if (fresh.length > 0) {
-          for (const id of next.map((c) => c.id)) knownIds.current.add(id);
-          setFlashIds((prev) => {
-            const merged = new Set(prev);
-            for (const id of fresh) merged.add(id);
-            return merged;
-          });
-          window.setTimeout(() => {
-            setFlashIds((prev) => {
-              const nextSet = new Set(prev);
-              for (const id of fresh) nextSet.delete(id);
-              return nextSet;
-            });
-          }, 1600);
-        } else {
-          for (const id of next.map((c) => c.id)) knownIds.current.add(id);
-        }
-        setCatalysts(next);
-        setLastFetchedAt(data.fetchedAt ?? new Date().toISOString());
-        pollErrorRef.current = null;
-        setPollError(null);
-      } catch (err) {
-        if (err instanceof DOMException && err.name === "AbortError") {
-          // Superseded by a newer request - not a real failure, so don't
-          // flash a transient error at the user.
-          return;
-        }
-        // A single quick, silent retry absorbs one-off network blips
-        // instead of leaving a stale feed (and a visible error) for up to
-        // a full poll interval.
-        if (!isRetry) {
-          retryTimeoutRef.current = window.setTimeout(() => {
-            void softRefetchRef.current?.(true);
-          }, RETRY_DELAY_MS);
-          return;
-        }
-        {
-          const msg =
-            err instanceof Error ? err.message : "Could not refresh feed.";
-          pollErrorRef.current = msg;
-          setPollError(msg);
-        }
-      } finally {
-        inFlight.current = false;
-      }
-    },
-    [timeWindow],
-  );
+  }, [filterState, quietMode, filtersHydrated]);
 
   useEffect(() => {
-    softRefetchRef.current = softRefetch;
-  }, [softRefetch]);
+    pollErrorRef.current = pollError;
+  }, [pollError]);
+
+  // Flash newly-arrived rows on background poll (not filter refetches).
+  useEffect(() => {
+    if (skipFlashRef.current) {
+      skipFlashRef.current = false;
+      knownIds.current = new Set(catalysts.map((c) => c.id));
+      return;
+    }
+    const fresh = catalysts
+      .filter((c) => !knownIds.current.has(c.id))
+      .map((c) => c.id);
+    if (fresh.length > 0) {
+      for (const id of catalysts.map((c) => c.id)) knownIds.current.add(id);
+      setFlashIds((prev) => {
+        const merged = new Set(prev);
+        for (const id of fresh) merged.add(id);
+        return merged;
+      });
+      window.setTimeout(() => {
+        setFlashIds((prev) => {
+          const nextSet = new Set(prev);
+          for (const id of fresh) nextSet.delete(id);
+          return nextSet;
+        });
+      }, 1600);
+    } else {
+      for (const id of catalysts.map((c) => c.id)) knownIds.current.add(id);
+    }
+  }, [catalysts]);
 
   const handleManualRefresh = useCallback(() => {
     if (manualRefreshing) return;
     setManualRefreshing(true);
-    // Keep the spin visible for a minimum stretch even when the request
-    // resolves near-instantly, so the click always reads as "doing
-    // something" instead of a flash too quick to notice.
     const minSpinMs = 500;
     const startedAt = Date.now();
-    void softRefetch()
+    void refresh()
       .then(() => {
-        // Manual refresh is a deliberate action, so a failure surfaces here
-        // as a toast too - not just the persistent inline `pollError` banner,
-        // which is tuned for background-polling status rather than a direct
-        // response to this click.
         if (pollErrorRef.current) {
           toast.error(pollErrorRef.current);
         }
@@ -408,7 +332,7 @@ export function LiveCatalystFeed({
           Math.max(0, minSpinMs - elapsed),
         );
       });
-  }, [manualRefreshing, softRefetch]);
+  }, [manualRefreshing, refresh]);
 
   useEffect(() => {
     const syncPresence = () => setPresence(readPresence());
@@ -433,33 +357,19 @@ export function LiveCatalystFeed({
     const immediateId =
       presence === "active"
         ? window.setTimeout(() => {
-            void softRefetch();
+            void refresh({ silent: true });
           }, 0)
         : null;
 
     const id = window.setInterval(() => {
-      void softRefetch();
+      void refresh({ silent: true });
     }, intervalMs);
 
     return () => {
       if (immediateId !== null) window.clearTimeout(immediateId);
       window.clearInterval(id);
     };
-  }, [presence, softRefetch]);
-
-  useEffect(() => {
-    return () => {
-      abortRef.current?.abort();
-      if (retryTimeoutRef.current !== null) {
-        window.clearTimeout(retryTimeoutRef.current);
-      }
-    };
-  }, []);
-
-  useEffect(() => {
-    const id = window.setInterval(() => setNowTick(Date.now()), 15_000);
-    return () => window.clearInterval(id);
-  }, []);
+  }, [presence, refresh]);
 
   const toggleQuietMode = useCallback(async () => {
     const next = !quietMode;
@@ -505,6 +415,37 @@ export function LiveCatalystFeed({
     setSelectedId(id);
   }, []);
 
+  const openArticle = useCallback(
+    (id: number) => {
+      router.push(`/dashboard/catalyst/${id}`);
+    },
+    [router],
+  );
+
+  const filterToTicker = useCallback(
+    (ticker: string) => {
+      patchFilters({ tickerQuery: ticker.trim().toUpperCase() });
+      setFiltersOpen(true);
+    },
+    [patchFilters],
+  );
+
+  // Keep `?c=` in sync with the open row so article / browser back lands on
+  // the same catalyst instead of a blank tape.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const url = new URL(window.location.href);
+    if (!url.pathname.startsWith("/dashboard")) return;
+    const current = url.searchParams.get("c");
+    const next = selectedId != null ? String(selectedId) : null;
+    if (current === next) return;
+    if (next) url.searchParams.set("c", next);
+    else url.searchParams.delete("c");
+    const qs = url.searchParams.toString();
+    const href = qs ? `${url.pathname}?${qs}` : url.pathname;
+    window.history.replaceState(window.history.state, "", href);
+  }, [selectedId]);
+
   const prefetchQuote = useCallback(
     (id: number) => {
       const row = catalysts.find((c) => c.id === id);
@@ -542,56 +483,54 @@ export function LiveCatalystFeed({
     [watchlistTickers],
   );
 
-  const categoryOptions = useMemo(() => {
-    const counts = new Map<EventCategoryKey, number>();
-    for (const c of catalysts) {
-      if (!c.eventCategory) continue;
-      counts.set(c.eventCategory, (counts.get(c.eventCategory) ?? 0) + 1);
-    }
-    return [...counts.entries()]
-      .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
-      .map(([category, count]) => ({ category, count }));
-  }, [catalysts]);
-
-  const windowMinutes =
-    FEED_TIME_WINDOWS.find((w) => w.id === timeWindow)?.minutes ?? null;
-
-  const filtered = useMemo(() => {
-    const q = tickerQuery.trim();
-    const impactFloor = minScoreForFeedImpactFloor(minImpact);
-    return catalysts
-      .filter((c) => {
-        if (dismissedIds.has(c.id)) return false;
-        if (
-          !matchesQuietPlaybook(
-            { ticker: c.ticker, eventCategory: c.eventCategory },
-            { quietMode, watchlistTickers, playbookCategories },
-          )
-        ) {
-          return false;
+  const handleQuiet = useCallback(
+    async (ticker: string | null) => {
+      const t = ticker?.trim().toUpperCase();
+      if (!t) return;
+      const wasOnWatchlist = watchlistTickers.includes(t);
+      if (!wasOnWatchlist) {
+        await quietAddTicker(t);
+      }
+      if (!quietMode) {
+        setQuietMode(true);
+        try {
+          await fetch("/api/playbook", {
+            method: "PUT",
+            credentials: "same-origin",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              categories: playbookCategories,
+              quietMode: true,
+            }),
+          });
+          toast.success(
+            wasOnWatchlist
+              ? "Quiet playbook enabled — watchlist + playbook categories only"
+              : "Added to watchlist · Quiet playbook enabled",
+          );
+        } catch {
+          setQuietMode(false);
+          toast.error("Could not enable quiet playbook");
         }
-        if (categoryFilter && c.eventCategory !== categoryFilter) return false;
-        if (q && !matchesFeedSearchQuery(c, q)) return false;
-        if (!isWithinWindow(c.timestamp, windowMinutes, nowTick)) return false;
-        if (
-          materialityFromScore(c.impactScore, c.eventCategory).score <
-          impactFloor
-        ) {
-          return false;
-        }
-        return true;
-      })
-      .sort(
-        (a, b) =>
-          new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
+      } else if (!wasOnWatchlist) {
+        toast.success("Added to watchlist");
+      }
+    },
+    [quietAddTicker, quietMode, watchlistTickers, playbookCategories],
+  );
+
+  const facetOptions = useMemo(() => buildFacetOptions(facets), [facets]);
+
+  const visible = useMemo(() => {
+    return catalysts.filter((c) => {
+      if (dismissedIds.has(c.id)) return false;
+      return matchesQuietPlaybook(
+        { ticker: c.ticker, eventCategory: c.eventCategory },
+        { quietMode, watchlistTickers, playbookCategories },
       );
+    });
   }, [
     catalysts,
-    categoryFilter,
-    tickerQuery,
-    minImpact,
-    windowMinutes,
-    nowTick,
     dismissedIds,
     quietMode,
     watchlistTickers,
@@ -602,21 +541,8 @@ export function LiveCatalystFeed({
     ? (catalysts.find((c) => c.id === selectedId) ?? null)
     : null;
 
-  const panelFilterState = {
-    tickerQuery,
-    categoryFilter,
-    timeWindow,
-    minImpact,
-  };
-  const panelFiltersActive = !isFiltersDefault(panelFilterState);
+  const panelFiltersActive = !isFiltersDefault(filterState);
   const filtersActive = panelFiltersActive || quietMode;
-
-  const clearPanelFilters = useCallback(() => {
-    setTickerQuery(DEFAULT_FEED_FILTERS.tickerQuery);
-    setCategoryFilter(DEFAULT_FEED_FILTERS.categoryFilter);
-    setTimeWindow(DEFAULT_FEED_FILTERS.timeWindow);
-    setMinImpact(DEFAULT_FEED_FILTERS.minImpact);
-  }, []);
 
   const lastUpdatedLabel = lastFetchedAt
     ? new Date(lastFetchedAt).toLocaleTimeString("en-US", {
@@ -640,7 +566,7 @@ export function LiveCatalystFeed({
             type="button"
             onClick={() => void toggleQuietMode()}
             disabled={!prefsLoaded}
-            title="Only show watchlist tickers that match your playbook categories"
+            title="When on, only show catalysts for tickers on your watchlist that match your playbook event categories"
             className={cn(
               "inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-[0.82rem] font-medium transition-colors",
               quietMode
@@ -679,7 +605,7 @@ export function LiveCatalystFeed({
           {panelFiltersActive ? (
             <button
               type="button"
-              onClick={clearPanelFilters}
+              onClick={clearFilters}
               className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--desk-border-strong)] bg-[var(--desk-overlay-soft)] px-2.5 py-1.5 text-[0.82rem] font-medium text-[var(--desk-text-secondary)] transition-colors hover:bg-[var(--desk-overlay-strong)] hover:text-[var(--desk-text)]"
             >
               <X className="size-3.5 text-[var(--desk-text-muted)]" />
@@ -709,20 +635,16 @@ export function LiveCatalystFeed({
       {filtersOpen ? (
         <div className="border-b border-[var(--desk-border)] bg-[var(--desk-header)]/80 px-4 py-3 sm:px-5">
           <FeedFilters
-            tickerQuery={tickerQuery}
-            onTickerQuery={setTickerQuery}
-            categoryFilter={categoryFilter}
-            onCategoryFilter={setCategoryFilter}
-            categoryOptions={categoryOptions}
-            timeWindow={timeWindow}
-            onTimeWindow={setTimeWindow}
-            minImpact={minImpact}
-            onMinImpact={setMinImpact}
+            filterState={filterState}
+            onPatchFilters={patchFilters}
+            facetOptions={facetOptions}
+            total={total}
+            visibleCount={visible.length}
             quietMode={quietMode}
             watchlistCount={watchlistTickers.length}
             playbookCount={playbookCategories.length}
             panelFiltersActive={panelFiltersActive}
-            onClearFilters={clearPanelFilters}
+            onClearFilters={clearFilters}
           />
         </div>
       ) : null}
@@ -740,7 +662,7 @@ export function LiveCatalystFeed({
         )}
       >
         <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-          {catalysts.length === 0 ? (
+          {catalysts.length === 0 && !loading ? (
             <div className="flex flex-1 flex-col items-center justify-center gap-2 px-6 py-16 text-center">
               <p className="text-sm font-medium text-[var(--desk-text)]">
                 No catalysts yet
@@ -751,7 +673,7 @@ export function LiveCatalystFeed({
                   : "Filings appear here once an admin runs the first ingestion job."}
               </p>
             </div>
-          ) : filtered.length === 0 ? (
+          ) : visible.length === 0 && !loading ? (
             <div className="flex flex-1 items-center justify-center px-6 py-12 text-center">
               <p className="font-mono text-sm text-[var(--desk-text-muted)]">
                 {quietMode
@@ -761,17 +683,23 @@ export function LiveCatalystFeed({
             </div>
           ) : (
             <CatalystFeedList
-              catalysts={filtered}
+              catalysts={visible}
               flashIds={flashIds}
               dismissingIds={dismissingIds}
               selectedId={selectedId}
               watchlistTickers={watchlistTickers}
               onSelect={openSplit}
-              onRead={openSplit}
+              onRead={openArticle}
               onPrefetch={prefetchQuote}
               onAct={openSplit}
               onDismiss={dismissCatalyst}
-              onQuietAdd={quietAddTicker}
+              onQuiet={handleQuiet}
+              onFilterToTicker={filterToTicker}
+              quietMode={quietMode}
+              restoreScrollToSelected={Boolean(initialSelectedId)}
+              hasMore={Boolean(nextCursor)}
+              loadingMore={loadingMore}
+              onLoadMore={loadMore}
             />
           )}
         </div>
@@ -801,16 +729,44 @@ export function LiveCatalystFeed({
   );
 }
 
+interface FacetOptions {
+  categories: { value: string; label: string; count?: number }[];
+  sectors: { value: string; label: string; count?: number }[];
+  forms: { value: string; label: string; count?: number }[];
+  sources: { value: string; label: string; count?: number }[];
+}
+
+function buildFacetOptions(facets: FeedFacets | null): FacetOptions {
+  return {
+    categories: (facets?.categories ?? []).map((b) => ({
+      value: b.key,
+      label: CATEGORY_LABELS[b.key as EventCategoryKey] ?? b.key,
+      count: b.count,
+    })),
+    sectors: (facets?.sectors ?? []).map((b) => ({
+      value: b.key,
+      label: gicsLabel(b.key as GicsSectorKey),
+      count: b.count,
+    })),
+    forms: (facets?.forms ?? []).map((b) => ({
+      value: b.key,
+      label: FEED_FORM_LABELS[b.key as FeedFormFilter] ?? b.key,
+      count: b.count,
+    })),
+    sources: (facets?.sources ?? []).map((b) => ({
+      value: b.key,
+      label: b.key,
+      count: b.count,
+    })),
+  };
+}
+
 interface FeedFiltersProps {
-  tickerQuery: string;
-  onTickerQuery: (v: string) => void;
-  categoryFilter: EventCategoryKey | null;
-  onCategoryFilter: (v: EventCategoryKey | null) => void;
-  categoryOptions: { category: EventCategoryKey; count: number }[];
-  timeWindow: FeedTimeWindow;
-  onTimeWindow: (v: FeedTimeWindow) => void;
-  minImpact: FeedImpactFloor;
-  onMinImpact: (v: FeedImpactFloor) => void;
+  filterState: FeedFilterState;
+  onPatchFilters: (patch: Partial<FeedFilterState>) => void;
+  facetOptions: FacetOptions;
+  total: number | null;
+  visibleCount: number;
   quietMode: boolean;
   watchlistCount: number;
   playbookCount: number;
@@ -819,15 +775,11 @@ interface FeedFiltersProps {
 }
 
 function FeedFilters({
-  tickerQuery,
-  onTickerQuery,
-  categoryFilter,
-  onCategoryFilter,
-  categoryOptions,
-  timeWindow,
-  onTimeWindow,
-  minImpact,
-  onMinImpact,
+  filterState,
+  onPatchFilters,
+  facetOptions,
+  total,
+  visibleCount,
   quietMode,
   watchlistCount,
   playbookCount,
@@ -846,27 +798,12 @@ function FeedFilters({
       ) : null}
       <div className="flex flex-wrap items-center gap-2">
         <Input
-          value={tickerQuery}
-          onChange={(e) => onTickerQuery(e.target.value)}
+          value={filterState.tickerQuery}
+          onChange={(e) => onPatchFilters({ tickerQuery: e.target.value })}
           placeholder="Ticker, company, title…"
           aria-label="Search by ticker, company, or title"
           className="h-8 w-52 border-[var(--desk-border-strong)] bg-[var(--desk-overlay-soft)] font-mono text-xs tracking-wide md:text-xs"
         />
-        <div
-          className="flex flex-wrap items-center gap-1"
-          role="group"
-          aria-label="Filter by impact"
-        >
-          {FEED_IMPACT_FLOORS.map((floor) => (
-            <FilterChip
-              key={floor.id}
-              active={minImpact === floor.id}
-              onClick={() => onMinImpact(floor.id)}
-            >
-              {floor.label}
-            </FilterChip>
-          ))}
-        </div>
         <div
           className="flex flex-wrap items-center gap-1"
           role="group"
@@ -875,8 +812,8 @@ function FeedFilters({
           {FEED_TIME_WINDOWS.map((w) => (
             <FilterChip
               key={w.id}
-              active={timeWindow === w.id}
-              onClick={() => onTimeWindow(w.id)}
+              active={filterState.timeWindow === w.id}
+              onClick={() => onPatchFilters({ timeWindow: w.id })}
             >
               {w.label}
             </FilterChip>
@@ -893,27 +830,52 @@ function FeedFilters({
           </button>
         ) : null}
       </div>
-      {categoryOptions.length > 0 ? (
-        <div className="flex flex-wrap items-center gap-1">
-          <FilterChip
-            active={categoryFilter === null}
-            onClick={() => onCategoryFilter(null)}
-          >
-            All sectors
-          </FilterChip>
-          {categoryOptions.map(({ category, count }) => (
-            <FilterChip
-              key={category}
-              active={categoryFilter === category}
-              onClick={() =>
-                onCategoryFilter(categoryFilter === category ? null : category)
-              }
-            >
-              {CATEGORY_LABELS[category]}
-              <span className="ml-1 opacity-60">{count}</span>
-            </FilterChip>
-          ))}
-        </div>
+      <div className="flex flex-wrap items-center gap-2">
+        <FeedFilterMultiSelect
+          label="Categories"
+          options={facetOptions.categories}
+          selected={filterState.categoryFilters}
+          onChange={(categoryFilters) =>
+            onPatchFilters({
+              categoryFilters: categoryFilters as EventCategoryKey[],
+            })
+          }
+          emptyLabel="All categories"
+        />
+        <FeedFilterMultiSelect
+          label="Industries"
+          options={facetOptions.sectors}
+          selected={filterState.sectorFilters}
+          onChange={(sectorFilters) =>
+            onPatchFilters({
+              sectorFilters: sectorFilters as GicsSectorKey[],
+            })
+          }
+          emptyLabel="All industries"
+        />
+        <FeedFilterMultiSelect
+          label="Form type"
+          options={facetOptions.forms}
+          selected={filterState.formFilters}
+          onChange={(formFilters) =>
+            onPatchFilters({
+              formFilters: formFilters as FeedFormFilter[],
+            })
+          }
+          emptyLabel="All forms"
+        />
+        <FeedFilterMultiSelect
+          label="Source"
+          options={facetOptions.sources}
+          selected={filterState.sourceFilters}
+          onChange={(sourceFilters) => onPatchFilters({ sourceFilters })}
+          emptyLabel="All sources"
+        />
+      </div>
+      {total != null ? (
+        <p className="font-mono text-[0.68rem] text-[var(--desk-text-dim)] tabular-nums">
+          Showing {visibleCount} of {total}
+        </p>
       ) : null}
     </div>
   );
@@ -955,7 +917,13 @@ function CatalystFeedList({
   onPrefetch,
   onAct,
   onDismiss,
-  onQuietAdd,
+  onQuiet,
+  onFilterToTicker,
+  quietMode,
+  restoreScrollToSelected = false,
+  hasMore = false,
+  loadingMore = false,
+  onLoadMore,
 }: {
   catalysts: FeedCatalyst[];
   flashIds: Set<number>;
@@ -967,13 +935,34 @@ function CatalystFeedList({
   onPrefetch: (id: number) => void;
   onAct: (id: number) => void;
   onDismiss: (id: number) => void;
-  onQuietAdd: (ticker: string | null) => void;
+  onQuiet: (ticker: string | null) => void;
+  onFilterToTicker: (ticker: string) => void;
+  quietMode: boolean;
+  /** One-shot scroll to the open row after returning from article. */
+  restoreScrollToSelected?: boolean;
+  hasMore?: boolean;
+  loadingMore?: boolean;
+  onLoadMore?: () => void;
 }) {
   const listRef = useRef<HTMLDivElement | null>(null);
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
+  const didRestoreScrollRef = useRef(false);
   // The feed's own scroll region (not `<main>` - it's sized to fit exactly,
   // see app-shell.tsx) needs to be focusable + focused on mount so Page
   // Up/Down/Home/End scroll it immediately, without requiring a prior click.
   useAutoFocusScrollRegion(listRef);
+
+  useEffect(() => {
+    if (!restoreScrollToSelected || selectedId == null) return;
+    if (didRestoreScrollRef.current) return;
+    const row = listRef.current?.querySelector<HTMLElement>(
+      `[data-catalyst-id="${selectedId}"]`,
+    );
+    if (!row) return;
+    didRestoreScrollRef.current = true;
+    // nearest keeps the row in view without yanking the list to center.
+    row.scrollIntoView({ block: "nearest", inline: "nearest" });
+  }, [restoreScrollToSelected, selectedId, catalysts]);
 
   // "N new" pill: when the user has scrolled down, newly-arrived rows land
   // at the top of the tape (out of view) and their `.row-flash` never gets
@@ -1016,6 +1005,23 @@ function CatalystFeedList({
     listRef.current?.scrollTo({ top: 0, behavior: "smooth" });
     setPendingNew(0);
   }, []);
+
+  useEffect(() => {
+    if (!hasMore || !onLoadMore) return;
+    const root = listRef.current;
+    const sentinel = sentinelRef.current;
+    if (!root || !sentinel) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting && !loadingMore) {
+          void onLoadMore();
+        }
+      },
+      { root, rootMargin: "240px" },
+    );
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [hasMore, onLoadMore, loadingMore, catalysts.length]);
 
   return (
     <div
@@ -1085,6 +1091,7 @@ function CatalystFeedList({
           return (
             <article
               key={catalyst.id}
+              data-catalyst-id={catalyst.id}
               role="row"
               tabIndex={0}
               onClick={() => onSelect(catalyst.id)}
@@ -1143,9 +1150,23 @@ function CatalystFeedList({
                   <span className="font-mono text-[0.68rem] text-[var(--desk-text-dim)]">
                     {eventLabel}
                   </span>
-                  <span className="font-mono text-[0.8rem] font-semibold text-[var(--desk-text)]">
-                    {catalyst.ticker ?? "—"}
-                  </span>
+                  {catalyst.ticker ? (
+                    <TickerActionMenu
+                      ticker={catalyst.ticker}
+                      catalystId={catalyst.id}
+                      onWatchlist={onWatchlist}
+                      onFilterToTicker={() =>
+                        onFilterToTicker(catalyst.ticker!)
+                      }
+                      onOpenPanel={() => onAct(catalyst.id)}
+                      onAddWatchlist={() => onQuiet(catalyst.ticker)}
+                      onDismiss={() => onDismiss(catalyst.id)}
+                    />
+                  ) : (
+                    <span className="font-mono text-[0.8rem] font-semibold text-[var(--desk-text)]">
+                      —
+                    </span>
+                  )}
                 </div>
                 {/* Touch: always-visible actions below meta/date (never same-line overlap). */}
                 <div
@@ -1156,34 +1177,30 @@ function CatalystFeedList({
                   <FeedActionButton
                     variant="primary"
                     onClick={() => onRead(catalyst.id)}
-                    title="Open article inside Catalyst"
+                    title="Open full article"
                   >
                     <BookOpen className="size-3" />
                     Read
                   </FeedActionButton>
                   <FeedActionButton
                     onClick={() => onAct(catalyst.id)}
-                    title="Quick triage drawer"
+                    title="Open side panel (chart + triage)"
                   >
                     <Check className="size-3" />
                     Act
                   </FeedActionButton>
                   <FeedActionButton
                     onClick={() => onDismiss(catalyst.id)}
-                    title="Dismiss from feed"
+                    title="Hide from this tape (this browser). Not deleted."
                   >
                     <X className="size-3" />
                     Dismiss
                   </FeedActionButton>
                   {catalyst.ticker ? (
                     <FeedActionButton
-                      onClick={() => onQuietAdd(catalyst.ticker)}
-                      title={
-                        onWatchlist
-                          ? "Already on quiet watchlist"
-                          : "Add ticker to quiet watchlist"
-                      }
-                      disabled={onWatchlist}
+                      onClick={() => onQuiet(catalyst.ticker)}
+                      title="Add to watchlist and enable Quiet playbook (watchlist + playbook categories only)"
+                      disabled={onWatchlist && quietMode}
                     >
                       <Plus className="size-3" />
                       Quiet
@@ -1219,9 +1236,21 @@ function CatalystFeedList({
               </div>
 
               <div role="cell" className="hidden min-w-0 sm:block">
-                <span className="truncate font-mono text-[0.88rem] font-semibold tracking-tight text-[var(--desk-text)] transition-colors group-hover:text-[var(--desk-live)]">
-                  {catalyst.ticker ?? "—"}
-                </span>
+                {catalyst.ticker ? (
+                  <TickerActionMenu
+                    ticker={catalyst.ticker}
+                    catalystId={catalyst.id}
+                    onWatchlist={onWatchlist}
+                    onFilterToTicker={() => onFilterToTicker(catalyst.ticker!)}
+                    onOpenPanel={() => onAct(catalyst.id)}
+                    onAddWatchlist={() => onQuiet(catalyst.ticker)}
+                    onDismiss={() => onDismiss(catalyst.id)}
+                  />
+                ) : (
+                  <span className="truncate font-mono text-[0.88rem] font-semibold tracking-tight text-[var(--desk-text)]">
+                    —
+                  </span>
+                )}
               </div>
 
               {/* Desktop: hover / focus-within reveals action toolbar in its own column */}
@@ -1242,34 +1271,30 @@ function CatalystFeedList({
                   <FeedActionButton
                     variant="primary"
                     onClick={() => onRead(catalyst.id)}
-                    title="Open article inside Catalyst"
+                    title="Open full article"
                   >
                     <BookOpen className="size-3" />
                     Read
                   </FeedActionButton>
                   <FeedActionButton
                     onClick={() => onAct(catalyst.id)}
-                    title="Quick triage drawer"
+                    title="Open side panel (chart + triage)"
                   >
                     <Check className="size-3" />
                     Act
                   </FeedActionButton>
                   <FeedActionButton
                     onClick={() => onDismiss(catalyst.id)}
-                    title="Dismiss from feed"
+                    title="Hide from this tape (this browser). Not deleted."
                   >
                     <X className="size-3" />
                     Dismiss
                   </FeedActionButton>
                   {catalyst.ticker ? (
                     <FeedActionButton
-                      onClick={() => onQuietAdd(catalyst.ticker)}
-                      title={
-                        onWatchlist
-                          ? "Already on quiet watchlist"
-                          : "Add ticker to quiet watchlist"
-                      }
-                      disabled={onWatchlist}
+                      onClick={() => onQuiet(catalyst.ticker)}
+                      title="Add to watchlist and enable Quiet playbook (watchlist + playbook categories only)"
+                      disabled={onWatchlist && quietMode}
                     >
                       <Plus className="size-3" />
                       Quiet
@@ -1280,6 +1305,17 @@ function CatalystFeedList({
             </article>
           );
         })}
+        {hasMore ? (
+          <div
+            ref={sentinelRef}
+            className="flex min-h-[48px] items-center justify-center py-3"
+            aria-hidden
+          >
+            {loadingMore ? (
+              <Loader2 className="size-4 animate-spin text-[var(--desk-text-dim)]" />
+            ) : null}
+          </div>
+        ) : null}
       </div>
     </div>
   );

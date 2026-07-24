@@ -9,6 +9,7 @@ import { eq } from "drizzle-orm";
 
 import { db } from "@/db/client";
 import { companies } from "@/db/schema";
+import { normalizeToGicsLabel } from "@/lib/companies/gics-sectors";
 
 export interface CompanyProfileInput {
   ticker: string;
@@ -48,6 +49,7 @@ export async function upsertCompanyProfile(
     .get();
 
   const now = new Date().toISOString();
+  const sector = normalizeToGicsLabel(input.industry);
 
   if (!existing) {
     await db
@@ -55,7 +57,7 @@ export async function upsertCompanyProfile(
       .values({
         name: input.name?.trim() || ticker,
         ticker,
-        sector: input.industry?.trim() || null,
+        sector,
         marketCap,
         exchange: input.exchange?.trim() || null,
         logoUrl: input.logoUrl?.trim() || null,
@@ -67,7 +69,7 @@ export async function upsertCompanyProfile(
 
   const updates: Partial<typeof companies.$inferInsert> = { enrichedAt: now };
   if (input.name?.trim()) updates.name = input.name.trim();
-  if (input.industry?.trim()) updates.sector = input.industry.trim();
+  if (sector) updates.sector = sector;
   if (marketCap != null) updates.marketCap = marketCap;
   if (input.exchange?.trim()) updates.exchange = input.exchange.trim();
   if (input.logoUrl?.trim()) updates.logoUrl = input.logoUrl.trim();

@@ -2,6 +2,8 @@
 
 import { useRouter } from "next/navigation";
 
+import { dashboardHref } from "@/lib/nav/dashboard-href";
+
 /**
  * Inline recovery UI when article SSR soft-fails (Turso blip / budget).
  * Prefer this over throwing into `error.tsx`, which mislabels timeouts as
@@ -31,7 +33,7 @@ export function ArticleLoadError({ catalystId }: { catalystId: number }) {
           </button>
           <button
             type="button"
-            onClick={() => router.push("/dashboard")}
+            onClick={() => router.push(dashboardHref({ catalystId }))}
             className="text-sm font-medium text-muted-foreground underline underline-offset-2"
           >
             Back to Catalyst Feed
