@@ -62,7 +62,7 @@ function ImpactChip({ impact }: { impact: "HIGH" | "MED" | "LOW" }) {
         impact === "HIGH"
           ? "border-[rgba(240,193,75,0.45)] bg-[rgba(240,193,75,0.14)] text-[var(--desk-live)]"
           : impact === "MED"
-            ? "border-[var(--desk-border-strong)] bg-white/[0.04] text-[var(--desk-text-secondary)]"
+            ? "border-[var(--desk-border-strong)] bg-[var(--desk-overlay-soft)] text-[var(--desk-text-secondary)]"
             : "border-[var(--desk-border)] text-[var(--desk-text-muted)]",
       )}
     >
@@ -117,7 +117,7 @@ export default async function Home() {
         </div>
 
         <div className="pointer-events-none fixed inset-x-0 bottom-0 z-30 sm:hidden">
-          <div className="pointer-events-auto border-t border-[var(--desk-border)] bg-[rgba(10,10,10,0.96)] px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur-md">
+          <div className="pointer-events-auto border-t border-[var(--desk-border)] bg-[var(--desk-app)]/95 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur-md">
             <Link
               href="/login"
               className={cn(
@@ -160,7 +160,7 @@ export default async function Home() {
             <div
               role="row"
               className={cn(
-                "grid h-10 items-center gap-3 border-b border-[var(--desk-border-strong)] bg-[#0c0c0c] px-4 font-mono text-[0.62rem] font-medium tracking-[0.12em] text-[var(--desk-text-dim)] uppercase sm:gap-4 sm:px-5",
+                "grid h-10 items-center gap-3 border-b border-[var(--desk-border-strong)] bg-[var(--desk-header)] px-4 font-mono text-[0.62rem] font-medium tracking-[0.12em] text-[var(--desk-text-dim)] uppercase sm:gap-4 sm:px-5",
                 PREVIEW_GRID,
               )}
             >
@@ -184,7 +184,7 @@ export default async function Home() {
                 key={`${row.ticker}-${row.time}`}
                 role="row"
                 className={cn(
-                  "feed-row grid min-h-[56px] items-center gap-3 border-b border-white/[0.06] px-4 py-3 sm:gap-4 sm:px-5 sm:py-0",
+                  "feed-row grid min-h-[56px] items-center gap-3 border-b border-[var(--desk-border)] px-4 py-3 sm:gap-4 sm:px-5 sm:py-0",
                   PREVIEW_GRID,
                 )}
                 style={{ animationDelay: `${index * 70}ms` }}
@@ -215,7 +215,7 @@ export default async function Home() {
                   <time>{row.time}</time>
                 </div>
                 <div role="cell" className="hidden sm:block">
-                  <span className="rounded-sm border border-[var(--desk-border-strong)] bg-white/[0.04] px-1.5 py-0.5 font-mono text-[0.68rem] text-[var(--desk-text-secondary)]">
+                  <span className="rounded-sm border border-[var(--desk-border-strong)] bg-[var(--desk-overlay-soft)] px-1.5 py-0.5 font-mono text-[0.68rem] text-[var(--desk-text-secondary)]">
                     {row.event}
                   </span>
                 </div>

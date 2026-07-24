@@ -9,7 +9,7 @@ import type { EventCategoryKey } from "@/lib/jobs/parse-8k-items";
 const TIER_STYLES: Record<MaterialityTier, string> = {
   high: "border-[rgba(240,193,75,0.45)] bg-[rgba(240,193,75,0.14)] text-[var(--desk-live)]",
   medium:
-    "border-[var(--desk-border-strong)] bg-white/[0.04] text-[var(--desk-text-secondary)]",
+    "border-[var(--desk-border-strong)] bg-[var(--desk-overlay-soft)] text-[var(--desk-text-secondary)]",
   low: "border-[var(--desk-border)] bg-transparent text-[var(--desk-text-muted)]",
 };
 

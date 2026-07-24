@@ -2,9 +2,11 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { Plus, Trash2 } from "lucide-react";
+import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { SkeletonCard } from "@/components/loading-skeleton";
 import {
   CATEGORY_LABELS,
   type EventCategoryKey,
@@ -21,7 +23,6 @@ export function WatchlistPlaybookPanel() {
   );
   const [quietMode, setQuietMode] = useState(false);
   const [draft, setDraft] = useState("");
-  const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const [nyseBySymbol, setNyseBySymbol] = useState<
@@ -50,7 +51,6 @@ export function WatchlistPlaybookPanel() {
       }
       const wData = await wRes.json();
       const pData = await pRes.json();
-      setError(null);
       setTickers(wData.tickers ?? []);
       setCategories(
         Array.isArray(pData.categories) && pData.categories.length > 0
@@ -85,7 +85,7 @@ export function WatchlistPlaybookPanel() {
         setNyseNote(null);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Load failed.");
+      toast.error(err instanceof Error ? err.message : "Load failed.");
     } finally {
       setLoaded(true);
     }
@@ -103,7 +103,7 @@ export function WatchlistPlaybookPanel() {
   async function addTicker(e: React.FormEvent) {
     e.preventDefault();
     setSaving(true);
-    setError(null);
+    const ticker = draft.trim().toUpperCase();
     try {
       const res = await fetch("/api/watchlist", {
         method: "POST",
@@ -115,8 +115,9 @@ export function WatchlistPlaybookPanel() {
       if (!res.ok) throw new Error(data.error ?? "Could not add ticker.");
       setDraft("");
       await load();
+      toast.success(`${ticker} added to watchlist`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not add ticker.");
+      toast.error(err instanceof Error ? err.message : "Could not add ticker.");
     } finally {
       setSaving(false);
     }
@@ -124,7 +125,6 @@ export function WatchlistPlaybookPanel() {
 
   async function removeTicker(ticker: string) {
     setSaving(true);
-    setError(null);
     try {
       const res = await fetch(
         `/api/watchlist?ticker=${encodeURIComponent(ticker)}`,
@@ -133,8 +133,11 @@ export function WatchlistPlaybookPanel() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Could not remove ticker.");
       await load();
+      toast.success(`${ticker} removed from watchlist`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not remove ticker.");
+      toast.error(
+        err instanceof Error ? err.message : "Could not remove ticker.",
+      );
     } finally {
       setSaving(false);
     }
@@ -143,9 +146,9 @@ export function WatchlistPlaybookPanel() {
   async function savePlaybook(
     nextCategories: EventCategoryKey[],
     nextQuiet: boolean,
+    { notify = false }: { notify?: boolean } = {},
   ) {
     setSaving(true);
-    setError(null);
     setCategories(nextCategories);
     setQuietMode(nextQuiet);
     try {
@@ -160,8 +163,15 @@ export function WatchlistPlaybookPanel() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Could not save playbook.");
+      if (notify) {
+        toast.success(
+          nextQuiet ? "Quiet mode turned on" : "Quiet mode turned off",
+        );
+      }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not save playbook.");
+      toast.error(
+        err instanceof Error ? err.message : "Could not save playbook.",
+      );
       await load();
     } finally {
       setSaving(false);
@@ -177,18 +187,15 @@ export function WatchlistPlaybookPanel() {
 
   if (!loaded) {
     return (
-      <p className="font-mono text-sm text-[var(--desk-text-muted)]">
-        Loading…
-      </p>
+      <div className="flex flex-col gap-8">
+        <SkeletonCard lines={2} />
+        <SkeletonCard lines={3} />
+      </div>
     );
   }
 
   return (
     <div className="flex flex-col gap-8">
-      {error ? (
-        <p className="font-mono text-sm text-destructive">{error}</p>
-      ) : null}
-
       <section className="overflow-hidden rounded-xl border border-[var(--desk-border)] bg-[var(--desk-panel)]">
         <div className="border-b border-[var(--desk-border)] px-4 py-4 sm:px-5">
           <h2 className="text-sm font-semibold text-[var(--desk-text)]">
@@ -209,7 +216,7 @@ export function WatchlistPlaybookPanel() {
               onChange={(e) => setDraft(e.target.value)}
               placeholder="Add ticker…"
               aria-label="Add ticker"
-              className="h-9 w-36 border-[var(--desk-border-strong)] bg-white/[0.02] font-mono text-xs uppercase"
+              className="h-9 w-36 border-[var(--desk-border-strong)] bg-[var(--desk-overlay-soft)] font-mono text-xs uppercase"
             />
             <Button
               type="submit"
@@ -237,7 +244,7 @@ export function WatchlistPlaybookPanel() {
                 return (
                   <li
                     key={t.id}
-                    className="inline-flex items-center gap-1.5 rounded-md border border-[var(--desk-border-strong)] bg-white/[0.03] px-2.5 py-1 font-mono text-sm text-[var(--desk-text)]"
+                    className="inline-flex items-center gap-1.5 rounded-md border border-[var(--desk-border-strong)] bg-[var(--desk-overlay-soft)] px-2.5 py-1 font-mono text-sm text-[var(--desk-text)]"
                     title={nyse?.description ?? undefined}
                   >
                     {t.ticker}
@@ -277,7 +284,9 @@ export function WatchlistPlaybookPanel() {
             <button
               type="button"
               disabled={saving}
-              onClick={() => void savePlaybook(categories, !quietMode)}
+              onClick={() =>
+                void savePlaybook(categories, !quietMode, { notify: true })
+              }
               className={cn(
                 "inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-[0.82rem] font-medium transition-colors",
                 quietMode
@@ -301,7 +310,7 @@ export function WatchlistPlaybookPanel() {
                 className={cn(
                   "inline-flex h-8 items-center rounded-md border px-2.5 font-mono text-[0.7rem] tracking-wide transition-colors",
                   active
-                    ? "border-white/30 bg-white/[0.08] text-[var(--desk-text)]"
+                    ? "border-[var(--desk-text-dim)] bg-[var(--desk-overlay-strong)] text-[var(--desk-text)]"
                     : "border-[var(--desk-border)] text-[var(--desk-text-muted)] hover:border-[var(--desk-border-strong)]",
                 )}
               >

@@ -70,6 +70,8 @@ export function checkRateLimit(options: {
 export const RATE_LIMITS = {
   /** Soft-refetch / Live feed polling. */
   catalystsRead: { limit: 90, windowMs: 60_000 },
+  /** Analytics dashboard - fetched on load + window-selector clicks, not polled. */
+  analyticsRead: { limit: 30, windowMs: 60_000 },
   /** Manual SEC fetch from the admin UI (cron bypasses separately). */
   adminWrite: { limit: 6, windowMs: 60_000 },
   /** Watchlist / playbook / alert-rule mutations. */

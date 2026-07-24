@@ -27,7 +27,7 @@ export default async function LoginPage({
       />
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-x-0 top-0 h-[40vh] bg-[radial-gradient(ellipse_at_top,rgba(255,255,255,0.07),transparent_65%)]"
+        className="pointer-events-none absolute inset-x-0 top-0 h-[40vh] bg-[radial-gradient(ellipse_at_top,var(--desk-glow),transparent_65%)]"
       />
 
       <header className="relative z-10 flex items-center justify-between px-4 pt-[max(1rem,env(safe-area-inset-top))] pb-4 sm:px-8 sm:py-5">
@@ -63,10 +63,10 @@ export default async function LoginPage({
             {devBypass ? (
               <div className="flex flex-col gap-3 rounded-md border border-amber-400/40 bg-amber-400/10 p-3">
                 <div className="text-sm">
-                  <p className="font-medium text-amber-200">
+                  <p className="font-medium text-amber-800 dark:text-amber-200">
                     Dev auth bypass is on
                   </p>
-                  <p className="mt-1 font-mono text-xs break-all text-amber-200/80">
+                  <p className="mt-1 font-mono text-xs break-all text-amber-800/80 dark:text-amber-200/80">
                     {getDevBypassEmail()}
                   </p>
                 </div>

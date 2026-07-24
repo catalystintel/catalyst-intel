@@ -14,7 +14,13 @@ import { withDbRetry } from "@/lib/db/with-db-retry";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 
-export default async function DashboardPage() {
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ ticker?: string }>;
+}) {
+  const { ticker } = await searchParams;
+
   if (!isLibsqlConfigured()) {
     if (isSupabaseConfigured()) {
       const supabase = await createSupabaseServerClient();
@@ -81,6 +87,7 @@ export default async function DashboardPage() {
         <LiveCatalystFeed
           initialCatalysts={recentCatalysts.map(toFeedCatalyst)}
           isAdmin={user.isAdmin}
+          initialTickerFilter={ticker?.trim().toUpperCase() || undefined}
         />
       </PageEnter>
     </AppShell>

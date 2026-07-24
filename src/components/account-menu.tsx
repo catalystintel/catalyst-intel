@@ -69,8 +69,8 @@ export function AccountMenu({
         className={cn(
           "btn-press flex items-center gap-1 rounded-full border py-0.5 pr-1.5 pl-0.5 transition-colors",
           open
-            ? "border-[var(--desk-border-strong)] bg-white/[0.04]"
-            : "border-transparent hover:bg-white/[0.04]",
+            ? "border-[var(--desk-border-strong)] bg-[var(--desk-overlay-soft)]"
+            : "border-transparent hover:bg-[var(--desk-overlay-soft)]",
         )}
         aria-label="Account menu"
       >
