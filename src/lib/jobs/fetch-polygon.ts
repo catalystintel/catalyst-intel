@@ -16,6 +16,8 @@ import {
   type SourceFetchResult,
 } from "@/lib/jobs/ingest-pipeline";
 import { getPolygonApiKey } from "@/lib/jobs/vendor-env";
+import { resolvePolygonNewsWindow } from "@/lib/jobs/polygon-news-window";
+import { getVendorFetchState } from "@/lib/jobs/vendor-fetch-state";
 
 const BASE = "https://api.polygon.io";
 
@@ -221,6 +223,10 @@ function newsToNormalized(
 /**
  * Fetches Polygon (Massive) news — typically includes Benzinga wire —
  * when POLYGON_API_KEY is set. Soft-fails otherwise.
+ *
+ * Uses per-vendor `last_fetched_at` as `published_utc.gte`. On HTTP 429 the
+ * watermark does not advance, so the next cron tick requests a wider window
+ * (and a larger page size) and does not permanently miss articles.
  */
 export async function fetchPolygonNews(): Promise<SourceFetchResult> {
   const apiKey = getPolygonApiKey();
@@ -231,20 +237,78 @@ export async function fetchPolygonNews(): Promise<SourceFetchResult> {
     );
   }
 
-  const payload = await polygonGet<{ results?: PolygonNewsArticle[] }>(
-    "/v2/reference/news",
-    apiKey,
-    { limit: "40", order: "desc", sort: "published_utc" },
-  );
+  const now = new Date();
+  const state = await getVendorFetchState("polygon-news");
+  const window = resolvePolygonNewsWindow({
+    state: state
+      ? {
+          lastFetchedAt: state.lastFetchedAt,
+          lastStatus: state.lastStatus,
+        }
+      : null,
+    now,
+  });
 
-  const normalized = (payload.results ?? [])
-    .map(newsToNormalized)
-    .filter((n): n is NormalizedCatalyst => n !== null)
-    // Quality-first: drop generic news before ingest; gate also enforces this.
-    .filter((n) => n.eventCategory !== "news");
+  try {
+    const payload = await polygonGet<{ results?: PolygonNewsArticle[] }>(
+      "/v2/reference/news",
+      apiKey,
+      {
+        limit: String(window.limit),
+        order: "desc",
+        sort: "published_utc",
+        "published_utc.gte": window.sinceIso,
+      },
+    );
 
-  const result = await ingestNormalizedCatalysts(normalized, { purge: false });
-  return toSourceResult("polygon-news", result);
+    const normalized = (payload.results ?? [])
+      .map(newsToNormalized)
+      .filter((n): n is NormalizedCatalyst => n !== null)
+      // Quality-first: drop generic news before ingest; gate also enforces this.
+      .filter((n) => n.eventCategory !== "news");
+
+    const result = await ingestNormalizedCatalysts(normalized, {
+      purge: false,
+    });
+    const sourceResult = toSourceResult("polygon-news", result);
+
+    const notes: string[] = [];
+    if (window.catchingUp) {
+      notes.push(
+        `Catch-up window since ${window.sinceIso} (limit ${window.limit}).`,
+      );
+    }
+    if (notes.length) {
+      sourceResult.message = [sourceResult.message, ...notes]
+        .filter(Boolean)
+        .join(" ");
+    }
+
+    return sourceResult;
+  } catch (error) {
+    if (isPolygonRateLimitError(error)) {
+      const message = window.catchingUp
+        ? `Rate limited (HTTP 429) during catch-up since ${window.sinceIso}; watermark held for next tick.`
+        : `Rate limited (HTTP 429); watermark held — next tick will widen published_utc.gte window.`;
+
+      return {
+        source: "polygon-news",
+        configured: true,
+        status: "ok",
+        rateLimited: true,
+        message,
+        fetched: 0,
+        inserted: 0,
+        skipped: 0,
+        errors: 0,
+        ranAt: now.toISOString(),
+        purgedCatalysts: 0,
+        purgedRawSources: 0,
+      };
+    }
+
+    throw error;
+  }
 }
 
 function pctChange(open: number, close: number): number {
@@ -292,6 +356,11 @@ export async function enrichHistoricalImpact(options?: {
   const todayStart = `${utcDateString(now)}T00:00:00.000Z`;
   const limit = options?.limit ?? DEFAULT_PRICE_ENRICH_LIMIT;
 
+  // After a prior 429, try a slightly larger batch once quota recovers.
+  const prior = await getVendorFetchState("polygon-prices");
+  const enrichLimit =
+    prior?.lastStatus === "rate_limited" ? Math.min(limit + 2, 6) : limit;
+
   // Skip "today" rows so free-tier 403 timeframe failures don't monopolize
   // the null-impact queue every cron tick.
   const candidates = await db
@@ -312,13 +381,18 @@ export async function enrichHistoricalImpact(options?: {
       ),
     )
     .orderBy(desc(catalysts.timestamp))
-    .limit(limit)
+    .limit(enrichLimit)
     .all();
 
   let inserted = 0;
   let skipped = 0;
   let errors = 0;
   const notes: string[] = [];
+  let rateLimited = false;
+
+  if (enrichLimit > limit) {
+    notes.push(`Catch-up enrich limit ${enrichLimit} after prior rate limit.`);
+  }
 
   for (let i = 0; i < candidates.length; i++) {
     const row = candidates[i];
@@ -393,8 +467,9 @@ export async function enrichHistoricalImpact(options?: {
       if (isPolygonRateLimitError(error)) {
         const remaining = candidates.length - i;
         skipped += remaining;
+        rateLimited = true;
         notes.push(
-          `Rate limited (HTTP 429) after ${i} enrichment attempt(s); deferred ${remaining}. Free tier is ~5 req/min — upgrade or wait for next cron.`,
+          `Rate limited (HTTP 429) after ${i} enrichment attempt(s); deferred ${remaining}. Watermark held — next cron widens catch-up batch.`,
         );
         break;
       }
@@ -424,16 +499,19 @@ export async function enrichHistoricalImpact(options?: {
     }
   }
 
+  const message = notes.length ? notes.join(" ") : undefined;
+
   return {
     source: "polygon-prices",
     configured: true,
     status: "ok",
-    message: notes.length ? notes.join(" ") : undefined,
+    rateLimited: rateLimited || undefined,
+    message,
     fetched: candidates.length,
     inserted,
     skipped,
     errors,
-    ranAt: new Date().toISOString(),
+    ranAt: now.toISOString(),
     purgedCatalysts: 0,
     purgedRawSources: 0,
   };
