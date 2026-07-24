@@ -3,10 +3,11 @@
 **Audience:** Software engineers changing the Catalyst Intel web app  
 **Purpose:** One clear file that says who the user is, what the desk must do, and exactly how to build / change UX and UI  
 **Status:** Synthesis of research + current code (Jul 2026) — not a new product invent  
+**Easy read (PDF-style):** [`ENGINEER-UX-UI-GUIDE-SIMPLE.md`](./ENGINEER-UX-UI-GUIDE-SIMPLE.md)  
 **Companion roadmaps:** [`ENGINEER-UX-FEATURE-ROADMAP.md`](./ENGINEER-UX-FEATURE-ROADMAP.md), [`ENGINEER-UX-FEATURE-ROADMAP-VISUAL.md`](./ENGINEER-UX-FEATURE-ROADMAP-VISUAL.md)  
 **QA:** repo root [`ACCEPTANCE-JTBD.md`](../../ACCEPTANCE-JTBD.md)
 
-Use this file when you edit feed, article, watchlist, alerts, fonts, colors, or empty states. Prefer short “Do X” rules over debate.
+Use this file when you edit feed, article, watchlist, alerts, fonts, colors, or empty states. Prefer short “Do X” rules over debate. For a lighter first pass, start with the [simple guide](./ENGINEER-UX-UI-GUIDE-SIMPLE.md).
 
 `CATALYST-NEWS-CONVERSATION-SUBJECTS.md` was not in the repo at write time; substance below comes from the Client Target / JTBD / Benzinga / Architecture docs instead.
 
