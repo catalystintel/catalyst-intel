@@ -24,7 +24,7 @@ export function PreLoginChrome({
       <div
         aria-hidden
         className={cn(
-          "pointer-events-none absolute inset-x-0 top-0 bg-[radial-gradient(ellipse_at_top,rgba(255,255,255,0.07),transparent_62%)]",
+          "pointer-events-none absolute inset-x-0 top-0 bg-[radial-gradient(ellipse_at_top,var(--desk-glow),transparent_62%)]",
           glowClassName,
         )}
       />
@@ -63,7 +63,7 @@ export function PreLoginChrome({
             href="/login"
             className={cn(
               buttonVariants({ variant: "outline", size: "sm" }),
-              "btn-press min-h-11 border-[var(--desk-border-strong)] bg-transparent px-3 text-[var(--desk-text-secondary)] hover:bg-white/[0.05] hover:text-[var(--desk-text)] sm:min-h-0",
+              "btn-press min-h-11 border-[var(--desk-border-strong)] bg-transparent px-3 text-[var(--desk-text-secondary)] hover:bg-[var(--desk-overlay-strong)] hover:text-[var(--desk-text)] sm:min-h-0",
             )}
           >
             Sign in

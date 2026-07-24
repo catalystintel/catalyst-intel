@@ -51,7 +51,7 @@ export function LiveHeaderStatus() {
           "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[0.68rem] font-bold tracking-[0.08em]",
           live
             ? "border-[rgba(240,193,75,0.35)] bg-[rgba(240,193,75,0.12)] text-[var(--desk-live)]"
-            : "border-[var(--desk-border-strong)] bg-white/[0.03] text-[var(--desk-text-muted)]",
+            : "border-[var(--desk-border-strong)] bg-[var(--desk-overlay-soft)] text-[var(--desk-text-muted)]",
         )}
       >
         <span

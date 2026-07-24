@@ -122,7 +122,7 @@ export function CatalystDetailDrawer({
                 <button
                   type="button"
                   onClick={() => onAct?.()}
-                  className="inline-flex items-center gap-1.5 rounded-sm border border-[var(--desk-border-strong)] px-3 py-1.5 font-mono text-xs tracking-wide text-[var(--desk-text-muted)] uppercase hover:bg-white/[0.05] hover:text-[var(--desk-text)]"
+                  className="inline-flex items-center gap-1.5 rounded-sm border border-[var(--desk-border-strong)] px-3 py-1.5 font-mono text-xs tracking-wide text-[var(--desk-text-muted)] uppercase hover:bg-[var(--desk-overlay-strong)] hover:text-[var(--desk-text)]"
                 >
                   <Check className="size-3.5" />
                   Act
@@ -130,7 +130,7 @@ export function CatalystDetailDrawer({
                 <button
                   type="button"
                   onClick={() => onDismiss?.()}
-                  className="inline-flex items-center gap-1.5 rounded-sm border border-[var(--desk-border-strong)] px-3 py-1.5 font-mono text-xs tracking-wide text-[var(--desk-text-muted)] uppercase hover:bg-white/[0.05] hover:text-[var(--desk-text)]"
+                  className="inline-flex items-center gap-1.5 rounded-sm border border-[var(--desk-border-strong)] px-3 py-1.5 font-mono text-xs tracking-wide text-[var(--desk-text-muted)] uppercase hover:bg-[var(--desk-overlay-strong)] hover:text-[var(--desk-text)]"
                 >
                   Dismiss
                 </button>
@@ -250,7 +250,7 @@ export function CatalystDetailDrawer({
                 </div>
               </div>
 
-              <div className="rounded-md border border-dashed border-[var(--desk-border-strong)] bg-white/[0.02] px-3 py-3">
+              <div className="rounded-md border border-dashed border-[var(--desk-border-strong)] bg-[var(--desk-overlay-soft)] px-3 py-3">
                 <p className="font-mono text-[0.65rem] tracking-[0.14em] text-[var(--desk-text-dim)] uppercase">
                   Historical reaction
                 </p>

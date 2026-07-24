@@ -209,7 +209,7 @@ export function WatchlistPlaybookPanel() {
               onChange={(e) => setDraft(e.target.value)}
               placeholder="Add ticker…"
               aria-label="Add ticker"
-              className="h-9 w-36 border-[var(--desk-border-strong)] bg-white/[0.02] font-mono text-xs uppercase"
+              className="h-9 w-36 border-[var(--desk-border-strong)] bg-[var(--desk-overlay-soft)] font-mono text-xs uppercase"
             />
             <Button
               type="submit"
@@ -237,7 +237,7 @@ export function WatchlistPlaybookPanel() {
                 return (
                   <li
                     key={t.id}
-                    className="inline-flex items-center gap-1.5 rounded-md border border-[var(--desk-border-strong)] bg-white/[0.03] px-2.5 py-1 font-mono text-sm text-[var(--desk-text)]"
+                    className="inline-flex items-center gap-1.5 rounded-md border border-[var(--desk-border-strong)] bg-[var(--desk-overlay-soft)] px-2.5 py-1 font-mono text-sm text-[var(--desk-text)]"
                     title={nyse?.description ?? undefined}
                   >
                     {t.ticker}
@@ -301,7 +301,7 @@ export function WatchlistPlaybookPanel() {
                 className={cn(
                   "inline-flex h-8 items-center rounded-md border px-2.5 font-mono text-[0.7rem] tracking-wide transition-colors",
                   active
-                    ? "border-white/30 bg-white/[0.08] text-[var(--desk-text)]"
+                    ? "border-[var(--desk-text-dim)] bg-[var(--desk-overlay-strong)] text-[var(--desk-text)]"
                     : "border-[var(--desk-border)] text-[var(--desk-text-muted)] hover:border-[var(--desk-border-strong)]",
                 )}
               >

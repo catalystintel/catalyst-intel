@@ -490,7 +490,7 @@ export function LiveCatalystFeed({
               "inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-[0.82rem] font-medium transition-colors",
               quietMode
                 ? "border-[var(--desk-live)]/45 bg-[var(--desk-live)]/10 text-[var(--desk-live)]"
-                : "border-[var(--desk-border-strong)] bg-white/[0.02] text-[var(--desk-text-secondary)] hover:bg-white/[0.05] hover:text-[var(--desk-text)]",
+                : "border-[var(--desk-border-strong)] bg-[var(--desk-overlay-soft)] text-[var(--desk-text-secondary)] hover:bg-[var(--desk-overlay-strong)] hover:text-[var(--desk-text)]",
             )}
           >
             Quiet playbook
@@ -506,7 +506,7 @@ export function LiveCatalystFeed({
               "inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-[0.82rem] font-medium transition-colors",
               filtersOpen || filtersActive
                 ? "border-[var(--desk-live)]/40 bg-[var(--desk-live)]/10 text-[var(--desk-live)]"
-                : "border-[var(--desk-border-strong)] bg-white/[0.02] text-[var(--desk-text-secondary)] hover:bg-white/[0.05] hover:text-[var(--desk-text)]",
+                : "border-[var(--desk-border-strong)] bg-[var(--desk-overlay-soft)] text-[var(--desk-text-secondary)] hover:bg-[var(--desk-overlay-strong)] hover:text-[var(--desk-text)]",
             )}
           >
             <ListFilter className="size-3.5 text-[var(--desk-text-muted)]" />
@@ -532,7 +532,7 @@ export function LiveCatalystFeed({
             aria-busy={manualRefreshing}
             onClick={handleManualRefresh}
             disabled={manualRefreshing}
-            className="btn-press grid size-[34px] place-items-center rounded-lg border border-[var(--desk-border-strong)] text-[var(--desk-text-muted)] transition-colors hover:bg-white/[0.05] hover:text-[var(--desk-text)] disabled:cursor-default disabled:opacity-70"
+            className="btn-press grid size-[34px] place-items-center rounded-lg border border-[var(--desk-border-strong)] text-[var(--desk-text-muted)] transition-colors hover:bg-[var(--desk-overlay-strong)] hover:text-[var(--desk-text)] disabled:cursor-default disabled:opacity-70"
           >
             <RefreshCw
               className={cn("size-4", manualRefreshing && "animate-spin")}
@@ -652,7 +652,7 @@ function FeedFilters({
           onChange={(e) => onTickerQuery(e.target.value)}
           placeholder="Ticker…"
           aria-label="Filter by ticker"
-          className="h-8 w-36 border-[var(--desk-border-strong)] bg-white/[0.02] font-mono text-xs tracking-wide uppercase md:text-xs"
+          className="h-8 w-36 border-[var(--desk-border-strong)] bg-[var(--desk-overlay-soft)] font-mono text-xs tracking-wide uppercase md:text-xs"
         />
         <div
           className="flex flex-wrap items-center gap-1"
@@ -712,7 +712,7 @@ function FilterChip({
       className={cn(
         "inline-flex h-7 items-center rounded-md border px-2.5 font-mono text-[0.7rem] tracking-wide transition-colors",
         active
-          ? "border-white/35 bg-white/[0.08] text-[var(--desk-text)]"
+          ? "border-[var(--desk-text-dim)] bg-[var(--desk-overlay-strong)] text-[var(--desk-text)]"
           : "border-[var(--desk-border)] bg-transparent text-[var(--desk-text-muted)] hover:border-[var(--desk-border-strong)] hover:text-[var(--desk-text)]",
       )}
     >
@@ -759,7 +759,7 @@ function CatalystFeedList({
       <div
         role="row"
         className={cn(
-          "sticky top-0 z-[2] grid h-10 items-center gap-2 border-b border-[var(--desk-border-strong)] bg-[#0c0c0c] px-4 font-mono text-[0.62rem] font-medium tracking-[0.12em] text-[var(--desk-text-dim)] uppercase shadow-[0_1px_0_rgba(0,0,0,0.35)] sm:gap-3 sm:px-5",
+          "sticky top-0 z-[2] grid h-10 items-center gap-2 border-b border-[var(--desk-border-strong)] bg-[var(--desk-header)] px-4 font-mono text-[0.62rem] font-medium tracking-[0.12em] text-[var(--desk-text-dim)] uppercase shadow-[0_1px_0_rgba(0,0,0,0.35)] sm:gap-3 sm:px-5",
           FEED_GRID,
         )}
       >
@@ -806,11 +806,11 @@ function CatalystFeedList({
                 }
               }}
               className={cn(
-                "feed-row group relative grid min-h-[56px] cursor-pointer items-center gap-2 border-b border-white/[0.06] px-4 py-3 transition-colors duration-150 outline-none sm:gap-3 sm:px-5 sm:py-0",
+                "feed-row group relative grid min-h-[56px] cursor-pointer items-center gap-2 border-b border-[var(--desk-border)] px-4 py-3 transition-colors duration-150 outline-none sm:gap-3 sm:px-5 sm:py-0",
                 FEED_GRID,
-                "hover:bg-white/[0.04] focus-visible:bg-white/[0.04] focus-visible:shadow-[inset_2px_0_0_var(--desk-live)]",
+                "hover:bg-[var(--desk-overlay-soft)] focus-visible:bg-[var(--desk-overlay-soft)] focus-visible:shadow-[inset_2px_0_0_var(--desk-live)]",
                 "hover:shadow-[inset_2px_0_0_rgba(240,193,75,0.35)]",
-                selected && "bg-white/[0.05]",
+                selected && "bg-[var(--desk-overlay-strong)]",
                 flashing && "row-flash",
               )}
               style={{ animationDelay: `${Math.min(index, 28) * 22}ms` }}
@@ -906,7 +906,7 @@ function CatalystFeedList({
 
               <div role="cell" className="hidden min-w-0 sm:block">
                 <span
-                  className="inline-flex max-w-full truncate rounded-sm border border-[var(--desk-border-strong)] bg-white/[0.04] px-1.5 py-0.5 font-mono text-[0.68rem] text-[var(--desk-text-secondary)]"
+                  className="inline-flex max-w-full truncate rounded-sm border border-[var(--desk-border-strong)] bg-[var(--desk-overlay-soft)] px-1.5 py-0.5 font-mono text-[0.68rem] text-[var(--desk-text-secondary)]"
                   title={
                     catalyst.eventCategory
                       ? CATEGORY_LABELS[catalyst.eventCategory]
@@ -1014,7 +1014,7 @@ function FeedActionButton({
         "inline-flex items-center gap-1 rounded-sm px-2 py-0.5 font-mono text-[0.65rem] font-semibold tracking-wide uppercase transition-[background-color,border-color,color,filter,opacity] duration-100",
         variant === "primary"
           ? "bg-[var(--desk-live)] text-[#121212] hover:brightness-110"
-          : "border border-[var(--desk-border-strong)] text-[var(--desk-text-muted)] hover:border-white/25 hover:bg-white/[0.05] hover:text-[var(--desk-text)]",
+          : "border border-[var(--desk-border-strong)] text-[var(--desk-text-muted)] hover:border-[var(--desk-text-dim)] hover:bg-[var(--desk-overlay-strong)] hover:text-[var(--desk-text)]",
         disabled &&
           "cursor-default opacity-45 hover:bg-transparent hover:brightness-100",
       )}

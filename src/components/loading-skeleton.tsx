@@ -12,7 +12,10 @@ export function Skeleton({ className }: { className?: string }) {
   return (
     <div
       aria-hidden
-      className={cn("skeleton-shimmer rounded-md bg-white/[0.05]", className)}
+      className={cn(
+        "skeleton-shimmer rounded-md bg-[var(--desk-overlay-strong)]",
+        className,
+      )}
     />
   );
 }

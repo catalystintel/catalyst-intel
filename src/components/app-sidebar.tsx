@@ -86,7 +86,7 @@ export function AppSidebar({
             type="button"
             onClick={onCollapseToggle}
             className={cn(
-              "flex w-full items-center gap-2.5 rounded-md px-2.5 py-2 text-[0.86rem] font-medium text-[var(--desk-text-dim)] transition-colors hover:bg-white/[0.04] hover:text-[var(--desk-text-muted)]",
+              "flex w-full items-center gap-2.5 rounded-md px-2.5 py-2 text-[0.86rem] font-medium text-[var(--desk-text-dim)] transition-colors hover:bg-[var(--desk-overlay-soft)] hover:text-[var(--desk-text-muted)]",
               collapsed && "justify-center px-0",
             )}
           >
@@ -181,8 +181,8 @@ function SidebarEntry({
         base,
         collapsed && "justify-center px-0",
         active
-          ? "bg-white/[0.07] text-[var(--desk-text)] shadow-[inset_2px_0_0_var(--desk-live)]"
-          : "text-[var(--desk-text-muted)] hover:bg-white/[0.04] hover:text-[var(--desk-text)]",
+          ? "bg-[var(--desk-overlay-strong)] text-[var(--desk-text)] shadow-[inset_2px_0_0_var(--desk-live)]"
+          : "text-[var(--desk-text-muted)] hover:bg-[var(--desk-overlay-soft)] hover:text-[var(--desk-text)]",
       )}
     >
       <Icon className="size-[17px] shrink-0 opacity-90" />

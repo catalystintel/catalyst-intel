@@ -179,13 +179,13 @@ export function AlertRulesPanel() {
               onChange={(e) => setName(e.target.value)}
               placeholder="Rule name"
               aria-label="Rule name"
-              className="h-9 w-48 border-[var(--desk-border-strong)] bg-white/[0.02]"
+              className="h-9 w-48 border-[var(--desk-border-strong)] bg-[var(--desk-overlay-soft)]"
             />
             <select
               value={channel}
               onChange={(e) => setChannel(e.target.value as AlertChannel)}
               aria-label="Channel"
-              className="h-9 rounded-md border border-[var(--desk-border-strong)] bg-white/[0.02] px-2 font-mono text-xs text-[var(--desk-text)]"
+              className="h-9 rounded-md border border-[var(--desk-border-strong)] bg-[var(--desk-overlay-soft)] px-2 font-mono text-xs text-[var(--desk-text)]"
             >
               <option value="webhook">Webhook</option>
               <option value="email">Email</option>
@@ -196,7 +196,7 @@ export function AlertRulesPanel() {
               onChange={(e) => setMinImpact(e.target.value)}
               placeholder="Min impact"
               aria-label="Minimum impact score"
-              className="h-9 w-28 border-[var(--desk-border-strong)] bg-white/[0.02] font-mono text-xs"
+              className="h-9 w-28 border-[var(--desk-border-strong)] bg-[var(--desk-overlay-soft)] font-mono text-xs"
             />
             <label className="inline-flex items-center gap-2 font-mono text-xs text-[var(--desk-text-muted)]">
               <input
@@ -213,7 +213,7 @@ export function AlertRulesPanel() {
               onChange={(e) => setWebhookUrl(e.target.value)}
               placeholder="https://hooks.example.com/…"
               aria-label="Webhook URL"
-              className="h-9 border-[var(--desk-border-strong)] bg-white/[0.02] font-mono text-xs"
+              className="h-9 border-[var(--desk-border-strong)] bg-[var(--desk-overlay-soft)] font-mono text-xs"
             />
           ) : null}
           {channel === "email" ? (
@@ -223,7 +223,7 @@ export function AlertRulesPanel() {
               placeholder="you@example.com"
               aria-label="Email recipient"
               type="email"
-              className="h-9 border-[var(--desk-border-strong)] bg-white/[0.02] font-mono text-xs"
+              className="h-9 border-[var(--desk-border-strong)] bg-[var(--desk-overlay-soft)] font-mono text-xs"
             />
           ) : null}
           {channel === "push" ? (
@@ -304,7 +304,7 @@ export function AlertRulesPanel() {
                     aria-label={`Delete ${rule.name}`}
                     disabled={saving}
                     onClick={() => void deleteRule(rule.id)}
-                    className="rounded-md p-2 text-[var(--desk-text-muted)] hover:bg-white/[0.05] hover:text-red-300"
+                    className="rounded-md p-2 text-[var(--desk-text-muted)] hover:bg-[var(--desk-overlay-strong)] hover:text-red-600 dark:hover:text-red-300"
                   >
                     <Trash2 className="size-4" />
                   </button>

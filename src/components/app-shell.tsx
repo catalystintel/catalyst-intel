@@ -71,7 +71,7 @@ export function AppShell({ user, active, children }: AppShellProps) {
               type="button"
               aria-label="Open navigation"
               onClick={() => setMobileOpen(true)}
-              className="inline-flex size-11 items-center justify-center rounded-lg text-[var(--desk-text-muted)] transition-colors hover:bg-white/[0.05] hover:text-[var(--desk-text)] md:hidden"
+              className="inline-flex size-11 items-center justify-center rounded-lg text-[var(--desk-text-muted)] transition-colors hover:bg-[var(--desk-overlay-strong)] hover:text-[var(--desk-text)] md:hidden"
             >
               <Menu className="size-5" />
             </button>
@@ -79,7 +79,7 @@ export function AppShell({ user, active, children }: AppShellProps) {
               type="button"
               aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
               onClick={() => setCollapsed((prev) => !prev)}
-              className="hidden rounded-lg p-1.5 text-[var(--desk-text-muted)] transition-colors hover:bg-white/[0.05] hover:text-[var(--desk-text)] md:block"
+              className="hidden rounded-lg p-1.5 text-[var(--desk-text-muted)] transition-colors hover:bg-[var(--desk-overlay-strong)] hover:text-[var(--desk-text)] md:block"
             >
               {collapsed ? (
                 <PanelLeftOpen className="size-4" />
