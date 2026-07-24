@@ -34,7 +34,7 @@ export function ArticleLoadError({ catalystId }: { catalystId: number }) {
             onClick={() => router.push("/dashboard")}
             className="text-sm font-medium text-muted-foreground underline underline-offset-2"
           >
-            Back to Live tape
+            Back to Catalyst Feed
           </button>
           <span className="font-mono text-xs text-muted-foreground">
             #{catalystId}
