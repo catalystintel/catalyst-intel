@@ -29,13 +29,41 @@ import {
   fetchLatestEarningsForTicker,
   needsEarningsEnrichment,
 } from "@/lib/catalysts/enrich-earnings";
-import { fetchArticleEnrichment } from "@/lib/catalysts/enrich-article";
+import {
+  fetchArticleEnrichment,
+  type ArticleEnrichment,
+} from "@/lib/catalysts/enrich-article";
 import { toFeedCatalyst } from "@/lib/catalysts/feed-catalyst";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 
 interface PageProps {
   params: Promise<{ id: string }>;
+}
+
+const EMPTY_ENRICHMENT: ArticleEnrichment = {
+  profile: null,
+  relatedHeadlines: [],
+  quote: null,
+};
+
+/** Prefer a partial page over blowing the Hobby function budget on vendors. */
+async function withTimeBudget<T>(
+  promise: Promise<T>,
+  fallback: T,
+  budgetMs: number,
+): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<T>((resolve) => {
+        timer = setTimeout(() => resolve(fallback), budgetMs);
+      }),
+    ]);
+  } finally {
+    if (timer !== undefined) clearTimeout(timer);
+  }
 }
 
 export default async function CatalystArticlePage({ params }: PageProps) {
@@ -63,39 +91,64 @@ export default async function CatalystArticlePage({ params }: PageProps) {
     redirect(`/login?next=/dashboard/catalyst/${id}`);
   }
 
-  const row = await withDbRetry(() =>
-    db
-      .select({
-        id: catalysts.id,
-        ticker: catalysts.ticker,
-        companyName: catalysts.companyName,
-        type: catalysts.type,
-        title: catalysts.title,
-        headline: catalysts.headline,
-        eventCategory: catalysts.eventCategory,
-        subcategory: catalysts.subcategory,
-        itemCodes: catalysts.itemCodes,
-        timestamp: catalysts.timestamp,
-        summary: catalysts.summary,
-        impactScore: catalysts.impactScore,
-        confidence: catalysts.confidence,
-        tags: catalysts.tags,
-        historicalImpact: catalysts.historicalImpact,
-        sourceUrl: rawSources.url,
-        sourceProvider: rawSources.provider,
-        rawContent: rawSources.rawContent,
-        sector: companies.sector,
-      })
-      .from(catalysts)
-      .leftJoin(rawSources, eq(catalysts.rawSourceId, rawSources.id))
-      .leftJoin(companies, eq(catalysts.companyId, companies.id))
-      .where(eq(catalysts.id, id))
-      .get(),
+  // Light metadata first (same shape as Live tape) — more resilient than
+  // hauling `raw_sources.raw_content` in the same round-trip.
+  const rowMeta = await withDbRetry(
+    () =>
+      db
+        .select({
+          id: catalysts.id,
+          ticker: catalysts.ticker,
+          companyName: catalysts.companyName,
+          type: catalysts.type,
+          title: catalysts.title,
+          headline: catalysts.headline,
+          eventCategory: catalysts.eventCategory,
+          subcategory: catalysts.subcategory,
+          itemCodes: catalysts.itemCodes,
+          timestamp: catalysts.timestamp,
+          summary: catalysts.summary,
+          impactScore: catalysts.impactScore,
+          confidence: catalysts.confidence,
+          tags: catalysts.tags,
+          historicalImpact: catalysts.historicalImpact,
+          sourceUrl: rawSources.url,
+          sourceProvider: rawSources.provider,
+          sector: companies.sector,
+          rawSourceId: catalysts.rawSourceId,
+        })
+        .from(catalysts)
+        .leftJoin(rawSources, eq(catalysts.rawSourceId, rawSources.id))
+        .leftJoin(companies, eq(catalysts.companyId, companies.id))
+        .where(eq(catalysts.id, id))
+        .get(),
+    { attempts: 3, delayMs: 400 },
   );
 
-  if (!row) {
+  if (!rowMeta) {
     notFound();
   }
+
+  let rawContent: unknown = null;
+  const rawSourceId = rowMeta.rawSourceId;
+  if (rawSourceId != null) {
+    try {
+      const rawRow = await withDbRetry(
+        () =>
+          db
+            .select({ rawContent: rawSources.rawContent })
+            .from(rawSources)
+            .where(eq(rawSources.id, rawSourceId))
+            .get(),
+        { attempts: 3, delayMs: 400 },
+      );
+      rawContent = rawRow?.rawContent ?? null;
+    } catch {
+      // Soft-fail: summary / title still render if the blob fetch blips.
+    }
+  }
+
+  const row = { ...rowMeta, rawContent };
 
   const catalyst = toFeedCatalyst(row);
   const { body, source: bodySource } = extractArticleBody({
@@ -139,17 +192,20 @@ export default async function CatalystArticlePage({ params }: PageProps) {
     Boolean(row.ticker) &&
     needsEarningsEnrichment(row.rawContent);
 
-  // These two vendor enrichment calls are independent - run them
-  // concurrently instead of one network round-trip after another.
-  const [enrichedEarnings, enrichment] = await Promise.all([
-    shouldFetchEarnings && row.ticker
-      ? fetchLatestEarningsForTicker(row.ticker)
-      : Promise.resolve(null),
-    fetchArticleEnrichment({
-      ticker: row.ticker,
-      excludeCatalystId: row.id,
-    }),
-  ]);
+  // Cap vendor wait so a slow Finnhub/Polygon never fails the whole page.
+  const [enrichedEarnings, enrichment] = await withTimeBudget(
+    Promise.all([
+      shouldFetchEarnings && row.ticker
+        ? fetchLatestEarningsForTicker(row.ticker)
+        : Promise.resolve(null),
+      fetchArticleEnrichment({
+        ticker: row.ticker,
+        excludeCatalystId: row.id,
+      }),
+    ]),
+    [null, EMPTY_ENRICHMENT] as const,
+    2_000,
+  );
 
   const detailCards = resolveArticleDetailCards({
     ...earningsMeta,
