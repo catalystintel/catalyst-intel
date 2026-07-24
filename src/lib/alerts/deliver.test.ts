@@ -52,4 +52,23 @@ describe("deliverAlertRules", () => {
     });
     expect(results[0].skipped).toBe(true);
   });
+
+  it("rejects private webhook URLs (SSRF guard)", async () => {
+    const results = await deliverAlertRules({
+      catalyst,
+      force: true,
+      rules: [
+        {
+          id: 4,
+          name: "Bad hook",
+          channel: "webhook",
+          webhookUrl: "https://127.0.0.1/hook",
+          emailTo: null,
+          conditions: {},
+        },
+      ],
+    });
+    expect(results[0].ok).toBe(false);
+    expect(results[0].detail.toLowerCase()).toMatch(/private|local|metadata/);
+  });
 });

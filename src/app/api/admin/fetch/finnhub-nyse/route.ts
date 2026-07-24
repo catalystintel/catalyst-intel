@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { LIBSQL_SETUP_HINT, isLibsqlConfigured } from "@/db/env";
+import { authorizeAdminFetch, jsonWithAuth } from "@/lib/auth/admin-fetch";
 import { getCurrentAppUser } from "@/lib/auth/current-user";
 import { isValidCronSecret } from "@/lib/auth/cron-secret";
 import { getClientIp } from "@/lib/http/client-ip";
@@ -72,9 +73,11 @@ export async function POST(request: NextRequest) {
   }
 }
 
-/** Lightweight status for admin UI empty states. */
-export async function GET() {
-  return NextResponse.json({
+/** Lightweight status for admin UI empty states (admin/cron only). */
+export async function GET(request: NextRequest) {
+  const auth = await authorizeAdminFetch(request, "admin-fetch-nyse-status");
+  if (!auth.ok) return auth.response;
+  return jsonWithAuth(auth, {
     configured: isFinnhubConfigured(),
   });
 }

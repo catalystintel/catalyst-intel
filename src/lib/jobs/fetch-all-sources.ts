@@ -320,7 +320,9 @@ async function runPostIngestEnrichment(
     result.clustersCreated = clustered.clustersCreated;
     result.catalystsLinked = clustered.catalystsLinked;
   } catch (error) {
-    console.error("Event clustering failed:", error);
+    const { reportServerError } =
+      await import("@/lib/observability/report-error");
+    await reportServerError(error, { step: "event_clustering" });
   }
 
   try {
@@ -328,7 +330,9 @@ async function runPostIngestEnrichment(
     result.llmTriaged = triaged.triaged;
     result.llmSkipped = triaged.skipped;
   } catch (error) {
-    console.error("LLM triage batch failed:", error);
+    const { reportServerError } =
+      await import("@/lib/observability/report-error");
+    await reportServerError(error, { step: "llm_triage" });
   }
 
   try {
@@ -337,7 +341,9 @@ async function runPostIngestEnrichment(
     result.alertsDelivered = fired.delivered;
     result.alertsFailed = fired.failed;
   } catch (error) {
-    console.error("Alert auto-fire failed:", error);
+    const { reportServerError } =
+      await import("@/lib/observability/report-error");
+    await reportServerError(error, { step: "alert_auto_fire" });
   }
 
   return result;

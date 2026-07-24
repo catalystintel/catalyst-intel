@@ -11,6 +11,7 @@ const PROTECTED_PREFIXES = [
   "/profile",
   "/watchlist",
   "/alerts",
+  "/analytics",
 ];
 
 export async function updateSession(request: NextRequest) {

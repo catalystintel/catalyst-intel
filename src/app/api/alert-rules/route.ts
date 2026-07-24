@@ -7,6 +7,7 @@ import { alertRules, type AlertChannel } from "@/db/schema";
 import { getCurrentAppUser } from "@/lib/auth/current-user";
 import { isResendConfigured } from "@/lib/alerts/deliver";
 import { normalizeAlertConditions } from "@/lib/alerts/normalize";
+import { validateWebhookUrl } from "@/lib/alerts/webhook-url";
 import { getClientIp } from "@/lib/http/client-ip";
 import { RATE_LIMITS, checkRateLimit } from "@/lib/http/rate-limit";
 import {
@@ -135,14 +136,25 @@ export async function POST(request: NextRequest) {
   const conditions = normalizeAlertConditions(raw.conditions);
   const enabled = raw.enabled === undefined ? true : Boolean(raw.enabled);
 
-  if (channel === "webhook" && !webhookUrl) {
-    return withRateLimitHeaders(
-      NextResponse.json(
-        { error: "webhookUrl is required for webhook rules." },
-        { status: 400 },
-      ),
-      limitResult,
-    );
+  let safeWebhookUrl: string | null = null;
+  if (channel === "webhook") {
+    if (!webhookUrl) {
+      return withRateLimitHeaders(
+        NextResponse.json(
+          { error: "webhookUrl is required for webhook rules." },
+          { status: 400 },
+        ),
+        limitResult,
+      );
+    }
+    const validated = validateWebhookUrl(webhookUrl);
+    if (!validated.ok) {
+      return withRateLimitHeaders(
+        NextResponse.json({ error: validated.reason }, { status: 400 }),
+        limitResult,
+      );
+    }
+    safeWebhookUrl = validated.url;
   }
   if (channel === "email" && !emailTo) {
     return withRateLimitHeaders(
@@ -161,7 +173,7 @@ export async function POST(request: NextRequest) {
       name,
       channel,
       enabled,
-      webhookUrl: channel === "webhook" ? webhookUrl : null,
+      webhookUrl: channel === "webhook" ? safeWebhookUrl : null,
       emailTo: channel === "email" ? emailTo : null,
       conditions,
     })

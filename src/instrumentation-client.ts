@@ -18,5 +18,7 @@ if (isPostHogConfigured()) {
     // Manual $pageview via PostHogPageView so soft navigations are captured once.
     capture_pageview: false,
     capture_pageleave: true,
+    // Capture unhandled window errors / promise rejections into PostHog Error tracking.
+    capture_exceptions: true,
   });
 }
