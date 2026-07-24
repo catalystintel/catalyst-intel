@@ -63,8 +63,8 @@ export default async function AdminPage() {
           Data ingestion
         </h1>
         <p className="mt-1 max-w-xl text-sm text-[var(--desk-text-muted)]">
-          Trigger vendor fetch jobs for the Live tape. Production schedules use
-          the cron secret path (external pinger / GitHub Actions fallback).
+          Trigger vendor fetch jobs for the Catalyst Feed. Production schedules
+          use the cron secret path (external pinger / GitHub Actions fallback).
           Scroll to What&apos;s new for release notes and a platform swim sheet.
         </p>
       </div>

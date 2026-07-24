@@ -629,11 +629,11 @@ export function LiveCatalystFeed({
   return (
     <section
       className="news-panel flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-[var(--desk-border)] bg-[var(--desk-panel)]"
-      aria-label="Latest News"
+      aria-label="Catalyst Feed"
     >
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--desk-border)] bg-[var(--desk-header)] px-4 py-3.5 sm:px-5">
         <h1 className="text-[1.05rem] font-semibold tracking-tight text-[var(--desk-text)]">
-          Live tape
+          Catalyst Feed
         </h1>
         <div className="flex flex-wrap items-center gap-2 sm:gap-3">
           <button
