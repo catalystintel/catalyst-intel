@@ -221,7 +221,7 @@ export function TapeSplitPanel({
             <TradingViewAdvancedChart
               key={tvSymbol}
               symbol={tvSymbol}
-              className="h-[240px] sm:h-[280px]"
+              className="h-[280px] sm:h-[340px]"
             />
           ) : (
             <div className="grid h-[180px] place-items-center px-4 text-center">
