@@ -16,8 +16,18 @@ export function classifyDbError(message: string): DbErrorKind {
   if (/local\.db|Database is not configured/i.test(message)) {
     return "not-configured";
   }
+  // Vercel Hobby function timeouts ("Task timed out after 10 seconds") used
+  // to match a bare `timeout` pattern and get mislabeled as a Turso outage.
+  // Keep those as unknown so ops look at function budget, not env vars.
   if (
-    /LIBSQL|Turso|ConnectionFailed|ECONNRESET|ETIMEDOUT|fetch failed|timed? ?out/i.test(
+    /FUNCTION_INVOCATION_TIMEOUT|Task timed out after|RUNTIME_TIMEOUT/i.test(
+      message,
+    )
+  ) {
+    return "unknown";
+  }
+  if (
+    /LIBSQL|Turso|ConnectionFailed|ECONNRESET|ETIMEDOUT|ENOTFOUND|EAI_AGAIN|fetch failed|socket hang up/i.test(
       message,
     )
   ) {

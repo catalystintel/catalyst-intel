@@ -26,6 +26,11 @@ describe("classifyDbError", () => {
     expect(classifyDbError("LibsqlError: fetch failed")).toBe("transient");
   });
 
+  it("does not mislabel Vercel function timeouts as a Turso outage", () => {
+    expect(classifyDbError("Task timed out after 10 seconds")).toBe("unknown");
+    expect(classifyDbError("FUNCTION_INVOCATION_TIMEOUT")).toBe("unknown");
+  });
+
   it("falls back to unknown for unrelated errors", () => {
     expect(classifyDbError("Cannot read properties of undefined")).toBe(
       "unknown",

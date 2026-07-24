@@ -72,7 +72,7 @@ export const CATALYST_SOURCE_CATALOG: readonly CatalystSourceMeta[] = [
     priority: "should",
     phase: "B",
     contributes:
-      "Near-term earnings + FDA calendars + company profile enrichment (needs FINNHUB_API_KEY). News/consensus intentionally skipped (quality-first).",
+      "Near-term earnings + FDA + classified news + recent PT + IPO calendar + profile enrichment (needs FINNHUB_API_KEY). Consensus rec snapshots skipped.",
     keyEnv: "FINNHUB_API_KEY",
   },
   {

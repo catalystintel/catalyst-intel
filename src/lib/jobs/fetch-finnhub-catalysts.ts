@@ -1,3 +1,5 @@
+import { categorizeNewsHeadline } from "@/lib/catalysts/news-category";
+import { RETENTION_DAYS } from "@/lib/jobs/data-retention";
 import {
   ingestNormalizedCatalysts,
   skippedSourceResult,
@@ -59,6 +61,29 @@ interface PriceTargetRow {
   targetMedian?: number;
 }
 
+interface CompanyNewsRow {
+  category?: string;
+  datetime?: number;
+  headline?: string;
+  id?: number;
+  image?: string;
+  related?: string;
+  source?: string;
+  summary?: string;
+  url?: string;
+}
+
+interface IpoRow {
+  date?: string;
+  exchange?: string;
+  name?: string;
+  numberOfShares?: number;
+  price?: string | number;
+  status?: string;
+  symbol?: string;
+  totalSharesValue?: number;
+}
+
 /** Fallback liquid names when earnings calendar is empty (free-tier probe). */
 const DEFAULT_ANALYST_SYMBOLS = ["AAPL", "MSFT", "NVDA", "AMZN", "META"];
 
@@ -89,13 +114,19 @@ async function finnhubGet<T>(
   return (await res.json()) as T;
 }
 
-function todayIsoDate(): string {
-  return new Date().toISOString().slice(0, 10);
+function todayIsoDate(now: Date = new Date()): string {
+  return now.toISOString().slice(0, 10);
 }
 
-function daysFromNowIso(days: number): string {
-  const d = new Date();
+function daysFromIso(days: number, now: Date = new Date()): string {
+  const d = new Date(now);
   d.setUTCDate(d.getUTCDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
+function daysAgoIso(days: number, now: Date = new Date()): string {
+  const d = new Date(now);
+  d.setUTCDate(d.getUTCDate() - days);
   return d.toISOString().slice(0, 10);
 }
 
@@ -206,11 +237,23 @@ export function recommendationToNormalized(
   };
 }
 
-/** @internal exported for unit tests — not ingested (quality-first). */
+/** @internal exported for unit tests and ingest when within retention window. */
 export function priceTargetToNormalized(
   symbol: string,
   row: PriceTargetRow,
+  options?: { now?: Date; retentionDays?: number },
 ): NormalizedCatalyst | null {
+  const updated = row.lastUpdated?.trim();
+  if (!updated) return null;
+
+  const now = options?.now ?? new Date();
+  const retentionDays = options?.retentionDays ?? RETENTION_DAYS;
+  const updatedDate = new Date(`${updated}T12:00:00.000Z`);
+  if (Number.isNaN(updatedDate.getTime())) return null;
+
+  const cutoff = new Date(now.getTime() - retentionDays * 24 * 60 * 60 * 1000);
+  if (updatedDate < cutoff) return null;
+
   if (
     row.targetMean == null &&
     row.targetMedian == null &&
@@ -218,7 +261,7 @@ export function priceTargetToNormalized(
   ) {
     return null;
   }
-  const updated = row.lastUpdated?.trim() || todayIsoDate();
+
   const mean = row.targetMean;
   const median = row.targetMedian;
 
@@ -234,7 +277,7 @@ export function priceTargetToNormalized(
     headline: "Price target (Street)",
     eventCategory: "analyst",
     subcategory: "price_target",
-    timestamp: new Date(`${updated}T12:00:00.000Z`).toISOString(),
+    timestamp: updatedDate.toISOString(),
     summary: [
       mean != null ? `Mean $${mean}` : null,
       median != null ? `Median $${median}` : null,
@@ -245,6 +288,93 @@ export function priceTargetToNormalized(
       .join(" · "),
     confidence: 58,
     tags: ["finnhub", "analyst", "price_target", "bz:analyst_ratings"],
+  };
+}
+
+/** Classified Finnhub company news — generic `news` category is dropped. */
+export function companyNewsToNormalized(
+  row: CompanyNewsRow,
+  fallbackSymbol?: string,
+): NormalizedCatalyst | null {
+  const headline = row.headline?.trim();
+  if (!headline) return null;
+
+  const relatedFirst = row.related?.split(",")[0]?.trim().toUpperCase();
+  const symbol = relatedFirst || fallbackSymbol?.trim().toUpperCase() || null;
+  const classified = categorizeNewsHeadline(headline, row.category);
+  if (classified.eventCategory === "news") return null;
+
+  const ts =
+    row.datetime != null && row.datetime > 0
+      ? new Date(row.datetime * 1000).toISOString()
+      : new Date().toISOString();
+  const id =
+    row.id != null
+      ? String(row.id)
+      : `${symbol ?? "UNK"}:${ts}:${headline.slice(0, 40)}`.toLowerCase();
+
+  return {
+    provider: "finnhub",
+    externalId: `finnhub:news:${id}`,
+    url: row.url ?? null,
+    rawContent: row,
+    ticker: symbol,
+    companyName: symbol,
+    type: "Company News",
+    title: headline,
+    headline: row.source?.trim() || "Company news",
+    eventCategory: classified.eventCategory,
+    subcategory: classified.subcategory,
+    timestamp: ts,
+    summary: row.summary?.trim() || null,
+    confidence: 62,
+    tags: ["finnhub", "news", ...classified.tags, ...(symbol ? [symbol] : [])],
+  };
+}
+
+/** Finnhub IPO calendar row → capital / ipo* subcategories. */
+export function ipoToNormalized(row: IpoRow): NormalizedCatalyst | null {
+  const date = row.date?.trim();
+  if (!date) return null;
+
+  const symbol = row.symbol?.trim().toUpperCase() || null;
+  const name = row.name?.trim() || symbol || "IPO";
+  const status = row.status?.trim().toLowerCase() ?? "";
+
+  let subcategory = "ipo";
+  if (/priced|completed|expected to price|priced at/i.test(status)) {
+    subcategory = "ipo_priced";
+  } else if (/filed|expected|upcoming|scheduled|announced/i.test(status)) {
+    subcategory = "ipo_filed";
+  } else if (/withdraw|cancel|postpon|terminated/i.test(status)) {
+    subcategory = "ipo_withdrawn";
+  }
+
+  const key = `${symbol ?? name}:${date}:${subcategory}`.toLowerCase();
+
+  return {
+    provider: "finnhub",
+    externalId: `finnhub:ipo:${key}`,
+    url: null,
+    rawContent: row,
+    ticker: symbol,
+    companyName: name,
+    type: "IPO Calendar",
+    title: `${name}${symbol ? ` (${symbol})` : ""} — IPO ${date}`,
+    headline: row.status?.trim() || "IPO calendar",
+    eventCategory: "capital",
+    subcategory,
+    timestamp: new Date(`${date}T12:00:00.000Z`).toISOString(),
+    summary:
+      [
+        row.exchange?.trim(),
+        row.price != null && row.price !== "" ? `Price ${row.price}` : null,
+        row.numberOfShares != null ? `Shares ${row.numberOfShares}` : null,
+      ]
+        .filter(Boolean)
+        .join(" · ") || null,
+    confidence: 60,
+    tags: ["finnhub", "ipo", "capital"],
   };
 }
 
@@ -266,29 +396,29 @@ function uniqueSymbols(
 }
 
 /**
- * Finnhub earnings + FDA calendars + company profile enrichment.
+ * Finnhub earnings + FDA + classified news + recent PT + IPO calendar
+ * + company profile enrichment.
  *
- * Quality-first: we intentionally do NOT ingest Finnhub general/company news
- * or recommendation/price-target snapshots as catalyst rows — those are
- * firehose / stale consensus and drown the tape. Profile2 still enriches
- * `companies` (sector / market cap) for materiality scoring.
+ * Quality-first: recommendation consensus snapshots are not ingested.
+ * Generic company news stays dropped; only gold-classified headlines ship.
  * Soft-fails when FINNHUB_API_KEY is unset.
  */
 export async function fetchFinnhubCatalysts(options?: {
   newsSymbols?: string[];
   analystSymbols?: string[];
+  now?: Date;
 }): Promise<SourceFetchResult> {
   const apiKey = getFinnhubApiKey();
   if (!apiKey) {
     return skippedSourceResult(
       "finnhub",
-      "FINNHUB_API_KEY is not set. Add it to enable Finnhub earnings/FDA ingest + profile enrichment.",
+      "FINNHUB_API_KEY is not set. Add it to enable Finnhub earnings/FDA/news/IPO ingest + profile enrichment.",
     );
   }
 
-  const from = todayIsoDate();
-  // Near-term only — distant calendar noise is not actionable today.
-  const to = daysFromNowIso(7);
+  const now = options?.now ?? new Date();
+  const from = todayIsoDate(now);
+  const to = daysFromIso(7, now);
   const normalized: NormalizedCatalyst[] = [];
 
   const earningsPayload = await finnhubGet<{
@@ -300,7 +430,6 @@ export async function fetchFinnhubCatalysts(options?: {
     if (item) normalized.push(item);
   }
 
-  // FDA calendar endpoint varies by plan; soft-catch 403/404.
   try {
     const fdaPayload = await finnhubGet<FdaRow[] | { data?: FdaRow[] }>(
       "/fda-calendar",
@@ -320,14 +449,75 @@ export async function fetchFinnhubCatalysts(options?: {
     );
   }
 
-  // Profile enrichment only (no news / consensus catalyst rows). Prefer
-  // earnings symbols + optional watchlist; fall back to liquid names.
-  const profileSymbols =
+  try {
+    const ipoFrom = daysAgoIso(RETENTION_DAYS, now);
+    const ipoTo = daysFromIso(14, now);
+    const ipoPayload = await finnhubGet<{ ipoCalendar?: IpoRow[] }>(
+      "/calendar/ipo",
+      apiKey,
+      { from: ipoFrom, to: ipoTo },
+    );
+    for (const row of ipoPayload.ipoCalendar ?? []) {
+      const item = ipoToNormalized(row);
+      if (item) normalized.push(item);
+    }
+  } catch (error) {
+    console.warn(
+      "Finnhub IPO calendar unavailable:",
+      error instanceof Error ? error.message : error,
+    );
+  }
+
+  const symbolSet =
     options?.analystSymbols?.slice(0, 8) ??
     options?.newsSymbols?.slice(0, 8) ??
     uniqueSymbols(earnings, DEFAULT_ANALYST_SYMBOLS, 8);
 
-  for (const symbol of profileSymbols) {
+  const newsFrom = daysAgoIso(RETENTION_DAYS, now);
+  const newsTo = todayIsoDate(now);
+  let newsCount = 0;
+  for (const symbol of symbolSet) {
+    if (newsCount >= 40) break;
+    try {
+      const articles = await finnhubGet<CompanyNewsRow[]>(
+        "/company-news",
+        apiKey,
+        { symbol, from: newsFrom, to: newsTo },
+      );
+      for (const row of articles) {
+        if (newsCount >= 40) break;
+        const item = companyNewsToNormalized(row, symbol);
+        if (item) {
+          normalized.push(item);
+          newsCount++;
+        }
+      }
+    } catch (error) {
+      console.warn(
+        `Finnhub company-news for ${symbol} unavailable:`,
+        error instanceof Error ? error.message : error,
+      );
+    }
+  }
+
+  for (const symbol of symbolSet) {
+    try {
+      const pt = await finnhubGet<PriceTargetRow>(
+        "/stock/price-target",
+        apiKey,
+        { symbol },
+      );
+      const item = priceTargetToNormalized(symbol, pt, { now });
+      if (item) normalized.push(item);
+    } catch (error) {
+      console.warn(
+        `Finnhub price-target for ${symbol} unavailable:`,
+        error instanceof Error ? error.message : error,
+      );
+    }
+  }
+
+  for (const symbol of symbolSet) {
     try {
       const profile = await finnhubGet<ProfileRow>("/stock/profile2", apiKey, {
         symbol,

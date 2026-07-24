@@ -5,17 +5,17 @@ Canonical Must → Should order for multi-source ingest
 
 ## Display order (Must → Should)
 
-| #   | Source id        | Label              | Priority | Runtime phase | What it contributes                                                             |
-| --- | ---------------- | ------------------ | -------- | ------------- | ------------------------------------------------------------------------------- |
-| 1   | `sec-edgar`      | SEC EDGAR          | Must     | A             | 8-K, Form 4, S-3, 424B, SC 13D/G (needs `SEC_EDGAR_USER_AGENT`)                 |
-| 2   | `nasdaq-halts`   | Nasdaq Halts       | Must     | A             | Trading halt / resume events (keyless)                                          |
-| 3   | `macro-calendar` | Macro calendar     | Must     | A             | CPI / NFP / FOMC dates (keyless; embedded BLS + Fed schedule)                   |
-| 4   | `finnhub`        | Finnhub            | Should   | B             | Earnings + FDA + news + analyst recs/PT (`FINNHUB_API_KEY`; soft-skip if unset) |
-| 5   | `openfda`        | openFDA            | Must     | A             | Recent FDA drug approval (AP) submissions (keyless)                             |
-| 6   | `clinicaltrials` | ClinicalTrials.gov | Must     | A             | Recent study updates (keyless)                                                  |
-| 7   | `polygon-news`   | Polygon news       | Should   | C             | Market / Benzinga Wire-tagged news (`POLYGON_API_KEY` / `MASSIVE_API_KEY`)      |
-| 8   | `polygon-prices` | Polygon prices     | Should   | C             | `historical_impact` from daily aggs (**after** news; same key)                  |
-| 9   | `form4api`       | Form4API           | Should   | B             | Optional Form 4 enrichment (`FORM4_API_KEY`; EDGAR Form 4 still works)          |
+| #   | Source id        | Label              | Priority | Runtime phase | What it contributes                                                                        |
+| --- | ---------------- | ------------------ | -------- | ------------- | ------------------------------------------------------------------------------------------ |
+| 1   | `sec-edgar`      | SEC EDGAR          | Must     | A             | 8-K, Form 4 buy·sell, S-3, 424B, SC 13D/G (needs `SEC_EDGAR_USER_AGENT`)                   |
+| 2   | `nasdaq-halts`   | Nasdaq Halts       | Must     | A             | Trading halt / resume events (keyless)                                                     |
+| 3   | `macro-calendar` | Macro calendar     | Must     | A             | CPI / NFP / FOMC dates (keyless; embedded BLS + Fed schedule)                              |
+| 4   | `finnhub`        | Finnhub            | Should   | B             | Earnings + FDA + classified news + recent PT + IPO (`FINNHUB_API_KEY`; soft-skip if unset) |
+| 5   | `openfda`        | openFDA            | Must     | A             | Recent FDA drug approval (AP) submissions (keyless)                                        |
+| 6   | `clinicaltrials` | ClinicalTrials.gov | Must     | A             | Recent study updates (keyless)                                                             |
+| 7   | `polygon-news`   | Polygon news       | Should   | C             | Market / Benzinga Wire-tagged news (`POLYGON_API_KEY` / `MASSIVE_API_KEY`)                 |
+| 8   | `polygon-prices` | Polygon prices     | Should   | C             | `historical_impact` from daily aggs (**after** news; same key)                             |
+| 9   | `form4api`       | Form4API           | Should   | B             | Intentionally skipped — EDGAR Form 4 (+ buy/sell XML) covers insiders                      |
 
 Source of truth in code: `src/lib/jobs/catalyst-sources.ts`
 (`CATALYST_SOURCE_IDS`, `CATALYST_SOURCE_CATALOG`, `FETCH_PHASES`).

@@ -75,14 +75,14 @@ Orchestrator: Must → Should display order; runtime phases A (keyless parallel)
 
 | #   | Source                 | Priority | Keyless vs keyed                         | Role on the tape                                     |
 | --- | ---------------------- | -------- | ---------------------------------------- | ---------------------------------------------------- |
-| 1   | **SEC EDGAR**          | Must     | Keyless (UA required)                    | 8-K, Form 4, S-3, 424B, SC 13D/G                     |
+| 1   | **SEC EDGAR**          | Must     | Keyless (UA required)                    | 8-K, Form 4 buy/sell, S-3, 424B, SC 13D/G            |
 | 2   | **Nasdaq Halts**       | Must     | Keyless RSS                              | Halt / resume                                        |
-| 3   | **Finnhub**            | Should   | `FINNHUB_API_KEY` (soft-skip)            | Earnings / FDA calendars, news, partial analyst      |
+| 3   | **Finnhub**            | Should   | `FINNHUB_API_KEY` (soft-skip)            | Earnings / FDA / classified news / recent PT / IPO   |
 | 4   | **openFDA**            | Must     | Keyless (optional key for higher limits) | Drug approval submissions                            |
 | 5   | **ClinicalTrials.gov** | Must     | Keyless                                  | Trial study updates                                  |
 | 6   | **Polygon news**       | Should   | `POLYGON_API_KEY` / `MASSIVE_API_KEY`    | Market news; Benzinga publisher → **Benzinga Wire**  |
 | 7   | **Polygon prices**     | Should   | Same key                                 | Session % / `historical_impact` for WIIM-lite        |
-| 8   | **Form4API**           | Should   | Optional key                             | Form 4 enrichment (EDGAR Form 4 still works without) |
+| 8   | **Form4API**           | Should   | Optional key                             | Intentionally skipped — EDGAR Form 4 covers insiders |
 
 **Also applied:** keyless **macro calendar** (CPI / NFP / FOMC → `eventCategory: macro`). FRED live prints = later.
 

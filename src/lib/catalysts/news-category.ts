@@ -42,7 +42,31 @@ const RULES: Array<{
     tags: ["offering", "capital"],
   },
   {
-    test: /\b(upgrade[sd]?|downgrade[sd]?|price target|initiates coverage|raises pt|cuts pt|analyst rating)\b/i,
+    test: /\b(ipo|initial public offering|prices ipo|files? for ipo|withdraws? ipo)\b/i,
+    eventCategory: "capital",
+    subcategory: "ipo_news",
+    tags: ["ipo", "capital"],
+  },
+  {
+    test: /\bupgrade[sd]?\b/i,
+    eventCategory: "analyst",
+    subcategory: "upgrade",
+    tags: ["analyst", "upgrade"],
+  },
+  {
+    test: /\bdowngrade[sd]?\b/i,
+    eventCategory: "analyst",
+    subcategory: "downgrade",
+    tags: ["analyst", "downgrade"],
+  },
+  {
+    test: /\b(price target|raises pt|cuts pt|pt to \$|target price|initiates coverage)\b/i,
+    eventCategory: "analyst",
+    subcategory: "price_target",
+    tags: ["analyst", "price_target"],
+  },
+  {
+    test: /\b(analyst rating|reiterates|maintains)\b/i,
     eventCategory: "analyst",
     subcategory: "analyst_rating",
     tags: ["ratings", "analyst"],
