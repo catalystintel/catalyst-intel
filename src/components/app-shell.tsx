@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useRef, useState, type ReactNode } from "react";
 import { Menu, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 
 import { AccountMenu } from "@/components/account-menu";
 import { AppSidebar } from "@/components/app-sidebar";
 import { LiveHeaderStatus } from "@/components/live-header-status";
+import { useAutoFocusScrollRegion } from "@/hooks/use-auto-focus-scroll-region";
 import type { NavKey } from "@/lib/nav/nav-items";
 
 interface AppShellUser {
@@ -28,6 +29,8 @@ interface AppShellProps {
 export function AppShell({ user, active, children }: AppShellProps) {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const mainRef = useRef<HTMLElement | null>(null);
+  useAutoFocusScrollRegion(mainRef);
 
   return (
     <div className="flex h-dvh max-h-dvh min-h-0 flex-1 overflow-hidden overscroll-none bg-[var(--desk-app)]">
@@ -107,8 +110,17 @@ export function AppShell({ user, active, children }: AppShellProps) {
           (e.g. /admin, /profile). Pages that manage their own internal
           scroll region (e.g. the Live feed) already size to 100% of this
           element via flex + min-h-0, so they aren't affected.
+
+          tabIndex=-1 (focusable via script, not via Tab) + the auto-focus
+          above is what makes Page Up/Down/Home/End work as soon as a page
+          loads - without a focused element, those keys have nothing to
+          scroll (see use-auto-focus-scroll-region.ts).
         */}
-        <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden overflow-y-auto overscroll-contain">
+        <main
+          ref={mainRef}
+          tabIndex={-1}
+          className="flex min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden overflow-y-auto overscroll-contain outline-none"
+        >
           {children}
         </main>
       </div>

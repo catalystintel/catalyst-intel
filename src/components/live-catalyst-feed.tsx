@@ -22,6 +22,7 @@ import {
 import { CatalystDetailDrawer } from "@/components/catalyst-detail-drawer";
 import { MaterialityBadge } from "@/components/materiality-badge";
 import { Input } from "@/components/ui/input";
+import { useAutoFocusScrollRegion } from "@/hooks/use-auto-focus-scroll-region";
 import {
   toFeedCatalyst,
   type FeedCatalyst,
@@ -741,9 +742,17 @@ function CatalystFeedList({
   onDismiss: (id: number) => void;
   onQuietAdd: (ticker: string | null) => void;
 }) {
+  const listRef = useRef<HTMLDivElement | null>(null);
+  // The feed's own scroll region (not `<main>` - it's sized to fit exactly,
+  // see app-shell.tsx) needs to be focusable + focused on mount so Page
+  // Up/Down/Home/End scroll it immediately, without requiring a prior click.
+  useAutoFocusScrollRegion(listRef);
+
   return (
     <div
-      className="flex min-h-0 flex-1 flex-col overflow-auto"
+      ref={listRef}
+      tabIndex={-1}
+      className="flex min-h-0 flex-1 flex-col overflow-auto outline-none"
       role="table"
       aria-label="News feed"
     >
