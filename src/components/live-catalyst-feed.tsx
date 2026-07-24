@@ -75,12 +75,12 @@ type Presence = "active" | "blurred" | "hidden";
 /**
  * Blotter: Title · Time · Event · Ticker · Action (hover toolbar).
  * Time is event occurrence (`catalysts.timestamp` in ET), never DB insert
- * time. Wide enough for `formatTimeDate` (`10:23 AM ET · Jul 20, 2026`).
- * Action reserves room for Read/Act/Dismiss/Quiet so hover buttons never overflow
- * left over Time. Impact column is intentionally hidden for now.
+ * Title is capped so the blotter stays dense; overflow uses ellipsis + hover
+ * `title` for the full string. A trailing `1fr` track absorbs leftover width so
+ * Action stays right-aligned when the split panel is closed.
  */
 const FEED_GRID =
-  "grid-cols-1 sm:grid-cols-[minmax(0,1fr)_156px_88px_72px] lg:grid-cols-[minmax(0,1fr)_160px_96px_80px_minmax(268px,max-content)]";
+  "grid-cols-1 sm:grid-cols-[minmax(0,340px)_156px_88px_72px_1fr] lg:grid-cols-[minmax(0,400px)_160px_96px_80px_1fr_minmax(268px,max-content)]";
 
 function readPresence(): Presence {
   if (typeof document === "undefined") return "active";
@@ -1049,7 +1049,10 @@ function CatalystFeedList({
         <div role="columnheader" className="hidden sm:block">
           Ticker
         </div>
-        <div role="columnheader" className="hidden text-right lg:block">
+        <div
+          role="columnheader"
+          className="col-start-5 hidden text-right lg:col-start-6 lg:block"
+        >
           Action
         </div>
       </div>
@@ -1074,6 +1077,7 @@ function CatalystFeedList({
           const selected = selectedId === catalyst.id;
           const eventLabel = feedEventLabel(catalyst);
           const source = sourceDisplay(catalyst);
+          const title = titleLine(catalyst);
           const onWatchlist = Boolean(
             catalyst.ticker &&
             watchlistTickers.includes(catalyst.ticker.toUpperCase()),
@@ -1109,10 +1113,20 @@ function CatalystFeedList({
               aria-hidden={dismissing || undefined}
             >
               <div role="cell" className="min-w-0">
-                <span className="line-clamp-2 block text-[0.86rem] font-medium tracking-tight text-[var(--desk-text-secondary)] transition-colors group-hover:text-[var(--desk-text)] group-focus-visible:text-[var(--desk-text)] sm:leading-snug">
-                  {titleLine(catalyst)}
+                <span
+                  className="block truncate text-[0.86rem] font-medium tracking-tight text-[var(--desk-text-secondary)] transition-colors group-hover:text-[var(--desk-text)] group-focus-visible:text-[var(--desk-text)] max-sm:line-clamp-2 max-sm:whitespace-normal"
+                  title={title}
+                >
+                  {title}
                 </span>
-                <span className="mt-0.5 hidden truncate font-mono text-[0.62rem] tracking-wide text-[var(--desk-text-dim)] sm:block">
+                <span
+                  className="mt-0.5 hidden truncate font-mono text-[0.62rem] tracking-wide text-[var(--desk-text-dim)] sm:block"
+                  title={
+                    catalyst.tags.length > 0
+                      ? `${source.name} · ${catalyst.tags.slice(0, 3).join(" · ")}`
+                      : source.name
+                  }
+                >
                   {source.name}
                   {catalyst.tags.length > 0
                     ? ` · ${catalyst.tags.slice(0, 3).join(" · ")}`
@@ -1213,7 +1227,7 @@ function CatalystFeedList({
               {/* Desktop: hover / focus-within reveals action toolbar in its own column */}
               <div
                 role="cell"
-                className="relative z-0 hidden min-w-0 justify-end overflow-hidden lg:flex"
+                className="relative z-0 col-start-5 hidden min-w-0 justify-end overflow-hidden lg:col-start-6 lg:flex"
                 onClick={(e) => e.stopPropagation()}
                 onKeyDown={(e) => e.stopPropagation()}
               >
