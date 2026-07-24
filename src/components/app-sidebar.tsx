@@ -148,10 +148,13 @@ function SidebarEntry({
     "group relative flex items-center gap-2.5 rounded-md px-2.5 py-2 text-[0.86rem] font-medium transition-colors";
 
   if (item.comingSoon || !item.href) {
+    const hint = item.comingSoonHint
+      ? `${item.label} · coming soon — ${item.comingSoonHint}`
+      : `${item.label} · coming soon`;
     return (
       <span
         aria-disabled
-        title={collapsed ? `${item.label} · coming soon` : undefined}
+        title={hint}
         className={cn(
           base,
           "cursor-not-allowed text-[var(--desk-text-dim)] select-none",

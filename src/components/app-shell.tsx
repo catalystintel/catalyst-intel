@@ -6,6 +6,7 @@ import { Menu, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { AccountMenu } from "@/components/account-menu";
 import { AppSidebar } from "@/components/app-sidebar";
 import { LiveHeaderStatus } from "@/components/live-header-status";
+import { Toaster } from "@/components/ui/toaster";
 import { useAutoFocusScrollRegion } from "@/hooks/use-auto-focus-scroll-region";
 import type { NavKey } from "@/lib/nav/nav-items";
 
@@ -34,6 +35,7 @@ export function AppShell({ user, active, children }: AppShellProps) {
 
   return (
     <div className="flex h-dvh max-h-dvh min-h-0 flex-1 overflow-hidden overscroll-none bg-[var(--desk-app)]">
+      <Toaster />
       <aside className="hidden md:block">
         <div className="sticky top-0 h-full max-h-dvh">
           <AppSidebar

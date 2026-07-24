@@ -2,9 +2,11 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { FlaskConical, Plus, Trash2 } from "lucide-react";
+import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { SkeletonCard } from "@/components/loading-skeleton";
 import type { AlertChannel, AlertRuleConditions } from "@/db/schema";
 import { cn } from "@/lib/utils";
 
@@ -22,8 +24,6 @@ interface AlertRuleRow {
 export function AlertRulesPanel() {
   const [rules, setRules] = useState<AlertRuleRow[]>([]);
   const [emailConfigured, setEmailConfigured] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [message, setMessage] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [saving, setSaving] = useState(false);
 
@@ -42,11 +42,10 @@ export function AlertRulesPanel() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Could not load rules.");
-      setError(null);
       setRules(data.rules ?? []);
       setEmailConfigured(Boolean(data.emailConfigured));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Load failed.");
+      toast.error(err instanceof Error ? err.message : "Load failed.");
     } finally {
       setLoaded(true);
     }
@@ -62,8 +61,6 @@ export function AlertRulesPanel() {
   async function createRule(e: React.FormEvent) {
     e.preventDefault();
     setSaving(true);
-    setError(null);
-    setMessage(null);
     try {
       const conditions: AlertRuleConditions = {
         minImpact: Number(minImpact) || 70,
@@ -85,17 +82,18 @@ export function AlertRulesPanel() {
       if (!res.ok) throw new Error(data.error ?? "Could not create rule.");
       setWebhookUrl("");
       await load();
-      setMessage("Rule saved.");
+      toast.success(`Rule "${name}" saved`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not create rule.");
+      toast.error(
+        err instanceof Error ? err.message : "Could not create rule.",
+      );
     } finally {
       setSaving(false);
     }
   }
 
-  async function deleteRule(id: number) {
+  async function deleteRule(id: number, name: string) {
     setSaving(true);
-    setError(null);
     try {
       const res = await fetch(`/api/alert-rules?id=${id}`, {
         method: "DELETE",
@@ -104,8 +102,11 @@ export function AlertRulesPanel() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Could not delete rule.");
       await load();
+      toast.success(`Rule "${name}" deleted`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not delete rule.");
+      toast.error(
+        err instanceof Error ? err.message : "Could not delete rule.",
+      );
     } finally {
       setSaving(false);
     }
@@ -113,8 +114,6 @@ export function AlertRulesPanel() {
 
   async function testRule(id: number) {
     setSaving(true);
-    setError(null);
-    setMessage(null);
     try {
       const res = await fetch("/api/alert-rules/test", {
         method: "POST",
@@ -130,9 +129,15 @@ export function AlertRulesPanel() {
             `${r.channel}: ${r.ok ? "ok" : "fail"} — ${r.detail}`,
         )
         .join("; ");
-      setMessage(lines || "Test completed.");
+      const results: { ok: boolean }[] = data.results ?? [];
+      const allOk = results.length > 0 && results.every((r) => r.ok);
+      if (allOk) {
+        toast.success(lines || "Test completed.");
+      } else {
+        toast.error(lines || "Test completed with failures.");
+      }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Test fire failed.");
+      toast.error(err instanceof Error ? err.message : "Test fire failed.");
     } finally {
       setSaving(false);
     }
@@ -140,21 +145,15 @@ export function AlertRulesPanel() {
 
   if (!loaded) {
     return (
-      <p className="font-mono text-sm text-[var(--desk-text-muted)]">
-        Loading…
-      </p>
+      <div className="flex flex-col gap-8">
+        <SkeletonCard lines={3} />
+        <SkeletonCard lines={2} />
+      </div>
     );
   }
 
   return (
     <div className="flex flex-col gap-8">
-      {error ? (
-        <p className="font-mono text-sm text-destructive">{error}</p>
-      ) : null}
-      {message ? (
-        <p className="font-mono text-sm text-[var(--desk-live)]">{message}</p>
-      ) : null}
-
       <section className="overflow-hidden rounded-xl border border-[var(--desk-border)] bg-[var(--desk-panel)]">
         <div className="border-b border-[var(--desk-border)] px-4 py-4 sm:px-5">
           <h2 className="text-sm font-semibold text-[var(--desk-text)]">
@@ -303,8 +302,8 @@ export function AlertRulesPanel() {
                     type="button"
                     aria-label={`Delete ${rule.name}`}
                     disabled={saving}
-                    onClick={() => void deleteRule(rule.id)}
-                    className="rounded-md p-2 text-[var(--desk-text-muted)] hover:bg-[var(--desk-overlay-strong)] hover:text-red-600 dark:hover:text-red-300"
+                    onClick={() => void deleteRule(rule.id, rule.name)}
+                    className="rounded-md p-2 text-[var(--desk-text-muted)] hover:bg-[var(--desk-overlay-strong)] hover:text-destructive"
                   >
                     <Trash2 className="size-4" />
                   </button>

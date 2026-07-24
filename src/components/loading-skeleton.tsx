@@ -102,7 +102,7 @@ export function SkeletonFeedRows({ count = 10 }: { count?: number }) {
           <Skeleton className="h-8 w-8 rounded-lg" />
         </div>
       </div>
-      <div className="flex flex-1 flex-col divide-y divide-white/[0.06] px-4 sm:px-5">
+      <div className="flex flex-1 flex-col divide-y divide-[var(--desk-border)] px-4 sm:px-5">
         {Array.from({ length: count }).map((_, i) => (
           <div key={i} className="flex items-center gap-3 py-3.5">
             <Skeleton className="h-3.5 flex-1" />

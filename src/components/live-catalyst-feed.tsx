@@ -18,6 +18,7 @@ import {
   RefreshCw,
   X,
 } from "lucide-react";
+import { toast } from "sonner";
 
 import { CatalystDetailDrawer } from "@/components/catalyst-detail-drawer";
 import { MaterialityBadge } from "@/components/materiality-badge";
@@ -54,7 +55,7 @@ import { cn } from "@/lib/utils";
 
 export type { FeedCatalyst };
 
-const ACTIVE_POLL_MS = 20_000;
+const ACTIVE_POLL_MS = 12_000;
 const BLURRED_POLL_MS = 90_000;
 const RETRY_DELAY_MS = 3_000;
 const DISMISS_STORAGE_KEY = "ci.dismissed-catalyst-ids";
@@ -105,9 +106,12 @@ function writeDismissedIds(ids: Set<number>) {
 export function LiveCatalystFeed({
   initialCatalysts,
   isAdmin,
+  initialTickerFilter,
 }: {
   initialCatalysts: FeedCatalyst[];
   isAdmin: boolean;
+  /** Pre-fills the ticker filter, e.g. arriving via `?ticker=` from Analytics. */
+  initialTickerFilter?: string;
 }) {
   const router = useRouter();
   const [catalysts, setCatalysts] = useState(initialCatalysts);
@@ -116,15 +120,18 @@ export function LiveCatalystFeed({
   const [pollError, setPollError] = useState<string | null>(null);
   const [flashIds, setFlashIds] = useState<Set<number>>(() => new Set());
   const [selectedId, setSelectedId] = useState<number | null>(null);
-  const [tickerQuery, setTickerQuery] = useState("");
+  const [tickerQuery, setTickerQuery] = useState(initialTickerFilter ?? "");
   const [categoryFilter, setCategoryFilter] = useState<EventCategoryKey | null>(
     null,
   );
   const [timeWindow, setTimeWindow] = useState<FeedTimeWindow>("all");
-  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [filtersOpen, setFiltersOpen] = useState(Boolean(initialTickerFilter));
   const [nowTick, setNowTick] = useState(() => Date.now());
   const [dismissedIds, setDismissedIds] = useState<Set<number>>(() =>
     readDismissedIds(),
+  );
+  const [dismissingIds, setDismissingIds] = useState<Set<number>>(
+    () => new Set(),
   );
   const [watchlistTickers, setWatchlistTickers] = useState<string[]>([]);
   const [playbookCategories, setPlaybookCategories] = useState<
@@ -134,6 +141,10 @@ export function LiveCatalystFeed({
   const [prefsLoaded, setPrefsLoaded] = useState(false);
   const [manualRefreshing, setManualRefreshing] = useState(false);
   const inFlight = useRef(false);
+  // Mirrors `pollError` synchronously (set alongside every `setPollError`
+  // call below) so `handleManualRefresh` can read the latest value right
+  // after its own `await`, without waiting on a React re-render.
+  const pollErrorRef = useRef<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   const retryTimeoutRef = useRef<number | null>(null);
   const knownIds = useRef(new Set(initialCatalysts.map((c) => c.id)));
@@ -213,7 +224,9 @@ export function LiveCatalystFeed({
         });
         const data = await res.json();
         if (res.status === 429) {
-          setPollError(data.error ?? "Rate limited — polling will retry.");
+          const msg = data.error ?? "Rate limited — polling will retry.";
+          pollErrorRef.current = msg;
+          setPollError(msg);
           return;
         }
         if (!res.ok) {
@@ -242,6 +255,7 @@ export function LiveCatalystFeed({
         }
         setCatalysts(next);
         setLastFetchedAt(data.fetchedAt ?? new Date().toISOString());
+        pollErrorRef.current = null;
         setPollError(null);
       } catch (err) {
         if (err instanceof DOMException && err.name === "AbortError") {
@@ -258,9 +272,12 @@ export function LiveCatalystFeed({
           }, RETRY_DELAY_MS);
           return;
         }
-        setPollError(
-          err instanceof Error ? err.message : "Could not refresh feed.",
-        );
+        {
+          const msg =
+            err instanceof Error ? err.message : "Could not refresh feed.";
+          pollErrorRef.current = msg;
+          setPollError(msg);
+        }
       } finally {
         inFlight.current = false;
       }
@@ -280,13 +297,23 @@ export function LiveCatalystFeed({
     // something" instead of a flash too quick to notice.
     const minSpinMs = 500;
     const startedAt = Date.now();
-    void softRefetch().finally(() => {
-      const elapsed = Date.now() - startedAt;
-      window.setTimeout(
-        () => setManualRefreshing(false),
-        Math.max(0, minSpinMs - elapsed),
-      );
-    });
+    void softRefetch()
+      .then(() => {
+        // Manual refresh is a deliberate action, so a failure surfaces here
+        // as a toast too - not just the persistent inline `pollError` banner,
+        // which is tuned for background-polling status rather than a direct
+        // response to this click.
+        if (pollErrorRef.current) {
+          toast.error(pollErrorRef.current);
+        }
+      })
+      .finally(() => {
+        const elapsed = Date.now() - startedAt;
+        window.setTimeout(
+          () => setManualRefreshing(false),
+          Math.max(0, minSpinMs - elapsed),
+        );
+      });
   }, [manualRefreshing, softRefetch]);
 
   useEffect(() => {
@@ -359,13 +386,25 @@ export function LiveCatalystFeed({
   }, [quietMode, playbookCategories]);
 
   const dismissCatalyst = useCallback((id: number) => {
-    setDismissedIds((prev) => {
-      const next = new Set(prev);
-      next.add(id);
-      writeDismissedIds(next);
-      return next;
-    });
+    // Two-phase removal: mark "dismissing" first so the row can play its
+    // exit animation (`.row-dismiss`, mirroring `.feed-row`'s entrance),
+    // then actually drop it from the list once that animation has had time
+    // to finish - otherwise it would just vanish instantly.
+    setDismissingIds((prev) => new Set(prev).add(id));
     setSelectedId((cur) => (cur === id ? null : cur));
+    window.setTimeout(() => {
+      setDismissedIds((prev) => {
+        const next = new Set(prev);
+        next.add(id);
+        writeDismissedIds(next);
+        return next;
+      });
+      setDismissingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
+    }, 260);
   }, []);
 
   const openArticle = useCallback(
@@ -587,6 +626,7 @@ export function LiveCatalystFeed({
         <CatalystFeedList
           catalysts={filtered}
           flashIds={flashIds}
+          dismissingIds={dismissingIds}
           selectedId={selectedId}
           watchlistTickers={watchlistTickers}
           onSelect={openArticle}
@@ -724,6 +764,7 @@ function FilterChip({
 function CatalystFeedList({
   catalysts,
   flashIds,
+  dismissingIds,
   selectedId,
   watchlistTickers,
   onSelect,
@@ -734,6 +775,7 @@ function CatalystFeedList({
 }: {
   catalysts: FeedCatalyst[];
   flashIds: Set<number>;
+  dismissingIds: Set<number>;
   selectedId: number | null;
   watchlistTickers: string[];
   onSelect: (id: number) => void;
@@ -748,10 +790,44 @@ function CatalystFeedList({
   // Up/Down/Home/End scroll it immediately, without requiring a prior click.
   useAutoFocusScrollRegion(listRef);
 
+  // "N new" pill: when the user has scrolled down, newly-arrived rows land
+  // at the top of the tape (out of view) and their `.row-flash` never gets
+  // seen. Tracking id membership across renders (independent of the
+  // flash/dismiss bookkeeping above, which is about individual rows, not
+  // "how many arrived while I wasn't looking") lets a single scroll-to-top
+  // affordance surface them instead.
+  const [atTop, setAtTop] = useState(true);
+  const [pendingNew, setPendingNew] = useState(0);
+  const knownListIds = useRef<Set<number>>(new Set(catalysts.map((c) => c.id)));
+
+  useEffect(() => {
+    const seen = knownListIds.current;
+    const newOnes = catalysts.filter((c) => !seen.has(c.id));
+    if (newOnes.length > 0 && !atTop) {
+      setPendingNew((n) => n + newOnes.length);
+    }
+    knownListIds.current = new Set(catalysts.map((c) => c.id));
+    // Only `catalysts` should retrigger the diff; `atTop` is read, not a
+    // dependency we want re-running this on its own.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [catalysts]);
+
+  const handleScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
+    const nearTop = e.currentTarget.scrollTop < 40;
+    setAtTop(nearTop);
+    if (nearTop) setPendingNew(0);
+  }, []);
+
+  const scrollToTop = useCallback(() => {
+    listRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+    setPendingNew(0);
+  }, []);
+
   return (
     <div
       ref={listRef}
       tabIndex={-1}
+      onScroll={handleScroll}
       className="flex min-h-0 flex-1 flex-col overflow-auto outline-none"
       role="table"
       aria-label="News feed"
@@ -783,9 +859,23 @@ function CatalystFeedList({
         </div>
       </div>
 
+      {pendingNew > 0 ? (
+        <div className="sticky top-10 z-[2] flex justify-center pt-2">
+          <button
+            type="button"
+            onClick={scrollToTop}
+            className="btn-press pointer-events-auto inline-flex items-center gap-1.5 rounded-full border border-[rgba(240,193,75,0.45)] bg-[var(--desk-live)] px-3 py-1 font-mono text-[0.72rem] font-semibold tracking-wide text-[#121212] uppercase shadow-[0_6px_18px_rgba(0,0,0,0.35)]"
+          >
+            <span className="live-pulse size-1.5 rounded-full bg-[#121212]" />
+            {pendingNew} new
+          </button>
+        </div>
+      ) : null}
+
       <div className="flex flex-col">
         {catalysts.map((catalyst, index) => {
           const flashing = flashIds.has(catalyst.id);
+          const dismissing = dismissingIds.has(catalyst.id);
           const selected = selectedId === catalyst.id;
           const eventLabel = feedEventLabel(catalyst);
           const source = sourceDisplay(catalyst);
@@ -812,8 +902,14 @@ function CatalystFeedList({
                 "hover:shadow-[inset_2px_0_0_rgba(240,193,75,0.35)]",
                 selected && "bg-[var(--desk-overlay-strong)]",
                 flashing && "row-flash",
+                dismissing && "row-dismiss pointer-events-none",
               )}
-              style={{ animationDelay: `${Math.min(index, 28) * 22}ms` }}
+              style={{
+                animationDelay: dismissing
+                  ? undefined
+                  : `${Math.min(index, 28) * 22}ms`,
+              }}
+              aria-hidden={dismissing || undefined}
             >
               <div role="cell" className="min-w-0">
                 <span className="block text-[0.86rem] font-medium tracking-tight text-[var(--desk-text-secondary)] transition-colors group-hover:text-[var(--desk-text)] group-focus-visible:text-[var(--desk-text)] max-sm:line-clamp-2 sm:truncate">
