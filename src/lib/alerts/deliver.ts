@@ -1,5 +1,6 @@
 import type { AlertChannel, AlertRuleConditions } from "@/db/schema";
 import { classifySession, sessionMatches } from "@/lib/alerts/session";
+import { validateWebhookUrl } from "@/lib/alerts/webhook-url";
 
 export interface AlertCatalystPayload {
   id: number;
@@ -72,12 +73,19 @@ async function deliverWebhook(
   url: string,
   body: unknown,
 ): Promise<{ ok: boolean; detail: string }> {
+  const validated = validateWebhookUrl(url);
+  if (!validated.ok) {
+    return { ok: false, detail: validated.reason };
+  }
+
   try {
-    const res = await fetch(url, {
+    const res = await fetch(validated.url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
       signal: AbortSignal.timeout(8_000),
+      // Avoid open-redirect bounce to an internal host after hostname checks.
+      redirect: "error",
     });
     if (!res.ok) {
       return { ok: false, detail: `Webhook HTTP ${res.status}` };

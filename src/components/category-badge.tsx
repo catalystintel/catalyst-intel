@@ -10,6 +10,8 @@ const CATEGORY_STYLES: Record<EventCategoryKey, string> = {
     "border-[var(--desk-border-strong)] bg-[var(--desk-overlay-soft)] text-[var(--desk-text-secondary)]",
   trading_halt:
     "border-[var(--desk-border-strong)] bg-[var(--desk-overlay-soft)] text-[var(--desk-text-secondary)]",
+  cyber:
+    "border-[var(--desk-border-strong)] bg-[var(--desk-overlay-soft)] text-[var(--desk-text-secondary)]",
   earnings:
     "border-[var(--desk-border-strong)] bg-[var(--desk-overlay-soft)] text-[var(--desk-text-secondary)]",
   regulatory:

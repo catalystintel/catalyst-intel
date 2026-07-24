@@ -16,6 +16,7 @@ export const BENZINGA_PANEL_FOR_CATEGORY: Record<EventCategoryKey, string> = {
   governance: "Calendar — SEC Filings",
   disclosure: "Calendar — SEC Filings / Newsfeed",
   trading_halt: "Halts",
+  cyber: "Newsfeed / Calendar — SEC Filings",
   insider: "Details — Insiders / Calendar SEC",
   regulatory: "Calendar — FDA",
   clinical: "Calendar — FDA",

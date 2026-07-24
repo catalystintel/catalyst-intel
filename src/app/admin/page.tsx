@@ -16,6 +16,7 @@ import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { FetchTrigger } from "./fetch-trigger";
 import { IngestionRunsPanel } from "./ingestion-runs-panel";
 import { MigrateTrigger } from "./migrate-trigger";
+import { WhatsNewPanel } from "./whats-new-panel";
 
 export default async function AdminPage() {
   if (!isLibsqlConfigured()) {
@@ -91,9 +92,16 @@ export default async function AdminPage() {
           <p className="mt-1 max-w-xl text-sm text-[var(--desk-text-muted)]">
             Trigger vendor fetch jobs for the Live tape. Production schedules
             use the cron secret path (external pinger / GitHub Actions
-            fallback).
+            fallback). Scroll to What&apos;s new for release notes and a
+            platform swim sheet.
           </p>
         </div>
+
+        <section className="overflow-hidden rounded-xl border border-[var(--desk-border)] bg-[var(--desk-panel)]">
+          <div className="border-b border-border/60 px-4 py-4 sm:px-5">
+            <WhatsNewPanel />
+          </div>
+        </section>
 
         <section className="overflow-hidden rounded-xl border border-[var(--desk-border)] bg-[var(--desk-panel)]">
           <div className="flex flex-wrap items-start justify-between gap-4 border-b border-border/60 px-4 py-4 sm:px-5">

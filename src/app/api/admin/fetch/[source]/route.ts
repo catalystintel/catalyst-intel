@@ -11,10 +11,12 @@ type RouteContext = { params: Promise<{ source: string }> };
 
 /**
  * Per-source ingest trigger. Admin session or x-cron-secret.
- * GET lists available source ids.
+ * GET lists available source ids (admin/cron only — avoid unauthenticated recon).
  */
-export async function GET() {
-  return NextResponse.json({ sources: CATALYST_SOURCE_IDS });
+export async function GET(request: NextRequest) {
+  const auth = await authorizeAdminFetch(request, "admin-fetch-sources-list");
+  if (!auth.ok) return auth.response;
+  return jsonWithAuth(auth, { sources: CATALYST_SOURCE_IDS });
 }
 
 export async function POST(request: NextRequest, context: RouteContext) {

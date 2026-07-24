@@ -369,3 +369,35 @@ to Vercel Pro.
 To confirm data actually landed, check `/dashboard` (Live feed) or open Drizzle Studio
 (`npm run db:studio` locally; point `LIBSQL_URL`/`LIBSQL_AUTH_TOKEN` at a remote Turso DB to
 inspect staging/production the same way).
+
+## Logging & monitoring plan
+
+Goal: know about production failures without watching Vercel logs all day.
+
+### What ships in-app today
+
+| Signal                       | Where                                                 | How you see it                          |
+| ---------------------------- | ----------------------------------------------------- | --------------------------------------- |
+| Server request crashes       | `src/instrumentation.ts` → PostHog `captureException` | PostHog → Error tracking / `$exception` |
+| Client React error boundary  | `src/app/error.tsx` → PostHog `captureException`      | Same                                    |
+| Ingest enrichment soft-fails | `fetch-all-sources.ts` → `reportServerError`          | PostHog + Vercel function logs          |
+| Ingest audit trail           | `ingestion_runs` + Admin panel                        | `/admin`                                |
+| Cron HTTP failures           | GHA `fetch-sec-edgar-cron.yml` exits non-zero         | GitHub Actions email / UI               |
+| Liveness probe               | `GET /api/health`                                     | Uptime monitor (see below)              |
+| Product analytics            | PostHog pageviews / custom events                     | PostHog insights                        |
+
+Vercel Runtime Logs remain the source of truth for raw `console.error` output.
+
+### Ops checklist (do once per environment)
+
+1. **PostHog** — set `NEXT_PUBLIC_POSTHOG_KEY` (+ host) on Preview and Production. In PostHog, enable **Error tracking** and create an alert (Slack/email) for exception spikes.
+2. **Uptime** — point UptimeRobot / Better Stack / Checkly at `https://<host>/api/health` every 1–5 minutes; alert on non-200.
+3. **GitHub Actions** — ensure repo notification settings email you on failed workflow runs for `Fetch catalysts (scheduled ETL)`.
+4. **Vercel** — enable deployment failure notifications for the project.
+5. **Cron secret** — treat `CRON_SECRET` like root access (rotate if leaked); it bypasses admin session checks by design.
+
+### Later upgrades (not required for MVP)
+
+- Dedicated APM (Sentry) if PostHog exception volume/noise becomes painful.
+- Shared rate-limit store (Upstash Redis) once multiple serverless isolates matter.
+- Slack webhook from Admin when an `ingestion_runs` row ends with high `errors`.
