@@ -1,5 +1,8 @@
 import {
   CATEGORY_LABELS,
+  extractSecItemBlurb,
+  isSecCatalogHeadline,
+  SEC_ITEM_HEADLINE_LABELS,
   type EventCategoryKey,
 } from "@/lib/jobs/parse-8k-items";
 import { benzingaPanelForCategory } from "@/lib/catalysts/benzinga-analogs";
@@ -164,13 +167,90 @@ export function stripSourceNames(text: string): string {
   return out || normalizeDisplayText(text);
 }
 
+/** Other short taxonomy headlines that need company context on the tape. */
+const GENERIC_EVENT_HEADLINES = new Set([
+  ...SEC_ITEM_HEADLINE_LABELS,
+  "form 4 insider transaction",
+  "insider buy (form 4)",
+  "insider sell (form 4)",
+  "form 4 insider buy & sell",
+  "beneficial ownership (13d)",
+  "beneficial ownership (13g)",
+  "prospectus / offering (424b)",
+  "shelf registration (s-3)",
+  "8-k filing",
+  "filing",
+  "earnings calendar",
+  "fda catalyst",
+  "trading halt",
+  "halt resumed",
+]);
+
+function isGenericEventHeadline(text: string): boolean {
+  const t = normalizeDisplayText(text).toLowerCase();
+  if (!t) return false;
+  if (GENERIC_EVENT_HEADLINES.has(t)) return true;
+  return isSecCatalogHeadline(t);
+}
+
+/** Company / ticker subject for composing richer tape titles. */
+function tapeSubject(c: FeedCatalyst): string | null {
+  const company = normalizeDisplayText(c.companyName ?? "");
+  if (company) {
+    // Drop filing-title chrome: "ACME CORP — 8-K filing"
+    const stripped = company
+      .replace(
+        /\s*[—–\-]\s*(?:\d+-?[A-Z]|8-?K|Form\s*4|S-3|424B|SC\s*13).*$/i,
+        "",
+      )
+      .trim();
+    if (stripped.length >= 2) return stripped;
+    return company;
+  }
+  const ticker = c.ticker?.trim().toUpperCase();
+  return ticker || null;
+}
+
 /**
- * Primary title cell — real story text, never a source/publisher label.
- * Prefers non-source headline, then title; always strips provider chrome.
+ * Primary title cell — company + what happened, not a bare taxonomy chip.
+ * Prefers real news headlines; for SEC catalog labels, compose
+ * `Company — official item blurb` (or trader label) so the wide Title column
+ * carries a usable event summary.
  */
 export function titleLine(c: FeedCatalyst): string {
   const headline = normalizeDisplayText(c.headline ?? "");
   const title = normalizeDisplayText(c.title ?? "");
+  const subject = tapeSubject(c);
+
+  // Real news / wire copy wins when it is not a publisher or generic chip.
+  if (
+    headline &&
+    !looksLikeSourceLabel(headline) &&
+    !isGenericEventHeadline(headline)
+  ) {
+    return stripSourceNames(headline) || headline;
+  }
+
+  // Generic SEC / calendar event — enrich with company + filing blurb.
+  if (headline && isGenericEventHeadline(headline)) {
+    const primaryCode =
+      c.items.find((i) => i.label.toLowerCase() === headline.toLowerCase())
+        ?.code ??
+      c.items[0]?.code ??
+      null;
+    const blurb =
+      extractSecItemBlurb(c.summary, primaryCode) ||
+      stripSourceNames(headline) ||
+      headline;
+    if (subject) {
+      // Avoid "ACME — ACME — Earnings…" when blurb somehow repeats subject.
+      if (blurb.toLowerCase().startsWith(subject.toLowerCase())) {
+        return blurb;
+      }
+      return `${subject} — ${blurb}`;
+    }
+    return blurb;
+  }
 
   let raw = "";
   if (headline && !looksLikeSourceLabel(headline)) {
@@ -187,6 +267,20 @@ export function titleLine(c: FeedCatalyst): string {
   if ((!cleaned || looksLikeSourceLabel(cleaned)) && title && title !== raw) {
     const fromTitle = stripSourceNames(title);
     if (fromTitle && !looksLikeSourceLabel(fromTitle)) return fromTitle;
+  }
+
+  // Filing title "ACME — 8-K filing" with no usable headline: prefer subject + detail.
+  if (
+    cleaned &&
+    subject &&
+    /(?:8-?K|Form\s*4|S-3|424B|SC\s*13).*filing$/i.test(cleaned)
+  ) {
+    const event =
+      (c.items[0] && extractSecItemBlurb(c.summary, c.items[0].code)) ||
+      c.items[0]?.label ||
+      null;
+    if (event) return `${subject} — ${event}`;
+    return cleaned;
   }
 
   if (cleaned && !looksLikeSourceLabel(cleaned)) return cleaned;
