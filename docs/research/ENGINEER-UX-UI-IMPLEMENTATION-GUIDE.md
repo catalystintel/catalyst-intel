@@ -108,6 +108,13 @@ Sources: Architecture §8, `Catalyst-Intel-JTBD-UX-UI.md`, `ENGINEER-UX-FEATURE-
 5. Flash new rows briefly (`row-flash`). Offer a “N new” jump-to-top control when scrolled.
 6. Keep chrome thin: filters + Quiet toggle + freshness. No hero, no promo strip, no card grid of stats above the blotter.
 7. Optional split panel (chart/quote) must stay secondary to the tape — tape remains the decision surface.
+8. **Symbol click** opens drawer/split with chart, multi-timeframe quote, and correlated ticker news (Visual §1A-C).
+
+### Pre-login / marketing (`/`)
+
+- No authenticated dashboard chrome and **no demo live tape / keys strip**.
+- Emphasize real-time news catalysts: efficient, filtered, broad topic coverage.
+- Hero: brand + one headline + one supporting sentence + CTA. See Visual §1A-E.
 
 ### Shell rules
 
@@ -119,21 +126,46 @@ Sources: Architecture §8, `Catalyst-Intel-JTBD-UX-UI.md`, `ENGINEER-UX-FEATURE-
 
 ## 4. Feed table / list (columns, density, filters, sort)
 
-### Current UI reality (implement against this)
+### Product decision (Jul 2026 JTBD) — implement against this
+
+**Decision:** default blotter columns are **Title · Time · Symbol** (not Title · Time · Event · Ticker).  
+Keep the **Action** toolbar (Read · Act · Dismiss · Quiet). Full acceptance + provider gaps: [`ENGINEER-UX-FEATURE-ROADMAP-VISUAL.md`](./ENGINEER-UX-FEATURE-ROADMAP-VISUAL.md) §1A.
 
 Live blotter columns on desktop (`live-catalyst-feed.tsx`):
 
-| Column     | Content                                            | Rules                                                                                                  |
-| ---------- | -------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| **Title**  | Headline preferred, else filing title              | Truncate on desktop; 2-line clamp on mobile. Source name + tags under title (dim mono).                |
-| **Time**   | Event occurrence in **ET** (`catalysts.timestamp`) | Use `formatTimeDate` / `formatClockTime`. **Never** show DB insert time as event time. `tabular-nums`. |
-| **Event**  | Subcategory → type → category label                | Compact mono chip. See §5.                                                                             |
-| **Ticker** | Symbol or `—`                                      | Mono, semibold. Hover can amber-tint.                                                                  |
-| **Action** | Hover / focus toolbar                              | Read · Act · Dismiss · Quiet. Own column so buttons never overlap Time.                                |
+| Column     | Content                                            | Rules                                                                                                                              |
+| ---------- | -------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| **Title**  | Headline preferred, else filing title              | Truncate on desktop; 2-line clamp on mobile. **No** source/provider under the title; strip provider prefixes (`stripSourceNames`). |
+| **Time**   | Event occurrence in **ET** (`catalysts.timestamp`) | Use `formatTimeDate` / `formatClockTime`. **Never** show DB insert time as event time. `tabular-nums`.                             |
+| **Symbol** | Ticker or `—`                                      | Mono, semibold. Clickable when present → drawer / split (§4C).                                                                     |
+| **Action** | Hover / focus toolbar                              | Read · Act · Dismiss · Quiet. Own column so buttons never overlap Time.                                                            |
 
-Grid comment in code: Impact column is **intentionally hidden for now**. Do not re-add Impact/Sector/Proof as primary columns unless product reopens that decision.
+**Removed from primary columns (decision):** Event chip column; Source column / source strip under title.  
+Event/category remain on **filter chips** and inside Read / drawer meta — not on the default blotter.
 
-Mobile stack under Title: **Time → Event → Ticker**, then always-visible action buttons (no hover-only).
+Grid comment in code: Impact column is **intentionally hidden for now**. Do not re-add Impact/Sector/Proof/Event as primary columns unless product reopens that decision.
+
+Mobile stack under Title: **Time → Symbol**, then always-visible action buttons (no hover-only).
+
+### Earnings filter — alternate column schema
+
+When the **Earnings** filter is active, replace default columns with:
+
+**Date · Name · Symbol · Period · EPS · Estimation**
+
+- **Period** = fiscal quarter only (`Q1` / `Q2` / `Q3` / `Q4`).
+- EPS / Estimation may be `—` when unknown; never invent numbers.
+- Prefer Finnhub earnings calendar / surprises + SEC 8-K Item 2.02. See Visual roadmap §1A-B for schema notes.
+
+### Symbol click → drawer / split
+
+Clicking **Symbol** opens `catalyst-detail-drawer.tsx` or `tape-split-panel.tsx` (tape stays primary) with:
+
+1. Price chart for that ticker
+2. Quote + change across available timeframes
+3. Correlated news/catalysts for that ticker (keyword / ticker join) → in-app Read
+
+Honest empty states when market APIs are unkeyed.
 
 ### Density
 
@@ -141,16 +173,18 @@ Mobile stack under Title: **Time → Event → Ticker**, then always-visible act
 - Sticky uppercase mono column headers.
 - One row = one catalyst. No nested cards inside the tape.
 - Hover: soft overlay + thin left amber inset. Selected row: stronger overlay.
-- Keep source under the title (not a separate Source column in the current grid).
+- Do **not** show source under the title on the dashboard.
 
 ### Filters (do keep)
 
-| Control                 | Behavior                                                                 |
-| ----------------------- | ------------------------------------------------------------------------ |
-| Ticker / company search | Filter visible tape                                                      |
-| Time window             | **1h / 4h / 24h / All**                                                  |
-| Category chips          | All + counts per `EventCategoryKey`                                      |
-| Quiet playbook toggle   | Persists via `/api/playbook`; filters by watchlist + playbook categories |
+| Control                 | Behavior                                                                                          |
+| ----------------------- | ------------------------------------------------------------------------------------------------- |
+| Ticker / company search | Filter visible tape                                                                               |
+| Time window             | **1h / 4h / 24h / All**                                                                           |
+| Primary category chips  | **All → Earnings → FDA Approvals → Clinical Trials → IPO → Gov Reports** (UX order; Visual §1A-D) |
+| Quiet playbook toggle   | Persists via `/api/playbook`; filters by watchlist + playbook categories                          |
+
+Wire each primary chip to real ingest (openFDA, ClinicalTrials.gov, Finnhub earnings/IPO, SEC/macro for Gov Reports). Hide or gate chips that have no provider yet — do not ship empty forever filters. Provider map: Visual roadmap §1A.
 
 ### Sort
 
@@ -158,16 +192,17 @@ Mobile stack under Title: **Time → Event → Ticker**, then always-visible act
 - Do not invent a second default sort that hides fresh High-impact rows without an explicit user control.
 - When you add score sort later, keep time as the honest primary for “what just hit.”
 
-### Older research column models (context only)
+### Older research column models (superseded)
 
-Research docs also mention:
+Research / older shipped grammar also mentioned:
 
 - Mental model: `Source \| Sector \| Title \| Time·date` (Client Target)
 - Earlier JTBD preview: `Ticker/Event · Sector · Impact · Title · Proof · Time`
+- Prior implementation guide: **Title · Time · Event · Ticker · Action**
 
-Those are **aspirational / historical**. Current shipped grammar is **Title · Time · Event · Ticker · Action**. If you change columns, update this guide + `Catalyst-Intel-JTBD-UX-UI.md` in the same PR.
+Those are **historical**. **Current product grammar is Title · Time · Symbol (+ Action)**; Earnings filter uses the alternate schema above. If you change columns again, update this guide, the [simple guide](./ENGINEER-UX-UI-GUIDE-SIMPLE.md), Visual §1A, and `Catalyst-Intel-JTBD-UX-UI.md` in the same PR.
 
-Sources: `live-catalyst-feed.tsx`, `Catalyst-Intel-JTBD-UX-UI.md`, Client Target §7.1, Architecture §5.
+Sources: `live-catalyst-feed.tsx`, Visual roadmap §1A, `Catalyst-Intel-JTBD-UX-UI.md`, Client Target §7.1, Architecture §5.
 
 ---
 
@@ -220,16 +255,17 @@ Show item codes in Event / drawer / article meta when known. Do not bury them on
 
 ### FDA / Clinical / Form 4 / Macro
 
-- Same blotter columns as SEC — do not invent a second UI grammar.
-- Always keep a **Proof / original source** path (feed Proof control or article secondary CTA).
+- Same default blotter columns as SEC (**Title · Time · Symbol**) — do not invent a second UI grammar except the **Earnings** alternate schema (Visual §1A-B).
+- Always keep a **Proof / original source** path (article secondary CTA / drawer) — not as a dashboard Source column.
 - Macro schedule rows must show event time honesty (scheduled vs print).
 
-### Source labels (under title / article)
+### Source labels (article / drawer — not dashboard rows)
 
-Be honest about provider:
+Be honest about provider on **Read / drawer / proof**, not on the feed row:
 
 - SEC EDGAR, Nasdaq Halts, Finnhub, Polygon / **Benzinga Wire** (when keyed), openFDA, ClinicalTrials, Form4API, etc.
 - DIY packs ≠ redistribute Benzinga wholesale — license honesty in UI copy.
+- Dashboard rows: strip source names from titles; no provider strip under Title.
 
 Sources: `taxonomy.ts`, Benzinga source map, Client Summary taxonomy notes, Client Target App B.
 
@@ -390,15 +426,15 @@ Design-only reference: `Catalyst-Intel-JTBD-Visual-Preview-README.md` (charcoal 
 
 ## 10. Mobile vs desktop
 
-| Concern       | Desktop                                | Mobile                                                |
-| ------------- | -------------------------------------- | ----------------------------------------------------- |
-| Primary job   | Full blotter triage                    | Alert path + readable article                         |
-| Feed columns  | Title · Time · Event · Ticker · Action | Stacked under Title; actions always visible           |
-| Hover actions | OK                                     | Never rely on hover                                   |
-| Article       | Full WIIM + bullets + body             | Same stack, narrower; CTAs thumb-friendly             |
-| Alerts        | Configure rules                        | Receive + deep link to Read                           |
-| Nav           | Sidebar                                | Collapsed / sheet — keep Feed reachable in one tap    |
-| Viewport      | Dense rows                             | `viewportFit: cover`; avoid horizontal scroll on tape |
+| Concern       | Desktop                          | Mobile                                                    |
+| ------------- | -------------------------------- | --------------------------------------------------------- |
+| Primary job   | Full blotter triage              | Alert path + readable article                             |
+| Feed columns  | Title · Time · Symbol (+ Action) | Mobile: Time → Symbol under Title; actions always visible |
+| Hover actions | OK                               | Never rely on hover                                       |
+| Article       | Full WIIM + bullets + body       | Same stack, narrower; CTAs thumb-friendly                 |
+| Alerts        | Configure rules                  | Receive + deep link to Read                               |
+| Nav           | Sidebar                          | Collapsed / sheet — keep Feed reachable in one tap        |
+| Viewport      | Dense rows                       | `viewportFit: cover`; avoid horizontal scroll on tape     |
 
 Rules:
 
@@ -490,7 +526,7 @@ Work top to bottom. Check off in the PR description when relevant.
 
 ### B. Feed (`/dashboard`)
 
-- [ ] Preserve **Title · Time · Event · Ticker · Action** unless product explicitly changes grammar
+- [ ] Preserve **Title · Time · Symbol** (+ Action); Earnings filter → Date · Name · Symbol · Period · EPS · Estimation (Visual §1A)
 - [ ] Time = event ET timestamp with `tabular-nums`; never DB insert time
 - [ ] Event labels from `eventLabel` / `CATEGORY_LABELS` — no duplicate maps
 - [ ] Soft-poll + Last updated + stale honesty
@@ -536,13 +572,14 @@ Work top to bottom. Check off in the PR description when relevant.
 
 ### H. Suggested next product tickets (if starting UI work tomorrow)
 
-1. Harden WIIM + bullet summary quality on article view
-2. Surface “Why this score?” beside materiality in drawer + article
-3. Liquidity / category filter polish on feed
-4. Alert prefs depth (watchlist-only + category + min materiality)
-5. Acceptance pass on `dev` Preview before new chrome
+1. Dashboard JTBD: Title · Time · Symbol + primary filter order + strip sources (Visual §1A)
+2. Earnings alternate columns + Symbol click panel (chart / quote / correlated news)
+3. Harden WIIM + bullet summary quality on article view
+4. Surface “Why this score?” beside materiality in drawer + article
+5. Pre-login: remove demo tape; hero value + CTA only
+6. Acceptance pass on `dev` Preview before new chrome
 
-Sources: `ENGINEER-UX-FEATURE-ROADMAP.md` §4–5, Visual roadmap §5.
+Sources: `ENGINEER-UX-FEATURE-ROADMAP.md` §4–5, Visual roadmap §1A / §5.
 
 ---
 

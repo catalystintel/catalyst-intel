@@ -4,7 +4,8 @@
 
 One simple read. Who the user is. What each screen must do. What to build. What to skip.
 
-Full detail: [ENGINEER-UX-UI-IMPLEMENTATION-GUIDE.md](./ENGINEER-UX-UI-IMPLEMENTATION-GUIDE.md)
+Full detail: [ENGINEER-UX-UI-IMPLEMENTATION-GUIDE.md](./ENGINEER-UX-UI-IMPLEMENTATION-GUIDE.md)  
+Hebrew PDF: [pdf/ENGINEER-UX-UI-GUIDE-HE.pdf](./pdf/ENGINEER-UX-UI-GUIDE-HE.pdf)
 
 ---
 
@@ -117,23 +118,31 @@ Nav order:
 
 # 3. Feed
 
-### Desktop columns (current)
+### Desktop columns (product decision Jul 2026)
 
 Use this order:
 
 1. **Title** — headline
 2. **Time** — when the event happened (ET)
-3. **Event** — type label (8-K item, halt, FDA…)
-4. **Ticker** — symbol
-5. **Action** — Read / Act / Dismiss / Quiet
+3. **Symbol** — ticker
+4. **Action** — Read / Act / Dismiss / Quiet
 
-Do **not** invent a new column order unless product asks.
+**Changed from** Title · Time · Event · Ticker. Event is **not** a primary column anymore (filters + Read/drawer only).  
+Full acceptance: [Visual roadmap §1A](./ENGINEER-UX-FEATURE-ROADMAP-VISUAL.md).
+
+### Earnings filter columns
+
+When Earnings is selected:
+
+**Date · Name · Symbol · Period · EPS · Estimation**
+
+Period = Q1 / Q2 / Q3 / Q4 only.
 
 ### Title
 
 - Prefer headline
 - Else filing title
-- Source name can sit under the title in small text
+- **Do not** show source under the title on the dashboard; strip provider names from titles
 
 ### Time
 
@@ -141,19 +150,26 @@ Do **not** invent a new column order unless product asks.
 - Use tabular numbers
 - Never show DB insert time as the event time
 
-### Event
+### Symbol
 
-- Show the most specific label you have
-- Prefer subcategory → type → category
-- Use labels from `taxonomy.ts` (`CATEGORY_LABELS`)
-- Examples traders care about: Earnings, 8-K items, Trading Halt, Regulatory / FDA, Insider (Form 4), Macro
+- Mono ticker or `—`
+- Click opens drawer / split: chart, quote changes, correlated news for that ticker
 
-### Filters to keep
+### Event (not a blotter column)
 
-- Ticker / company search
-- Time window: 1h / 4h / 24h / All
-- Category chips
-- Quiet playbook toggle
+- Still used on filter chips and inside Read / drawer
+- Prefer subcategory → type → category from `taxonomy.ts`
+
+### Filters to keep (primary chip order)
+
+1. All
+2. Earnings
+3. FDA Approvals
+4. Clinical Trials
+5. IPO
+6. Gov Reports
+
+Also keep: ticker search, time window (1h / 4h / 24h / All), Quiet playbook toggle.
 
 ### Sort
 
@@ -169,7 +185,7 @@ Do **not** invent a new column order unless product asks.
 
 ### Mobile
 
-- Stack under Title: Time → Event → Ticker
+- Stack under Title: Time → Symbol
 - Action buttons always visible
 - Do not rely on hover
 
@@ -337,10 +353,12 @@ Do these in order when you change UX.
 
 ### Feed
 
-4. Keep Title · Time · Event · Ticker · Action
+4. Keep Title · Time · Symbol (+ Action); Earnings → Date · Name · Symbol · Period · EPS · Estimation
 5. Event time in ET with tabular nums
-6. Keep filters + Quiet toggle
+6. Keep primary filters (All → Earnings → FDA → Clinical → IPO → Gov Reports) + Quiet toggle
 7. Soft-poll + Last updated + stale honesty
+   7b. Symbol click → drawer/split with chart, quote, correlated news
+   7c. Pre-login page: no demo tape — hero value + CTA only
 
 ### Actions
 
