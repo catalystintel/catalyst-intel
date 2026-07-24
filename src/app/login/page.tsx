@@ -56,7 +56,7 @@ export default async function LoginPage({
             Sign in
           </h1>
           <p className="mt-1 text-sm text-[var(--desk-text-muted)]">
-            Continue with Google to open the Latest News feed.
+            Continue with Google to open the Catalyst Feed.
           </p>
 
           <div className="mt-6 flex flex-col gap-4">

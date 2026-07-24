@@ -49,7 +49,8 @@ const PRIMARY_NAV: NavItem[] = [
     label: "News Feed",
     icon: Newspaper,
     comingSoon: true,
-    comingSoonHint: "A dedicated headline stream, separate from the tape.",
+    comingSoonHint:
+      "A dedicated headline stream, separate from the Catalyst Feed.",
   },
   { key: "alerts", label: "Alerts", icon: Bell, href: "/alerts" },
   { key: "watchlist", label: "Watchlists", icon: Star, href: "/watchlist" },

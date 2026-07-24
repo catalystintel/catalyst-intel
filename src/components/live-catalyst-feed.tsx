@@ -629,11 +629,11 @@ export function LiveCatalystFeed({
   return (
     <section
       className="news-panel flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-[var(--desk-border)] bg-[var(--desk-panel)]"
-      aria-label="Latest News"
+      aria-label="Catalyst Feed"
     >
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--desk-border)] bg-[var(--desk-header)] px-4 py-3.5 sm:px-5">
         <h1 className="text-[1.05rem] font-semibold tracking-tight text-[var(--desk-text)]">
-          Live tape
+          Catalyst Feed
         </h1>
         <div className="flex flex-wrap items-center gap-2 sm:gap-3">
           <button
@@ -1109,7 +1109,7 @@ function CatalystFeedList({
               aria-hidden={dismissing || undefined}
             >
               <div role="cell" className="min-w-0">
-                <span className="block text-[0.86rem] font-medium tracking-tight text-[var(--desk-text-secondary)] transition-colors group-hover:text-[var(--desk-text)] group-focus-visible:text-[var(--desk-text)] max-sm:line-clamp-2 sm:truncate">
+                <span className="line-clamp-2 block text-[0.86rem] font-medium tracking-tight text-[var(--desk-text-secondary)] transition-colors group-hover:text-[var(--desk-text)] group-focus-visible:text-[var(--desk-text)] sm:leading-snug">
                   {titleLine(catalyst)}
                 </span>
                 <span className="mt-0.5 hidden truncate font-mono text-[0.62rem] tracking-wide text-[var(--desk-text-dim)] sm:block">
@@ -1156,7 +1156,7 @@ function CatalystFeedList({
                   </FeedActionButton>
                   <FeedActionButton
                     onClick={() => onDismiss(catalyst.id)}
-                    title="Dismiss from tape"
+                    title="Dismiss from feed"
                   >
                     <X className="size-3" />
                     Dismiss
@@ -1242,7 +1242,7 @@ function CatalystFeedList({
                   </FeedActionButton>
                   <FeedActionButton
                     onClick={() => onDismiss(catalyst.id)}
-                    title="Dismiss from tape"
+                    title="Dismiss from feed"
                   >
                     <X className="size-3" />
                     Dismiss

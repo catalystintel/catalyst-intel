@@ -87,11 +87,47 @@ describe("sectorLabel", () => {
 });
 
 describe("titleLine", () => {
-  it("prefers non-source headline over title", () => {
-    expect(titleLine(base())).toBe("Earnings / results");
+  it("composes company + catalog event when headline is a short 8-K label", () => {
+    expect(titleLine(base())).toBe("NVIDIA Corp — Earnings / results");
     expect(titleLine(base({ headline: null }))).toBe(
       "NVIDIA Corp — 8-K filing",
     );
+  });
+
+  it("prefers official SEC item blurb over the short catalog label", () => {
+    expect(
+      titleLine(
+        base({
+          companyName: "Liberty Global Ltd",
+          ticker: "LBTYK",
+          headline: "Earnings / results",
+          items: [
+            {
+              code: "2.02",
+              label: "Earnings / results",
+              category: "earnings",
+            },
+          ],
+          summary:
+            "Filed: 2026-07-24 AccNo: 000123 Size: 10 KB " +
+            "Item 2.02: Results of Operations and Financial Condition " +
+            "Item 9.01: Financial Statements and Exhibits",
+        }),
+      ),
+    ).toBe(
+      "Liberty Global Ltd — Results of Operations and Financial Condition",
+    );
+  });
+
+  it("keeps specific news headlines without forcing company prefix", () => {
+    expect(
+      titleLine(
+        base({
+          headline: "NVDA raises data-center outlook after strong quarter",
+          title: "ignored",
+        }),
+      ),
+    ).toBe("NVDA raises data-center outlook after strong quarter");
   });
 
   it("skips publisher/source headlines and uses the story title", () => {

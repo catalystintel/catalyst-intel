@@ -82,7 +82,7 @@ export function CatalystArticleView({
           className="inline-flex items-center gap-1.5 font-mono text-[0.72rem] tracking-wide text-[var(--desk-text-muted)] uppercase transition-colors hover:text-[var(--desk-text)]"
         >
           <ArrowLeft className="size-3.5" />
-          Live tape
+          Catalyst Feed
         </Link>
         <span className="inline-flex items-center gap-1.5 font-mono text-[0.65rem] tracking-[0.14em] text-[var(--desk-live)] uppercase">
           <BookOpen className="size-3.5" />
