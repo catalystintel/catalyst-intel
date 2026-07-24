@@ -1,3 +1,4 @@
+import { resolveTickerFromName } from "@/lib/catalysts/ticker-resolver";
 import { RETENTION_DAYS } from "@/lib/jobs/data-retention";
 import {
   ingestNormalizedCatalysts,
@@ -144,6 +145,7 @@ export async function fetchOpenFda(): Promise<SourceFetchResult> {
   };
 
   const normalized: NormalizedCatalyst[] = [];
+  const userAgent = process.env.SEC_EDGAR_USER_AGENT?.trim() || "";
 
   for (const row of payload.results ?? []) {
     const app = row.application_number?.trim();
@@ -163,12 +165,17 @@ export async function fetchOpenFda(): Promise<SourceFetchResult> {
       submission.submission_class_code?.trim() ||
       null;
 
+    // Sponsor -> ticker resolution: without it these rows can never match a
+    // trader's watchlist / quiet mode / alerts (see ticker-resolver.ts).
+    const resolved = await resolveTickerFromName(sponsor, { userAgent });
+
     normalized.push({
       provider: "openfda",
       externalId: `openfda:${app}:${date}`,
       url: `https://api.fda.gov/drug/drugsfda.json?search=application_number:"${app}"`,
       rawContent: row,
-      ticker: null,
+      ticker: resolved?.ticker ?? null,
+      tickerSource: resolved?.source ?? "unresolved",
       companyName: sponsor,
       type: "FDA Approval",
       title: `${sponsor ?? "Sponsor"} — ${brand}`,

@@ -19,6 +19,7 @@ interface TickerEntry {
 }
 
 let inMemoryCache: Map<number, string> | null = null;
+let inMemoryRecords: TickerEntry[] | null = null;
 
 function readDiskCache(): Record<string, TickerEntry> | null {
   try {
@@ -50,11 +51,36 @@ export async function getTickerByCik(
 ): Promise<Map<number, string>> {
   if (inMemoryCache) return inMemoryCache;
 
+  const data = await loadTickerData(userAgent, options);
+  inMemoryCache = buildMap(data);
+  return inMemoryCache;
+}
+
+/**
+ * Same dataset as {@link getTickerByCik}, indexed by company name instead of
+ * CIK. Used to resolve a ticker from a sponsor/issuer name string (e.g.
+ * openFDA `sponsor_name`, ClinicalTrials.gov lead sponsor) — see
+ * `ticker-resolver.ts`. Shares the same 24h disk cache.
+ */
+export async function getTickerRecords(
+  userAgent: string,
+  options: { mode?: SecFetchMode } = {},
+): Promise<TickerEntry[]> {
+  if (inMemoryRecords) return inMemoryRecords;
+
+  const data = await loadTickerData(userAgent, options);
+  inMemoryRecords = Object.values(data).filter(
+    (entry) => entry?.cik_str != null && Boolean(entry?.ticker),
+  );
+  return inMemoryRecords;
+}
+
+async function loadTickerData(
+  userAgent: string,
+  options: { mode?: SecFetchMode } = {},
+): Promise<Record<string, TickerEntry>> {
   const cached = readDiskCache();
-  if (cached) {
-    inMemoryCache = buildMap(cached);
-    return inMemoryCache;
-  }
+  if (cached) return cached;
 
   const res = await fetchSecUrl(TICKERS_URL, {
     userAgent,
@@ -62,8 +88,7 @@ export async function getTickerByCik(
   });
   const data = (await res.json()) as Record<string, TickerEntry>;
   writeDiskCache(data);
-  inMemoryCache = buildMap(data);
-  return inMemoryCache;
+  return data;
 }
 
 export function buildMap(
@@ -76,4 +101,10 @@ export function buildMap(
     }
   }
   return map;
+}
+
+/** Test helper — clear in-memory ticker caches between cases. */
+export function clearTickerLookupCache(): void {
+  inMemoryCache = null;
+  inMemoryRecords = null;
 }

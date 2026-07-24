@@ -9,7 +9,7 @@ import { CategoryBadge } from "@/components/category-badge";
 import { EdgarProofLink } from "@/components/edgar-proof-link";
 import { MaterialityBadge } from "@/components/materiality-badge";
 import type { FeedCatalyst } from "@/lib/catalysts/feed-catalyst";
-import { formatRelativeAge } from "@/lib/format/relative-time";
+import { formatEventTime, formatRelativeAge } from "@/lib/format/relative-time";
 import { CATEGORY_LABELS } from "@/lib/jobs/parse-8k-items";
 import { cn } from "@/lib/utils";
 
@@ -178,10 +178,10 @@ export function CatalystDetailDrawer({
                 ) : null}
                 <div className="col-span-2">
                   <dt className="tracking-[0.14em] text-[var(--desk-text-dim)] uppercase">
-                    Filed
+                    Event time
                   </dt>
                   <dd className="mt-1 text-sm text-[var(--desk-text)] tabular-nums">
-                    {new Date(catalyst.timestamp).toLocaleString()}
+                    {formatEventTime(catalyst.timestamp)}
                   </dd>
                 </div>
               </dl>

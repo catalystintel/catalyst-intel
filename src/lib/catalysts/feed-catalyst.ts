@@ -16,6 +16,10 @@ export interface FeedCatalyst {
   eventCategory: EventCategoryKey | null;
   subcategory: string | null;
   items: ParsedItem[];
+  /**
+   * When the event occurred / was filed / published / is scheduled
+   * (`catalysts.timestamp`). Never DB `createdAt` — that is ingest metadata.
+   */
   timestamp: string;
   summary: string | null;
   impactScore: number | null;

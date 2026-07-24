@@ -155,7 +155,7 @@ export function CatalystArticleView({
           />
           <MetaCell label="Type" value={catalyst.type || "—"} />
           <MetaCell
-            label="Time"
+            label="Event time"
             value={formatTimeDate(catalyst.timestamp)}
             tabular
           />

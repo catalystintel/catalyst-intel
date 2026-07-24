@@ -1,3 +1,4 @@
+import { resolveTickerFromName } from "@/lib/catalysts/ticker-resolver";
 import {
   ingestNormalizedCatalysts,
   toSourceResult,
@@ -26,6 +27,10 @@ interface CtStudy {
 
 /**
  * ClinicalTrials.gov recent study updates (free API v2). No key required.
+ *
+ * Quality-first: only material status changes (completed / terminated /
+ * suspended / withdrawn). "Recruiting" updates are high-volume noise for
+ * day traders. Rows still need ticker resolution at ingest (quality gate).
  */
 export async function fetchClinicalTrials(): Promise<SourceFetchResult> {
   const url = new URL("https://clinicaltrials.gov/api/v2/studies");
@@ -33,7 +38,7 @@ export async function fetchClinicalTrials(): Promise<SourceFetchResult> {
   url.searchParams.set("sort", "LastUpdatePostDate:desc");
   url.searchParams.set(
     "query.term",
-    "AREA[OverallStatus]RECRUITING OR AREA[OverallStatus]COMPLETED",
+    "AREA[OverallStatus]COMPLETED OR AREA[OverallStatus]TERMINATED OR AREA[OverallStatus]SUSPENDED OR AREA[OverallStatus]WITHDRAWN",
   );
 
   const res = await fetch(url.toString(), {
@@ -69,12 +74,17 @@ export async function fetchClinicalTrials(): Promise<SourceFetchResult> {
     const conditions =
       study.protocolSection?.conditionsModule?.conditions?.slice(0, 3) ?? [];
 
+    const resolved = await resolveTickerFromName(sponsor, {
+      userAgent: process.env.SEC_EDGAR_USER_AGENT?.trim() || "",
+    });
+
     normalized.push({
       provider: "clinicaltrials",
       externalId: `clinicaltrials:${nctId}:${date}`,
       url: `https://clinicaltrials.gov/study/${nctId}`,
       rawContent: study,
-      ticker: null,
+      ticker: resolved?.ticker ?? null,
+      tickerSource: resolved?.source ?? "unresolved",
       companyName: sponsor,
       type: "Clinical Trial",
       title: `${sponsor ?? "Sponsor"} — ${title}`,
