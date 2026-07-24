@@ -3,7 +3,8 @@
 **Audience:** Software engineers implementing Catalyst Intel  
 **Purpose:** One place to see who we build for, which UX must ship, which Benzinga Pro–inspired ideas fit _this_ product, and the prioritized steps to take next.  
 **Status:** Synthesis of existing research (Jul 2026) — not a new product invent  
-**Codebase orientation:** Next.js desk app; live tape `/dashboard`; watchlist `/watchlist`; alerts `/alerts`; in-app Read `/dashboard/catalyst/[id]`; admin SEC fetch
+**Codebase orientation:** Next.js desk app; live tape `/dashboard`; watchlist `/watchlist`; alerts `/alerts`; in-app Read `/dashboard/catalyst/[id]`; admin SEC fetch  
+**Visual companion:** [`ENGINEER-UX-FEATURE-ROADMAP-VISUAL.md`](./ENGINEER-UX-FEATURE-ROADMAP-VISUAL.md) (Mermaid diagrams, swimlanes, priority matrix)
 
 ---
 

@@ -9,6 +9,7 @@ Shared architecture, UX/JTBD, sources/schema, and API research notes for collabo
 | File                                                                                                           | Topic                                          |
 | -------------------------------------------------------------------------------------------------------------- | ---------------------------------------------- |
 | [ENGINEER-UX-FEATURE-ROADMAP.md](./ENGINEER-UX-FEATURE-ROADMAP.md)                                             | Engineer-facing UX/feature roadmap (synthesis) |
+| [ENGINEER-UX-FEATURE-ROADMAP-VISUAL.md](./ENGINEER-UX-FEATURE-ROADMAP-VISUAL.md)                               | Visual companion (Mermaid diagrams, matrices)  |
 | [Catalyst-Intel-Client-Architecture-and-Flow.md](./Catalyst-Intel-Client-Architecture-and-Flow.md)             | Client architecture and data/UI flow           |
 | [Catalyst-Intel-Architecture-Flow.md](./Catalyst-Intel-Architecture-Flow.md)                                   | Broader system architecture flow               |
 | [Catalyst-Intel-Persona-Data-Architecture-Proposal.md](./Catalyst-Intel-Persona-Data-Architecture-Proposal.md) | Persona / data architecture proposal           |
