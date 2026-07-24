@@ -86,3 +86,15 @@ const ADMIN_NAV: NavItem = {
 export function getPrimaryNav(isAdmin: boolean): NavItem[] {
   return isAdmin ? [...PRIMARY_NAV, ADMIN_NAV] : PRIMARY_NAV;
 }
+
+/** Resolve active nav key from the current URL (shared desk layout). */
+export function navKeyFromPathname(pathname: string | null): NavKey {
+  if (!pathname) return "live";
+  if (pathname.startsWith("/dashboard")) return "live";
+  if (pathname.startsWith("/analytics")) return "analytics";
+  if (pathname.startsWith("/admin")) return "admin";
+  if (pathname.startsWith("/alerts")) return "alerts";
+  if (pathname.startsWith("/watchlist")) return "watchlist";
+  if (pathname.startsWith("/profile")) return "profile";
+  return "live";
+}

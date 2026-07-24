@@ -59,6 +59,11 @@ export interface SourceFetchResult extends IngestPipelineResult {
   configured: boolean;
   status: "ok" | "skipped" | "error";
   message?: string;
+  /**
+   * Vendor HTTP 429 (or equivalent). Watermark must not advance — next tick
+   * widens the fetch window (see vendor_fetch_state / polygon-news-window).
+   */
+  rateLimited?: boolean;
 }
 
 function normalizeTicker(ticker: string | null | undefined): string | null {

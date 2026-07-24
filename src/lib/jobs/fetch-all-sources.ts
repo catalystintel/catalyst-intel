@@ -25,6 +25,7 @@ import {
   type FetchPhaseDef,
   type FetchPhaseId,
 } from "@/lib/jobs/catalyst-sources";
+import { recordVendorFetchFromResult } from "@/lib/jobs/vendor-fetch-state";
 
 export {
   CATALYST_SOURCE_CATALOG,
@@ -87,6 +88,28 @@ export interface FetchAllSourcesResult {
 }
 
 async function runSource(id: CatalystSourceId): Promise<SourceFetchResult> {
+  let result: SourceFetchResult;
+  try {
+    result = await runSourceInner(id);
+  } catch (error) {
+    result = settledToResult(id, { status: "rejected", reason: error });
+  }
+  try {
+    await recordVendorFetchFromResult({
+      sourceId: id,
+      status: result.status,
+      message: result.message,
+      rateLimited: result.rateLimited,
+    });
+  } catch {
+    // Watermark write must never fail the ingest tick.
+  }
+  return result;
+}
+
+async function runSourceInner(
+  id: CatalystSourceId,
+): Promise<SourceFetchResult> {
   switch (id) {
     case "sec-edgar": {
       try {
@@ -224,10 +247,46 @@ export async function fetchAllCatalystSources(options?: {
       continue;
     }
 
-    // Sequential (Polygon news → prices)
+    // Sequential (Polygon news → prices). Skip prices when news already burned
+    // the shared free-tier budget so we don't stack another 429 in the same tick.
+    let polygonNewsRateLimited = false;
     for (const id of phase.sources) {
+      if (id === "polygon-prices" && polygonNewsRateLimited) {
+        const deferred: SourceFetchResult = {
+          source: "polygon-prices",
+          configured: true,
+          status: "ok",
+          rateLimited: true,
+          message:
+            "Deferred this tick — polygon-news was rate-limited (shared ~5 req/min budget).",
+          fetched: 0,
+          inserted: 0,
+          skipped: 0,
+          errors: 0,
+          ranAt: new Date().toISOString(),
+          purgedCatalysts: 0,
+          purgedRawSources: 0,
+        };
+        try {
+          await recordVendorFetchFromResult({
+            sourceId: id,
+            status: deferred.status,
+            message: deferred.message,
+            rateLimited: true,
+          });
+        } catch {
+          // ignore
+        }
+        byId.set(id, deferred);
+        continue;
+      }
+
       try {
-        byId.set(id, await runSource(id));
+        const result = await runSource(id);
+        if (id === "polygon-news" && result.rateLimited) {
+          polygonNewsRateLimited = true;
+        }
+        byId.set(id, result);
       } catch (error) {
         byId.set(
           id,

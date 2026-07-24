@@ -1,7 +1,7 @@
 # Catalyst Intel — API fetch order
 
 Canonical Must → Should order for multi-source ingest
-(`POST /api/admin/fetch/all`, Admin “Fetch all”, GHA cron).
+(`POST /api/admin/fetch/all`, Admin “Fetch all”, **cron-job.org** every 1 min in prod).
 
 ## Display order (Must → Should)
 
@@ -52,14 +52,30 @@ One vendor failure never blocks later sources within a parallel phase
 
 ### Common messages / errors
 
-| Source           | Typical issue                             | Meaning                                                              |
-| ---------------- | ----------------------------------------- | -------------------------------------------------------------------- |
-| `form4api`       | `FORM4_API_KEY is not set…`               | Expected without optional key; EDGAR Form 4 still ingests            |
-| `finnhub`        | `FINNHUB_API_KEY is not set…`             | Soft-skip; calendars/news not fetched                                |
-| `polygon-*`      | `POLYGON_API_KEY is not set…`             | Soft-skip news + price enrichment                                    |
-| `polygon-prices` | HTTP **429** / rate limit note            | Free tier ~5 REST req/min; remaining enrichments deferred            |
-| `polygon-prices` | HTTP **403** `NOT_AUTHORIZED` / timeframe | Plan cannot read that session window; marked unavailable and skipped |
-| `sec-edgar`      | User-Agent / SEC HTTP errors              | Fix `SEC_EDGAR_USER_AGENT`; required for Must path                   |
+| Source           | Typical issue                             | Meaning                                                                                               |
+| ---------------- | ----------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `form4api`       | `FORM4_API_KEY is not set…`               | Expected without optional key; EDGAR Form 4 still ingests                                             |
+| `finnhub`        | `FINNHUB_API_KEY is not set…`             | Soft-skip; calendars/news not fetched                                                                 |
+| `polygon-*`      | `POLYGON_API_KEY is not set…`             | Soft-skip news + price enrichment                                                                     |
+| `polygon-prices` | HTTP **429** / rate limit note            | Free tier ~5 REST req/min; remaining enrichments deferred; **watermark held**, next tick larger batch |
+| `polygon-news`   | HTTP **429** / rate limit note            | Soft-handled; **`last_fetched_at` not advanced**; next tick widens `published_utc.gte` + limit 100    |
+| `polygon-prices` | HTTP **403** `NOT_AUTHORIZED` / timeframe | Plan cannot read that session window; marked unavailable and skipped                                  |
+| `sec-edgar`      | User-Agent / SEC HTTP errors              | Fix `SEC_EDGAR_USER_AGENT`; required for Must path                                                    |
+
+## Per-vendor watermarks (`vendor_fetch_state`)
+
+Each source id has a row with `last_fetched_at` / `last_status`:
+
+- **Success (`ok`)** → advance `last_fetched_at` to now.
+- **Rate limited / error / skipped** → keep the previous watermark.
+- **`polygon-news`** uses the watermark as `published_utc.gte` (with a small overlap). After a
+  429 or a gap ≥ 3 minutes, the next request uses catch-up limit **100** (vs steady-state **40**)
+  so articles are not lost when free-tier quota trips.
+- **`polygon-prices`** still drains a null-`historical_impact` queue; after a 429 the next tick
+  bumps the enrich batch (up to 6). If news was rate-limited in the same tick, prices are
+  deferred so we do not stack another 429 on the shared budget.
+
+See `src/lib/jobs/vendor-fetch-state.ts` and `src/lib/jobs/polygon-news-window.ts`.
 
 ## Admin UI
 

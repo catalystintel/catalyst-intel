@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState, type ReactNode } from "react";
+import { usePathname } from "next/navigation";
 import { Menu, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 
 import { AccountMenu } from "@/components/account-menu";
@@ -8,7 +9,7 @@ import { AppSidebar } from "@/components/app-sidebar";
 import { LiveHeaderStatus } from "@/components/live-header-status";
 import { Toaster } from "@/components/ui/toaster";
 import { useAutoFocusScrollRegion } from "@/hooks/use-auto-focus-scroll-region";
-import type { NavKey } from "@/lib/nav/nav-items";
+import { navKeyFromPathname, type NavKey } from "@/lib/nav/nav-items";
 
 interface AppShellUser {
   email: string;
@@ -19,7 +20,8 @@ interface AppShellUser {
 
 interface AppShellProps {
   user: AppShellUser;
-  active: NavKey;
+  /** Optional override; defaults from the current pathname. */
+  active?: NavKey;
   children: ReactNode;
 }
 
@@ -27,7 +29,13 @@ interface AppShellProps {
  * App chrome for authenticated pages: collapsible left sidebar, LIVE top bar,
  * account menu, and a scrollable content region.
  */
-export function AppShell({ user, active, children }: AppShellProps) {
+export function AppShell({
+  user,
+  active: activeProp,
+  children,
+}: AppShellProps) {
+  const pathname = usePathname();
+  const active = activeProp ?? navKeyFromPathname(pathname);
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const mainRef = useRef<HTMLElement | null>(null);

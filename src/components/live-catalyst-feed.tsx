@@ -8,7 +8,6 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { useRouter } from "next/navigation";
 import {
   BookOpen,
   Check,
@@ -20,7 +19,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
-import { CatalystDetailDrawer } from "@/components/catalyst-detail-drawer";
+import { TapeSplitPanel } from "@/components/tape-split-panel";
 import { Input } from "@/components/ui/input";
 import { useAutoFocusScrollRegion } from "@/hooks/use-auto-focus-scroll-region";
 import {
@@ -30,6 +29,7 @@ import {
 import {
   titleLine,
   eventLabel as feedEventLabel,
+  matchesFeedSearchQuery,
   sourceDisplay,
 } from "@/lib/catalysts/feed-display";
 import {
@@ -124,7 +124,6 @@ export function LiveCatalystFeed({
   /** Pre-fills the ticker filter, e.g. arriving via `?ticker=` from Analytics. */
   initialTickerFilter?: string;
 }) {
-  const router = useRouter();
   const [catalysts, setCatalysts] = useState(initialCatalysts);
   const [presence, setPresence] = useState<Presence>("active");
   const [lastFetchedAt, setLastFetchedAt] = useState<string | null>(null);
@@ -502,24 +501,21 @@ export function LiveCatalystFeed({
     }, 260);
   }, []);
 
-  const openArticle = useCallback(
-    (id: number) => {
-      router.push(`/dashboard/catalyst/${id}`);
-    },
-    [router],
-  );
-
-  const prefetchArticle = useCallback(
-    (id: number) => {
-      void router.prefetch(`/dashboard/catalyst/${id}`);
-    },
-    [router],
-  );
-
-  /** Act = quick triage drawer (Read still opens full article depth). */
-  const openActDrawer = useCallback((id: number) => {
+  const openSplit = useCallback((id: number) => {
     setSelectedId(id);
   }, []);
+
+  const prefetchQuote = useCallback(
+    (id: number) => {
+      const row = catalysts.find((c) => c.id === id);
+      const ticker = row?.ticker?.trim().toUpperCase();
+      if (!ticker) return;
+      void fetch(`/api/market/quote?symbol=${encodeURIComponent(ticker)}`, {
+        credentials: "same-origin",
+      });
+    },
+    [catalysts],
+  );
 
   const quietAddTicker = useCallback(
     async (ticker: string | null) => {
@@ -561,7 +557,7 @@ export function LiveCatalystFeed({
     FEED_TIME_WINDOWS.find((w) => w.id === timeWindow)?.minutes ?? null;
 
   const filtered = useMemo(() => {
-    const q = tickerQuery.trim().toUpperCase();
+    const q = tickerQuery.trim();
     const impactFloor = minScoreForFeedImpactFloor(minImpact);
     return catalysts
       .filter((c) => {
@@ -575,7 +571,7 @@ export function LiveCatalystFeed({
           return false;
         }
         if (categoryFilter && c.eventCategory !== categoryFilter) return false;
-        if (q && !(c.ticker ?? "").toUpperCase().includes(q)) return false;
+        if (q && !matchesFeedSearchQuery(c, q)) return false;
         if (!isWithinWindow(c.timestamp, windowMinutes, nowTick)) return false;
         if (
           materialityFromScore(c.impactScore, c.eventCategory).score <
@@ -739,56 +735,68 @@ export function LiveCatalystFeed({
 
       <div
         className={cn(
-          "flex min-h-0 flex-1 flex-col",
+          "flex min-h-0 flex-1",
           filterRecalc && "feed-filter-recalc",
         )}
       >
-        {catalysts.length === 0 ? (
-          <div className="flex flex-1 flex-col items-center justify-center gap-2 px-6 py-16 text-center">
-            <p className="text-sm font-medium text-[var(--desk-text)]">
-              No catalysts yet
-            </p>
-            <p className="max-w-sm text-sm text-[var(--desk-text-muted)]">
-              {isAdmin
-                ? "Open Admin and run “Fetch all sources now” to populate the Live feed."
-                : "Filings appear here once an admin runs the first ingestion job."}
-            </p>
-          </div>
-        ) : filtered.length === 0 ? (
-          <div className="flex flex-1 items-center justify-center px-6 py-12 text-center">
-            <p className="font-mono text-sm text-[var(--desk-text-muted)]">
-              {quietMode
-                ? "Quiet playbook: no watchlist/playbook matches right now."
-                : "No rows match these filters."}
-            </p>
-          </div>
-        ) : (
-          <CatalystFeedList
-            catalysts={filtered}
-            flashIds={flashIds}
-            dismissingIds={dismissingIds}
-            selectedId={selectedId}
-            watchlistTickers={watchlistTickers}
-            onSelect={openArticle}
-            onRead={openArticle}
-            onPrefetch={prefetchArticle}
-            onAct={openActDrawer}
-            onDismiss={dismissCatalyst}
-            onQuietAdd={quietAddTicker}
-          />
-        )}
-      </div>
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+          {catalysts.length === 0 ? (
+            <div className="flex flex-1 flex-col items-center justify-center gap-2 px-6 py-16 text-center">
+              <p className="text-sm font-medium text-[var(--desk-text)]">
+                No catalysts yet
+              </p>
+              <p className="max-w-sm text-sm text-[var(--desk-text-muted)]">
+                {isAdmin
+                  ? "Open Admin and run “Fetch all sources now” to populate the Live feed."
+                  : "Filings appear here once an admin runs the first ingestion job."}
+              </p>
+            </div>
+          ) : filtered.length === 0 ? (
+            <div className="flex flex-1 items-center justify-center px-6 py-12 text-center">
+              <p className="font-mono text-sm text-[var(--desk-text-muted)]">
+                {quietMode
+                  ? "Quiet playbook: no watchlist/playbook matches right now."
+                  : "No rows match these filters."}
+              </p>
+            </div>
+          ) : (
+            <CatalystFeedList
+              catalysts={filtered}
+              flashIds={flashIds}
+              dismissingIds={dismissingIds}
+              selectedId={selectedId}
+              watchlistTickers={watchlistTickers}
+              onSelect={openSplit}
+              onRead={openSplit}
+              onPrefetch={prefetchQuote}
+              onAct={openSplit}
+              onDismiss={dismissCatalyst}
+              onQuietAdd={quietAddTicker}
+            />
+          )}
+        </div>
 
-      <CatalystDetailDrawer
-        catalyst={selected}
-        onClose={() => setSelectedId(null)}
-        onAct={() => {
-          if (selectedId !== null) openArticle(selectedId);
-        }}
-        onDismiss={() => {
-          if (selectedId !== null) dismissCatalyst(selectedId);
-        }}
-      />
+        {selected ? (
+          <>
+            <button
+              type="button"
+              aria-label="Close panel backdrop"
+              className="fixed inset-0 z-40 bg-black/55 lg:hidden"
+              onClick={() => setSelectedId(null)}
+            />
+            <TapeSplitPanel
+              key={selected.id}
+              catalyst={selected}
+              onClose={() => setSelectedId(null)}
+              onDismiss={() => {
+                if (selectedId !== null) dismissCatalyst(selectedId);
+              }}
+              mobileOverlay
+              className="fixed inset-0 z-50 w-full lg:static lg:inset-auto lg:z-auto lg:w-[min(38%,440px)] lg:shrink-0 lg:border-l"
+            />
+          </>
+        ) : null}
+      </div>
     </section>
   );
 }
@@ -840,9 +848,9 @@ function FeedFilters({
         <Input
           value={tickerQuery}
           onChange={(e) => onTickerQuery(e.target.value)}
-          placeholder="Ticker…"
-          aria-label="Filter by ticker"
-          className="h-8 w-36 border-[var(--desk-border-strong)] bg-[var(--desk-overlay-soft)] font-mono text-xs tracking-wide uppercase md:text-xs"
+          placeholder="Ticker, company, title…"
+          aria-label="Search by ticker, company, or title"
+          className="h-8 w-52 border-[var(--desk-border-strong)] bg-[var(--desk-overlay-soft)] font-mono text-xs tracking-wide md:text-xs"
         />
         <div
           className="flex flex-wrap items-center gap-1"

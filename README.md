@@ -128,8 +128,13 @@ Instead of manually clicking the admin button, run the local cron in its own ter
 npm run cron
 ```
 
-This fetches immediately, then re-fetches every `CRON_INTERVAL_MINUTES` (default `2`). Leave it
+This fetches immediately, then re-fetches every `CRON_INTERVAL_MINUTES` (default `1`). Leave it
 running while you develop and `/dashboard` stays up to date. Stop with `Ctrl+C`.
+
+**Production:** ETL is driven by [cron-job.org](https://cron-job.org) (job title e.g.
+`catalyst-intel prod ETL`) every **1 minute**, POSTing
+`https://<host>/api/admin/fetch/all` with the `x-cron-secret` header. See
+[ARCHITECTURE.md](ARCHITECTURE.md) and [DEPLOYMENT.md](DEPLOYMENT.md).
 
 ## Staging & production
 
@@ -147,7 +152,7 @@ Vercel; production is `main`. Env vars for each environment (and CI/CD triggers)
 | `npm run db:migrate`            | Apply pending migrations to `local.db`                                                        |
 | `npm run db:studio`             | Open Drizzle Studio to browse `local.db`                                                      |
 | `npm run make-admin -- <email>` | Deprecated helper — syncs local `users.role` from the allowlist (does not grant access alone) |
-| `npm run cron`                  | Continuously re-fetch SEC EDGAR every `CRON_INTERVAL_MINUTES` (local dev)                     |
+| `npm run cron`                  | Continuously re-fetch all sources every `CRON_INTERVAL_MINUTES` (default 1; local)            |
 
 ## Architecture notes
 
@@ -159,12 +164,16 @@ Vercel; production is `main`. Env vars for each environment (and CI/CD triggers)
   cookie and does a cheap, optimistic redirect for signed-out visitors. Real authorization lives
   in page/API handlers: session via `getCurrentAppUser()`, admin via JWT email allowlist
   (`src/lib/auth/admin.ts`).
-- **Data ingestion** can be triggered four ways, all calling the same
-  [src/lib/jobs/fetch-sec-edgar.ts](src/lib/jobs/fetch-sec-edgar.ts): the `/admin` page button
-  (allowlisted session), `npm run cron` (local, continuous), a scheduled GitHub Actions workflow
-  against staging/production (`x-cron-secret` header auth), or a self-healing background trigger
-  on `GET /api/catalysts` when data looks stale (`src/lib/jobs/ingestion-freshness.ts`) - see
-  [DEPLOYMENT.md](DEPLOYMENT.md) for why the scheduler alone isn't reliable enough.
+- **Data ingestion** can be triggered several ways, all calling
+  `fetchAllCatalystSources()` via `/api/admin/fetch/all` (or the shared job modules):
+  the `/admin` page button (allowlisted session), `npm run cron` (local, continuous),
+  **cron-job.org every 1 minute in production** (`x-cron-secret`), an optional GitHub Actions
+  workflow as backup, or a self-healing background trigger on `GET /api/catalysts` when data
+  looks stale (`src/lib/jobs/ingestion-freshness.ts`) — see [DEPLOYMENT.md](DEPLOYMENT.md) and
+  [ARCHITECTURE.md](ARCHITECTURE.md).
+- **Per-vendor watermarks** (`vendor_fetch_state`): each source keeps its own `last_fetched_at`.
+  After a Polygon HTTP 429 the cursor does **not** advance, so the next tick widens the news
+  window / price enrich batch and does not permanently miss results — see [FETCH-ORDER.md](FETCH-ORDER.md).
 - **IA:** `/` is marketing for signed-out users (signed-in users redirect to Live). `/dashboard`
   is the Live feed; `/profile` is account + sign-out.
 - **Live presence:** while the Live tab is visible/focused, the client soft-refetches

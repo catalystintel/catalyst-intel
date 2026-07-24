@@ -34,7 +34,7 @@ Three environments, one app:
 | `NEXT_PUBLIC_SUPABASE_URL`         | Yes       | Supabase Project Settings → API                                                                         |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY`    | Yes       | Supabase Project Settings → API                                                                         |
 | `SEC_EDGAR_USER_AGENT`             | Yes       | e.g. `you@email.com CatalystIntel/0.1`                                                                  |
-| `CRON_INTERVAL_MINUTES`            | No        | Default `2` for `npm run cron`                                                                          |
+| `CRON_INTERVAL_MINUTES`            | No        | Default `1` for `npm run cron`                                                                          |
 | `NEXT_PUBLIC_POSTHOG_KEY`          | No        | PostHog Project API key; omit to disable analytics                                                      |
 | `NEXT_PUBLIC_POSTHOG_HOST`         | No        | Default `https://us.i.posthog.com`                                                                      |
 | `ADMIN_EMAILS`                     | No        | Comma-separated admin emails; defaults to `zhbar10@gmail.com,omer.nachshon@gmail.com`                   |
@@ -328,7 +328,24 @@ left with no catalyst referencing it is deleted too. `companies` rows are never 
 Vercel serverless has no durable writable filesystem across invocations. Turso is hosted libSQL -
 same driver and schema as local SQLite; only the URL/token change.
 
-## Why GitHub Actions cron every 5 minutes
+## Production scheduler: cron-job.org (every 1 minute)
+
+**Primary prod ETL clock** is an external [cron-job.org](https://cron-job.org) job (example title:
+`catalyst-intel prod ETL`) that POSTs:
+
+`https://catalyst-intel.vercel.app/api/admin/fetch/all`
+
+with header `x-cron-secret: <CRON_SECRET>` every **1 minute** (`* * * * *`).
+
+Agents and humans should treat this as the source of truth for prod cadence — not GHA alone.
+GitHub Actions `fetch-sec-edgar-cron.yml` may still exist as an optional backup; historically it
+drifted far past its configured `*/5` interval. See [ARCHITECTURE.md](ARCHITECTURE.md).
+
+Polygon free-tier (~5 REST req/min) will still hit **429** under a 1-min full orchestrator. The
+app holds per-vendor `last_fetched_at` on rate-limit so the **next** tick widens the news window
+and price enrich batch instead of permanently missing data — see [FETCH-ORDER.md](FETCH-ORDER.md).
+
+## Why GitHub Actions cron every 5 minutes (legacy / backup)
 
 Closest free option to "every 1-2 minutes." Vercel Hobby allows one cron/day; Pro is $20/mo for
 per-minute.
@@ -360,11 +377,12 @@ to Vercel Pro.
 
 ## Testing ETL end-to-end
 
-| Where          | How                                                                                                                                                                                                                             |
-| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Local**      | `npm run cron` (continuous multi-source, every `CRON_INTERVAL_MINUTES`) or `/admin` → "Fetch all sources now" / per-source buttons.                                                                                             |
-| **Staging**    | Sign in with an allowlisted admin email on the staging Preview URL → `/admin` → run a fetch; or set `STAGING_APP_URL`/`STAGING_CRON_SECRET` so the scheduled workflow covers it; or `gh workflow run fetch-sec-edgar-cron.yml`. |
-| **Production** | Same as staging, against the production URL/secrets, or watch the self-healing backstop kick in on real traffic.                                                                                                                |
+| Where          | How                                                                                                                                                                                                                            |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Local**      | `npm run cron` (continuous multi-source, every `CRON_INTERVAL_MINUTES`, default 1) or `/admin` → "Fetch all sources now" / per-source buttons.                                                                                 |
+| **Staging**    | Sign in with an allowlisted admin email on the staging Preview URL → `/admin` → run a fetch; or set `STAGING_APP_URL`/`STAGING_CRON_SECRET` so a scheduled workflow covers it; or point a cron-job.org job at the staging URL. |
+| **Production** | **cron-job.org** every 1 min → `/api/admin/fetch/all` + `x-cron-secret` (primary). Optional GHA backup.                                                                                                                        |
+| **Production** | Same as staging, against the production URL/secrets, or watch the self-healing backstop kick in on real traffic.                                                                                                               |
 
 To confirm data actually landed, check `/dashboard` (Live feed) or open Drizzle Studio
 (`npm run db:studio` locally; point `LIBSQL_URL`/`LIBSQL_AUTH_TOKEN` at a remote Turso DB to

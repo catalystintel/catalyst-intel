@@ -491,6 +491,78 @@ async function fetchArticleEnrichmentInner(options: {
   return value;
 }
 
+/**
+ * Lightweight quote + profile for the Live tape split panel.
+ * Skips related-headline fan-out used by the full article enrichment path.
+ */
+export async function fetchMarketQuoteBundle(options: {
+  ticker: string | null | undefined;
+}): Promise<{
+  quote: ArticleMarketQuote | null;
+  profile: ArticleCompanyProfile | null;
+}> {
+  try {
+    const symbol = normalizeTicker(options.ticker);
+    if (!symbol) return { quote: null, profile: null };
+
+    const cacheKey = `quote:${symbol}`;
+    const cached = cacheGet(cacheKey);
+    if (cached) {
+      return { quote: cached.quote, profile: cached.profile };
+    }
+
+    const finnhubKey = getFinnhubApiKey();
+    const polygonKey = getPolygonApiKey();
+
+    const [profile, finnhubQuote, polygonQuote] = await Promise.all([
+      finnhubKey ? fetchProfile(symbol, finnhubKey) : Promise.resolve(null),
+      finnhubKey
+        ? fetchFinnhubQuote(symbol, finnhubKey)
+        : Promise.resolve(null),
+      polygonKey && !finnhubKey
+        ? fetchPolygonPrevQuote(symbol, polygonKey)
+        : Promise.resolve(null),
+    ]);
+
+    let quote = finnhubQuote;
+    if (!quote && polygonKey) {
+      quote = polygonQuote ?? (await fetchPolygonPrevQuote(symbol, polygonKey));
+    }
+
+    const value: ArticleEnrichment = {
+      profile,
+      relatedHeadlines: [],
+      quote,
+    };
+    cacheSet(cacheKey, value);
+    return { quote, profile };
+  } catch {
+    return { quote: null, profile: null };
+  }
+}
+
+/** Map vendor exchange string → TradingView `EXCHANGE:TICKER` when possible. */
+export function toTradingViewSymbol(
+  ticker: string,
+  exchange: string | null | undefined,
+): string {
+  const symbol = ticker.trim().toUpperCase();
+  const ex = (exchange ?? "").toUpperCase();
+  if (!symbol) return symbol;
+  if (ex.includes("NASDAQ")) return `NASDAQ:${symbol}`;
+  if (
+    ex.includes("AMEX") ||
+    ex.includes("NYSE MKT") ||
+    ex.includes("NYSE ARCA") ||
+    ex.includes("ARCA")
+  ) {
+    return `AMEX:${symbol}`;
+  }
+  if (ex.includes("NYSE") || ex.includes("NEW YORK")) return `NYSE:${symbol}`;
+  if (ex.includes("OTC") || ex.includes("PINK")) return `OTC:${symbol}`;
+  return symbol;
+}
+
 /** Format Finnhub market cap (millions USD) for desk display. */
 export function formatMarketCapMillions(
   millions: number | null | undefined,

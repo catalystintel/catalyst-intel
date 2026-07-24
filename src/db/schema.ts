@@ -254,6 +254,26 @@ export const ingestionRuns = sqliteTable("ingestion_runs", {
 });
 
 /**
+ * Per-vendor ingest watermark. `last_fetched_at` advances only on success so
+ * a 429/error leaves the cursor behind and the next tick widens the window
+ * (see `resolvePolygonNewsWindow` / FETCH-ORDER.md).
+ */
+export const vendorFetchState = sqliteTable("vendor_fetch_state", {
+  /** Matches `CatalystSourceId` (e.g. polygon-news, sec-edgar). */
+  sourceId: text("source_id").primaryKey(),
+  /** Watermark used as the next catch-up lower bound (ISO). */
+  lastFetchedAt: text("last_fetched_at"),
+  lastAttemptAt: text("last_attempt_at").notNull(),
+  lastStatus: text("last_status", {
+    enum: ["ok", "error", "skipped", "rate_limited"],
+  }).notNull(),
+  lastMessage: text("last_message"),
+  updatedAt: text("updated_at")
+    .notNull()
+    .default(sql`(current_timestamp)`),
+});
+
+/**
  * Audit trail + dedup guard for auto-fired alerts (one row per rule×catalyst
  * delivery attempt). Lets the ingest pipeline evaluate rules on every fetch
  * without re-notifying the same catalyst twice — see alerts/auto-fire.ts.
