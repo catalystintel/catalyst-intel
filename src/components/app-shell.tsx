@@ -7,6 +7,7 @@ import { Menu, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { AccountMenu } from "@/components/account-menu";
 import { AppSidebar } from "@/components/app-sidebar";
 import { LiveHeaderStatus } from "@/components/live-header-status";
+import { HeaderThemeToggle } from "@/components/theme-toggle";
 import { Toaster } from "@/components/ui/toaster";
 import { useAutoFocusScrollRegion } from "@/hooks/use-auto-focus-scroll-region";
 import { navKeyFromPathname, type NavKey } from "@/lib/nav/nav-items";
@@ -106,12 +107,15 @@ export function AppShell({
             )}
           </div>
 
-          <AccountMenu
-            email={user.email}
-            displayName={user.displayName}
-            avatarUrl={user.avatarUrl}
-            isAdmin={user.isAdmin}
-          />
+          <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
+            <HeaderThemeToggle />
+            <AccountMenu
+              email={user.email}
+              displayName={user.displayName}
+              avatarUrl={user.avatarUrl}
+              isAdmin={user.isAdmin}
+            />
+          </div>
         </header>
 
         {/*
