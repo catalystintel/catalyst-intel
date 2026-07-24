@@ -2,7 +2,7 @@
 
 **Companion to:** [`ENGINEER-UX-FEATURE-ROADMAP.md`](./ENGINEER-UX-FEATURE-ROADMAP.md) (full prose + tables)  
 **Audience:** Engineers who want the same substance in diagrams, swimlanes, and checklists  
-**Status:** Visual synthesis of existing research (Jul 2026) — not a new product invent  
+**Status:** Visual synthesis of existing research (Jul 2026) + **Clear news catalysts dashboard** acceptance (product JTBD Jul 2026) — not a new product invent  
 **Sources:** filenames cited inline; full index in §8 of the prose roadmap
 
 ---
@@ -11,7 +11,8 @@
 
 ```mermaid
 flowchart LR
-  A[§1 Persona → JTBD → Surfaces] --> B[§2 Phased roadmap 0–4]
+  A[§1 Persona → JTBD → Surfaces] --> A2[§1A Dashboard acceptance]
+  A2 --> B[§2 Phased roadmap 0–4]
   B --> C[§3 Benzinga vs Catalyst-native]
   C --> D[§4 Priority matrix]
   D --> E[§5 First tickets]
@@ -96,6 +97,154 @@ flowchart LR
 
 Archive / Search is still a gap vs research IA → Phase 2.  
 **Source:** `Catalyst-Intel-Client-Architecture-and-Flow.md` §8.
+
+---
+
+## 1A. Clear news catalysts dashboard — acceptance (product JTBD Jul 2026)
+
+**Audience:** Engineers shipping feed / taxonomy / marketing-page work  
+**Companion build rules:** [`ENGINEER-UX-UI-IMPLEMENTATION-GUIDE.md`](./ENGINEER-UX-UI-IMPLEMENTATION-GUIDE.md) §4 (column grammar), [`ENGINEER-UX-UI-GUIDE-SIMPLE.md`](./ENGINEER-UX-UI-GUIDE-SIMPLE.md) §3  
+**Sources:** product JTBD (Jul 2026), `Catalyst-Intel-Benzinga-Pro-Catalysts-Source-Map.md`, `Catalyst-Intel-Sources-and-Schema-Recommendation.md`, `taxonomy.ts`
+
+### Goals (engineer contract)
+
+1. **Taxonomy ↔ API correlation:** Every catalyst subject that the product exposes as a dashboard filter must map to a real ingest path (`raw_sources.provider` → `catalysts.eventCategory` / subcategory) and must surface in the authenticated feed UI. Do not ship filter chips that return empty forever because no provider is wired.
+2. **Day-trader desk efficiency:** Optimize the authenticated `/dashboard` for fast triage (dense rows, honest timestamps, symbol-first drill-down). Keep marketing chrome off the post-login tape.
+
+### Product decision — main blotter columns
+
+| Prior grammar (shipped / older docs)       | **New grammar (decision)**                                                          |
+| ------------------------------------------ | ----------------------------------------------------------------------------------- |
+| **Title · Time · Event · Ticker · Action** | **Title · Time · Symbol** (+ keep **Action** toolbar: Read / Act / Dismiss / Quiet) |
+
+**Do this:**
+
+- Replace the primary Event column with **Symbol** as the third primary column (order: Title → Time →Title · Time · Symbol).
+- Remove source details from dashboard rows: no Source column; do not append provider names under the title; strip provider prefixes from titles when present (`stripSourceNames` / equivalent).
+- Keep Event/category available as filter chips and inside Read / drawer meta — not as a primary blotter column.
+- Update `live-catalyst-feed.tsx`, feed-display helpers, and both engineer UX guides in the same PR as the UI change.
+
+**Mobile stack:** Time →Title · Time · Symbol under Title (Event no longer in the primary stack).
+
+### A. Default dashboard rows — acceptance
+
+- [ ] Desktop columns render **Title | Time |Title · Time · Symbol** in that order.
+- [ ] Action controls remain reachable without overlapping Time/Symbol.
+- [ ] Rows do not show source provider name, wire label strip, or Source column.
+- [ ] Title prefers headline / filing title with source names stripped.
+- [ ] Time remains event occurrence in **ET** (`catalysts.timestamp`); never DB insert time.
+- [ ]Title · Time · Symbol is mono; empty ticker shows `—` and is not clickable.
+
+### B. Earnings filter — alternate column schema
+
+When the **Earnings** filter chip is active, replace the default blotter columns with:
+
+| Column         | Content                                                                 |
+| -------------- | ----------------------------------------------------------------------- |
+| **Date**       | Earnings / report date (calendar or filing date — be explicit in UI)    |
+| **Name**       | Company name                                                            |
+| **Symbol**     | Ticker                                                                  |
+| **Period**     | Fiscal quarter label only: **Q1 / Q2 / Q3 / Q4** (no free-text seasons) |
+| **EPS**        | Reported EPS when known; otherwise `—`                                  |
+| **Estimation** | Consensus / estimated EPS when known; otherwise `—`                     |
+
+**API / schema implications:**
+
+- Prefer Finnhub earnings calendar / surprise fields when keyed; enrich with SEC 8-K Item 2.02 rows classified as `earnings`.
+- Persist or derive: `period` (quarter enum), `epsActual`, `epsEstimate` (map onto existing catalyst metadata / detail JSON — extend schema only if missing).
+- Empty EPS/Estimation is allowed; do not invent numbers.
+
+### C.Title · Time · Symbol click → drawer or split view
+
+**Do this when the user clicksTitle · Time · Symbol** on any row (default or earnings schema):
+
+- [ ] Open existing drawer **or** split panel (`catalyst-detail-drawer.tsx` / `tape-split-panel.tsx`) — tape remains primary.
+- [ ] Show a **price chart** for that symbol (reuse market quote / history paths; honest empty state if unkeyed).
+- [ ] Show **updated quote details**: last price + %/absolute change across available timeframes (e.g. session, 1D, 5D, 1M — only what the API returns).
+- [ ] Show **correlated news** for that symbol: catalysts/articles joined by ticker and/or keyword match on company/ticker; link into in-app Read.
+- [ ] Do not navigate away from `/dashboard` for this interaction.
+
+### D. Dashboard filter chips — UX order (decision)
+
+Ship chips in this order (left → right). Rationale: default volume first, then highest day-trader cadence / materiality, then lower-frequency capital and macro/gov.
+
+| #   | Chip label          | Maps to taxonomy / query                         |
+| --- | ------------------- | ------------------------------------------------ |
+| 1   | **All**             | No category filter (default)                     |
+| 2   | **Earnings**        | `eventCategory = earnings` (+ earnings calendar) |
+| 3   | **FDA Approvals**   | `regulatory` / FDA approval-class subcategories  |
+| 4   | **Clinical Trials** | `clinical` / ClinicalTrials.gov updates          |
+| 5   | **IPO**             | `capital` + IPO subcategories (`ipo*`)           |
+| 6   | **Gov Reports**     | Gov / macro / SEC report-class events (see gaps) |
+
+Do not randomize chip order. Additional taxonomy chips (halts, insider, analyst, …) may remain available behind All or secondary controls, but these six are the primary product filter set for this JTBD.
+
+### E. Pre-login / marketing page (`src/app/page.tsx`)
+
+**Do this:**
+
+- [ ] Remove the fake / demo live tape preview and any “keys” / demo blotter from the pre-login page.
+- [ ] Do **not** render an authenticated-style dashboard on the marketing surface.
+- [ ] Lead with **real-time news catalysts** value: efficient triage, filtered catalyst topics, broad subject coverage.
+- [ ] CTA → sign-in / sign-up only; no pretend live feed.
+
+**Borrow patterns from trader-facing news sites (research notes — UX only, not a clone):**
+
+| Site                               | Pattern to borrow                                                                                                                     | Do not copy                                                      |
+| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
+| **Benzinga**                       | Hero promise of timely market-moving news; clear product CTA; social proof (desk / trader language) without embedding a full terminal | Loud multi-panel terminal chrome; Squawk; fake wire speed claims |
+| **MarketWatch / Yahoo Finance**    | Plain value headline + “why sign in” clarity; topic coverage called out as categories                                                 | Dense magazine homepage as the product itself                    |
+| **The Fly / Briefing-style desks** | Scarcity of chrome; “what moved / why” framing; professional tone                                                                     | Paywalled fake dashboards that look logged-in                    |
+
+Concrete pre-login IA: **brand + one hero line + one supporting sentence + CTA group**. No demo tape, no filter chips, no keys strip.
+
+### Filter → provider wiring (data / API gaps)
+
+Engineers must treat each primary filter as an ingest + UI contract:
+
+| Filter chip         | Primary providers / paths                                                                                                           | Status / gap                                                                                               |
+| ------------------- | ----------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| **All**             | Union of wired providers via `GET /api/catalysts`                                                                                   | Keep green; empty only when ingest is down                                                                 |
+| **Earnings**        | SEC EDGAR 8-K Item **2.02**; **Finnhub** `calendar/earnings` (+ surprises when keyed); optional Polygon/Benzinga reaction headlines | Calendar EPS/estimate fields may be thin — schema gap for Period/EPS/Estimation UI                         |
+| **FDA Approvals**   | **openFDA**; Finnhub FDA / AdCom calendar; regulatory 8-K                                                                           | Approvals ≠ AdCom calendar — label honestly; same-day desk chatter still paid wire                         |
+| **Clinical Trials** | **ClinicalTrials.gov** API v2 (`clinicaltrials` provider)                                                                           | Registry updates, not PDUFA buzz                                                                           |
+| **IPO**             | **Finnhub** `/calendar/ipo` → `capital` / `ipo*`                                                                                    | **Thin** today — deepen before promising parity                                                            |
+| **Gov Reports**     | **SEC EDGAR** (filings / 8-K disclosure); macro schedule (CPI/NFP/FOMC); later **FRED** live prints                                 | Product label spans SEC + macro — define subcategory map before UI ships; do not pretend full gov firehose |
+
+**Related market data forTitle · Time · Symbol panel:** Polygon (or Finnhub) quotes / aggregates when keyed; soft-fail empty chart if unkeyed.
+
+```mermaid
+flowchart LR
+  subgraph Filters["Primary filter chips"]
+    All --> Earn[Earnings]
+    Earn --> FDA[FDA Approvals]
+    FDA --> CT[Clinical Trials]
+    CT --> IPO
+    IPO --> Gov[Gov Reports]
+  end
+
+  Earn --> FH[Finnhub earnings + SEC 2.02]
+  FDA --> OF[openFDA + Finnhub FDA cal]
+  CT --> CTG[ClinicalTrials.gov]
+  IPO --> FHI[Finnhub IPO calendar]
+  Gov --> SEC[SEC EDGAR + macro schedule]
+```
+
+### Implementation tickets (imperative)
+
+| ID  | Do this                                                                                                                             | Primary surfaces                                                          |
+| --- | ----------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| D1  | Change default blotter to **Title · Time · Symbol**; strip source from rows                                                         | `live-catalyst-feed.tsx`, `feed-display.ts`                               |
+| D2  | When Earnings filter active, switch column schema to **Date · Name · Symbol · Period · EPS · Estimation**                           | feed + earnings metadata API                                              |
+| D3  | On Symbol click, open drawer/split with chart, multi-timeframe quote, correlated ticker news                                        | `tape-split-panel.tsx`, `catalyst-detail-drawer.tsx`, `/api/market/quote` |
+| D4  | Reorder primary filter chips to All → Earnings → FDA Approvals → Clinical Trials → IPO → Gov Reports; wire each to taxonomy queries | feed filters + `taxonomy.ts`                                              |
+| D5  | Audit each chip against ingest; fill provider gaps or hide chip until data exists                                                   | jobs under `src/lib/jobs/`, Source Map                                    |
+| D6  | Rebuild pre-login page: no demo tape; hero value prop + CTA only                                                                    | `src/app/page.tsx`, `pre-login-chrome`                                    |
+| D7  | Keep engineer guides in sync (this file + Implementation + Simple guides)                                                           | `docs/research/ENGINEER-UX-*.md`                                          |
+
+### Sync rule
+
+If implementation changes column grammar or primary filter order, update **this section**, [`ENGINEER-UX-UI-IMPLEMENTATION-GUIDE.md`](./ENGINEER-UX-UI-IMPLEMENTATION-GUIDE.md) §4, and [`ENGINEER-UX-UI-GUIDE-SIMPLE.md`](./ENGINEER-UX-UI-GUIDE-SIMPLE.md) §3 in the **same PR**.
 
 ---
 
@@ -322,7 +471,7 @@ quadrantChart
 #### P0 — must ship / harden
 
 - [ ] Live catalyst feed (`/dashboard` → `/api/catalysts`)
-- [ ] Stable row: **Ticker/Event · Sector · Impact · Title · Proof · Time**
+- [ ] Stable row: **Title · Time · Symbol** (+ Action) — see §1A; Earnings filter uses Date · Name · Symbol · Period · EPS · Estimation
 - [ ] Primary-source proof one click (`edgar-proof-link.tsx`)
 - [ ] Act / Dismiss (remember dismissals)
 - [ ] Materiality badge + plain-language reason
@@ -378,22 +527,24 @@ Auth / dashboard shell                Prop SSO / audit exports
 
 ```mermaid
 flowchart LR
+  T0["0. Dashboard JTBD<br/>Title/Time/Symbol + filters<br/>live-catalyst-feed.tsx"]
   T1["1. Read triage<br/>WIIM + bullets<br/>catalyst-article-view.tsx"]
   T2["2. Score explainability<br/>MaterialityBadge why<br/>drawer + article"]
-  T3["3. Liquidity + category<br/>live-catalyst-feed.tsx"]
+  T3["3.Title · Time · Symbol panel<br/>chart + quote + related<br/>drawer / split"]
   T4["4. Alert prefs depth<br/>alert-rules-panel.tsx"]
   T5["5. Acceptance pass<br/>ACCEPTANCE-JTBD.md<br/>on dev Preview"]
 
-  T1 --> T2 --> T3 --> T4 --> T5
+  T0 --> T1 --> T2 --> T3 --> T4 --> T5
 ```
 
-| #   | Ticket                           | Files / surfaces                            | Source                   |
-| --- | -------------------------------- | ------------------------------------------- | ------------------------ |
-| 1   | Read triage upgrade              | `catalyst-article-view.tsx`                 | Benzinga-Like P0         |
-| 2   | Score explainability             | drawer + article next to `MaterialityBadge` | Client Target §7.3       |
-| 3   | Liquidity + category polish      | `live-catalyst-feed.tsx`                    | Client Target §7.2       |
-| 4   | Alert prefs depth                | `alert-rules-panel.tsx`                     | JTBD 4 / Architecture S2 |
-| 5   | Acceptance pass on `dev` Preview | `ACCEPTANCE-JTBD.md`                        | Fix before new chrome    |
+| #   | Ticket                            | Files / surfaces                            | Source                   |
+| --- | --------------------------------- | ------------------------------------------- | ------------------------ |
+| 0   | Dashboard JTBD (columns/filters)  | `live-catalyst-feed.tsx`, feed-display      | §1A product JTBD         |
+| 1   | Read triage upgrade               | `catalyst-article-view.tsx`                 | Benzinga-Like P0         |
+| 2   | Score explainability              | drawer + article next to `MaterialityBadge` | Client Target §7.3       |
+| 3   | Title · Time · Symbol click panel | drawer / `tape-split-panel.tsx` + quote API | §1A-C                    |
+| 4   | Alert prefs depth                 | `alert-rules-panel.tsx`                     | JTBD 4 / Architecture S2 |
+| 5   | Acceptance pass on `dev` Preview  | `ACCEPTANCE-JTBD.md`                        | Fix before new chrome    |
 
 ---
 
@@ -475,20 +626,23 @@ flowchart TB
 
 ## 8. Source index
 
-| Doc                                                                  | Use for                                    |
-| -------------------------------------------------------------------- | ------------------------------------------ |
-| [`ENGINEER-UX-FEATURE-ROADMAP.md`](./ENGINEER-UX-FEATURE-ROADMAP.md) | Full prose companion (this file is visual) |
-| `Catalyst-Intel-Client-Target-Guideline.md`                          | Personas, JTBD, must-haves, non-goals      |
-| `Catalyst-Intel-Client-Summary.md`                                   | Condensed truth + taxonomy + POC order     |
-| `Catalyst-Intel-Client-Architecture-and-Flow.md`                     | IA, backlog, phased roadmap                |
-| `Catalyst-Intel-JTBD-UX-UI.md`                                       | Implemented UI map + component paths       |
-| `ACCEPTANCE-JTBD.md` (repo root)                                     | QA checklist for Preview                   |
-| `Catalyst-Intel-JTBD-Visual-Preview-README.md`                       | Visual language (design-only)              |
-| `Catalyst-Intel-Internal-Article-View.md`                            | In-app Read vs external proof              |
-| `Catalyst-Intel-Benzinga-Like-Article-Display.md`                    | Which BZ article IA to borrow              |
-| `Catalyst-Intel-Benzinga-Pro-Catalysts-Source-Map.md`                | Applied vs paid vs never-claim             |
-| `Catalyst-Intel-Sources-and-Schema-Recommendation.md`                | Schema / source stack                      |
-| `Catalyst-Intel-Persona-Data-Architecture-Proposal.md`               | Persona ↔ data architecture                |
+| Doc                                                                                  | Use for                                    |
+| ------------------------------------------------------------------------------------ | ------------------------------------------ |
+| [`ENGINEER-UX-FEATURE-ROADMAP.md`](./ENGINEER-UX-FEATURE-ROADMAP.md)                 | Full prose companion (this file is visual) |
+| `Catalyst-Intel-Client-Target-Guideline.md`                                          | Personas, JTBD, must-haves, non-goals      |
+| `Catalyst-Intel-Client-Summary.md`                                                   | Condensed truth + taxonomy + POC order     |
+| `Catalyst-Intel-Client-Architecture-and-Flow.md`                                     | IA, backlog, phased roadmap                |
+| `Catalyst-Intel-JTBD-UX-UI.md`                                                       | Implemented UI map + component paths       |
+| `ACCEPTANCE-JTBD.md` (repo root)                                                     | QA checklist for Preview                   |
+| `Catalyst-Intel-JTBD-Visual-Preview-README.md`                                       | Visual language (design-only)              |
+| `Catalyst-Intel-Internal-Article-View.md`                                            | In-app Read vs external proof              |
+| `Catalyst-Intel-Benzinga-Like-Article-Display.md`                                    | Which BZ article IA to borrow              |
+| `Catalyst-Intel-Benzinga-Pro-Catalysts-Source-Map.md`                                | Applied vs paid vs never-claim             |
+| `Catalyst-Intel-Sources-and-Schema-Recommendation.md`                                | Schema / source stack                      |
+| `Catalyst-Intel-Persona-Data-Architecture-Proposal.md`                               | Persona ↔ data architecture                |
+| [`ENGINEER-UX-UI-IMPLEMENTATION-GUIDE.md`](./ENGINEER-UX-UI-IMPLEMENTATION-GUIDE.md) | Build contract; §4 column grammar          |
+| [`ENGINEER-UX-UI-GUIDE-SIMPLE.md`](./ENGINEER-UX-UI-GUIDE-SIMPLE.md)                 | Short feed / column rules                  |
+| §1A (this file)                                                                      | Clear news catalysts dashboard acceptance  |
 
 ---
 
