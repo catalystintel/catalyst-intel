@@ -4,7 +4,8 @@
 
 One simple read. Who the user is. What each screen must do. What to build. What to skip.
 
-Full detail: [ENGINEER-UX-UI-IMPLEMENTATION-GUIDE.md](./ENGINEER-UX-UI-IMPLEMENTATION-GUIDE.md)
+Full detail: [ENGINEER-UX-UI-IMPLEMENTATION-GUIDE.md](./ENGINEER-UX-UI-IMPLEMENTATION-GUIDE.md)  
+Hebrew PDF: [pdf/ENGINEER-UX-UI-GUIDE-HE.pdf](./pdf/ENGINEER-UX-UI-GUIDE-HE.pdf)
 
 ---
 
