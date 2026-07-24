@@ -195,6 +195,21 @@ export function titleLine(c: FeedCatalyst): string {
   return cleaned || title || c.type;
 }
 
+/**
+ * Live-tape search: match ticker, company name, filing title, and the
+ * displayed title line (headline-first) case-insensitively.
+ */
+export function matchesFeedSearchQuery(
+  c: FeedCatalyst,
+  query: string,
+): boolean {
+  const q = query.trim().toLowerCase();
+  if (!q) return true;
+
+  const fields = [c.ticker, c.companyName, c.title, c.headline, titleLine(c)];
+  return fields.some((field) => (field ?? "").toLowerCase().includes(q));
+}
+
 /** Event cell: subcategory when present, else type / category. */
 export function eventLabel(c: FeedCatalyst): string {
   if (c.subcategory?.trim()) {

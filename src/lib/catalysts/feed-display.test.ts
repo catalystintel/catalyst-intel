@@ -4,6 +4,7 @@ import type { FeedCatalyst } from "./feed-catalyst";
 import {
   eventLabel,
   looksLikeSourceLabel,
+  matchesFeedSearchQuery,
   sectorLabel,
   sectorTone,
   sourceDisplay,
@@ -28,6 +29,7 @@ function base(overrides: Partial<FeedCatalyst> = {}): FeedCatalyst {
     confidence: 85,
     tags: ["8k"],
     historicalImpact: null,
+    materialityReasons: [],
     sourceUrl: "https://example.com",
     sourceProvider: "sec-edgar",
     sector: null,
@@ -181,6 +183,26 @@ describe("eventLabel", () => {
     expect(eventLabel(base({ subcategory: "halt_resumed" }))).toBe(
       "halt resumed",
     );
+  });
+});
+
+describe("matchesFeedSearchQuery", () => {
+  it("matches ticker, company name, and title case-insensitively", () => {
+    const row = base({
+      ticker: "TSLA",
+      companyName: "Tesla, Inc.",
+      title: "Form 4 insider transaction",
+      headline: "CEO sells shares",
+    });
+    expect(matchesFeedSearchQuery(row, "tsla")).toBe(true);
+    expect(matchesFeedSearchQuery(row, "tesla")).toBe(true);
+    expect(matchesFeedSearchQuery(row, "INSIDER")).toBe(true);
+    expect(matchesFeedSearchQuery(row, "ceo sells")).toBe(true);
+    expect(matchesFeedSearchQuery(row, "nvidia")).toBe(false);
+  });
+
+  it("empty query matches everything", () => {
+    expect(matchesFeedSearchQuery(base(), "   ")).toBe(true);
   });
 });
 
