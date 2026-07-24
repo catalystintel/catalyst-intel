@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 
 import {
   extractItems,
+  extractSecItemBlurb,
+  isSecCatalogHeadline,
   parseFilingSummary,
   selectPrimaryItem,
 } from "./parse-8k-items";
@@ -43,6 +45,31 @@ describe("extractItems", () => {
   it("returns an empty array when no item codes are present", () => {
     expect(extractItems("Filed: 2026-07-17 AccNo: 123 Size: 10 KB")).toEqual(
       [],
+    );
+  });
+});
+
+describe("extractSecItemBlurb", () => {
+  it("returns the official description for a primary item", () => {
+    const blurb = extractSecItemBlurb(REAL_SUMMARY, "5.02");
+    expect(blurb).toMatch(/^Departure of Directors/);
+    expect(blurb).not.toMatch(/Item 9\.01/);
+    expect(blurb!.length).toBeLessThanOrEqual(110);
+  });
+
+  it("falls back to the first item when code omitted", () => {
+    expect(extractSecItemBlurb(REAL_SUMMARY)).toMatch(
+      /^Departure of Directors/,
+    );
+  });
+});
+
+describe("isSecCatalogHeadline", () => {
+  it("detects short catalog labels", () => {
+    expect(isSecCatalogHeadline("Earnings / results")).toBe(true);
+    expect(isSecCatalogHeadline("Officer / director change")).toBe(true);
+    expect(isSecCatalogHeadline("Liberty Global reports Q2 results")).toBe(
+      false,
     );
   });
 });

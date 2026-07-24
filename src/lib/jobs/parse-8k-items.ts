@@ -68,6 +68,55 @@ const ITEM_CATALOG: Record<string, ItemMeta> = {
   "9.01": { label: "Exhibits", category: "other" },
 };
 
+/** Short 8-K item labels used as feed headlines (e.g. "Earnings / results"). */
+export const SEC_ITEM_HEADLINE_LABELS = new Set(
+  Object.values(ITEM_CATALOG).map((m) => m.label.toLowerCase()),
+);
+
+/** True when text is just a catalog 8-K item label (not a company-specific story). */
+export function isSecCatalogHeadline(text: string): boolean {
+  const t = text.replace(/\s+/g, " ").trim().toLowerCase();
+  return Boolean(t) && SEC_ITEM_HEADLINE_LABELS.has(t);
+}
+
+/**
+ * Official SEC item description from an Atom summary, e.g.
+ * "Item 5.02: Departure of Directors…" → "Departure of Directors…".
+ */
+export function extractSecItemBlurb(
+  summary: string | null | undefined,
+  itemCode?: string | null,
+  maxChars = 110,
+): string | null {
+  const text = summary?.replace(/\s+/g, " ").trim();
+  if (!text) return null;
+
+  const code = itemCode?.trim();
+  const pattern = code
+    ? new RegExp(
+        `Item\\s+${code.replace(".", "\\.")}\\s*:\\s*(.+?)(?=\\s*Item\\s+\\d+\\.\\d+|$)`,
+        "i",
+      )
+    : /Item\s+\d+\.\d+\s*:\s*(.+?)(?=\s*Item\s+\d+\.\d+|$)/i;
+
+  const match = text.match(pattern);
+  let blurb = match?.[1]?.trim() ?? null;
+  if (!blurb) return null;
+
+  blurb = blurb
+    .replace(/\s+(?:Filed|AccNo|Acc-no|Size)\s*:.*$/i, "")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (!blurb || blurb.length < 12) return null;
+
+  if (blurb.length > maxChars) {
+    const cut = blurb.slice(0, maxChars);
+    const sp = cut.lastIndexOf(" ");
+    blurb = `${(sp > 40 ? cut.slice(0, sp) : cut).trim()}…`;
+  }
+  return blurb;
+}
+
 // "Exhibits" almost always tags along with the real item, so it should never win
 // the headline unless it is genuinely the only thing in the filing.
 const BOILERPLATE_CODES = new Set(["9.01"]);

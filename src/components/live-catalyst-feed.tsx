@@ -1109,7 +1109,7 @@ function CatalystFeedList({
               aria-hidden={dismissing || undefined}
             >
               <div role="cell" className="min-w-0">
-                <span className="block text-[0.86rem] font-medium tracking-tight text-[var(--desk-text-secondary)] transition-colors group-hover:text-[var(--desk-text)] group-focus-visible:text-[var(--desk-text)] max-sm:line-clamp-2 sm:truncate">
+                <span className="line-clamp-2 block text-[0.86rem] font-medium tracking-tight text-[var(--desk-text-secondary)] transition-colors group-hover:text-[var(--desk-text)] group-focus-visible:text-[var(--desk-text)] sm:leading-snug">
                   {titleLine(catalyst)}
                 </span>
                 <span className="mt-0.5 hidden truncate font-mono text-[0.62rem] tracking-wide text-[var(--desk-text-dim)] sm:block">
