@@ -792,7 +792,7 @@ export function LiveCatalystFeed({
                 if (selectedId !== null) dismissCatalyst(selectedId);
               }}
               mobileOverlay
-              className="fixed inset-0 z-50 w-full lg:static lg:inset-auto lg:z-auto lg:w-[min(38%,440px)] lg:shrink-0 lg:border-l"
+              className="fixed inset-0 z-50 w-full lg:static lg:inset-auto lg:z-auto lg:w-[min(52%,640px)] lg:min-w-[420px] lg:shrink-0 lg:border-l"
             />
           </>
         ) : null}
