@@ -1,18 +1,12 @@
-import { redirect } from "next/navigation";
 import { desc, eq, lte } from "drizzle-orm";
 
-import { AppShell } from "@/components/app-shell";
 import { LiveCatalystFeed } from "@/components/live-catalyst-feed";
-import { DatabaseSetupNotice } from "@/components/database-setup-notice";
 import { PageEnter } from "@/components/page-enter";
 import { db } from "@/db/client";
-import { isLibsqlConfigured } from "@/db/env";
 import { catalysts, companies, rawSources } from "@/db/schema";
 import { getCurrentAppUser } from "@/lib/auth/current-user";
 import { toFeedCatalyst } from "@/lib/catalysts/feed-catalyst";
 import { withDbRetry } from "@/lib/db/with-db-retry";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { isSupabaseConfigured } from "@/lib/supabase/env";
 
 export default async function DashboardPage({
   searchParams,
@@ -21,23 +15,10 @@ export default async function DashboardPage({
 }) {
   const { ticker } = await searchParams;
 
-  if (!isLibsqlConfigured()) {
-    if (isSupabaseConfigured()) {
-      const supabase = await createSupabaseServerClient();
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) {
-        redirect("/login?next=/dashboard");
-      }
-    }
-    return <DatabaseSetupNotice />;
-  }
-
+  // Auth / DB setup handled by `dashboard/layout.tsx`.
   const user = await getCurrentAppUser();
-
   if (!user) {
-    redirect("/login?next=/dashboard");
+    return null;
   }
 
   const recentCatalysts = await withDbRetry(() =>
@@ -74,22 +55,12 @@ export default async function DashboardPage({
   );
 
   return (
-    <AppShell
-      user={{
-        email: user.email,
-        isAdmin: user.isAdmin,
-        displayName: user.displayName,
-        avatarUrl: user.avatarUrl,
-      }}
-      active="live"
-    >
-      <PageEnter className="flex min-h-0 flex-1 flex-col p-4 sm:p-5">
-        <LiveCatalystFeed
-          initialCatalysts={recentCatalysts.map(toFeedCatalyst)}
-          isAdmin={user.isAdmin}
-          initialTickerFilter={ticker?.trim().toUpperCase() || undefined}
-        />
-      </PageEnter>
-    </AppShell>
+    <PageEnter className="flex min-h-0 flex-1 flex-col p-4 sm:p-5">
+      <LiveCatalystFeed
+        initialCatalysts={recentCatalysts.map(toFeedCatalyst)}
+        isAdmin={user.isAdmin}
+        initialTickerFilter={ticker?.trim().toUpperCase() || undefined}
+      />
+    </PageEnter>
   );
 }

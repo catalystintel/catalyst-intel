@@ -1,15 +1,7 @@
-import { notFound, redirect } from "next/navigation";
-import { eq } from "drizzle-orm";
+import { notFound } from "next/navigation";
 
-import { AppShell } from "@/components/app-shell";
 import { CatalystArticleView } from "@/components/catalyst-article-view";
-import { DatabaseSetupNotice } from "@/components/database-setup-notice";
 import { PageEnter } from "@/components/page-enter";
-import { db } from "@/db/client";
-import { isLibsqlConfigured } from "@/db/env";
-import { catalysts, companies, rawSources } from "@/db/schema";
-import { getCurrentAppUser } from "@/lib/auth/current-user";
-import { withDbRetry } from "@/lib/db/with-db-retry";
 import {
   extractArticleBody,
   resolveArticleSummary,
@@ -26,6 +18,10 @@ import {
   parseDeltaSincePublish,
 } from "@/lib/catalysts/article-funnel";
 import {
+  getCachedCatalystArticleMeta,
+  getCachedCatalystRawContent,
+} from "@/lib/catalysts/article-page-data";
+import {
   fetchLatestEarningsForTicker,
   needsEarningsEnrichment,
 } from "@/lib/catalysts/enrich-earnings";
@@ -34,8 +30,6 @@ import {
   type ArticleEnrichment,
 } from "@/lib/catalysts/enrich-article";
 import { toFeedCatalyst } from "@/lib/catalysts/feed-catalyst";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { isSupabaseConfigured } from "@/lib/supabase/env";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -73,58 +67,9 @@ export default async function CatalystArticlePage({ params }: PageProps) {
     notFound();
   }
 
-  if (!isLibsqlConfigured()) {
-    if (isSupabaseConfigured()) {
-      const supabase = await createSupabaseServerClient();
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) {
-        redirect(`/login?next=/dashboard/catalyst/${id}`);
-      }
-    }
-    return <DatabaseSetupNotice />;
-  }
+  // Auth / DB setup handled by `dashboard/layout.tsx`.
 
-  const user = await getCurrentAppUser();
-  if (!user) {
-    redirect(`/login?next=/dashboard/catalyst/${id}`);
-  }
-
-  // Light metadata first (same shape as Live tape) — more resilient than
-  // hauling `raw_sources.raw_content` in the same round-trip.
-  const rowMeta = await withDbRetry(
-    () =>
-      db
-        .select({
-          id: catalysts.id,
-          ticker: catalysts.ticker,
-          companyName: catalysts.companyName,
-          type: catalysts.type,
-          title: catalysts.title,
-          headline: catalysts.headline,
-          eventCategory: catalysts.eventCategory,
-          subcategory: catalysts.subcategory,
-          itemCodes: catalysts.itemCodes,
-          timestamp: catalysts.timestamp,
-          summary: catalysts.summary,
-          impactScore: catalysts.impactScore,
-          confidence: catalysts.confidence,
-          tags: catalysts.tags,
-          historicalImpact: catalysts.historicalImpact,
-          sourceUrl: rawSources.url,
-          sourceProvider: rawSources.provider,
-          sector: companies.sector,
-          rawSourceId: catalysts.rawSourceId,
-        })
-        .from(catalysts)
-        .leftJoin(rawSources, eq(catalysts.rawSourceId, rawSources.id))
-        .leftJoin(companies, eq(catalysts.companyId, companies.id))
-        .where(eq(catalysts.id, id))
-        .get(),
-    { attempts: 3, delayMs: 400 },
-  );
-
+  const rowMeta = await getCachedCatalystArticleMeta(id);
   if (!rowMeta) {
     notFound();
   }
@@ -133,16 +78,7 @@ export default async function CatalystArticlePage({ params }: PageProps) {
   const rawSourceId = rowMeta.rawSourceId;
   if (rawSourceId != null) {
     try {
-      const rawRow = await withDbRetry(
-        () =>
-          db
-            .select({ rawContent: rawSources.rawContent })
-            .from(rawSources)
-            .where(eq(rawSources.id, rawSourceId))
-            .get(),
-        { attempts: 3, delayMs: 400 },
-      );
-      rawContent = rawRow?.rawContent ?? null;
+      rawContent = await getCachedCatalystRawContent(rawSourceId);
     } catch {
       // Soft-fail: summary / title still render if the blob fetch blips.
     }
@@ -230,31 +166,21 @@ export default async function CatalystArticlePage({ params }: PageProps) {
   const thumbUrl = extractArticleThumbUrl(row.rawContent);
 
   return (
-    <AppShell
-      user={{
-        email: user.email,
-        isAdmin: user.isAdmin,
-        displayName: user.displayName,
-        avatarUrl: user.avatarUrl,
-      }}
-      active="live"
-    >
-      <PageEnter className="flex min-h-0 flex-1 flex-col overflow-y-auto p-4 sm:p-5">
-        <CatalystArticleView
-          catalyst={catalyst}
-          summary={summary}
-          summaryGenerated={generated}
-          body={body}
-          bodySource={bodySource}
-          detailCards={detailCards}
-          whyMoving={whyMoving}
-          takeaways={takeaways}
-          relatedTickers={relatedTickers}
-          thumbUrl={thumbUrl}
-          deltaSincePublish={deltaSincePublish}
-          enrichment={enrichment}
-        />
-      </PageEnter>
-    </AppShell>
+    <PageEnter className="flex min-h-0 flex-1 flex-col overflow-y-auto p-4 sm:p-5">
+      <CatalystArticleView
+        catalyst={catalyst}
+        summary={summary}
+        summaryGenerated={generated}
+        body={body}
+        bodySource={bodySource}
+        detailCards={detailCards}
+        whyMoving={whyMoving}
+        takeaways={takeaways}
+        relatedTickers={relatedTickers}
+        thumbUrl={thumbUrl}
+        deltaSincePublish={deltaSincePublish}
+        enrichment={enrichment}
+      />
+    </PageEnter>
   );
 }

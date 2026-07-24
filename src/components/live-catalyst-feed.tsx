@@ -510,6 +510,13 @@ export function LiveCatalystFeed({
     [router],
   );
 
+  const prefetchArticle = useCallback(
+    (id: number) => {
+      void router.prefetch(`/dashboard/catalyst/${id}`);
+    },
+    [router],
+  );
+
   /** Act = quick triage drawer (Read still opens full article depth). */
   const openActDrawer = useCallback((id: number) => {
     setSelectedId(id);
@@ -765,6 +772,7 @@ export function LiveCatalystFeed({
             watchlistTickers={watchlistTickers}
             onSelect={openArticle}
             onRead={openArticle}
+            onPrefetch={prefetchArticle}
             onAct={openActDrawer}
             onDismiss={dismissCatalyst}
             onQuietAdd={quietAddTicker}
@@ -937,6 +945,7 @@ function CatalystFeedList({
   watchlistTickers,
   onSelect,
   onRead,
+  onPrefetch,
   onAct,
   onDismiss,
   onQuietAdd,
@@ -948,6 +957,7 @@ function CatalystFeedList({
   watchlistTickers: string[];
   onSelect: (id: number) => void;
   onRead: (id: number) => void;
+  onPrefetch: (id: number) => void;
   onAct: (id: number) => void;
   onDismiss: (id: number) => void;
   onQuietAdd: (ticker: string | null) => void;
@@ -967,6 +977,15 @@ function CatalystFeedList({
   const [atTop, setAtTop] = useState(true);
   const [pendingNew, setPendingNew] = useState(0);
   const knownListIds = useRef<Set<number>>(new Set(catalysts.map((c) => c.id)));
+
+  // Warm the first visible article routes so a click often skips cold SSR.
+  useEffect(() => {
+    for (const c of catalysts.slice(0, 8)) {
+      onPrefetch(c.id);
+    }
+    // Only when the top of the list identity changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [catalysts[0]?.id, catalysts[1]?.id, catalysts[2]?.id, catalysts[3]?.id]);
 
   useEffect(() => {
     const seen = knownListIds.current;
@@ -1061,6 +1080,8 @@ function CatalystFeedList({
               role="row"
               tabIndex={0}
               onClick={() => onSelect(catalyst.id)}
+              onMouseEnter={() => onPrefetch(catalyst.id)}
+              onFocus={() => onPrefetch(catalyst.id)}
               onKeyDown={(e) => {
                 if (e.key === "Enter" || e.key === " ") {
                   e.preventDefault();
