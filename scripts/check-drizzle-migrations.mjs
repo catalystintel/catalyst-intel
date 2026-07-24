@@ -72,13 +72,22 @@ function snapshotDrizzleState() {
   return { sql, meta, journalMtime };
 }
 
+/** Run local drizzle-kit without `npx` (Windows `execFileSync("npx")` fails on `.cmd`). */
+function runDrizzleKit(args) {
+  const bin = join(ROOT, "node_modules", "drizzle-kit", "bin.cjs");
+  if (!existsSync(bin)) {
+    throw new Error(`Missing ${bin}; run npm install`);
+  }
+  return execFileSync(process.execPath, [bin, ...args], {
+    cwd: ROOT,
+    encoding: "utf8",
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+}
+
 function runDrizzleCheck() {
   try {
-    execFileSync("npx", ["drizzle-kit", "check"], {
-      cwd: ROOT,
-      encoding: "utf8",
-      stdio: ["ignore", "pipe", "pipe"],
-    });
+    runDrizzleKit(["check"]);
   } catch (err) {
     const stderr =
       err && typeof err === "object" && "stderr" in err
@@ -171,11 +180,7 @@ function verifySchemaCommitIncludesMigrations(staged) {
   // Schema-only staging: only OK if generate is a no-op.
   const before = snapshotDrizzleState();
   try {
-    execFileSync("npx", ["drizzle-kit", "generate"], {
-      cwd: ROOT,
-      encoding: "utf8",
-      stdio: ["ignore", "pipe", "pipe"],
-    });
+    runDrizzleKit(["generate"]);
   } catch (err) {
     revertGenerateArtifacts(before);
     const stderr =

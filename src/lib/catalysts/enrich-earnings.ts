@@ -77,7 +77,7 @@ export async function fetchLatestEarningsForTicker(
     const res = await fetch(url.toString(), {
       headers: { Accept: "application/json" },
       cache: "no-store",
-      signal: AbortSignal.timeout(8_000),
+      signal: AbortSignal.timeout(2_500),
     });
 
     if (!res.ok) {
