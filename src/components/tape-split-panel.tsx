@@ -6,7 +6,6 @@ import { BookOpen, XIcon } from "lucide-react";
 
 import { CategoryBadge } from "@/components/category-badge";
 import { EdgarProofLink } from "@/components/edgar-proof-link";
-import { MaterialityBadge } from "@/components/materiality-badge";
 import { TradingViewAdvancedChart } from "@/components/tradingview-advanced-chart";
 import { Button } from "@/components/ui/button";
 import type { FeedCatalyst } from "@/lib/catalysts/feed-catalyst";
@@ -237,10 +236,6 @@ export function TapeSplitPanel({
             {catalyst.eventCategory ? (
               <CategoryBadge category={catalyst.eventCategory} />
             ) : null}
-            <MaterialityBadge
-              score={catalyst.impactScore}
-              category={catalyst.eventCategory}
-            />
           </div>
 
           <div className="flex flex-wrap gap-2">

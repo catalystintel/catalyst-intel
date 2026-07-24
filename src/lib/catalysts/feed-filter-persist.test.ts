@@ -5,8 +5,8 @@ import {
   FEED_FILTER_IDLE_MS,
   FEED_FILTER_STORAGE_KEY,
   clearPersistedFeedFilters,
+  feedApiQuery,
   isFiltersDefault,
-  minScoreForFeedImpactFloor,
   readPersistedFeedFilters,
   writePersistedFeedFilters,
 } from "./feed-filter-persist";
@@ -47,34 +47,40 @@ describe("feed-filter-persist", () => {
     expect(readPersistedFeedFilters()).toBeNull();
   });
 
-  it("product default is Med+ with no other gates", () => {
-    expect(DEFAULT_FEED_FILTERS.minImpact).toBe("medium");
+  it("product default has no gates", () => {
     expect(isFiltersDefault(DEFAULT_FEED_FILTERS)).toBe(true);
-    expect(minScoreForFeedImpactFloor("medium")).toBe(45);
-    expect(minScoreForFeedImpactFloor("high")).toBe(70);
   });
 
-  it("round-trips active filters within the idle window", () => {
+  it("round-trips multi filters", () => {
     writePersistedFeedFilters({
       tickerQuery: "TSLA",
-      categoryFilter: "news",
+      categoryFilters: ["news", "earnings"],
+      sectorFilters: ["information_technology"],
+      formFilters: ["8-K"],
+      sourceFilters: ["sec-edgar"],
       timeWindow: "4h",
-      minImpact: "high",
     });
     expect(readPersistedFeedFilters()).toEqual({
       tickerQuery: "TSLA",
-      categoryFilter: "news",
+      categoryFilters: ["news", "earnings"],
+      sectorFilters: ["information_technology"],
+      formFilters: ["8-K"],
+      sourceFilters: ["sec-edgar"],
       timeWindow: "4h",
-      minImpact: "high",
     });
   });
 
-  it("persists All impact (non-default) even with empty ticker", () => {
-    writePersistedFeedFilters({
-      ...DEFAULT_FEED_FILTERS,
-      minImpact: "all",
-    });
-    expect(readPersistedFeedFilters()?.minImpact).toBe("all");
+  it("migrates legacy single categoryFilter", () => {
+    localStorage.setItem(
+      "ci.feed-filters.v1",
+      JSON.stringify({
+        tickerQuery: "NVDA",
+        categoryFilter: "earnings",
+        timeWindow: "all",
+        lastActiveAt: Date.now(),
+      }),
+    );
+    expect(readPersistedFeedFilters()?.categoryFilters).toEqual(["earnings"]);
   });
 
   it("does not persist product defaults", () => {
@@ -82,44 +88,38 @@ describe("feed-filter-persist", () => {
     expect(localStorage.getItem(FEED_FILTER_STORAGE_KEY)).toBeNull();
   });
 
-  it("expires after 1 hour of idle and clears storage", () => {
+  it("expires after idle", () => {
     writePersistedFeedFilters({
+      ...DEFAULT_FEED_FILTERS,
       tickerQuery: "AMZN",
-      categoryFilter: null,
-      timeWindow: "1h",
-      minImpact: "medium",
     });
     vi.setSystemTime(Date.now() + FEED_FILTER_IDLE_MS + 1);
     expect(readPersistedFeedFilters()).toBeNull();
-    expect(localStorage.getItem(FEED_FILTER_STORAGE_KEY)).toBeNull();
-  });
-
-  it("defaults missing minImpact on legacy payloads to Med+", () => {
-    localStorage.setItem(
-      FEED_FILTER_STORAGE_KEY,
-      JSON.stringify({
-        tickerQuery: "NVDA",
-        categoryFilter: null,
-        timeWindow: "all",
-        lastActiveAt: Date.now(),
-      }),
-    );
-    expect(readPersistedFeedFilters()).toEqual({
-      tickerQuery: "NVDA",
-      categoryFilter: null,
-      timeWindow: "all",
-      minImpact: "medium",
-    });
   });
 
   it("clearPersistedFeedFilters removes the key", () => {
     writePersistedFeedFilters({
+      ...DEFAULT_FEED_FILTERS,
       tickerQuery: "X",
-      categoryFilter: null,
-      timeWindow: "all",
-      minImpact: "high",
     });
     clearPersistedFeedFilters();
     expect(localStorage.getItem(FEED_FILTER_STORAGE_KEY)).toBeNull();
+  });
+
+  it("feedApiQuery encodes filters", () => {
+    const qs = feedApiQuery({
+      tickerQuery: "AAPL",
+      categoryFilters: ["earnings"],
+      sectorFilters: ["financials"],
+      formFilters: ["8-K"],
+      sourceFilters: ["sec-edgar"],
+      timeWindow: "24h",
+    });
+    const params = new URLSearchParams(qs);
+    expect(params.get("q")).toBe("AAPL");
+    expect(params.get("categories")).toBe("earnings");
+    expect(params.get("sectors")).toBe("financials");
+    expect(params.get("forms")).toBe("8-K");
+    expect(params.get("window")).toBe("24h");
   });
 });

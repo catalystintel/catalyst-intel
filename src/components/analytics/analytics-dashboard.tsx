@@ -5,7 +5,6 @@ import { RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 
 import { CategoryBreakdownChart } from "@/components/analytics/category-breakdown-chart";
-import { MaterialityDonut } from "@/components/analytics/materiality-donut";
 import { StatStrip } from "@/components/analytics/stat-strip";
 import { TopTickersWidget } from "@/components/analytics/top-tickers-widget";
 import { VolumeTrendChart } from "@/components/analytics/volume-trend-chart";
@@ -87,7 +86,7 @@ export function AnalyticsDashboard() {
             Analytics
           </h1>
           <p className="mt-0.5 text-sm text-[var(--desk-text-muted)]">
-            Aggregate view of catalyst volume, materiality, and coverage.
+            Aggregate view of catalyst volume and coverage.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -126,8 +125,8 @@ export function AnalyticsDashboard() {
 
       {loading || !summary ? (
         <div className="flex flex-col gap-5">
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            {Array.from({ length: 4 }).map((_, i) => (
+          <div className="grid grid-cols-2 gap-3">
+            {Array.from({ length: 2 }).map((_, i) => (
               <SkeletonCard key={i} lines={1} />
             ))}
           </div>
@@ -138,19 +137,12 @@ export function AnalyticsDashboard() {
         <>
           <StatStrip
             totalCount={summary.totalCount}
-            highImpactCount={summary.highImpactCount}
             activeTickerCount={summary.activeTickerCount}
-            avgImpactScore={summary.avgImpactScore}
           />
 
-          <div className="grid gap-4 lg:grid-cols-[1.3fr_1fr]">
-            <Panel title="Catalysts by category">
-              <CategoryBreakdownChart data={summary.categoryCounts} />
-            </Panel>
-            <Panel title="Materiality mix">
-              <MaterialityDonut counts={summary.materialityCounts} />
-            </Panel>
-          </div>
+          <Panel title="Catalysts by category">
+            <CategoryBreakdownChart data={summary.categoryCounts} />
+          </Panel>
 
           <Panel title="Volume over time">
             <VolumeTrendChart data={summary.volumeSeries} window={window_} />
