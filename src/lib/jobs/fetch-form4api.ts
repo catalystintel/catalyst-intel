@@ -18,7 +18,7 @@ export async function fetchForm4Api(): Promise<SourceFetchResult> {
   return skippedSourceResult(
     "form4api",
     hasKey
-      ? "Form4API intentionally skipped (quality-first): SEC EDGAR already covers Form 4; dual ingest is spam."
-      : "FORM4_API_KEY is not set. Form 4 still ingests via SEC EDGAR; Form4API stays skipped to avoid duplicate volume.",
+      ? "Intentionally skipped (quality-first): SEC EDGAR already covers Form 4; dual ingest with Form4API is spam."
+      : "Intentionally skipped: Form 4 already ingests via SEC EDGAR. Form4API stays off to avoid duplicate volume (FORM4_API_KEY unset).",
   );
 }

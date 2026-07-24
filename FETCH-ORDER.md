@@ -54,7 +54,7 @@ One vendor failure never blocks later sources within a parallel phase
 
 | Source           | Typical issue                             | Meaning                                                                                               |
 | ---------------- | ----------------------------------------- | ----------------------------------------------------------------------------------------------------- |
-| `form4api`       | `FORM4_API_KEY is not set…`               | Expected without optional key; EDGAR Form 4 still ingests                                             |
+| `form4api`       | `Intentionally skipped…`                  | Expected always (quality-first); EDGAR Form 4 still ingests; Form4API off to avoid duplicates         |
 | `finnhub`        | `FINNHUB_API_KEY is not set…`             | Soft-skip; calendars/news not fetched                                                                 |
 | `polygon-*`      | `POLYGON_API_KEY is not set…`             | Soft-skip news + price enrichment                                                                     |
 | `polygon-prices` | HTTP **429** / rate limit note            | Free tier ~5 REST req/min; remaining enrichments deferred; **watermark held**, next tick larger batch |
