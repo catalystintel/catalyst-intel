@@ -48,7 +48,7 @@ Ingest is no longer an opaque “run everything somehow.” There is a **Must �
 
 | Pattern                                   | Source         | Meaning                                                                                         |
 | ----------------------------------------- | -------------- | ----------------------------------------------------------------------------------------------- |
-| `FORM4_API_KEY is not set…`               | form4api       | Expected; Form 4 still comes from SEC EDGAR                                                     |
+| `Intentionally skipped…`                  | form4api       | Expected always (quality-first); Form 4 still comes from SEC EDGAR                              |
 | `FINNHUB_API_KEY is not set…`             | finnhub        | Soft-skip calendars/news                                                                        |
 | `POLYGON_API_KEY is not set…`             | polygon-*      | Soft-skip news + price enrichment                                                               |
 | HTTP **429** / rate-limit note            | polygon-prices | Free tier ~5 REST req/min; remaining enrichments deferred to next cron                          |

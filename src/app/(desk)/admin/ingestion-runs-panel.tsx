@@ -329,12 +329,16 @@ function RunRows({
       </TableRow>
       {open ? (
         <TableRow className="hover:bg-transparent">
-          <TableCell colSpan={9} className="bg-muted/30 px-4 py-3">
+          {/* Override TableCell's default whitespace-nowrap so messages wrap. */}
+          <TableCell
+            colSpan={9}
+            className="bg-muted/30 px-4 py-3 whitespace-normal"
+          >
             <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
               {sources.map((s) => (
                 <li
                   key={s.source}
-                  className="rounded-md border border-border/50 bg-[var(--desk-panel)] px-3 py-2 font-mono text-[0.7rem]"
+                  className="min-w-0 rounded-md border border-border/50 bg-[var(--desk-panel)] px-3 py-2 font-mono text-[0.7rem]"
                 >
                   <div className="flex items-center justify-between gap-2">
                     <span className="text-foreground">{s.source}</span>
@@ -354,7 +358,7 @@ function RunRows({
                     f{s.fetched} · i{s.inserted} · s{s.skipped} · e{s.errors}
                   </p>
                   {s.message ? (
-                    <p className="mt-1 line-clamp-3 text-muted-foreground normal-case">
+                    <p className="mt-1 break-words text-muted-foreground normal-case">
                       {s.message}
                     </p>
                   ) : null}
