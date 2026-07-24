@@ -1,7 +1,9 @@
 import { notFound } from "next/navigation";
 
+import { ArticleLoadError } from "@/components/article-load-error";
 import { CatalystArticleView } from "@/components/catalyst-article-view";
 import { PageEnter } from "@/components/page-enter";
+import { withTimeBudget } from "@/lib/async/with-time-budget";
 import {
   extractArticleBody,
   resolveArticleSummary,
@@ -18,8 +20,8 @@ import {
   parseDeltaSincePublish,
 } from "@/lib/catalysts/article-funnel";
 import {
-  getCachedCatalystArticleMeta,
-  getCachedCatalystRawContent,
+  getCatalystArticleMeta,
+  getCatalystRawContent,
 } from "@/lib/catalysts/article-page-data";
 import {
   fetchLatestEarningsForTicker,
@@ -41,25 +43,6 @@ const EMPTY_ENRICHMENT: ArticleEnrichment = {
   quote: null,
 };
 
-/** Prefer a partial page over blowing the Hobby function budget on vendors. */
-async function withTimeBudget<T>(
-  promise: Promise<T>,
-  fallback: T,
-  budgetMs: number,
-): Promise<T> {
-  let timer: ReturnType<typeof setTimeout> | undefined;
-  try {
-    return await Promise.race([
-      promise,
-      new Promise<T>((resolve) => {
-        timer = setTimeout(() => resolve(fallback), budgetMs);
-      }),
-    ]);
-  } finally {
-    if (timer !== undefined) clearTimeout(timer);
-  }
-}
-
 export default async function CatalystArticlePage({ params }: PageProps) {
   const { id: idParam } = await params;
   const id = Number(idParam);
@@ -67,9 +50,19 @@ export default async function CatalystArticlePage({ params }: PageProps) {
     notFound();
   }
 
-  // Auth / DB setup handled by `dashboard/layout.tsx`.
+  // Auth / DB setup handled by `(desk)/layout.tsx`.
+  // Never throw into error.tsx for Turso/vendor blips — that UI mislabels
+  // Hobby function timeouts as "Database temporarily unreachable".
 
-  const rowMeta = await getCachedCatalystArticleMeta(id);
+  const rowMeta = await getCatalystArticleMeta(id);
+  // `null` = budget/retry soft-fail; falsy otherwise (undefined) = missing row.
+  if (rowMeta === null) {
+    return (
+      <PageEnter className="flex min-h-0 flex-1 flex-col overflow-y-auto p-4 sm:p-5">
+        <ArticleLoadError catalystId={id} />
+      </PageEnter>
+    );
+  }
   if (!rowMeta) {
     notFound();
   }
@@ -77,11 +70,8 @@ export default async function CatalystArticlePage({ params }: PageProps) {
   let rawContent: unknown = null;
   const rawSourceId = rowMeta.rawSourceId;
   if (rawSourceId != null) {
-    try {
-      rawContent = await getCachedCatalystRawContent(rawSourceId);
-    } catch {
-      // Soft-fail: summary / title still render if the blob fetch blips.
-    }
+    // Hard-capped inside getCatalystRawContent; never blocks the page.
+    rawContent = await getCatalystRawContent(rawSourceId);
   }
 
   const row = { ...rowMeta, rawContent };
@@ -128,7 +118,7 @@ export default async function CatalystArticlePage({ params }: PageProps) {
     Boolean(row.ticker) &&
     needsEarningsEnrichment(row.rawContent);
 
-  // Cap vendor wait so a slow Finnhub/Polygon never fails the whole page.
+  // Vendors are optional chrome — never spend more than 1s on them.
   const [enrichedEarnings, enrichment] = await withTimeBudget(
     Promise.all([
       shouldFetchEarnings && row.ticker
@@ -140,7 +130,7 @@ export default async function CatalystArticlePage({ params }: PageProps) {
       }),
     ]),
     [null, EMPTY_ENRICHMENT] as const,
-    2_000,
+    1_000,
   );
 
   const detailCards = resolveArticleDetailCards({
