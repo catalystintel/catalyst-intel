@@ -5,6 +5,7 @@ import {
   type ParsedItem,
 } from "@/lib/jobs/parse-8k-items";
 import { normalizeMaterialityReasons } from "@/lib/catalysts/materiality-reasons";
+import { normalizeToGicsLabel } from "@/lib/companies/gics-sectors";
 
 /** A single catalyst as consumed by the Live feed UI. */
 export interface FeedCatalyst {
@@ -105,6 +106,6 @@ export function toFeedCatalyst(row: RawCatalystRow): FeedCatalyst {
     materialityReasons: normalizeMaterialityReasons(row.materialityReasons),
     sourceUrl: row.sourceUrl,
     sourceProvider: row.sourceProvider ?? null,
-    sector: row.sector ?? null,
+    sector: normalizeToGicsLabel(row.sector) ?? row.sector ?? null,
   };
 }

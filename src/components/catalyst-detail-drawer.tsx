@@ -7,7 +7,6 @@ import { BookOpen, Check, XIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CategoryBadge } from "@/components/category-badge";
 import { EdgarProofLink } from "@/components/edgar-proof-link";
-import { MaterialityBadge } from "@/components/materiality-badge";
 import type { FeedCatalyst } from "@/lib/catalysts/feed-catalyst";
 import { formatEventTime, formatRelativeAge } from "@/lib/format/relative-time";
 import { CATEGORY_LABELS } from "@/lib/jobs/parse-8k-items";
@@ -104,10 +103,6 @@ export function CatalystDetailDrawer({
                 {catalyst.eventCategory ? (
                   <CategoryBadge category={catalyst.eventCategory} />
                 ) : null}
-                <MaterialityBadge
-                  score={catalyst.impactScore}
-                  category={catalyst.eventCategory}
-                />
               </div>
 
               <div className="flex flex-wrap gap-2">

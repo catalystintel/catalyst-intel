@@ -7,13 +7,15 @@ import { catalysts, companies, rawSources } from "@/db/schema";
 import { getCurrentAppUser } from "@/lib/auth/current-user";
 import { toFeedCatalyst } from "@/lib/catalysts/feed-catalyst";
 import { withDbRetry } from "@/lib/db/with-db-retry";
+import { parseDashboardCatalystId } from "@/lib/nav/dashboard-href";
 
 export default async function DashboardPage({
   searchParams,
 }: {
-  searchParams: Promise<{ ticker?: string }>;
+  searchParams: Promise<{ ticker?: string; c?: string }>;
 }) {
-  const { ticker } = await searchParams;
+  const { ticker, c } = await searchParams;
+  const initialSelectedId = parseDashboardCatalystId(c);
 
   // Auth / DB setup handled by `dashboard/layout.tsx`.
   const user = await getCurrentAppUser();
@@ -60,6 +62,7 @@ export default async function DashboardPage({
         initialCatalysts={recentCatalysts.map(toFeedCatalyst)}
         isAdmin={user.isAdmin}
         initialTickerFilter={ticker?.trim().toUpperCase() || undefined}
+        initialSelectedId={initialSelectedId}
       />
     </PageEnter>
   );
