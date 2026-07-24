@@ -1,7 +1,7 @@
 "use client";
 
 import Link, { useLinkStatus } from "next/link";
-import { PanelLeftClose } from "lucide-react";
+import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
 
 import { getPrimaryNav, type NavItem, type NavKey } from "@/lib/nav/nav-items";
 import { cn } from "@/lib/utils";
@@ -16,7 +16,7 @@ interface AppSidebarProps {
 
 /**
  * Primary left navigation with brand mark and readable section/nav titles.
- * Labels stay visible whenever the sidebar is expanded (default desk layout).
+ * Collapsed mode is an icon rail: square centered hits, no label/hint shift.
  */
 export function AppSidebar({
   active,
@@ -34,15 +34,15 @@ export function AppSidebar({
   return (
     <nav
       className={cn(
-        "flex h-full flex-col border-r border-[var(--desk-border)] bg-[var(--desk-sidebar)] px-3 py-4",
-        collapsed ? "w-[68px]" : "w-[220px]",
+        "flex h-full flex-col border-r border-[var(--desk-border)] bg-[var(--desk-sidebar)] py-4",
+        collapsed ? "w-[56px] items-center px-1.5" : "w-[220px] px-3",
       )}
       aria-label="Primary navigation"
     >
       <div
         className={cn(
-          "mb-5 flex items-center gap-2.5 px-2",
-          collapsed && "justify-center px-0",
+          "mb-5 flex items-center gap-2.5",
+          collapsed ? "justify-center" : "px-2",
         )}
       >
         <span
@@ -61,7 +61,12 @@ export function AppSidebar({
         ) : null}
       </div>
 
-      <div className="flex flex-1 flex-col gap-4">
+      <div
+        className={cn(
+          "flex flex-1 flex-col",
+          collapsed ? "w-full items-center gap-1" : "gap-4",
+        )}
+      >
         <NavSection
           label="Workspace"
           items={workspace}
@@ -81,17 +86,32 @@ export function AppSidebar({
       </div>
 
       {onCollapseToggle ? (
-        <div className="mt-2 border-t border-[var(--desk-border)] pt-3">
+        <div
+          className={cn(
+            "mt-2 border-t border-[var(--desk-border)] pt-3",
+            collapsed && "w-full",
+          )}
+        >
           <button
             type="button"
             onClick={onCollapseToggle}
+            title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+            aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
             className={cn(
-              "flex w-full items-center gap-2.5 rounded-md px-2.5 py-2 text-[0.86rem] font-medium text-[var(--desk-text-dim)] transition-colors hover:bg-[var(--desk-overlay-soft)] hover:text-[var(--desk-text-muted)]",
-              collapsed && "justify-center px-0",
+              "flex items-center gap-2.5 rounded-md text-[0.86rem] font-medium text-[var(--desk-text-dim)] transition-colors hover:bg-[var(--desk-overlay-soft)] hover:text-[var(--desk-text-muted)]",
+              collapsed
+                ? "mx-auto size-9 justify-center"
+                : "w-full px-2.5 py-2",
             )}
           >
-            <PanelLeftClose className="size-[17px] shrink-0" />
-            {!collapsed ? <span>Collapse</span> : null}
+            {collapsed ? (
+              <PanelLeftOpen className="size-[17px] shrink-0" />
+            ) : (
+              <>
+                <PanelLeftClose className="size-[17px] shrink-0" />
+                <span>Collapse</span>
+              </>
+            )}
           </button>
         </div>
       ) : null}
@@ -113,7 +133,12 @@ function NavSection({
   onNavigate?: () => void;
 }) {
   return (
-    <div className="flex flex-col gap-0.5">
+    <div
+      className={cn(
+        "flex flex-col",
+        collapsed ? "w-full items-center gap-0.5" : "gap-0.5",
+      )}
+    >
       {!collapsed ? (
         <p className="px-2.5 pb-1 font-mono text-[0.62rem] tracking-[0.14em] text-[var(--desk-text-dim)] uppercase">
           {label}
@@ -144,8 +169,10 @@ function SidebarEntry({
   onNavigate?: () => void;
 }) {
   const Icon = item.icon;
-  const base =
-    "group relative flex items-center gap-2.5 rounded-md px-2.5 py-2 text-[0.86rem] font-medium transition-colors";
+  const base = cn(
+    "group relative flex items-center rounded-md text-[0.86rem] font-medium transition-colors",
+    collapsed ? "size-9 shrink-0 justify-center" : "w-full gap-2.5 px-2.5 py-2",
+  );
 
   if (item.comingSoon || !item.href) {
     const hint = item.comingSoonHint
@@ -158,7 +185,6 @@ function SidebarEntry({
         className={cn(
           base,
           "cursor-not-allowed text-[var(--desk-text-dim)] select-none",
-          collapsed && "justify-center px-0",
         )}
       >
         <Icon className="size-[17px] shrink-0 opacity-90" />
@@ -182,15 +208,24 @@ function SidebarEntry({
       title={collapsed ? item.label : undefined}
       className={cn(
         base,
-        collapsed && "justify-center px-0",
         active
-          ? "bg-[var(--desk-overlay-strong)] text-[var(--desk-text)] shadow-[inset_2px_0_0_var(--desk-live)]"
+          ? cn(
+              "bg-[var(--desk-overlay-strong)] text-[var(--desk-text)]",
+              !collapsed && "shadow-[inset_2px_0_0_var(--desk-live)]",
+              collapsed && "ring-1 ring-[var(--desk-live)]/55 ring-inset",
+            )
           : "text-[var(--desk-text-muted)] hover:bg-[var(--desk-overlay-soft)] hover:text-[var(--desk-text)]",
       )}
     >
       <Icon className="size-[17px] shrink-0 opacity-90" />
-      {!collapsed ? <span className="truncate">{item.label}</span> : null}
-      <NavPendingHint />
+      {!collapsed ? (
+        <>
+          <span className="truncate">{item.label}</span>
+          <NavPendingHint />
+        </>
+      ) : (
+        <NavPendingHint collapsed />
+      )}
     </Link>
   );
 }
@@ -201,13 +236,16 @@ function SidebarEntry({
  * destination that isn't fully prefetched yet, without adding layout shift
  * or flashing on the common instant case (see `useLinkStatus` docs).
  */
-function NavPendingHint() {
+function NavPendingHint({ collapsed = false }: { collapsed?: boolean }) {
   const { pending } = useLinkStatus();
   return (
     <span
       aria-hidden
       className={cn(
-        "nav-pending-hint ml-auto size-1.5 shrink-0 rounded-full bg-[var(--desk-live)]",
+        "nav-pending-hint size-1.5 shrink-0 rounded-full bg-[var(--desk-live)]",
+        collapsed
+          ? "pointer-events-none absolute top-1.5 right-1.5"
+          : "ml-auto",
         pending && "nav-pending-hint-active",
       )}
     />
