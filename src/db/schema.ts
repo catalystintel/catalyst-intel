@@ -141,6 +141,29 @@ export const alertRules = sqliteTable("alert_rules", {
 });
 
 /**
+ * One row per multi-source `/api/admin/fetch/all` orchestration.
+ * Written after each cron / admin trigger so ops can audit cadence and results.
+ */
+export const ingestionRuns = sqliteTable("ingestion_runs", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  ranAt: text("ran_at").notNull(),
+  /** Who triggered the orchestrator. */
+  trigger: text("trigger", { enum: ["cron", "admin"] }).notNull(),
+  /** Aggregate outcome derived from per-source results. */
+  status: text("status", { enum: ["ok", "partial", "failed"] }).notNull(),
+  fetched: integer("fetched").notNull().default(0),
+  inserted: integer("inserted").notNull().default(0),
+  skipped: integer("skipped").notNull().default(0),
+  errors: integer("errors").notNull().default(0),
+  durationMs: integer("duration_ms").notNull().default(0),
+  /** Compact per-source results for drill-down in Admin. */
+  sourcesJson: text("sources_json", { mode: "json" }).notNull(),
+  createdAt: text("created_at")
+    .notNull()
+    .default(sql`(current_timestamp)`),
+});
+
+/**
  * NYSE listing universe from Finnhub (`stock/symbol?exchange=US`, mic XNYS).
  * Optional last price filled when quote enrichment runs.
  */

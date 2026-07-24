@@ -14,6 +14,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 
 import { FetchTrigger } from "./fetch-trigger";
+import { IngestionRunsPanel } from "./ingestion-runs-panel";
 import { MigrateTrigger } from "./migrate-trigger";
 
 export default async function AdminPage() {
@@ -89,7 +90,8 @@ export default async function AdminPage() {
           </h1>
           <p className="mt-1 max-w-xl text-sm text-[var(--desk-text-muted)]">
             Trigger vendor fetch jobs for the Live tape. Production schedules
-            still use the cron secret path (GitHub Actions).
+            use the cron secret path (external pinger / GitHub Actions
+            fallback).
           </p>
         </div>
 
@@ -135,6 +137,21 @@ export default async function AdminPage() {
           ) : null}
           <div className="px-4 py-4 sm:px-5">
             <FetchTrigger />
+          </div>
+        </section>
+
+        <section className="overflow-hidden rounded-xl border border-[var(--desk-border)] bg-[var(--desk-panel)]">
+          <div className="border-b border-border/60 px-4 py-4 sm:px-5">
+            <h2 className="font-mono text-sm tracking-wide text-foreground">
+              Ingestion run audit
+            </h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Last multi-source orchestrator runs (cron + Admin). 20 rows per
+              page; scroll for more. Expand a row for per-source results.
+            </p>
+          </div>
+          <div className="px-4 py-4 sm:px-5">
+            <IngestionRunsPanel />
           </div>
         </section>
 

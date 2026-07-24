@@ -36,6 +36,13 @@
       "when": 1784650000000,
       "tag": "0004_multi_source_catalyst_fields",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1784886000000,
+      "tag": "0005_ingestion_runs",
+      "breakpoints": true
     }
   ]
 }
