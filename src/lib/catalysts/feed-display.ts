@@ -7,6 +7,12 @@ import {
 } from "@/lib/jobs/parse-8k-items";
 import { benzingaPanelForCategory } from "@/lib/catalysts/benzinga-analogs";
 import type { FeedCatalyst } from "@/lib/catalysts/feed-catalyst";
+import {
+  earningsDateForQuarterInference,
+  earningsQuarterLabel,
+  formatEarningsReportTitle,
+  looksLikeResultsOfOperationsTitle,
+} from "@/lib/catalysts/catalyst-titles";
 
 export interface SourceDisplay {
   name: string;
@@ -250,6 +256,58 @@ function prefersStoredGroundRuleTitle(c: FeedCatalyst, title: string): boolean {
   return false;
 }
 
+/**
+ * SEC Item 2.02 / Results of Operations rows (and matching legacy titles)
+ * recompute to `Earnings Report Qn - Company` so the tape matches Finnhub
+ * ground-rule titles even when the DB still has the old SEC wording.
+ */
+function earningsReportDisplayTitle(c: FeedCatalyst): string | null {
+  const title = normalizeDisplayText(c.title ?? "");
+  const headline = normalizeDisplayText(c.headline ?? "");
+  const hasItem202 = c.items.some((i) => i.code === "2.02");
+  const earningsChip =
+    c.eventCategory === "earnings" &&
+    (isGenericEventHeadline(headline) ||
+      /^earnings\s*\/\s*results$/i.test(headline));
+  const resultsWording = looksLikeResultsOfOperationsTitle(
+    title,
+    headline,
+    c.summary,
+  );
+
+  if (!hasItem202 && !earningsChip && !resultsWording) return null;
+
+  // Keep real earnings news headlines; only rewrite taxonomy / Item 2.02 copy.
+  if (
+    headline &&
+    !looksLikeSourceLabel(headline) &&
+    !isGenericEventHeadline(headline) &&
+    !looksLikeResultsOfOperationsTitle(headline) &&
+    !/^Earnings Report\s+Q/i.test(headline)
+  ) {
+    return null;
+  }
+
+  if (/^Earnings Report\s+Q/i.test(title)) {
+    return stripSourceNames(title) || title;
+  }
+  if (/^Earnings Report\s+Q/i.test(headline)) {
+    return stripSourceNames(headline) || headline;
+  }
+
+  const quarter = earningsQuarterLabel(
+    null,
+    earningsDateForQuarterInference({
+      summary: c.summary,
+      timestamp: c.timestamp,
+    }),
+  );
+  return formatEarningsReportTitle(
+    quarter,
+    tapeSubject(c) ?? c.companyName ?? c.ticker,
+  );
+}
+
 export function titleLine(
   c: FeedCatalyst,
   options: TitleLineOptions = {},
@@ -262,6 +320,9 @@ export function titleLine(
   if (prefersStoredGroundRuleTitle(c, title)) {
     return stripSourceNames(title) || title;
   }
+
+  const earningsTitle = earningsReportDisplayTitle(c);
+  if (earningsTitle) return earningsTitle;
 
   // Real news / wire copy wins when it is not a publisher or generic chip.
   if (
