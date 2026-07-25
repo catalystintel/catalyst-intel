@@ -27,6 +27,16 @@ describe("parseFilingTitle", () => {
     });
   });
 
+  it("parses a Form 4 reporting-owner title (role is 'Reporting', not 'Filer')", () => {
+    expect(
+      parseFilingTitle("4 - Tangney Jeffrey (0001863328) (Reporting)"),
+    ).toEqual({
+      formType: "4",
+      companyName: "Tangney Jeffrey",
+      cik: 1863328,
+    });
+  });
+
   it("returns null for an unrecognized title format", () => {
     expect(parseFilingTitle("not a real filing title")).toBeNull();
   });

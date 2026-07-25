@@ -85,10 +85,15 @@ export function stripHtml(html: string): string {
     .trim();
 }
 
-/** Parses titles like "8-K - PEDEVCO CORP (0001141197) (Filer)". */
+/**
+ * Parses titles like "8-K - PEDEVCO CORP (0001141197) (Filer)".
+ * Form 3/4/5 Atom entries use "(Reporting)" instead of "(Filer)" for the
+ * insider's own role — without it here, the regex silently fails and the
+ * entry falls back to the raw, unparsed title with no CIK/ticker.
+ */
 export function parseFilingTitle(title: string) {
   const match = title.match(
-    /^(.+?) - (.+) \((\d+)\) \((?:Filer|Filed by|Subject)\)$/,
+    /^(.+?) - (.+) \((\d+)\) \((?:Filer|Filed by|Subject|Reporting)\)$/,
   );
   if (!match) return null;
   const [, formType, companyName, cik] = match;

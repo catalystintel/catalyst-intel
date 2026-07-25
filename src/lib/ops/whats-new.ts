@@ -48,8 +48,8 @@ export const PLATFORM_MAP: {
   {
     title: "Schedule & ETL",
     bullets: [
-      "GitHub Actions cron (~every 5 min config; real cadence often slower) hits `POST /api/admin/fetch/all` with `x-cron-secret`.",
-      "Local: `npm run cron` or Admin → Fetch all / per-source.",
+      "cron-job.org (external pinger, every 1 min in prod) hits `POST /api/admin/fetch/all` with `x-cron-secret`.",
+      "Local: `npm run cron` (default every 1 min) or Admin → Fetch all / per-source.",
       "Phased A→B→C orchestrator — see FETCH-ORDER.md (Must keyless first, then keyed vendors).",
       "Self-heal: stale `GET /api/catalysts` can trigger a background refetch for signed-in traffic.",
       "30-day retention purge after multi-source runs; ingestion audit in Admin + `ingestion_runs`.",
@@ -77,7 +77,7 @@ export const PLATFORM_MAP: {
     bullets: [
       "`GET /api/health` → wire UptimeRobot / Better Stack on staging + production URLs.",
       "PostHog → Error tracking + alert on exception spikes (needs `NEXT_PUBLIC_POSTHOG_KEY`).",
-      "GitHub Actions email on failed ETL workflow; Vercel deploy-failure notifications.",
+      "cron-job.org job history / failure notifications for ETL; GitHub Actions email for failed CI/migrations; Vercel deploy-failure notifications.",
       "Details: DEPLOYMENT.md → “Logging & monitoring plan”.",
     ],
   },
