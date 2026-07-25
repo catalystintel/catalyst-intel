@@ -244,6 +244,14 @@ export function classifySecFormType(formType: string): {
       tags: ["offering", "capital", "bz:secondary_offerings"],
     };
   }
+  if (form === "425" || form.startsWith("425/")) {
+    return {
+      category: "deals",
+      headline: "Merger / Acquisition (425)",
+      subcategory: "425",
+      tags: ["425", "ma", "bz:ma"],
+    };
+  }
   if (form.includes("13D")) {
     return {
       category: "deals",

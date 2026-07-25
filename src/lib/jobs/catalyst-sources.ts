@@ -45,7 +45,7 @@ export const CATALYST_SOURCE_CATALOG: readonly CatalystSourceMeta[] = [
     priority: "must",
     phase: "A",
     contributes:
-      "8-K (tradeable items) / Form 4 buy·sell / S-3 / 424B / SC 13D·G (keyless; needs SEC_EDGAR_USER_AGENT). Non-catalyst 8-K (7.01/8.01/9.01 + routine 1.04/5.05/5.07/5.08) and Form 4 awards/tax/gifts dropped.",
+      "8-K (tradeable items) / Form 4 buy·sell / S-3 / 424B / 425 / SC 13D·G (keyless; needs SEC_EDGAR_USER_AGENT). Non-catalyst 8-K (7.01/8.01/9.01 + routine 1.04/5.05/5.07/5.08) and Form 4 awards/tax/gifts dropped.",
     keyEnv: "SEC_EDGAR_USER_AGENT",
   },
   {

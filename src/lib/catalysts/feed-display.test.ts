@@ -139,8 +139,12 @@ describe("titleLine", () => {
       items: [{ code: "3.01", label: "Delisting risk", category: "distress" }],
       summary: `Item 3.01: ${long}`,
     });
-    expect(titleLine(row)).toBe("Delisting Risk - Quantum-Si Inc");
-    expect(titleTooltipLine(row)).toBe("Delisting Risk - Quantum-Si Inc");
+    expect(titleLine(row)).toBe(
+      "Quantum-Si Inc — Delisting Risk — Stock Could Lose Its Listing",
+    );
+    expect(titleTooltipLine(row)).toBe(
+      "Quantum-Si Inc — Delisting Risk — Stock Could Lose Its Listing",
+    );
   });
 
   it("keeps specific news headlines without forcing company prefix", () => {
@@ -221,7 +225,7 @@ describe("titleLine", () => {
           title: "Material agreement — SEC",
         }),
       ),
-    ).toBe("Material Agreement - NVIDIA Corp");
+    ).toBe("NVIDIA Corp New Deal Announced — Major Contract or Partnership");
   });
 
   it("rewrites offering / ownership / clinical / macro / analyst titles", () => {
@@ -249,7 +253,20 @@ describe("titleLine", () => {
           companyName: "Acme Corp",
         }),
       ),
-    ).toBe("Prospectus / Offering (424B) - Acme Corp");
+    ).toBe("Acme Corp New Stock Offering Filed — Potential Dilution Ahead");
+
+    expect(
+      titleLine(
+        base({
+          type: "425",
+          subcategory: "425",
+          eventCategory: "deals",
+          headline: "Merger / Acquisition (425)",
+          title: "Acme Corp — 425 filing",
+          companyName: "Acme Corp",
+        }),
+      ),
+    ).toBe("Acme Corp — Merger or Acquisition News: Deal in Play");
 
     expect(
       titleLine(

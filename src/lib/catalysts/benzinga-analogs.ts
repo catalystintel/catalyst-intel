@@ -32,6 +32,7 @@ export const BENZINGA_PANEL_FOR_SEC_FORM: Record<string, string> = {
   "4": "Details — Insiders",
   "S-3": "Calendar — Secondary Offerings",
   "424B": "Calendar — Secondary Offerings",
+  "425": "Calendar — M&A / Newsfeed",
   "13D": "Calendar — M&A / SEC Filings",
   "13G": "Calendar — SEC Filings",
 };
@@ -50,6 +51,9 @@ export function benzingaPanelForSecForm(formType: string): string {
   }
   if (form.startsWith("S-3")) return BENZINGA_PANEL_FOR_SEC_FORM["S-3"];
   if (form.startsWith("424B")) return BENZINGA_PANEL_FOR_SEC_FORM["424B"];
+  if (form === "425" || form.startsWith("425/")) {
+    return BENZINGA_PANEL_FOR_SEC_FORM["425"];
+  }
   if (form.includes("13D")) return BENZINGA_PANEL_FOR_SEC_FORM["13D"];
   if (form.includes("13G")) return BENZINGA_PANEL_FOR_SEC_FORM["13G"];
   if (form.startsWith("8-K")) return BENZINGA_PANEL_FOR_SEC_FORM["8-K"];
