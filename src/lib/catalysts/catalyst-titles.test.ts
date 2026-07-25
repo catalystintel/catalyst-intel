@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  earningsDateForQuarterInference,
   earningsQuarterLabel,
   formatEarningsReportTitle,
   formatFdaApprovalTitle,
   formatHaltTitle,
+  looksLikeResultsOfOperationsTitle,
   resolveDisplayCompanyName,
 } from "./catalyst-titles";
 import { haltReasonLabel } from "./halt-reason-codes";
@@ -100,5 +102,45 @@ describe("earningsQuarterLabel + formatEarningsReportTitle", () => {
     expect(formatEarningsReportTitle("Q1", null)).toBe(
       "Earnings Report Q1 - Unknown company",
     );
+  });
+
+  it("infers a date from period end, Filed:, then timestamp", () => {
+    expect(
+      earningsDateForQuarterInference({
+        periodEndYmd: "2026-03-31",
+        summary: "Filed: 2026-07-24 AccNo: 1",
+        timestamp: "2026-07-25T12:00:00.000Z",
+      }),
+    ).toBe("2026-03-31");
+
+    expect(
+      earningsDateForQuarterInference({
+        summary:
+          "For the quarter ended June 30, 2026. Filed: 2026-07-24 AccNo: 1",
+        timestamp: "2026-07-25T12:00:00.000Z",
+      }),
+    ).toBe("2026-06-30");
+
+    expect(
+      earningsDateForQuarterInference({
+        summary: "Filed: 2026-07-24 AccNo: 1",
+        timestamp: "2026-07-25T12:00:00.000Z",
+      }),
+    ).toBe("2026-07-24");
+
+    expect(
+      earningsDateForQuarterInference({
+        timestamp: "2026-11-02T08:00:00.000Z",
+      }),
+    ).toBe("2026-11-02");
+  });
+
+  it("detects Results of Operations wording", () => {
+    expect(
+      looksLikeResultsOfOperationsTitle(
+        "Acme - Results of Operations and Financial Condition",
+      ),
+    ).toBe(true);
+    expect(looksLikeResultsOfOperationsTitle("Guidance update")).toBe(false);
   });
 });

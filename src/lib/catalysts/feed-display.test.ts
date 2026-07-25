@@ -91,14 +91,21 @@ describe("sectorLabel", () => {
 });
 
 describe("titleLine", () => {
-  it("composes company + catalog event when headline is a short 8-K label", () => {
-    expect(titleLine(base())).toBe("NVIDIA Corp — Earnings / results");
-    expect(titleLine(base({ headline: null }))).toBe(
-      "NVIDIA Corp — 8-K filing",
-    );
+  it("formats SEC earnings catalog rows as Earnings Report Qn - Company", () => {
+    // Filing date 2026-07-20 → calendar Q3 heuristic when Finnhub quarter absent.
+    expect(titleLine(base())).toBe("Earnings Report Q3 - NVIDIA Corp");
+    expect(
+      titleLine(
+        base({
+          headline: null,
+          eventCategory: null,
+          items: [],
+        }),
+      ),
+    ).toBe("NVIDIA Corp — 8-K filing");
   });
 
-  it("prefers official SEC item blurb over the short catalog label", () => {
+  it("rewrites Results of Operations blurbs to Earnings Report Qn - Company", () => {
     expect(
       titleLine(
         base({
@@ -118,9 +125,7 @@ describe("titleLine", () => {
             "Item 9.01: Financial Statements and Exhibits",
         }),
       ),
-    ).toBe(
-      "Liberty Global Ltd — Results of Operations and Financial Condition",
-    );
+    ).toBe("Earnings Report Q3 - Liberty Global Ltd");
   });
 
   it("tooltip title keeps longer SEC notices than the tape line", () => {
