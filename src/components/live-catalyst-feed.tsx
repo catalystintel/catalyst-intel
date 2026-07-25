@@ -1133,7 +1133,7 @@ function CatalystFeedList({
         </div>
         <div
           role="columnheader"
-          className="hidden justify-self-end pr-1 text-right sm:block"
+          className="hidden min-w-0 sm:block"
           title="When the event occurred (ET) — not DB insert time"
         >
           Time
@@ -1284,7 +1284,7 @@ function CatalystFeedList({
 
               <div
                 role="cell"
-                className="relative z-[1] hidden min-w-0 justify-self-end pr-1 text-right sm:block"
+                className="relative z-[1] hidden min-w-0 sm:block"
               >
                 <time
                   dateTime={catalyst.timestamp}
