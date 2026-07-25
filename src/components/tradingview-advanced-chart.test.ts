@@ -13,6 +13,8 @@ describe("buildTradingViewEmbedUrl", () => {
     expect(parsed.searchParams.get("theme")).toBe("dark");
     expect(parsed.searchParams.get("interval")).toBe("D");
     expect(parsed.searchParams.get("timezone")).toBe("America/New_York");
+    // Line (price) view — not candles (style "1").
+    expect(parsed.searchParams.get("style")).toBe("2");
   });
 
   it("trims bare tickers", () => {
