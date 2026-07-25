@@ -27,34 +27,34 @@ company-first narrative copy for a few high-signal SEC subjects (see
 
 ## 2. 8-K Item catalog → title + catalyst class
 
-| Item | Official theme (short)                         | Tape title pattern                                           | Class            | Notes                                   |
-| ---- | ---------------------------------------------- | ------------------------------------------------------------ | ---------------- | --------------------------------------- |
-| 1.01 | Entry into material agreement                  | `{Co} New Deal Announced — Major Contract or Partnership`    | **Catalyst**     | Contracts, partnerships                 |
-| 1.02 | Termination of material agreement              | `Agreement Terminated - {Co}`                                | **Catalyst**     |                                         |
-| 1.03 | Bankruptcy / receivership                      | `{Co} — Bankruptcy Filing — Equity at Risk`                  | **Catalyst**     | High urgency                            |
-| 1.04 | Mine safety                                    | —                                                            | **Non-catalyst** | Statutory; drop when only item          |
-| 1.05 | Material cybersecurity incident                | `Material Cybersecurity Incident - {Co}`                     | **Catalyst**     |                                         |
-| 2.01 | Completion of acquisition/disposition          | `Acquisition / Disposition Closed - {Co}`                    | **Catalyst**     |                                         |
-| 2.02 | Results of operations                          | `Earnings Report Qn - {Co}`                                  | **Catalyst**     | Quarter from Filed: / timestamp         |
-| 2.03 | Creation of direct financial obligation        | `New Financial Obligation - {Co}`                            | **Catalyst**     |                                         |
-| 2.04 | Triggering events that accelerate obligation   | `Debt Acceleration - {Co}`                                   | **Catalyst**     |                                         |
-| 2.05 | Costs associated with exit/disposal            | `Restructuring / Exit Costs - {Co}`                          | **Catalyst**     |                                         |
-| 2.06 | Material impairments                           | `Material Impairment - {Co}`                                 | **Catalyst**     |                                         |
-| 3.01 | Notice of delisting / failure to satisfy       | `{Co} — Delisting Risk — Stock Could Lose Its Listing`       | **Catalyst**     |                                         |
-| 3.02 | Unregistered sales of equity                   | `Unregistered Equity Sale - {Co}`                            | **Catalyst**     | Dilution                                |
-| 3.03 | Material modification to rights                | `Security Holder Rights Change - {Co}`                       | **Catalyst**     |                                         |
-| 4.01 | Changes in registrant’s certifying accountant  | `Auditor Change - {Co}`                                      | **Catalyst**     | Governance signal                       |
-| 4.02 | Non-reliance on prior financials               | `Financials Non-Reliance - {Co}`                             | **Catalyst**     |                                         |
-| 5.01 | Changes in control                             | `Change of Control - {Co}`                                   | **Catalyst**     |                                         |
-| 5.02 | Departure/election of directors; officer appt. | `{Co} — Executive Change — CEO/CFO Departure or Appointment` | **Catalyst**     | C-suite moves matter                    |
-| 5.03 | Amendments to articles/bylaws                  | `Charter / Bylaw Change - {Co}`                              | **Keep**         | Often procedural; keep if sole material |
-| 5.04 | Temporary suspension of trading                | `Trading Blackout - {Co}`                                    | **Keep**         | Can precede news                        |
-| 5.05 | Amendments to ethics code                      | —                                                            | **Non-catalyst** | Drop when only item                     |
-| 5.07 | Submission of matters to a vote                | —                                                            | **Non-catalyst** | Routine annual / say-on-pay; drop alone |
-| 5.08 | Shareholder nominations                        | —                                                            | **Non-catalyst** | Drop when only item                     |
-| 7.01 | Regulation FD disclosure                       | —                                                            | **Non-catalyst** | Alone = noise (may pair with real item) |
-| 8.01 | Other events                                   | —                                                            | **Non-catalyst** | Alone = noise without gold co-item      |
-| 9.01 | Financial statements and exhibits              | —                                                            | **Non-catalyst** | Always rides along; never primary alone |
+| Item | Official theme (short)                         | Tape title pattern                                         | Class            | Notes                                   |
+| ---- | ---------------------------------------------- | ---------------------------------------------------------- | ---------------- | --------------------------------------- |
+| 1.01 | Entry into material agreement                  | `{Co}: New Deal Announced (Major Contract or Partnership)` | **Catalyst**     | Contracts, partnerships                 |
+| 1.02 | Termination of material agreement              | `{Co}: Agreement Terminated`                               | **Catalyst**     |                                         |
+| 1.03 | Bankruptcy / receivership                      | `{Co}: Bankruptcy Filing (Equity at Risk)`                 | **Catalyst**     | High urgency                            |
+| 1.04 | Mine safety                                    | —                                                          | **Non-catalyst** | Statutory; drop when only item          |
+| 1.05 | Material cybersecurity incident                | `{Co}: Material Cybersecurity Incident`                    | **Catalyst**     |                                         |
+| 2.01 | Completion of acquisition/disposition          | `{Co}: Acquisition / Disposition Closed`                   | **Catalyst**     |                                         |
+| 2.02 | Results of operations                          | `{Co}: Earnings Report Qn`                                 | **Catalyst**     | Quarter from Filed: / timestamp         |
+| 2.03 | Creation of direct financial obligation        | `{Co}: New Financial Obligation`                           | **Catalyst**     |                                         |
+| 2.04 | Triggering events that accelerate obligation   | `{Co}: Debt Acceleration`                                  | **Catalyst**     |                                         |
+| 2.05 | Costs associated with exit/disposal            | `{Co}: Restructuring / Exit Costs`                         | **Catalyst**     |                                         |
+| 2.06 | Material impairments                           | `{Co}: Material Impairment`                                | **Catalyst**     |                                         |
+| 3.01 | Notice of delisting / failure to satisfy       | `{Co}: Delisting Risk (Stock Could Lose Its Listing)`      | **Catalyst**     |                                         |
+| 3.02 | Unregistered sales of equity                   | `{Co}: Unregistered Equity Sale`                           | **Catalyst**     | Dilution                                |
+| 3.03 | Material modification to rights                | `{Co}: Security Holder Rights Change`                      | **Catalyst**     |                                         |
+| 4.01 | Changes in registrant’s certifying accountant  | `{Co}: Auditor Change`                                     | **Catalyst**     | Governance signal                       |
+| 4.02 | Non-reliance on prior financials               | `{Co}: Financials Non-Reliance`                            | **Catalyst**     |                                         |
+| 5.01 | Changes in control                             | `{Co}: Change of Control`                                  | **Catalyst**     |                                         |
+| 5.02 | Departure/election of directors; officer appt. | `{Co}: {Position} Change ({Appointment\|Departure})`       | **Catalyst**     | C-suite moves matter                    |
+| 5.03 | Amendments to articles/bylaws                  | `{Co}: Charter / Bylaw Change`                             | **Keep**         | Often procedural; keep if sole material |
+| 5.04 | Temporary suspension of trading                | `{Co}: Trading Blackout`                                   | **Keep**         | Can precede news                        |
+| 5.05 | Amendments to ethics code                      | —                                                          | **Non-catalyst** | Drop when only item                     |
+| 5.07 | Submission of matters to a vote                | —                                                          | **Non-catalyst** | Routine annual / say-on-pay; drop alone |
+| 5.08 | Shareholder nominations                        | —                                                          | **Non-catalyst** | Drop when only item                     |
+| 7.01 | Regulation FD disclosure                       | —                                                          | **Non-catalyst** | Alone = noise (may pair with real item) |
+| 8.01 | Other events                                   | —                                                          | **Non-catalyst** | Alone = noise without gold co-item      |
+| 9.01 | Financial statements and exhibits              | —                                                          | **Non-catalyst** | Always rides along; never primary alone |
 
 **Primary-item selection:** ignore 9.01 for headline choice; among remaining items pick highest `CATEGORY_PRIORITY`.  
 **Quality gate:** drop filings whose item set is entirely in the non-catalyst set above (`7.01`, `8.01`, `9.01`, `1.04`, `5.05`, `5.07`, `5.08`).
@@ -67,17 +67,17 @@ Non-8-K offering / M&A forms: `formatProspectusOfferingTitle` (424B), `format425
 
 ## 3. Form 4 transaction codes → title
 
-| Code               | SEC meaning (typical)            | Desk class         | Title when dominant                                   |
-| ------------------ | -------------------------------- | ------------------ | ----------------------------------------------------- |
-| **P**              | Open-market purchase             | **Catalyst buy**   | `Form 4 Insider Buy - {Company}`                      |
-| **S**              | Open-market sale                 | **Catalyst sell**  | `Form 4 Insider Sell - {Company}`                     |
-| P+S                | Both in one filing               | **Catalyst mixed** | `Form 4 Insider Buy & Sell - {Company}`               |
-| A                  | Grant / award                    | Routine            | Drop (`form4_routine`)                                |
-| M                  | Option exercise                  | Routine            | Drop                                                  |
-| F                  | Tax withholding                  | Routine            | Drop                                                  |
-| G                  | Gift                             | Routine            | Drop                                                  |
-| D/C/U/H/…          | Other dispositions / conversions | Routine            | Drop                                                  |
-| Unknown / XML miss | Unenriched Atom row              | Soft-keep          | `Form 4 Insider Transaction - {Company}` until enrich |
+| Code               | SEC meaning (typical)            | Desk class         | Title when dominant                                  |
+| ------------------ | -------------------------------- | ------------------ | ---------------------------------------------------- |
+| **P**              | Open-market purchase             | **Catalyst buy**   | `{Company}: Form 4 Insider Buy`                      |
+| **S**              | Open-market sale                 | **Catalyst sell**  | `{Company}: Form 4 Insider Sell`                     |
+| P+S                | Both in one filing               | **Catalyst mixed** | `{Company}: Form 4 Insider Buy & Sell`               |
+| A                  | Grant / award                    | Routine            | Drop (`form4_routine`)                               |
+| M                  | Option exercise                  | Routine            | Drop                                                 |
+| F                  | Tax withholding                  | Routine            | Drop                                                 |
+| G                  | Gift                             | Routine            | Drop                                                 |
+| D/C/U/H/…          | Other dispositions / conversions | Routine            | Drop                                                 |
+| Unknown / XML miss | Unenriched Atom row              | Soft-keep          | `{Company}: Form 4 Insider Transaction` until enrich |
 
 Enrichment: EDGAR ownership XML → `insider_buy` / `insider_sell` / `form4_mixed` / `form4_routine` (`parse-form4.ts`).  
 Quality gate drops only `form4_routine` (confirmed paperwork), not unenriched `form4` rows (fetch-cap soft-fail).
@@ -86,22 +86,22 @@ Quality gate drops only `form4_routine` (confirmed paperwork), not unenriched `f
 
 ## 4. Examples (tape)
 
-| Situation               | Title                                                             |
-| ----------------------- | ----------------------------------------------------------------- |
-| Item 2.02 filed mid-May | `Earnings Report Q2 - Apple Inc.`                                 |
-| Item 1.01 only (+ 9.01) | `PEDEVCO CORP New Deal Announced — Major Contract or Partnership` |
-| Item 1.03 bankruptcy    | `Acme Corp — Bankruptcy Filing — Equity at Risk`                  |
-| Item 3.01 delisting     | `Quantum-Si Inc — Delisting Risk — Stock Could Lose Its Listing`  |
-| Item 5.02 management    | `Acme Corp — Executive Change — CEO/CFO Departure or Appointment` |
-| 424B prospectus         | `Acme Corp New Stock Offering Filed — Potential Dilution Ahead`   |
-| Form 425                | `Acme Corp — Merger or Acquisition News: Deal in Play`            |
-| Item 1.05 cybersecurity | `Material Cybersecurity Incident - CrowdStrike`                   |
-| Form 4 code P           | `Form 4 Insider Buy - Tesla, Inc.`                                |
-| Form 4 code S           | `Form 4 Insider Sell - Nvidia Corporation`                        |
-| Form 4 codes P + S      | `Form 4 Insider Buy & Sell - Acme Corp`                           |
-| Form 4 code F only      | _(suppressed — routine)_                                          |
-| Items 7.01 + 9.01 only  | _(suppressed — boilerplate)_                                      |
-| Items 5.07 + 9.01 only  | _(suppressed — routine vote)_                                     |
+| Situation               | Title                                                              |
+| ----------------------- | ------------------------------------------------------------------ |
+| Item 2.02 filed mid-May | `Apple Inc.: Earnings Report Q2`                                   |
+| Item 1.01 only (+ 9.01) | `PEDEVCO CORP: New Deal Announced (Major Contract or Partnership)` |
+| Item 1.03 bankruptcy    | `Acme Corp: Bankruptcy Filing (Equity at Risk)`                    |
+| Item 3.01 delisting     | `Quantum-Si Inc: Delisting Risk (Stock Could Lose Its Listing)`    |
+| Item 5.02 management    | `Acme Corp: CEO Change (Departure)`                                |
+| 424B prospectus         | `Acme Corp: New Stock Offering Filed (Potential Dilution Ahead)`   |
+| Form 425                | `Acme Corp: Merger or Acquisition News (Deal in Play)`             |
+| Item 1.05 cybersecurity | `CrowdStrike: Material Cybersecurity Incident`                     |
+| Form 4 code P           | `Tesla, Inc.: Form 4 Insider Buy`                                  |
+| Form 4 code S           | `Form 4 Insider Sell - Nvidia Corporation`                         |
+| Form 4 codes P + S      | `Form 4 Insider Buy & Sell - Acme Corp`                            |
+| Form 4 code F only      | _(suppressed — routine)_                                           |
+| Items 7.01 + 9.01 only  | _(suppressed — boilerplate)_                                       |
+| Items 5.07 + 9.01 only  | _(suppressed — routine vote)_                                      |
 
 ---
 
