@@ -1142,7 +1142,7 @@ function CatalystFeedList({
           role="columnheader"
           className="hidden justify-self-end pl-1 text-right lg:block"
         >
-          Action
+          Actions
         </div>
       </div>
 
