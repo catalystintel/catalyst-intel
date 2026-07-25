@@ -1,3 +1,4 @@
+import { formatClinicalTrialTitle } from "@/lib/catalysts/catalyst-titles";
 import { resolveTickerFromName } from "@/lib/catalysts/ticker-resolver";
 import {
   ingestNormalizedCatalysts,
@@ -62,7 +63,7 @@ export async function fetchClinicalTrials(): Promise<SourceFetchResult> {
     const nctId = idMod?.nctId?.trim();
     if (!nctId) continue;
 
-    const title = idMod?.briefTitle?.trim() || nctId;
+    const studyTitle = idMod?.briefTitle?.trim() || nctId;
     const sponsor =
       study.protocolSection?.sponsorCollaboratorsModule?.leadSponsor?.name?.trim() ||
       idMod?.organization?.fullName?.trim() ||
@@ -73,6 +74,7 @@ export async function fetchClinicalTrials(): Promise<SourceFetchResult> {
       new Date().toISOString().slice(0, 10);
     const conditions =
       study.protocolSection?.conditionsModule?.conditions?.slice(0, 3) ?? [];
+    const status = statusMod?.overallStatus?.trim() || "Clinical trial update";
 
     const resolved = await resolveTickerFromName(sponsor, {
       userAgent: process.env.SEC_EDGAR_USER_AGENT?.trim() || "",
@@ -87,12 +89,12 @@ export async function fetchClinicalTrials(): Promise<SourceFetchResult> {
       tickerSource: resolved?.source ?? "unresolved",
       companyName: sponsor,
       type: "Clinical Trial",
-      title: `${sponsor ?? "Sponsor"} — ${title}`,
-      headline: statusMod?.overallStatus?.trim() || "Clinical trial update",
+      title: formatClinicalTrialTitle(sponsor),
+      headline: status,
       eventCategory: "clinical",
       subcategory: "clinicaltrials_update",
       timestamp: new Date(`${date}T12:00:00.000Z`).toISOString(),
-      summary: conditions.join(", ") || null,
+      summary: [studyTitle, conditions.join(", ")].filter(Boolean).join(" · "),
       confidence: 65,
       tags: [
         "clinicaltrials",
