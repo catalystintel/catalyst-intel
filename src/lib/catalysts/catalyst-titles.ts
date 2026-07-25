@@ -395,11 +395,11 @@ export function formatProspectusOfferingTitle(
   return `${resolveDisplayCompanyName(companyName)}: New Stock Offering Filed (Potential Dilution Ahead)`;
 }
 
-/** `{Company}: Merger or Acquisition News (Deal in Play)` (Form 425) */
+/** `{Company Name} Announces Acquisition — Deal in Play` (Form 425) */
 export function format425MergerTitle(
   companyName: string | null | undefined,
 ): string {
-  return `${resolveDisplayCompanyName(companyName)}: Merger or Acquisition News (Deal in Play)`;
+  return `${resolveDisplayCompanyName(companyName)} Announces Acquisition — Deal in Play`;
 }
 
 /** `{Company Name}: Schedule 13D` */

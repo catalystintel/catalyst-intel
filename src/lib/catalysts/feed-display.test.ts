@@ -351,7 +351,20 @@ describe("titleLine", () => {
           companyName: "Acme Corp",
         }),
       ),
-    ).toBe("Acme Corp: Merger or Acquisition News (Deal in Play)");
+    ).toBe("Acme Corp Announces Acquisition — Deal in Play");
+
+    expect(
+      titleLine(
+        base({
+          type: "425",
+          subcategory: "425",
+          eventCategory: "deals",
+          headline: "Merger / Acquisition (425)",
+          title: "Acme Corp: Merger or Acquisition News (Deal in Play)",
+          companyName: "Acme Corp",
+        }),
+      ),
+    ).toBe("Acme Corp Announces Acquisition — Deal in Play");
 
     expect(
       titleLine(
