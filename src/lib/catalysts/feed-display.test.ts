@@ -221,6 +221,50 @@ describe("titleLine", () => {
       ),
     ).toBe("Material agreement");
   });
+
+  it("prefers ground-rule Halt / FDA / Earnings titles over generic chips", () => {
+    expect(
+      titleLine(
+        base({
+          sourceProvider: "nasdaq-halts",
+          type: "Trading Halt",
+          eventCategory: "trading_halt",
+          headline: "Trading halt",
+          title: "Halts (Steakholder Foods Ltd. ADS) — News pending",
+          companyName: "Steakholder Foods Ltd. ADS",
+          ticker: "STKH",
+        }),
+      ),
+    ).toBe("Halts (Steakholder Foods Ltd. ADS) — News pending");
+
+    expect(
+      titleLine(
+        base({
+          sourceProvider: "openfda",
+          type: "FDA Approval",
+          eventCategory: "regulatory",
+          subcategory: "openfda_approval",
+          headline: "FDA approval update",
+          title: "FDA Approval - Pfizer Inc",
+          companyName: "Pfizer Inc",
+        }),
+      ),
+    ).toBe("FDA Approval - Pfizer Inc");
+
+    expect(
+      titleLine(
+        base({
+          sourceProvider: "finnhub",
+          type: "Earnings",
+          eventCategory: "earnings",
+          headline: "Earnings calendar",
+          title: "Earnings Report Q1 - Apple Inc.",
+          companyName: "Apple Inc.",
+          ticker: "AAPL",
+        }),
+      ),
+    ).toBe("Earnings Report Q1 - Apple Inc.");
+  });
 });
 
 describe("stripSourceNames / looksLikeSourceLabel", () => {

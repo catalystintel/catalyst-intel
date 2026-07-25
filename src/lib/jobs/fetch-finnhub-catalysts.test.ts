@@ -4,10 +4,79 @@ import { RETENTION_DAYS } from "@/lib/jobs/data-retention";
 
 import {
   companyNewsToNormalized,
+  earningsToNormalized,
+  fdaToNormalized,
   ipoToNormalized,
   priceTargetToNormalized,
   recommendationToNormalized,
 } from "./fetch-finnhub-catalysts";
+
+describe("earningsToNormalized", () => {
+  it("formats Earnings Report Qn - Company Name", () => {
+    const item = earningsToNormalized(
+      {
+        symbol: "AAPL",
+        date: "2026-01-28",
+        quarter: 1,
+        year: 2026,
+        hour: "amc",
+        epsEstimate: 2.1,
+      },
+      "Apple Inc.",
+    );
+    expect(item).toMatchObject({
+      provider: "finnhub",
+      ticker: "AAPL",
+      companyName: "Apple Inc.",
+      type: "Earnings",
+      title: "Earnings Report Q1 - Apple Inc.",
+      headline: "Earnings Report Q1 - Apple Inc.",
+      eventCategory: "earnings",
+      subcategory: "amc",
+    });
+  });
+
+  it("derives quarter from date and falls back to ticker for the name", () => {
+    const item = earningsToNormalized({
+      symbol: "MSFT",
+      date: "2026-04-24",
+      hour: "bmo",
+    });
+    expect(item?.title).toBe("Earnings Report Q2 - MSFT");
+    expect(item?.companyName).toBe("MSFT");
+  });
+});
+
+describe("fdaToNormalized", () => {
+  it("uses FDA Approval title for approval-like calendar rows", () => {
+    const item = fdaToNormalized({
+      symbol: "PFE",
+      company: "Pfizer Inc",
+      drug: "DrugX",
+      catalyst: "FDA approval decision",
+      status: "Approved",
+      date: "2026-07-20",
+    });
+    expect(item).toMatchObject({
+      type: "FDA Approval",
+      title: "FDA Approval - Pfizer Inc",
+      headline: "FDA Approval - Pfizer Inc",
+      subcategory: "fda_approval",
+    });
+  });
+
+  it("keeps non-approval FDA calendar titles", () => {
+    const item = fdaToNormalized({
+      symbol: "MRNA",
+      company: "Moderna Inc",
+      drug: "VaccineY",
+      catalyst: "Advisory committee",
+      date: "2026-07-21",
+    });
+    expect(item?.type).toBe("FDA Calendar");
+    expect(item?.title).toBe("Moderna Inc — VaccineY");
+  });
+});
 
 describe("recommendationToNormalized", () => {
   it("maps Finnhub consensus into Analyst Actions", () => {
