@@ -7,6 +7,7 @@ import {
   clearPersistedFeedFilters,
   feedApiQuery,
   isFiltersDefault,
+  isPanelFiltersDefault,
   readPersistedFeedFilters,
   writePersistedFeedFilters,
 } from "./feed-filter-persist";
@@ -49,6 +50,16 @@ describe("feed-filter-persist", () => {
 
   it("product default has no gates", () => {
     expect(isFiltersDefault(DEFAULT_FEED_FILTERS)).toBe(true);
+    expect(isPanelFiltersDefault(DEFAULT_FEED_FILTERS)).toBe(true);
+  });
+
+  it("tickerOnly alone does not count as panel filters", () => {
+    expect(
+      isPanelFiltersDefault({ ...DEFAULT_FEED_FILTERS, tickerOnly: false }),
+    ).toBe(true);
+    expect(
+      isFiltersDefault({ ...DEFAULT_FEED_FILTERS, tickerOnly: false }),
+    ).toBe(false);
   });
 
   it("round-trips multi filters", () => {
@@ -59,6 +70,7 @@ describe("feed-filter-persist", () => {
       formFilters: ["8-K"],
       sourceFilters: ["sec-edgar"],
       timeWindow: "4h",
+      tickerOnly: false,
     });
     expect(readPersistedFeedFilters()).toEqual({
       tickerQuery: "TSLA",
@@ -67,6 +79,7 @@ describe("feed-filter-persist", () => {
       formFilters: ["8-K"],
       sourceFilters: ["sec-edgar"],
       timeWindow: "4h",
+      tickerOnly: false,
     });
   });
 
@@ -114,6 +127,7 @@ describe("feed-filter-persist", () => {
       formFilters: ["8-K"],
       sourceFilters: ["sec-edgar"],
       timeWindow: "24h",
+      tickerOnly: true,
     });
     const params = new URLSearchParams(qs);
     expect(params.get("q")).toBe("AAPL");
@@ -121,5 +135,22 @@ describe("feed-filter-persist", () => {
     expect(params.get("sectors")).toBe("financials");
     expect(params.get("forms")).toBe("8-K");
     expect(params.get("window")).toBe("24h");
+    expect(params.get("tickerOnly")).toBe("1");
+  });
+
+  it("defaults missing tickerOnly to true on read", () => {
+    localStorage.setItem(
+      FEED_FILTER_STORAGE_KEY,
+      JSON.stringify({
+        tickerQuery: "X",
+        categoryFilters: [],
+        sectorFilters: [],
+        formFilters: [],
+        sourceFilters: [],
+        timeWindow: "all",
+        lastActiveAt: Date.now(),
+      }),
+    );
+    expect(readPersistedFeedFilters()?.tickerOnly).toBe(true);
   });
 });

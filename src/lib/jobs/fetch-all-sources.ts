@@ -1,7 +1,6 @@
 import { runAlertAutoFire } from "@/lib/alerts/auto-fire";
 import { clusterRecentCatalysts } from "@/lib/jobs/cluster-events";
 import { purgeStaleCatalysts } from "@/lib/jobs/data-retention";
-import { runLlmTriageBatch } from "@/lib/jobs/llm-triage";
 import { fetchClinicalTrials } from "@/lib/jobs/fetch-clinicaltrials";
 import { fetchFinnhubCatalysts } from "@/lib/jobs/fetch-finnhub-catalysts";
 import { fetchForm4Api } from "@/lib/jobs/fetch-form4api";
@@ -384,15 +383,9 @@ async function runPostIngestEnrichment(
     await reportServerError(error, { step: "event_clustering" });
   }
 
-  try {
-    const triaged = await runLlmTriageBatch();
-    result.llmTriaged = triaged.triaged;
-    result.llmSkipped = triaged.skipped;
-  } catch (error) {
-    const { reportServerError } =
-      await import("@/lib/observability/report-error");
-    await reportServerError(error, { step: "llm_triage" });
-  }
+  // AI triage is on-demand only (POST /api/catalysts/[id]/analyze) so free
+  // OpenRouter quota is spent when a trader actually opens an event — not on
+  // every cron tick. llmTriaged / llmSkipped stay 0 in enrichment stats.
 
   try {
     const fired = await runAlertAutoFire({ since: runStartIso });

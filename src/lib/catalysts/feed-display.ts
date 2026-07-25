@@ -211,13 +211,25 @@ function tapeSubject(c: FeedCatalyst): string | null {
   return ticker || null;
 }
 
+export type TitleLineOptions = {
+  /**
+   * Max chars for SEC Atom item blurbs. Tape rows stay short (~110);
+   * hover tooltips pass a higher cap so the full notice is readable.
+   */
+  maxBlurbChars?: number;
+};
+
 /**
  * Primary title cell — company + what happened, not a bare taxonomy chip.
  * Prefers real news headlines; for SEC catalog labels, compose
  * `Company — official item blurb` (or trader label) so the wide Title column
  * carries a usable event summary.
  */
-export function titleLine(c: FeedCatalyst): string {
+export function titleLine(
+  c: FeedCatalyst,
+  options: TitleLineOptions = {},
+): string {
+  const maxBlurbChars = options.maxBlurbChars ?? 110;
   const headline = normalizeDisplayText(c.headline ?? "");
   const title = normalizeDisplayText(c.title ?? "");
   const subject = tapeSubject(c);
@@ -239,7 +251,7 @@ export function titleLine(c: FeedCatalyst): string {
       c.items[0]?.code ??
       null;
     const blurb =
-      extractSecItemBlurb(c.summary, primaryCode) ||
+      extractSecItemBlurb(c.summary, primaryCode, maxBlurbChars) ||
       stripSourceNames(headline) ||
       headline;
     if (subject) {
@@ -276,7 +288,8 @@ export function titleLine(c: FeedCatalyst): string {
     /(?:8-?K|Form\s*4|S-3|424B|SC\s*13).*filing$/i.test(cleaned)
   ) {
     const event =
-      (c.items[0] && extractSecItemBlurb(c.summary, c.items[0].code)) ||
+      (c.items[0] &&
+        extractSecItemBlurb(c.summary, c.items[0].code, maxBlurbChars)) ||
       c.items[0]?.label ||
       null;
     if (event) return `${subject} — ${event}`;
@@ -287,6 +300,11 @@ export function titleLine(c: FeedCatalyst): string {
   if (title && !looksLikeSourceLabel(title))
     return stripSourceNames(title) || title;
   return cleaned || title || c.type;
+}
+
+/** Full filing blurb for hover — same composition as {@link titleLine}, less cut. */
+export function titleTooltipLine(c: FeedCatalyst): string {
+  return titleLine(c, { maxBlurbChars: 480 });
 }
 
 /**

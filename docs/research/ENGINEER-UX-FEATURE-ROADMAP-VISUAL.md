@@ -113,27 +113,27 @@ Archive / Search is still a gap vs research IA → Phase 2.
 
 ### Product decision — main blotter columns
 
-| Prior grammar (shipped / older docs)       | **New grammar (decision)**                                                          |
-| ------------------------------------------ | ----------------------------------------------------------------------------------- |
-| **Title · Time · Event · Ticker · Action** | **Title · Time · Symbol** (+ keep **Action** toolbar: Read / Act / Dismiss / Quiet) |
+| Prior grammar (shipped / older docs)       | **New grammar (decision)**                                                                   |
+| ------------------------------------------ | -------------------------------------------------------------------------------------------- |
+| **Title · Time · Event · Ticker · Action** | **Symbol · Title · Time** (+ keep **Action** toolbar: Read / Dismiss / Quiet) — Symbol first |
 
 **Do this:**
 
-- Replace the primary Event column with **Symbol** as the third primary column (order: Title → Time →Title · Time · Symbol).
-- Remove source details from dashboard rows: no Source column; do not append provider names under the title; strip provider prefixes from titles when present (`stripSourceNames` / equivalent).
+- Lead with **Symbol** as the row index (mono ticker / `—`), then **Title → Time**.
+- Remove the primary Event column. Remove source details from dashboard rows: no Source column; do not append provider names under the title; strip provider prefixes from titles when present (`stripSourceNames` / equivalent).
 - Keep Event/category available as filter chips and inside Read / drawer meta — not as a primary blotter column.
 - Update `live-catalyst-feed.tsx`, feed-display helpers, and both engineer UX guides in the same PR as the UI change.
 
-**Mobile stack:** Time →Title · Time · Symbol under Title (Event no longer in the primary stack).
+**Mobile stack:** Symbol (index col) + Title, with **Time** under Title (Event no longer in the primary stack).
 
 ### A. Default dashboard rows — acceptance
 
-- [ ] Desktop columns render **Title | Time |Title · Time · Symbol** in that order.
-- [ ] Action controls remain reachable without overlapping Time/Symbol.
-- [ ] Rows do not show source provider name, wire label strip, or Source column.
-- [ ] Title prefers headline / filing title with source names stripped.
-- [ ] Time remains event occurrence in **ET** (`catalysts.timestamp`); never DB insert time.
-- [ ]Title · Time · Symbol is mono; empty ticker shows `—` and is not clickable.
+- [x] Desktop columns render **Symbol | Title | Time** in that order.
+- [x] Action controls remain reachable without overlapping Time/Symbol.
+- [x] Rows do not show source provider name, wire label strip, or Source column.
+- [x] Title prefers headline / filing title with source names stripped.
+- [x] Time remains event occurrence in **ET** (`catalysts.timestamp`); never DB insert time.
+- [x] Symbol is mono; empty ticker shows `—` and is not clickable.
 
 ### B. Earnings filter — alternate column schema
 
@@ -154,9 +154,9 @@ When the **Earnings** filter chip is active, replace the default blotter columns
 - Persist or derive: `period` (quarter enum), `epsActual`, `epsEstimate` (map onto existing catalyst metadata / detail JSON — extend schema only if missing).
 - Empty EPS/Estimation is allowed; do not invent numbers.
 
-### C.Title · Time · Symbol click → drawer or split view
+### C. Symbol click → drawer or split view
 
-**Do this when the user clicksTitle · Time · Symbol** on any row (default or earnings schema):
+**Do this when the user clicks Symbol** on any row (default or earnings schema):
 
 - [ ] Open existing drawer **or** split panel (`catalyst-detail-drawer.tsx` / `tape-split-panel.tsx`) — tape remains primary.
 - [ ] Show a **price chart** for that symbol (reuse market quote / history paths; honest empty state if unkeyed).
@@ -211,7 +211,7 @@ Engineers must treat each primary filter as an ingest + UI contract:
 | **IPO**             | **Finnhub** `/calendar/ipo` → `capital` / `ipo*`                                                                                    | **Thin** today — deepen before promising parity                                                            |
 | **Gov Reports**     | **SEC EDGAR** (filings / 8-K disclosure); macro schedule (CPI/NFP/FOMC); later **FRED** live prints                                 | Product label spans SEC + macro — define subcategory map before UI ships; do not pretend full gov firehose |
 
-**Related market data forTitle · Time · Symbol panel:** Polygon (or Finnhub) quotes / aggregates when keyed; soft-fail empty chart if unkeyed.
+**Related market data for Symbol panel:** Polygon (or Finnhub) quotes / aggregates when keyed; soft-fail empty chart if unkeyed.
 
 ```mermaid
 flowchart LR
@@ -234,7 +234,7 @@ flowchart LR
 
 | ID  | Do this                                                                                                                             | Primary surfaces                                                          |
 | --- | ----------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
-| D1  | Change default blotter to **Title · Time · Symbol**; strip source from rows                                                         | `live-catalyst-feed.tsx`, `feed-display.ts`                               |
+| D1  | Change default blotter to **Symbol · Title · Time**; strip source from rows                                                         | `live-catalyst-feed.tsx`, `feed-display.ts`                               |
 | D2  | When Earnings filter active, switch column schema to **Date · Name · Symbol · Period · EPS · Estimation**                           | feed + earnings metadata API                                              |
 | D3  | On Symbol click, open drawer/split with chart, multi-timeframe quote, correlated ticker news                                        | `tape-split-panel.tsx`, `catalyst-detail-drawer.tsx`, `/api/market/quote` |
 | D4  | Reorder primary filter chips to All → Earnings → FDA Approvals → Clinical Trials → IPO → Gov Reports; wire each to taxonomy queries | feed filters + `taxonomy.ts`                                              |
@@ -471,7 +471,7 @@ quadrantChart
 #### P0 — must ship / harden
 
 - [ ] Live catalyst feed (`/dashboard` → `/api/catalysts`)
-- [ ] Stable row: **Title · Time · Symbol** (+ Action) — see §1A; Earnings filter uses Date · Name · Symbol · Period · EPS · Estimation
+- [ ] Stable row: **Symbol · Title · Time** (+ Action) — see §1A; Earnings filter uses Date · Name · Symbol · Period · EPS · Estimation
 - [ ] Primary-source proof one click (`edgar-proof-link.tsx`)
 - [ ] Act / Dismiss (remember dismissals)
 - [ ] Materiality badge + plain-language reason
@@ -527,24 +527,23 @@ Auth / dashboard shell                Prop SSO / audit exports
 
 ```mermaid
 flowchart LR
-  T0["0. Dashboard JTBD<br/>Title/Time/Symbol + filters<br/>live-catalyst-feed.tsx"]
+  T0["0. Dashboard JTBD<br/>Symbol/Title/Time + filters<br/>live-catalyst-feed.tsx"]
   T1["1. Read triage<br/>WIIM + bullets<br/>catalyst-article-view.tsx"]
   T2["2. Score explainability<br/>MaterialityBadge why<br/>drawer + article"]
-  T3["3.Title · Time · Symbol panel<br/>chart + quote + related<br/>drawer / split"]
-  T4["4. Alert prefs depth<br/>alert-rules-panel.tsx"]
+  T3["3. Symbol panel<br/>chart + quote + related<br/>drawer / split"]  T4["4. Alert prefs depth<br/>alert-rules-panel.tsx"]
   T5["5. Acceptance pass<br/>ACCEPTANCE-JTBD.md<br/>on dev Preview"]
 
   T0 --> T1 --> T2 --> T3 --> T4 --> T5
 ```
 
-| #   | Ticket                            | Files / surfaces                            | Source                   |
-| --- | --------------------------------- | ------------------------------------------- | ------------------------ |
-| 0   | Dashboard JTBD (columns/filters)  | `live-catalyst-feed.tsx`, feed-display      | §1A product JTBD         |
-| 1   | Read triage upgrade               | `catalyst-article-view.tsx`                 | Benzinga-Like P0         |
-| 2   | Score explainability              | drawer + article next to `MaterialityBadge` | Client Target §7.3       |
-| 3   | Title · Time · Symbol click panel | drawer / `tape-split-panel.tsx` + quote API | §1A-C                    |
-| 4   | Alert prefs depth                 | `alert-rules-panel.tsx`                     | JTBD 4 / Architecture S2 |
-| 5   | Acceptance pass on `dev` Preview  | `ACCEPTANCE-JTBD.md`                        | Fix before new chrome    |
+| #   | Ticket                           | Files / surfaces                            | Source                   |
+| --- | -------------------------------- | ------------------------------------------- | ------------------------ |
+| 0   | Dashboard JTBD (columns/filters) | `live-catalyst-feed.tsx`, feed-display      | §1A product JTBD         |
+| 1   | Read triage upgrade              | `catalyst-article-view.tsx`                 | Benzinga-Like P0         |
+| 2   | Score explainability             | drawer + article next to `MaterialityBadge` | Client Target §7.3       |
+| 3   | Symbol click panel               | drawer / `tape-split-panel.tsx` + quote API | §1A-C                    |
+| 4   | Alert prefs depth                | `alert-rules-panel.tsx`                     | JTBD 4 / Architecture S2 |
+| 5   | Acceptance pass on `dev` Preview | `ACCEPTANCE-JTBD.md`                        | Fix before new chrome    |
 
 ---
 

@@ -57,17 +57,17 @@ Copy `.env.example` to `.env.local` and fill in the Supabase values:
 cp .env.example .env.local
 ```
 
-| Variable                        | Required now?         | Notes                                                                                 |
-| ------------------------------- | --------------------- | ------------------------------------------------------------------------------------- |
-| `DATABASE_URL`                  | Yes (default is fine) | Local SQLite file path                                                                |
-| `NEXT_PUBLIC_SUPABASE_URL`      | Yes                   | From Supabase Project Settings -> API                                                 |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Yes                   | From Supabase Project Settings -> API                                                 |
-| `SEC_EDGAR_USER_AGENT`          | Yes                   | SEC requires a descriptive contact string, e.g. `you@email.com CatalystIntel/0.1`     |
-| `NEXT_PUBLIC_POSTHOG_KEY`       | No                    | PostHog Project API key (`phc_…`). Leave blank to disable analytics                   |
-| `NEXT_PUBLIC_POSTHOG_HOST`      | No                    | Default `https://us.i.posthog.com` (use `https://eu.i.posthog.com` for EU)            |
-| `ADMIN_EMAILS`                  | No                    | Comma-separated admin emails; defaults to `zhbar10@gmail.com,omer.nachshon@gmail.com` |
-| `SUPABASE_SERVICE_ROLE_KEY`     | No                    | Reserved for future admin operations                                                  |
-| `GROQ_API_KEY`                  | No                    | Only needed once AI scoring is added                                                  |
+| Variable                        | Required now?         | Notes                                                                                  |
+| ------------------------------- | --------------------- | -------------------------------------------------------------------------------------- |
+| `DATABASE_URL`                  | Yes (default is fine) | Local SQLite file path                                                                 |
+| `NEXT_PUBLIC_SUPABASE_URL`      | Yes                   | From Supabase Project Settings -> API                                                  |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Yes                   | From Supabase Project Settings -> API                                                  |
+| `SEC_EDGAR_USER_AGENT`          | Yes                   | SEC requires a descriptive contact string, e.g. `you@email.com CatalystIntel/0.1`      |
+| `NEXT_PUBLIC_POSTHOG_KEY`       | No                    | PostHog Project API key (`phc_…`). Leave blank to disable analytics                    |
+| `NEXT_PUBLIC_POSTHOG_HOST`      | No                    | Default `https://us.i.posthog.com` (use `https://eu.i.posthog.com` for EU)             |
+| `ADMIN_EMAILS`                  | No                    | Comma-separated admin emails; defaults to `zhbar10@gmail.com,omer.nachshon@gmail.com`  |
+| `SUPABASE_SERVICE_ROLE_KEY`     | No                    | Reserved for future admin operations                                                   |
+| `OPENROUTER_API_KEY`            | No                    | On-demand AI analysis (free `:free` models). Or use `OPENROUTER_API_KEYS` (comma pool) |
 
 No SEC/FDA/ClinicalTrials.gov API keys are needed - those vendors are free and keyless.
 
@@ -88,6 +88,27 @@ No SEC/FDA/ClinicalTrials.gov API keys are needed - those vendors are free and k
    Preview (`dev` / staging) and Production (`main`). Redeploy after saving.
 
 If `NEXT_PUBLIC_POSTHOG_KEY` is missing, PostHog stays off and the app runs normally.
+
+### On-demand AI analysis (optional, OpenRouter free)
+
+1. Create an API key at [openrouter.ai/keys](https://openrouter.ai/keys) (no card required for `:free` models).
+2. Add to `.env.local` and restart `npm run dev`:
+
+   ```bash
+   OPENROUTER_API_KEY=sk-or-v1-your-key
+   # optional pool for more free quota:
+   # OPENROUTER_API_KEYS=sk-or-v1-aaa,sk-or-v1-bbb
+   ```
+
+3. On Vercel, set the same var(s) for Preview + Production.
+
+Default model: `openai/gpt-oss-20b:free`. Analysis runs only when a user
+clicks **See AI analysis**; the result is stored on the catalyst and shared for everyone.
+
+**Quota tips (still free-tier friendly):** stack multiple OpenRouter accounts via
+`OPENROUTER_API_KEYS` (round-robin + 429 failover), and/or add a one-time **$10 credit**
+on OpenRouter — that typically raises free-model daily limits from ~50 to ~1000 while
+you keep using `:free` models (you are not billed per token on those models).
 
 ### 4. Set up the local database
 

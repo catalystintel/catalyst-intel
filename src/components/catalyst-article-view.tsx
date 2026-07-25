@@ -3,14 +3,12 @@
 import Link from "next/link";
 import { ArrowLeft, BookOpen, ExternalLink } from "lucide-react";
 
+import { AiAnalysisPanel } from "@/components/ai-analysis-panel";
 import { CategoryBadge } from "@/components/category-badge";
 import type { FeedCatalyst } from "@/lib/catalysts/feed-catalyst";
 import { benzingaPanelForCategory } from "@/lib/catalysts/benzinga-analogs";
-import { sourceDisplay, titleLine } from "@/lib/catalysts/feed-display";
-import {
-  originalSourceLabel,
-  type ArticleBodySource,
-} from "@/lib/catalysts/article-content";
+import { sectorLabel, titleLine } from "@/lib/catalysts/feed-display";
+import { type ArticleBodySource } from "@/lib/catalysts/article-content";
 import type {
   ArticleDetailCard,
   DetailTone,
@@ -45,12 +43,13 @@ export interface CatalystArticleViewProps {
   deltaSincePublish?: DeltaSincePublish | null;
   /** Soft-fail vendor enrichment (profile / related / quote). */
   enrichment?: ArticleEnrichment | null;
+  /** `dialog` hides the feed back-link (modal chrome owns dismiss). */
+  variant?: "page" | "dialog";
 }
 
 /**
- * Full-page in-app article reader for a single catalyst.
- * Primary path stays inside Catalyst; original vendor URL is secondary.
- * Depth features follow Benzinga Pro funnel IA without a visual rebrand.
+ * Full in-app article reader for a single catalyst.
+ * Product is the source of truth for the reader — no vendor provenance CTAs.
  */
 export function CatalystArticleView({
   catalyst,
@@ -65,36 +64,50 @@ export function CatalystArticleView({
   thumbUrl = null,
   deltaSincePublish = null,
   enrichment = null,
+  variant = "page",
 }: CatalystArticleViewProps) {
-  const source = sourceDisplay(catalyst);
-  const originalLabel = originalSourceLabel(catalyst.sourceProvider);
   const categoryLabel = catalyst.eventCategory
     ? CATEGORY_LABELS[catalyst.eventCategory]
     : null;
   const subcategory = catalyst.subcategory?.replace(/_/g, " ") || null;
   const panelAnalog = benzingaPanelForCategory(catalyst.eventCategory);
+  const ticker = catalyst.ticker?.trim().toUpperCase() || null;
+  const eventTitle = titleLine(catalyst);
 
   return (
-    <article className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-6 pb-10">
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--desk-border)] pb-4">
-        <Link
-          href={dashboardHref({ catalystId: catalyst.id })}
-          className="inline-flex items-center gap-1.5 font-mono text-[0.72rem] tracking-wide text-[var(--desk-text-muted)] uppercase transition-colors hover:text-[var(--desk-text)]"
-        >
-          <ArrowLeft className="size-3.5" />
-          Catalyst Feed
-        </Link>
-        <span className="inline-flex items-center gap-1.5 font-mono text-[0.65rem] tracking-[0.14em] text-[var(--desk-live)] uppercase">
-          <BookOpen className="size-3.5" />
-          In-app article
-        </span>
-      </div>
-
-      <header className="flex flex-col gap-4">
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="font-mono text-2xl font-semibold tracking-tight text-[var(--desk-text)] sm:text-3xl">
-            {catalyst.ticker ?? "—"}
+    <article
+      className={cn(
+        "mx-auto flex w-full flex-1 flex-col gap-5",
+        variant === "page" ? "max-w-3xl pb-10" : "max-w-none pb-2",
+      )}
+    >
+      {variant === "page" ? (
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--desk-border)] pb-3">
+          <Link
+            href={dashboardHref({ catalystId: catalyst.id })}
+            className="inline-flex items-center gap-1.5 font-mono text-[0.72rem] tracking-wide text-[var(--desk-text-muted)] uppercase transition-colors hover:text-[var(--desk-text)]"
+          >
+            <ArrowLeft className="size-3.5" />
+            Catalyst Feed
+          </Link>
+          <span className="inline-flex items-center gap-1.5 font-mono text-[0.65rem] tracking-[0.14em] text-[var(--desk-live)] uppercase">
+            <BookOpen className="size-3.5" />
+            Article
           </span>
+        </div>
+      ) : null}
+
+      <header className="flex flex-col gap-3">
+        <div className="flex flex-wrap items-center gap-2">
+          {ticker ? (
+            <span className="font-mono text-2xl font-semibold tracking-tight text-[var(--desk-text)] sm:text-3xl">
+              {ticker}
+            </span>
+          ) : (
+            <span className="rounded-sm border border-amber-500/35 bg-amber-500/10 px-2 py-1 font-mono text-[0.7rem] tracking-wide text-amber-200 uppercase">
+              Ticker unresolved
+            </span>
+          )}
           {relatedTickers.length > 0 ? (
             <div
               className="flex flex-wrap items-center gap-1.5"
@@ -117,7 +130,7 @@ export function CatalystArticleView({
         </div>
 
         <h1 className="text-xl font-semibold tracking-tight text-[var(--desk-text)] sm:text-2xl">
-          {titleLine(catalyst)}
+          {eventTitle}
         </h1>
 
         {catalyst.companyName ? (
@@ -126,9 +139,16 @@ export function CatalystArticleView({
           </p>
         ) : null}
 
+        {!ticker ? (
+          <p className="font-mono text-[0.72rem] leading-snug text-[var(--desk-text-dim)]">
+            No tradable ticker on this filing — use the summary and article body
+            below.
+          </p>
+        ) : null}
+
         {whyMoving ? (
           <div
-            className="rounded-sm border border-[var(--desk-border-strong)] bg-[var(--desk-overlay-soft)] px-3 py-2.5 transition-colors hover:border-[var(--desk-text-dim)]"
+            className="border-l-2 border-[var(--desk-live)] pl-3"
             role="note"
             aria-label="Why it's moving"
           >
@@ -142,11 +162,7 @@ export function CatalystArticleView({
         ) : null}
 
         {catalyst.materialityReasons.length > 0 ? (
-          <div
-            className="rounded-sm border border-[var(--desk-border)] px-3 py-2.5"
-            role="note"
-            aria-label="Why this score"
-          >
+          <div role="note" aria-label="Why this score">
             <p className="font-mono text-[0.62rem] tracking-[0.14em] text-[var(--desk-text-dim)] uppercase">
               Why this score
             </p>
@@ -158,8 +174,7 @@ export function CatalystArticleView({
           </div>
         ) : null}
 
-        <dl className="grid grid-cols-2 gap-3 font-mono text-xs sm:grid-cols-4">
-          <MetaCell label="Provider" value={source.name} />
+        <dl className="grid grid-cols-2 gap-3 font-mono text-xs sm:grid-cols-3">
           <MetaCell
             label="Category"
             value={
@@ -167,14 +182,13 @@ export function CatalystArticleView({
             }
           />
           <MetaCell label="Type" value={catalyst.type || "—"} />
+          <MetaCell label="Sector" value={sectorLabel(catalyst)} />
           <MetaCell
             label="Event time"
             value={formatTimeDate(catalyst.timestamp)}
             tabular
           />
-          {panelAnalog ? (
-            <MetaCell label="BZ panel" value={panelAnalog} />
-          ) : null}
+          {panelAnalog ? <MetaCell label="Panel" value={panelAnalog} /> : null}
         </dl>
 
         {(thumbUrl || deltaSincePublish) && (
@@ -215,28 +229,6 @@ export function CatalystArticleView({
             ) : null}
           </div>
         )}
-
-        <div className="flex flex-wrap gap-2">
-          <span className="inline-flex items-center gap-1.5 rounded-sm bg-[var(--desk-live)] px-3 py-1.5 font-mono text-xs font-semibold tracking-wide text-[#121212] uppercase">
-            <BookOpen className="size-3.5" />
-            Open in Catalyst
-          </span>
-          {catalyst.sourceUrl ? (
-            <a
-              href={catalyst.sourceUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 rounded-sm border border-[var(--desk-border-strong)] bg-[var(--desk-overlay-soft)] px-3 py-1.5 font-mono text-xs tracking-wide text-[var(--desk-text-secondary)] uppercase transition-colors hover:border-[var(--desk-text-dim)] hover:text-[var(--desk-text)]"
-            >
-              <ExternalLink className="size-3.5" />
-              {originalLabel}
-            </a>
-          ) : (
-            <span className="inline-flex items-center gap-1.5 rounded-sm border border-[var(--desk-border)] px-3 py-1.5 font-mono text-xs tracking-wide text-[var(--desk-text-dim)] uppercase">
-              No original URL
-            </span>
-          )}
-        </div>
       </header>
 
       <section className="flex flex-col gap-2">
@@ -246,7 +238,7 @@ export function CatalystArticleView({
           </h2>
           {summaryGenerated ? (
             <span className="font-mono text-[0.6rem] tracking-wide text-[var(--desk-text-dim)] uppercase">
-              Extractive · Groq later
+              Extractive
             </span>
           ) : null}
         </div>
@@ -271,6 +263,19 @@ export function CatalystArticleView({
           </p>
         )}
       </section>
+
+      <AiAnalysisPanel
+        catalystId={catalyst.id}
+        initial={
+          catalyst.aiBullets
+            ? {
+                bullets: catalyst.aiBullets,
+                lean: catalyst.aiLean ?? "uncertain",
+                uncertain: catalyst.aiUncertain ?? true,
+              }
+            : null
+        }
+      />
 
       {enrichment?.profile ? (
         <section className="flex flex-col gap-2">
@@ -326,15 +331,14 @@ export function CatalystArticleView({
               const age = item.publishedAt
                 ? formatRelativeAge(item.publishedAt)
                 : null;
-              const meta = [item.source, age].filter(Boolean).join(" · ");
               const inner = (
                 <>
                   <span className="text-sm leading-snug text-[var(--desk-text)]">
                     {item.title}
                   </span>
-                  {meta ? (
+                  {age ? (
                     <span className="mt-0.5 font-mono text-[0.65rem] tracking-wide text-[var(--desk-text-dim)]">
-                      {meta}
+                      {age}
                     </span>
                   ) : null}
                 </>
@@ -351,15 +355,6 @@ export function CatalystArticleView({
                     >
                       {inner}
                     </Link>
-                  ) : item.url ? (
-                    <a
-                      href={item.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex flex-col transition-colors hover:opacity-90"
-                    >
-                      {inner}
-                    </a>
                   ) : (
                     <div className="flex flex-col">{inner}</div>
                   )}
@@ -477,9 +472,8 @@ export function CatalystArticleView({
           </div>
         ) : (
           <p className="rounded-sm border border-dashed border-[var(--desk-border-strong)] px-4 py-4 text-sm text-[var(--desk-text-muted)]">
-            No stored article text for this row. Use the original source link
-            when you need the full external page — we do not iframe blocked
-            sites.
+            No stored article text for this row yet. Summary and takeaways above
+            are the available in-app content.
           </p>
         )}
       </section>

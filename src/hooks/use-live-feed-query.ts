@@ -10,7 +10,10 @@ import {
 } from "react";
 
 import type { FeedCatalyst } from "@/lib/catalysts/feed-catalyst";
-import { toFeedCatalyst } from "@/lib/catalysts/feed-catalyst";
+import {
+  sortFeedNewestFirst,
+  toFeedCatalyst,
+} from "@/lib/catalysts/feed-catalyst";
 import {
   DEFAULT_FEED_FILTERS,
   feedApiQuery,
@@ -55,7 +58,9 @@ export function useLiveFeedQuery(
     ...DEFAULT_FEED_FILTERS,
     ...initialFilters,
   });
-  const [catalysts, setCatalysts] = useState(initialCatalysts);
+  const [catalysts, setCatalysts] = useState(() =>
+    sortFeedNewestFirst(initialCatalysts),
+  );
   const [total, setTotal] = useState<number | null>(initialCatalysts.length);
   const [facets, setFacets] = useState<FeedFacets | null>(null);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
@@ -96,7 +101,7 @@ export function useLiveFeedQuery(
       }
       const rows = (data.catalysts ?? []).map(toFeedCatalyst);
       if (options.replace) {
-        setCatalysts(rows);
+        setCatalysts(sortFeedNewestFirst(rows));
       } else {
         setCatalysts((prev) => {
           const seen = new Set(prev.map((c) => c.id));
@@ -104,7 +109,7 @@ export function useLiveFeedQuery(
           for (const row of rows) {
             if (!seen.has(row.id)) merged.push(row);
           }
-          return merged;
+          return sortFeedNewestFirst(merged);
         });
       }
       if (typeof data.total === "number") setTotal(data.total);
@@ -196,11 +201,7 @@ export function useLiveFeedQuery(
     setCatalysts((prev) => {
       const byId = new Map(prev.map((c) => [c.id, c]));
       for (const row of rows) byId.set(row.id, row);
-      return [...byId.values()].sort(
-        (a, b) =>
-          new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime() ||
-          b.id - a.id,
-      );
+      return sortFeedNewestFirst([...byId.values()]);
     });
   }, []);
 

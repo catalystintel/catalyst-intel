@@ -19,4 +19,13 @@ describe("buildTradingViewEmbedUrl", () => {
     const url = buildTradingViewEmbedUrl("  LBTYK  ");
     expect(new URL(url).searchParams.get("symbol")).toBe("LBTYK");
   });
+
+  it("shows side toolbar in fullscreen mode", () => {
+    const compact = new URL(buildTradingViewEmbedUrl("AAPL"));
+    const full = new URL(
+      buildTradingViewEmbedUrl("AAPL", { fullscreen: true }),
+    );
+    expect(compact.searchParams.get("hidesidetoolbar")).toBe("1");
+    expect(full.searchParams.get("hidesidetoolbar")).toBe("0");
+  });
 });
