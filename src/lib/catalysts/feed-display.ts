@@ -22,12 +22,31 @@ import {
   formatProspectusOfferingTitle,
   formatSchedule13DTitle,
   formatSchedule13GTitle,
+  formatOfficerDirectorChangeTitle,
   formatSec8kItemTitle,
   formatShelfRegistrationTitle,
   form4TitleKindFromSubcategory,
+  looksLikeOfficerDirectorChangeTitle,
   looksLikeResultsOfOperationsTitle,
   titleCaseEventLabel,
 } from "@/lib/catalysts/catalyst-titles";
+
+/** Summary (+ title/headline fallback) for Item 5.02 role/action parsing. */
+function officerChangeContent(c: FeedCatalyst): string {
+  return [c.summary, c.title, c.headline]
+    .map((t) => t?.replace(/\s+/g, " ").trim())
+    .filter((t): t is string => Boolean(t && t.length > 0))
+    .join("\n");
+}
+
+function formatOfficerChangeForCatalyst(
+  c: FeedCatalyst,
+  subject: string | null | undefined,
+): string {
+  return formatOfficerDirectorChangeTitle(subject, {
+    content: officerChangeContent(c),
+  });
+}
 
 export interface SourceDisplay {
   name: string;
@@ -289,7 +308,7 @@ function prefersStoredGroundRuleTitle(c: FeedCatalyst, title: string): boolean {
   if (/New Deal Announced\s*—/i.test(title)) return true;
   if (/—\s*Delisting Risk\s*—/i.test(title)) return true;
   if (/—\s*Bankruptcy Filing\s*—/i.test(title)) return true;
-  if (/—\s*Executive Change\s*—/i.test(title)) return true;
+  if (looksLikeOfficerDirectorChangeTitle(title)) return true;
   if (/^Clinical Trial\s*-/i.test(title)) return true;
   if (/^Price Target\s*-/i.test(title)) return true;
   if (/^Analyst Rating\s*-/i.test(title)) return true;
@@ -357,8 +376,8 @@ function canonicalizeGroundRuleTitle(c: FeedCatalyst, title: string): string {
   if (/—\s*Bankruptcy Filing\s*—/i.test(title)) {
     return formatSec8kItemTitle("Bankruptcy / Receivership", subject);
   }
-  if (/—\s*Executive Change\s*—/i.test(title)) {
-    return formatSec8kItemTitle("Officer / Director Change", subject);
+  if (looksLikeOfficerDirectorChangeTitle(title)) {
+    return formatOfficerChangeForCatalyst(c, subject);
   }
 
   // 8-K `{label} - {company}` → narrative or Title Case label.
@@ -375,7 +394,9 @@ function canonicalizeGroundRuleTitle(c: FeedCatalyst, title: string): string {
       !looksLikeResultsOfOperationsTitle(split[1]) &&
       !/^Form 4 Insider\b/i.test(split[1])
     ) {
-      return formatSec8kItemTitle(split[1], split[2] || subject);
+      return formatSec8kItemTitle(split[1], split[2] || subject, {
+        content: officerChangeContent(c),
+      });
     }
   }
 
@@ -489,12 +510,16 @@ function sec8kDisplayTitle(c: FeedCatalyst): string | null {
     }) ?? c.items[0];
 
   if (primary?.label && !/^earnings\s*\/\s*results$/i.test(primary.label)) {
-    return formatSec8kItemTitle(primary.label, subject);
+    return formatSec8kItemTitle(primary.label, subject, {
+      content: officerChangeContent(c),
+    });
   }
 
   const headline = normalizeDisplayText(c.headline ?? "");
   if (headline && isSecCatalogHeadline(headline)) {
-    return formatSec8kItemTitle(headline, subject);
+    return formatSec8kItemTitle(headline, subject, {
+      content: officerChangeContent(c),
+    });
   }
 
   return null;
@@ -716,7 +741,9 @@ export function titleLine(
   if (headline && isGenericEventHeadline(headline)) {
     if (isSecCatalogHeadline(headline) && subject) {
       if (!/^earnings\s*\/\s*results$/i.test(headline)) {
-        return formatSec8kItemTitle(headline, subject);
+        return formatSec8kItemTitle(headline, subject, {
+          content: officerChangeContent(c),
+        });
       }
     }
     if (/shelf registration \(s-3\)/i.test(headline) && subject) {
@@ -784,7 +811,9 @@ export function titleLine(
   // Catalog label alone (after source strip) → ground-rule with company.
   if (cleaned && isSecCatalogHeadline(cleaned) && subject) {
     if (!/^earnings\s*\/\s*results$/i.test(cleaned)) {
-      return formatSec8kItemTitle(cleaned, subject);
+      return formatSec8kItemTitle(cleaned, subject, {
+        content: officerChangeContent(c),
+      });
     }
   }
 
@@ -795,7 +824,9 @@ export function titleLine(
     /(?:8-?K|Form\s*4|S-3|424B|425|SC\s*13).*filing$/i.test(cleaned)
   ) {
     if (c.items[0]?.label) {
-      return formatSec8kItemTitle(c.items[0].label, subject);
+      return formatSec8kItemTitle(c.items[0].label, subject, {
+        content: officerChangeContent(c),
+      });
     }
     const event =
       (c.items[0] &&
