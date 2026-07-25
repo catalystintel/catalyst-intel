@@ -357,12 +357,24 @@
     animation: ai-analysis-bullet 380ms cubic-bezier(0.22, 1, 0.36, 1) both;
   }
 
-  .ai-analysis-pulse {
-    animation: ai-analysis-pulse 1.4s ease-in-out infinite;
+  /* On-demand AI triage "computing" state: a terminal-style scanning
+     beam sweeps the panel while skeleton lines stand in for the bullets
+     that are about to resolve, echoing the shimmer skeleton language
+     used elsewhere instead of a generic spinner icon. */
+  .ai-scanline {
+    animation: ai-scanline 2.2s cubic-bezier(0.37, 0, 0.63, 1) infinite;
   }
 
-  .ai-analysis-spinner {
-    animation: ai-analysis-spin 0.85s linear infinite;
+  .ai-analyzing-dots span {
+    animation: ai-analyzing-dot 1.2s ease-in-out infinite;
+  }
+
+  .ai-analyzing-dots span:nth-child(2) {
+    animation-delay: 0.15s;
+  }
+
+  .ai-analyzing-dots span:nth-child(3) {
+    animation-delay: 0.3s;
   }
 }
 
@@ -486,19 +498,31 @@
   }
 }
 
-@keyframes ai-analysis-pulse {
-  0%,
-  100% {
-    opacity: 0.55;
+@keyframes ai-scanline {
+  0% {
+    transform: translateY(-120%);
+    opacity: 0;
   }
-  50% {
-    opacity: 0.85;
+  12% {
+    opacity: 1;
+  }
+  88% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(120%);
+    opacity: 0;
   }
 }
 
-@keyframes ai-analysis-spin {
-  to {
-    transform: rotate(360deg);
+@keyframes ai-analyzing-dot {
+  0%,
+  60%,
+  100% {
+    opacity: 0.25;
+  }
+  30% {
+    opacity: 1;
   }
 }
 
@@ -516,9 +540,17 @@
   .nav-pending-hint-active,
   .ai-analysis-reveal,
   .ai-analysis-reveal li,
-  .ai-analysis-pulse,
-  .ai-analysis-spinner {
+  .ai-scanline,
+  .ai-analyzing-dots span {
     animation: none !important;
     transition: none !important;
+  }
+
+  .ai-scanline {
+    display: none !important;
+  }
+
+  .ai-analyzing-dots span {
+    opacity: 1 !important;
   }
 }
