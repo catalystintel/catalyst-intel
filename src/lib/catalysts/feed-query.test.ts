@@ -68,6 +68,14 @@ describe("parseFeedQueryFromSearchParams", () => {
     });
     expect(filters.tickerOnly).toBe(false);
   });
+
+  it("accepts tickerOnly false via explicit param", () => {
+    const filters = parseFeedQueryFromSearchParams(
+      new URLSearchParams({ tickerOnly: "0" }),
+      { nowIso: "2026-07-24T20:00:00.000Z" },
+    );
+    expect(filters.tickerOnly).toBe(false);
+  });
 });
 
 describe("sectorSqlValues", () => {

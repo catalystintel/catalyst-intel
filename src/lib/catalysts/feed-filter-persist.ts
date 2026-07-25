@@ -28,7 +28,10 @@ export interface PersistedFeedFilters {
   formFilters: FeedFormFilter[];
   sourceFilters: string[];
   timeWindow: FeedTimeWindow;
-  /** When true, hide catalysts with no resolved ticker. */
+  /**
+   * When true, hide catalysts with no resolved ticker — except CPI / Jobs
+   * (NFP) macro rows (`tickerFeedGateSql`).
+   */
   tickerOnly: boolean;
   /** Epoch ms of last activity while these filters were in use. */
   lastActiveAt: number;
@@ -44,7 +47,7 @@ export const DEFAULT_FEED_FILTERS: FeedFilterState = {
   formFilters: [],
   sourceFilters: [],
   timeWindow: "all",
-  /** Desk default: tradable names only (no empty chart rows). */
+  /** Desk default: tradable names only (CPI / Jobs NFP still allowed). */
   tickerOnly: true,
 };
 

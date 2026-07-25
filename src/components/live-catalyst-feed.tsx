@@ -46,6 +46,7 @@ import {
 } from "@/lib/jobs/parse-8k-items";
 import { FEED_TIME_WINDOWS } from "@/lib/catalysts/feed-time-window";
 import { classifyFeedEmpty } from "@/lib/catalysts/feed-empty-state";
+import { passesTickerFeedGate } from "@/lib/catalysts/ticker-feed-gate";
 import {
   isFiltersDefault,
   isPanelFiltersDefault,
@@ -550,10 +551,11 @@ export function LiveCatalystFeed({
   const selectedRaw = selectedId
     ? (catalysts.find((c) => c.id === selectedId) ?? null)
     : null;
-  // Ticker-only mode: don't open the split panel for unresolved names.
+  // Ticker-only mode: don't open the split panel for unresolved names
+  // (CPI / Jobs NFP macro exceptions may still open without a symbol).
   const selected =
     selectedRaw &&
-    (!filterState.tickerOnly || Boolean(selectedRaw.ticker?.trim()))
+    (!filterState.tickerOnly || passesTickerFeedGate(selectedRaw))
       ? selectedRaw
       : null;
 
@@ -617,7 +619,7 @@ export function LiveCatalystFeed({
             onClick={() =>
               patchFilters({ tickerOnly: !filterState.tickerOnly })
             }
-            title="When on, hide catalysts with no resolved symbol (no chart / quote)"
+            title="When on, hide catalysts with no resolved symbol — except CPI and Jobs/NFP"
             aria-pressed={filterState.tickerOnly}
             className={cn(
               "inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-[0.82rem] font-medium transition-colors",

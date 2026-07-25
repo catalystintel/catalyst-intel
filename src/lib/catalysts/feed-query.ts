@@ -11,10 +11,8 @@ import {
   eq,
   gte,
   inArray,
-  isNotNull,
   like,
   lte,
-  ne,
   or,
   sql,
   type SQL,
@@ -42,6 +40,7 @@ import {
   sinceIsoForFeedTimeWindow,
   type FeedTimeWindow,
 } from "@/lib/catalysts/feed-time-window";
+import { tickerFeedGateSql } from "@/lib/catalysts/ticker-feed-gate";
 import {
   isEventCategoryKey,
   type EventCategoryKey,
@@ -67,7 +66,10 @@ export interface FeedQueryFilters {
   forms: FeedFormFilter[];
   sources: string[];
   timeWindow: FeedTimeWindow;
-  /** When true, exclude catalysts with null/blank ticker. */
+  /**
+   * When true, require a ticker/symbol — except CPI / Jobs (NFP) macro rows
+   * (see `tickerFeedGateSql`).
+   */
   tickerOnly: boolean;
   /** ISO lower bound; overrides window when set. */
   since: string | null;
@@ -319,7 +321,7 @@ export function buildFeedWhere(
   }
 
   if (filters.tickerOnly) {
-    parts.push(and(isNotNull(catalysts.ticker), ne(catalysts.ticker, ""))!);
+    parts.push(tickerFeedGateSql());
   }
 
   return parts.length === 1 ? parts[0] : and(...parts);
