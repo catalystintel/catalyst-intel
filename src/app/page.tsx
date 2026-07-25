@@ -22,31 +22,31 @@ const DEMO_ROWS: {
   {
     ticker: "NVDA",
     title: "Earnings Report Q3 - NVIDIA Corp",
-    time: "10:23 AM ET · Jul 25, 2026",
+    time: "10:23 AM · Jul 25, 2026",
     timeShort: "10:23 AM",
   },
   {
     ticker: "TSLA",
     title: "Item 8.01 — Other Events · guidance update",
-    time: "10:18 AM ET · Jul 25, 2026",
+    time: "10:18 AM · Jul 25, 2026",
     timeShort: "10:18 AM",
   },
   {
     ticker: "AMD",
     title: "Item 1.01 — Material definitive agreement",
-    time: "10:15 AM ET · Jul 25, 2026",
+    time: "10:15 AM · Jul 25, 2026",
     timeShort: "10:15 AM",
   },
   {
     ticker: "JPM",
     title: "Item 5.02 — Departure of directors or certain officers",
-    time: "10:12 AM ET · Jul 25, 2026",
+    time: "10:12 AM · Jul 25, 2026",
     timeShort: "10:12 AM",
   },
   {
     ticker: "MRK",
     title: "Item 8.01 — Other Events · FDA decision referenced",
-    time: "10:08 AM ET · Jul 25, 2026",
+    time: "10:08 AM · Jul 25, 2026",
     timeShort: "10:08 AM",
   },
 ];
@@ -174,7 +174,7 @@ export default async function Home() {
               <div
                 role="columnheader"
                 className="hidden text-right sm:block"
-                title="When the event occurred (ET)"
+                title="When the event occurred (your local time)"
               >
                 Time
               </div>

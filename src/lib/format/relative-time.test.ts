@@ -22,14 +22,27 @@ describe("formatRelativeAge", () => {
 });
 
 describe("formatTimeDate / formatEventTime", () => {
-  it("formats event occurrence in ET (not DB insert time)", () => {
+  it("formats event occurrence in the given local zone (not DB insert time)", () => {
     // 14:23 UTC on Jul 20 = 10:23 AM EDT
-    expect(formatTimeDate("2026-07-20T14:23:00.000Z")).toBe(
-      "10:23 AM ET · Jul 20, 2026",
-    );
-    expect(formatEventTime("2026-07-20T14:23:00.000Z")).toBe(
-      "10:23 AM ET · Jul 20, 2026",
-    );
+    expect(
+      formatTimeDate("2026-07-20T14:23:00.000Z", {
+        timeZone: "America/New_York",
+      }),
+    ).toBe("10:23 AM EDT · Jul 20, 2026");
+    expect(
+      formatEventTime("2026-07-20T14:23:00.000Z", {
+        timeZone: "America/New_York",
+      }),
+    ).toBe("10:23 AM EDT · Jul 20, 2026");
+  });
+
+  it("formats in Asia/Jerusalem when asked", () => {
+    // 21:31 UTC Jul 24 = 00:31 IDT Jul 25 (UTC+3 in July)
+    expect(
+      formatEventTime("2026-07-24T21:31:02.000Z", {
+        timeZone: "Asia/Jerusalem",
+      }),
+    ).toBe("12:31 AM GMT+3 · Jul 25, 2026");
   });
 
   it("returns em dash for invalid ISO", () => {
