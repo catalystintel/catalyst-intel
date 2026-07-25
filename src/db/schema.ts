@@ -313,3 +313,32 @@ export const nyseListings = sqliteTable("nyse_listings", {
     .notNull()
     .default(sql`(current_timestamp)`),
 });
+
+export const REPORT_WINDOW_VALUES = ["24h", "7d", "30d"] as const;
+export type ReportWindow = (typeof REPORT_WINDOW_VALUES)[number];
+
+export const REPORT_SCOPE_VALUES = ["watchlist", "all"] as const;
+export type ReportScope = (typeof REPORT_SCOPE_VALUES)[number];
+
+/**
+ * User-saved catalyst digest snapshots.
+ * `itemsJson` is a frozen serialization of `ReportSnapshotItem[]` so the
+ * shared link never drifts with the live tape.
+ */
+export const savedReports = sqliteTable("saved_reports", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: integer("user_id")
+    .notNull()
+    .references(() => users.id),
+  title: text("title").notNull(),
+  window: text("window", { enum: REPORT_WINDOW_VALUES }).notNull(),
+  scope: text("scope", { enum: REPORT_SCOPE_VALUES }).notNull(),
+  /** URL-safe token for public share links; unique per report. */
+  shareToken: text("share_token").notNull().unique(),
+  itemCount: integer("item_count").notNull().default(0),
+  /** Frozen JSON snapshot of ReportSnapshotItem[]. */
+  itemsJson: text("items_json", { mode: "json" }).notNull(),
+  createdAt: text("created_at")
+    .notNull()
+    .default(sql`(current_timestamp)`),
+});

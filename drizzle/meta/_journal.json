@@ -71,6 +71,13 @@
       "when": 1785000000009,
       "tag": "0009_rename_ticker_to_symbol",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "6",
+      "when": 1785000527929,
+      "tag": "0010_shallow_mole_man",
+      "breakpoints": true
     }
   ]
 }

@@ -6,10 +6,13 @@ describe("navKeyFromPathname", () => {
   it("maps desk routes to nav keys", () => {
     expect(navKeyFromPathname("/catalyst-feed")).toBe("live");
     expect(navKeyFromPathname("/catalyst-feed/catalyst/12")).toBe("live");
+    expect(navKeyFromPathname("/news-feed")).toBe("news");
     expect(navKeyFromPathname("/analytics")).toBe("analytics");
     expect(navKeyFromPathname("/admin")).toBe("admin");
     expect(navKeyFromPathname("/alerts")).toBe("alerts");
     expect(navKeyFromPathname("/watchlist")).toBe("watchlist");
+    expect(navKeyFromPathname("/reports")).toBe("reports");
+    expect(navKeyFromPathname("/reports/s/abc123")).toBe("reports");
     expect(navKeyFromPathname("/profile")).toBe("profile");
   });
 
