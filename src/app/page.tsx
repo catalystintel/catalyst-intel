@@ -1,5 +1,7 @@
+import type { ReactNode } from "react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { BookOpen, X } from "lucide-react";
 
 import { PreLoginChrome } from "@/components/pre-login-chrome";
 import { buttonVariants } from "@/components/ui/button";
@@ -7,66 +9,65 @@ import { cn } from "@/lib/utils";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 
+/** Matches live blotter: Symbol · Title · Time (+ Action). */
 const PREVIEW_GRID =
-  "grid-cols-1 sm:grid-cols-[minmax(0,1fr)_78px_72px_72px] lg:grid-cols-[minmax(0,1fr)_78px_80px_80px_80px]";
+  "grid-cols-[4.5rem_minmax(0,1fr)] sm:grid-cols-[5rem_minmax(0,1fr)_156px] lg:grid-cols-[5rem_minmax(0,1fr)_160px_minmax(200px,max-content)]";
 
 const DEMO_ROWS: {
   ticker: string;
-  event: string;
-  impact: "HIGH" | "MED" | "LOW";
   title: string;
   time: string;
+  timeShort: string;
 }[] = [
   {
     ticker: "NVDA",
-    event: "8-K",
-    impact: "HIGH",
     title: "Item 2.02 — Results of Operations and Financial Condition",
-    time: "10:23 AM",
+    time: "10:23 AM ET · Jul 25, 2026",
+    timeShort: "10:23 AM",
   },
   {
     ticker: "TSLA",
-    event: "8-K",
-    impact: "HIGH",
     title: "Item 8.01 — Other Events · guidance update",
-    time: "10:18 AM",
+    time: "10:18 AM ET · Jul 25, 2026",
+    timeShort: "10:18 AM",
   },
   {
     ticker: "AMD",
-    event: "8-K",
-    impact: "MED",
     title: "Item 1.01 — Material definitive agreement",
-    time: "10:15 AM",
+    time: "10:15 AM ET · Jul 25, 2026",
+    timeShort: "10:15 AM",
   },
   {
     ticker: "JPM",
-    event: "8-K",
-    impact: "LOW",
     title: "Item 5.02 — Departure of directors or certain officers",
-    time: "10:12 AM",
+    time: "10:12 AM ET · Jul 25, 2026",
+    timeShort: "10:12 AM",
   },
   {
     ticker: "MRK",
-    event: "8-K",
-    impact: "HIGH",
     title: "Item 8.01 — Other Events · FDA decision referenced",
-    time: "10:08 AM",
+    time: "10:08 AM ET · Jul 25, 2026",
+    timeShort: "10:08 AM",
   },
 ];
 
-function ImpactChip({ impact }: { impact: "HIGH" | "MED" | "LOW" }) {
+function PreviewActionChip({
+  children,
+  variant = "ghost",
+}: {
+  children: ReactNode;
+  variant?: "primary" | "ghost";
+}) {
   return (
     <span
       className={cn(
-        "inline-flex rounded-sm border px-1.5 py-0.5 font-mono text-[0.62rem] font-semibold tracking-wide",
-        impact === "HIGH"
-          ? "border-[rgba(240,193,75,0.45)] bg-[rgba(240,193,75,0.14)] text-[var(--desk-live)]"
-          : impact === "MED"
-            ? "border-[var(--desk-border-strong)] bg-[var(--desk-overlay-soft)] text-[var(--desk-text-secondary)]"
-            : "border-[var(--desk-border)] text-[var(--desk-text-muted)]",
+        "inline-flex items-center gap-1 rounded-sm px-2 py-0.5 font-mono text-[0.65rem] font-semibold tracking-wide uppercase",
+        variant === "primary"
+          ? "bg-[var(--desk-live)] text-[#121212]"
+          : "border border-[var(--desk-border-strong)] text-[var(--desk-text-muted)]",
       )}
     >
-      {impact}
+      {children}
     </span>
   );
 }
@@ -97,8 +98,8 @@ export default async function Home() {
             Catalyst Intel
           </h1>
           <p className="mt-4 max-w-lg text-base text-pretty text-[var(--desk-text-secondary)] sm:text-lg">
-            Material SEC filings on a black-and-white trading blotter — Title,
-            Time, Event. Open Read for a plain-language summary.
+            Material SEC filings on a black-and-white trading blotter — Symbol,
+            Title, Time. Open Read for a plain-language summary.
           </p>
           <div className="mt-8 flex flex-col items-start gap-3 sm:flex-row sm:flex-wrap sm:items-center">
             <Link
@@ -160,73 +161,84 @@ export default async function Home() {
             <div
               role="row"
               className={cn(
-                "grid h-10 items-center gap-3 border-b border-[var(--desk-border-strong)] bg-[var(--desk-header)] px-4 font-mono text-[0.62rem] font-medium tracking-[0.12em] text-[var(--desk-text-dim)] uppercase sm:gap-4 sm:px-5",
+                "grid h-10 items-center gap-2 border-b border-[var(--desk-border-strong)] bg-[var(--desk-header)] px-4 font-mono text-[0.62rem] font-medium tracking-[0.12em] text-[var(--desk-text-dim)] uppercase shadow-[0_1px_0_rgba(0,0,0,0.35)] sm:gap-3 sm:px-5",
                 PREVIEW_GRID,
               )}
             >
-              <div role="columnheader">Title</div>
-              <div role="columnheader" className="hidden text-right sm:block">
+              <div role="columnheader" className="min-w-0">
+                Symbol
+              </div>
+              <div role="columnheader" className="min-w-0">
+                Title
+              </div>
+              <div
+                role="columnheader"
+                className="hidden text-right sm:block"
+                title="When the event occurred (ET)"
+              >
                 Time
               </div>
-              <div role="columnheader" className="hidden sm:block">
-                Event
-              </div>
-              <div role="columnheader" className="hidden sm:block">
-                Ticker
-              </div>
-              <div role="columnheader" className="hidden sm:block">
-                Impact
+              <div role="columnheader" className="hidden text-right lg:block">
+                Action
               </div>
             </div>
 
             {DEMO_ROWS.map((row, index) => (
               <article
-                key={`${row.ticker}-${row.time}`}
+                key={`${row.ticker}-${row.timeShort}`}
                 role="row"
                 className={cn(
-                  "feed-row grid min-h-[56px] items-center gap-3 border-b border-[var(--desk-border)] px-4 py-3 sm:gap-4 sm:px-5 sm:py-0",
+                  "feed-row grid min-h-[56px] items-center gap-2 border-b border-[var(--desk-border)] px-4 py-3 sm:gap-3 sm:px-5 sm:py-0",
                   PREVIEW_GRID,
                 )}
-                style={{ animationDelay: `${index * 70}ms` }}
+                style={{
+                  animationDelay: index < 10 ? `${index * 16}ms` : "0ms",
+                }}
               >
+                <div role="cell" className="min-w-0">
+                  <span className="truncate font-mono text-[0.88rem] font-semibold tracking-tight text-[var(--desk-text)]">
+                    {row.ticker}
+                  </span>
+                </div>
+
                 <div role="cell" className="min-w-0">
                   <span className="line-clamp-2 text-[0.88rem] font-medium text-[var(--desk-text-secondary)] sm:line-clamp-1">
                     {row.title}
                   </span>
                   <div className="mt-1.5 flex flex-col gap-1 sm:hidden">
-                    <time className="font-mono text-[0.7rem] text-[var(--desk-text-muted)] tabular-nums">
-                      {row.time}
+                    <time className="font-mono text-[0.72rem] font-medium tracking-tight whitespace-nowrap text-[var(--desk-text-muted)] tabular-nums">
+                      {row.timeShort}
                     </time>
-                    <span className="font-mono text-[0.68rem] text-[var(--desk-text-dim)]">
-                      {row.event}
-                    </span>
-                    <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                      <span className="font-mono text-[0.75rem] font-semibold text-[var(--desk-text)]">
-                        {row.ticker}
-                      </span>
-                      <ImpactChip impact={row.impact} />
-                    </span>
+                  </div>
+                  <div className="mt-2 flex flex-wrap items-center gap-1.5 lg:hidden">
+                    <PreviewActionChip variant="primary">
+                      <BookOpen className="size-3" />
+                      Read
+                    </PreviewActionChip>
+                    <PreviewActionChip>
+                      <X className="size-3" />
+                      Dismiss
+                    </PreviewActionChip>
                   </div>
                 </div>
-                <div
-                  role="cell"
-                  className="hidden text-right font-mono text-[0.72rem] text-[var(--desk-text-dim)] tabular-nums sm:block"
-                >
-                  <time>{row.time}</time>
+
+                <div role="cell" className="hidden min-w-0 text-right sm:block">
+                  <time className="inline-block max-w-full font-mono text-[0.72rem] font-medium tracking-tight whitespace-nowrap text-[var(--desk-text-dim)] tabular-nums">
+                    {row.time}
+                  </time>
                 </div>
-                <div role="cell" className="hidden sm:block">
-                  <span className="rounded-sm border border-[var(--desk-border-strong)] bg-[var(--desk-overlay-soft)] px-1.5 py-0.5 font-mono text-[0.68rem] text-[var(--desk-text-secondary)]">
-                    {row.event}
-                  </span>
-                </div>
-                <div
-                  role="cell"
-                  className="hidden font-mono text-[0.88rem] font-semibold text-[var(--desk-text)] sm:block"
-                >
-                  {row.ticker}
-                </div>
-                <div role="cell" className="hidden sm:block">
-                  <ImpactChip impact={row.impact} />
+
+                <div role="cell" className="hidden min-w-0 justify-end lg:flex">
+                  <div className="flex w-full min-w-0 flex-nowrap items-center justify-end gap-1">
+                    <PreviewActionChip variant="primary">
+                      <BookOpen className="size-3" />
+                      Read
+                    </PreviewActionChip>
+                    <PreviewActionChip>
+                      <X className="size-3" />
+                      Dismiss
+                    </PreviewActionChip>
+                  </div>
                 </div>
               </article>
             ))}
