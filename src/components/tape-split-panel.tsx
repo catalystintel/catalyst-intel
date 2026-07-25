@@ -295,6 +295,19 @@ export function TapeSplitPanel({
             </div>
           </dl>
 
+          {catalyst.materialityReasons.length > 0 ? (
+            <div>
+              <p className="font-mono text-[0.65rem] tracking-[0.14em] text-[var(--desk-text-dim)] uppercase">
+                Why this score
+              </p>
+              <ul className="mt-2 list-disc space-y-1 pl-4 text-sm leading-snug text-[var(--desk-text-secondary)]">
+                {catalyst.materialityReasons.map((reason) => (
+                  <li key={reason}>{reason}</li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+
           <div>
             <p className="font-mono text-[0.65rem] tracking-[0.14em] text-[var(--desk-text-dim)] uppercase">
               Summary

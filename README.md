@@ -167,8 +167,8 @@ Vercel; production is `main`. Env vars for each environment (and CI/CD triggers)
 - **Data ingestion** can be triggered several ways, all calling
   `fetchAllCatalystSources()` via `/api/admin/fetch/all` (or the shared job modules):
   the `/admin` page button (allowlisted session), `npm run cron` (local, continuous),
-  **cron-job.org every 1 minute in production** (`x-cron-secret`), an optional GitHub Actions
-  workflow as backup, or a self-healing background trigger on `GET /api/catalysts` when data
+  **cron-job.org every 1 minute in production** (`x-cron-secret`), or a self-healing background
+  trigger on `GET /api/catalysts` when data
   looks stale (`src/lib/jobs/ingestion-freshness.ts`) — see [DEPLOYMENT.md](DEPLOYMENT.md) and
   [ARCHITECTURE.md](ARCHITECTURE.md).
 - **Per-vendor watermarks** (`vendor_fetch_state`): each source keeps its own `last_fetched_at`.

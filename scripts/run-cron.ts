@@ -4,8 +4,7 @@
  * sources on an interval so the dashboard always has fresh data.
  *
  * In production the same job is triggered by cron-job.org every 1 minute
- * hitting `/api/admin/fetch/all` (optional GHA backup) — see ARCHITECTURE.md
- * and DEPLOYMENT.md.
+ * hitting `/api/admin/fetch/all` — see ARCHITECTURE.md and DEPLOYMENT.md.
  */
 async function main() {
   try {

@@ -42,6 +42,7 @@ import {
   type EventCategoryKey,
 } from "@/lib/jobs/parse-8k-items";
 import { FEED_TIME_WINDOWS } from "@/lib/catalysts/feed-time-window";
+import { classifyFeedEmpty } from "@/lib/catalysts/feed-empty-state";
 import {
   isFiltersDefault,
   readPersistedFeedFilters,
@@ -49,6 +50,7 @@ import {
   writePersistedFeedFilters,
   type FeedFilterState,
 } from "@/lib/catalysts/feed-filter-persist";
+import { INGESTION_STALE_AFTER_MS } from "@/lib/jobs/ingestion-freshness";
 import {
   FEED_FORM_LABELS,
   type FeedFormFilter,
@@ -133,6 +135,7 @@ export function LiveCatalystFeed({
     loading,
     loadingMore,
     lastFetchedAt,
+    lastIngestedAt,
     pollError,
     filterState,
     setFilterState,
@@ -544,6 +547,22 @@ export function LiveCatalystFeed({
   const panelFiltersActive = !isFiltersDefault(filterState);
   const filtersActive = panelFiltersActive || quietMode;
 
+  const emptyKind = classifyFeedEmpty({
+    catalystCount: catalysts.length,
+    visibleCount: visible.length,
+    loading,
+    filtersDefault: isFiltersDefault(filterState),
+    quietMode,
+    timeWindow: filterState.timeWindow,
+  });
+
+  // Compare ingest lag to the last successful poll clock (pure; no Date.now).
+  const ingestStale =
+    lastFetchedAt != null &&
+    lastIngestedAt != null &&
+    new Date(lastFetchedAt).getTime() - new Date(lastIngestedAt).getTime() >
+      INGESTION_STALE_AFTER_MS;
+
   const lastUpdatedLabel = lastFetchedAt
     ? new Date(lastFetchedAt).toLocaleTimeString("en-US", {
         hour: "numeric",
@@ -655,6 +674,22 @@ export function LiveCatalystFeed({
         </p>
       ) : null}
 
+      {ingestStale && !pollError ? (
+        <p className="border-b border-amber-500/35 bg-amber-500/10 px-4 py-2 font-mono text-xs text-amber-200 sm:px-5">
+          Tape ingest looks stale
+          {lastIngestedAt
+            ? ` (last source fetch ${new Date(
+                lastIngestedAt,
+              ).toLocaleTimeString("en-US", {
+                hour: "numeric",
+                minute: "2-digit",
+              })})`
+            : ""}
+          . Cron or Admin fetch may be behind — event times below are still
+          honest.
+        </p>
+      ) : null}
+
       <div
         className={cn(
           "flex min-h-0 flex-1",
@@ -662,7 +697,7 @@ export function LiveCatalystFeed({
         )}
       >
         <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-          {catalysts.length === 0 && !loading ? (
+          {emptyKind === "db" ? (
             <div className="flex flex-1 flex-col items-center justify-center gap-2 px-6 py-16 text-center">
               <p className="text-sm font-medium text-[var(--desk-text)]">
                 No catalysts yet
@@ -673,13 +708,27 @@ export function LiveCatalystFeed({
                   : "Filings appear here once an admin runs the first ingestion job."}
               </p>
             </div>
-          ) : visible.length === 0 && !loading ? (
-            <div className="flex flex-1 items-center justify-center px-6 py-12 text-center">
+          ) : emptyKind !== "none" ? (
+            <div className="flex flex-1 flex-col items-center justify-center gap-3 px-6 py-12 text-center">
               <p className="font-mono text-sm text-[var(--desk-text-muted)]">
-                {quietMode
+                {emptyKind === "quiet"
                   ? "Quiet playbook: no watchlist/playbook matches right now."
-                  : "No rows match these filters."}
+                  : emptyKind === "time_window"
+                    ? "No catalysts in this time window (filters by event time, not when Admin inserted the row)."
+                    : "No rows match these filters."}
               </p>
+              {emptyKind === "time_window" || emptyKind === "filters" ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    clearFilters();
+                    setFiltersOpen(true);
+                  }}
+                  className="rounded-lg border border-[var(--desk-border-strong)] px-3 py-1.5 font-mono text-xs text-[var(--desk-text-secondary)] hover:bg-[var(--desk-overlay-strong)] hover:text-[var(--desk-text)]"
+                >
+                  Clear filters · show All
+                </button>
+              ) : null}
             </div>
           ) : (
             <CatalystFeedList
