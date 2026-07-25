@@ -353,7 +353,7 @@ Do these in order when you change UX.
 
 ### Feed
 
-4. Keep Title · Time · Symbol (+ Action); Earnings → Date · Name · Symbol · Period · EPS · Estimation
+4. Keep Symbol · Title · Time (+ Action); Earnings → Date · Name · Symbol · Period · EPS · Estimation
 5. Event time in ET with tabular nums
 6. Keep primary filters (All → Earnings → FDA → Clinical → IPO → Gov Reports) + Quiet toggle
 7. Soft-poll + Last updated + stale honesty

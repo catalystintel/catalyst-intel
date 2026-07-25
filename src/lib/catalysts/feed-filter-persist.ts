@@ -28,6 +28,8 @@ export interface PersistedFeedFilters {
   formFilters: FeedFormFilter[];
   sourceFilters: string[];
   timeWindow: FeedTimeWindow;
+  /** When true, hide catalysts with no resolved ticker. */
+  tickerOnly: boolean;
   /** Epoch ms of last activity while these filters were in use. */
   lastActiveAt: number;
 }
@@ -42,9 +44,15 @@ export const DEFAULT_FEED_FILTERS: FeedFilterState = {
   formFilters: [],
   sourceFilters: [],
   timeWindow: "all",
+  /** Desk default: tradable names only (no empty chart rows). */
+  tickerOnly: true,
 };
 
-export function isFiltersDefault(filters: FeedFilterState): boolean {
+/**
+ * True when search / time / facet gates match product defaults.
+ * Ignores `tickerOnly` — that is a separate header toggle, not a panel filter.
+ */
+export function isPanelFiltersDefault(filters: FeedFilterState): boolean {
   return (
     !filters.tickerQuery.trim() &&
     filters.categoryFilters.length === 0 &&
@@ -53,6 +61,11 @@ export function isFiltersDefault(filters: FeedFilterState): boolean {
     filters.sourceFilters.length === 0 &&
     filters.timeWindow === "all"
   );
+}
+
+/** Full product default (panel filters + ticker-only desk default). */
+export function isFiltersDefault(filters: FeedFilterState): boolean {
+  return isPanelFiltersDefault(filters) && filters.tickerOnly === true;
 }
 
 function parseStringArray(value: unknown): string[] {
@@ -111,6 +124,11 @@ export function readPersistedFeedFilters(
       isFeedTimeWindow(parsed.timeWindow)
         ? parsed.timeWindow
         : "all";
+    // Missing field (legacy v2) → product default (ticker only on).
+    const tickerOnly =
+      typeof parsed.tickerOnly === "boolean"
+        ? parsed.tickerOnly
+        : DEFAULT_FEED_FILTERS.tickerOnly;
 
     return {
       tickerQuery,
@@ -119,6 +137,7 @@ export function readPersistedFeedFilters(
       formFilters,
       sourceFilters,
       timeWindow,
+      tickerOnly,
     };
   } catch {
     return null;
@@ -142,6 +161,7 @@ export function writePersistedFeedFilters(
     formFilters: filters.formFilters,
     sourceFilters: filters.sourceFilters,
     timeWindow: filters.timeWindow,
+    tickerOnly: filters.tickerOnly,
     lastActiveAt: now,
   };
   window.localStorage.setItem(FEED_FILTER_STORAGE_KEY, JSON.stringify(payload));
@@ -181,6 +201,7 @@ export function feedApiQuery(
   if (filters.sourceFilters.length > 0) {
     params.set("sources", filters.sourceFilters.join(","));
   }
+  if (filters.tickerOnly) params.set("tickerOnly", "1");
   if (options?.cursor) params.set("cursor", options.cursor);
   if (typeof options?.limit === "number") {
     params.set("limit", String(options.limit));

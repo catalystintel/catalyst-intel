@@ -19,6 +19,7 @@ import { db } from "@/db/client";
 import { catalysts, rawSources, type AiLean } from "@/db/schema";
 import { extractArticleBody } from "@/lib/catalysts/article-content";
 import {
+  getLastOpenRouterFailure,
   isOpenRouterConfigured,
   openRouterChatCompletion,
 } from "@/lib/jobs/llm-provider";
@@ -255,11 +256,13 @@ export async function analyzeCatalystOnDemand(
   });
 
   if (!result) {
+    const detail = getLastOpenRouterFailure();
     return {
       ok: false,
       status: 502,
       error:
-        "AI analysis failed or hit a free-tier rate limit. Try again in a minute.",
+        detail ??
+        "AI analysis failed. The model may be unavailable or rate-limited — try again shortly.",
     };
   }
 

@@ -49,6 +49,25 @@ export interface FeedCatalyst {
   sector: string | null;
 }
 
+/** Newest event time first; tie-break by higher id. */
+export function compareFeedNewestFirst(
+  a: { timestamp: string; id: number },
+  b: { timestamp: string; id: number },
+): number {
+  const ta = Date.parse(a.timestamp);
+  const tb = Date.parse(b.timestamp);
+  const na = Number.isFinite(ta) ? ta : 0;
+  const nb = Number.isFinite(tb) ? tb : 0;
+  return nb - na || b.id - a.id;
+}
+
+/** Stable tape order: newest → oldest by `timestamp`. */
+export function sortFeedNewestFirst<
+  T extends { timestamp: string; id: number },
+>(rows: readonly T[]): T[] {
+  return [...rows].sort(compareFeedNewestFirst);
+}
+
 /** Shape shared by the DB row and the JSON API response before normalization. */
 export interface RawCatalystRow {
   id: number;

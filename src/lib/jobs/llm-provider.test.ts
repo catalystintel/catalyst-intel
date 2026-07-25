@@ -49,13 +49,13 @@ describe("getOpenRouterApiKeys", () => {
 });
 
 describe("getOpenRouterModel", () => {
-  it("defaults to Llama 3.3 70B free", () => {
+  it("defaults to a current OpenRouter free model", () => {
     delete process.env.OPENROUTER_MODEL;
-    expect(getOpenRouterModel()).toBe("meta-llama/llama-3.3-70b-instruct:free");
+    expect(getOpenRouterModel()).toBe("openai/gpt-oss-20b:free");
   });
 
   it("allows override", () => {
-    process.env.OPENROUTER_MODEL = "google/gemma-3-27b-it:free";
-    expect(getOpenRouterModel()).toBe("google/gemma-3-27b-it:free");
+    process.env.OPENROUTER_MODEL = "google/gemma-4-26b-a4b-it:free";
+    expect(getOpenRouterModel()).toBe("google/gemma-4-26b-a4b-it:free");
   });
 });

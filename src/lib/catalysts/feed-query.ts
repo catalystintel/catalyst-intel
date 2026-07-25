@@ -11,8 +11,10 @@ import {
   eq,
   gte,
   inArray,
+  isNotNull,
   like,
   lte,
+  ne,
   or,
   sql,
   type SQL,
@@ -65,6 +67,8 @@ export interface FeedQueryFilters {
   forms: FeedFormFilter[];
   sources: string[];
   timeWindow: FeedTimeWindow;
+  /** When true, exclude catalysts with null/blank ticker. */
+  tickerOnly: boolean;
   /** ISO lower bound; overrides window when set. */
   since: string | null;
   /** Upper bound (now) — excludes future-dated calendar rows. */
@@ -222,6 +226,12 @@ export function parseFeedQueryFromSearchParams(
     s.toLowerCase(),
   );
 
+  const tickerOnlyRaw = (params.get("tickerOnly") ?? "").trim().toLowerCase();
+  const tickerOnly =
+    tickerOnlyRaw === "1" ||
+    tickerOnlyRaw === "true" ||
+    tickerOnlyRaw === "yes";
+
   return {
     q: (params.get("q") ?? "").trim(),
     categories,
@@ -229,6 +239,7 @@ export function parseFeedQueryFromSearchParams(
     forms,
     sources,
     timeWindow,
+    tickerOnly,
     since,
     until: options?.nowIso ?? new Date().toISOString(),
   };
@@ -305,6 +316,10 @@ export function buildFeedWhere(
 
   if (options?.omit !== "sources" && filters.sources.length > 0) {
     parts.push(inArray(rawSources.provider, filters.sources));
+  }
+
+  if (filters.tickerOnly) {
+    parts.push(and(isNotNull(catalysts.ticker), ne(catalysts.ticker, ""))!);
   }
 
   return parts.length === 1 ? parts[0] : and(...parts);

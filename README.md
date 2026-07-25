@@ -102,7 +102,7 @@ If `NEXT_PUBLIC_POSTHOG_KEY` is missing, PostHog stays off and the app runs norm
 
 3. On Vercel, set the same var(s) for Preview + Production.
 
-Default model: `meta-llama/llama-3.3-70b-instruct:free`. Analysis runs only when a user
+Default model: `openai/gpt-oss-20b:free`. Analysis runs only when a user
 clicks **See AI analysis**; the result is stored on the catalyst and shared for everyone.
 
 **Quota tips (still free-tier friendly):** stack multiple OpenRouter accounts via

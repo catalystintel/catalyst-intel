@@ -128,24 +128,24 @@ Sources: Architecture §8, `Catalyst-Intel-JTBD-UX-UI.md`, `ENGINEER-UX-FEATURE-
 
 ### Product decision (Jul 2026 JTBD) — implement against this
 
-**Decision:** default blotter columns are **Title · Time · Symbol** (not Title · Time · Event · Ticker).  
-Keep the **Action** toolbar (Read · Act · Dismiss · Quiet). Full acceptance + provider gaps: [`ENGINEER-UX-FEATURE-ROADMAP-VISUAL.md`](./ENGINEER-UX-FEATURE-ROADMAP-VISUAL.md) §1A.
+**Decision:** default blotter columns are **Symbol · Title · Time** (Symbol first as row index; not Title · Time · Event · Ticker).  
+Keep the **Action** toolbar (Read · Dismiss · Quiet). Full acceptance + provider gaps: [`ENGINEER-UX-FEATURE-ROADMAP-VISUAL.md`](./ENGINEER-UX-FEATURE-ROADMAP-VISUAL.md) §1A.
 
 Live blotter columns on desktop (`live-catalyst-feed.tsx`):
 
 | Column     | Content                                            | Rules                                                                                                                              |
 | ---------- | -------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| **Symbol** | Ticker or `—`                                      | Leading index column. Mono, semibold. Clickable when present → drawer / split (§4C).                                               |
 | **Title**  | Headline preferred, else filing title              | Truncate on desktop; 2-line clamp on mobile. **No** source/provider under the title; strip provider prefixes (`stripSourceNames`). |
 | **Time**   | Event occurrence in **ET** (`catalysts.timestamp`) | Use `formatTimeDate` / `formatClockTime`. **Never** show DB insert time as event time. `tabular-nums`.                             |
-| **Symbol** | Ticker or `—`                                      | Mono, semibold. Clickable when present → drawer / split (§4C).                                                                     |
-| **Action** | Hover / focus toolbar                              | Read · Act · Dismiss · Quiet. Own column so buttons never overlap Time.                                                            |
+| **Action** | Hover / focus toolbar                              | Read · Dismiss · Quiet. Own column so buttons never overlap Time.                                                                  |
 
 **Removed from primary columns (decision):** Event chip column; Source column / source strip under title.  
 Event/category remain on **filter chips** and inside Read / drawer meta — not on the default blotter.
 
 Grid comment in code: Impact column is **intentionally hidden for now**. Do not re-add Impact/Sector/Proof/Event as primary columns unless product reopens that decision.
 
-Mobile stack under Title: **Time → Symbol**, then always-visible action buttons (no hover-only).
+Mobile: Symbol index col + Title; **Time** under Title; always-visible action buttons (no hover-only).
 
 ### Earnings filter — alternate column schema
 
@@ -200,7 +200,7 @@ Research / older shipped grammar also mentioned:
 - Earlier JTBD preview: `Ticker/Event · Sector · Impact · Title · Proof · Time`
 - Prior implementation guide: **Title · Time · Event · Ticker · Action**
 
-Those are **historical**. **Current product grammar is Title · Time · Symbol (+ Action)**; Earnings filter uses the alternate schema above. If you change columns again, update this guide, the [simple guide](./ENGINEER-UX-UI-GUIDE-SIMPLE.md), Visual §1A, and `Catalyst-Intel-JTBD-UX-UI.md` in the same PR.
+Those are **historical**. **Current product grammar is Symbol · Title · Time (+ Action)**; Earnings filter uses the alternate schema above. If you change columns again, update this guide, the [simple guide](./ENGINEER-UX-UI-GUIDE-SIMPLE.md), Visual §1A, and `Catalyst-Intel-JTBD-UX-UI.md` in the same PR.
 
 Sources: `live-catalyst-feed.tsx`, Visual roadmap §1A, `Catalyst-Intel-JTBD-UX-UI.md`, Client Target §7.1, Architecture §5.
 
@@ -255,7 +255,7 @@ Show item codes in Event / drawer / article meta when known. Do not bury them on
 
 ### FDA / Clinical / Form 4 / Macro
 
-- Same default blotter columns as SEC (**Title · Time · Symbol**) — do not invent a second UI grammar except the **Earnings** alternate schema (Visual §1A-B).
+- Same default blotter columns as SEC (**Symbol · Title · Time**) — do not invent a second UI grammar except the **Earnings** alternate schema (Visual §1A-B).
 - Always keep a **Proof / original source** path (article secondary CTA / drawer) — not as a dashboard Source column.
 - Macro schedule rows must show event time honesty (scheduled vs print).
 
@@ -426,15 +426,15 @@ Design-only reference: `Catalyst-Intel-JTBD-Visual-Preview-README.md` (charcoal 
 
 ## 10. Mobile vs desktop
 
-| Concern       | Desktop                          | Mobile                                                    |
-| ------------- | -------------------------------- | --------------------------------------------------------- |
-| Primary job   | Full blotter triage              | Alert path + readable article                             |
-| Feed columns  | Title · Time · Symbol (+ Action) | Mobile: Time → Symbol under Title; actions always visible |
-| Hover actions | OK                               | Never rely on hover                                       |
-| Article       | Full WIIM + bullets + body       | Same stack, narrower; CTAs thumb-friendly                 |
-| Alerts        | Configure rules                  | Receive + deep link to Read                               |
-| Nav           | Sidebar                          | Collapsed / sheet — keep Feed reachable in one tap        |
-| Viewport      | Dense rows                       | `viewportFit: cover`; avoid horizontal scroll on tape     |
+| Concern       | Desktop                          | Mobile                                                                 |
+| ------------- | -------------------------------- | ---------------------------------------------------------------------- |
+| Primary job   | Full blotter triage              | Alert path + readable article                                          |
+| Feed columns  | Symbol · Title · Time (+ Action) | Mobile: Symbol index + Title; Time under Title; actions always visible |
+| Hover actions | OK                               | Never rely on hover                                                    |
+| Article       | Full WIIM + bullets + body       | Same stack, narrower; CTAs thumb-friendly                              |
+| Alerts        | Configure rules                  | Receive + deep link to Read                                            |
+| Nav           | Sidebar                          | Collapsed / sheet — keep Feed reachable in one tap                     |
+| Viewport      | Dense rows                       | `viewportFit: cover`; avoid horizontal scroll on tape                  |
 
 Rules:
 
@@ -526,7 +526,7 @@ Work top to bottom. Check off in the PR description when relevant.
 
 ### B. Feed (`/dashboard`)
 
-- [ ] Preserve **Title · Time · Symbol** (+ Action); Earnings filter → Date · Name · Symbol · Period · EPS · Estimation (Visual §1A)
+- [ ] Preserve **Symbol · Title · Time** (+ Action); Earnings filter → Date · Name · Symbol · Period · EPS · Estimation (Visual §1A)
 - [ ] Time = event ET timestamp with `tabular-nums`; never DB insert time
 - [ ] Event labels from `eventLabel` / `CATEGORY_LABELS` — no duplicate maps
 - [ ] Soft-poll + Last updated + stale honesty
@@ -572,7 +572,7 @@ Work top to bottom. Check off in the PR description when relevant.
 
 ### H. Suggested next product tickets (if starting UI work tomorrow)
 
-1. Dashboard JTBD: Title · Time · Symbol + primary filter order + strip sources (Visual §1A)
+1. Dashboard JTBD: Symbol · Title · Time + primary filter order + strip sources (Visual §1A)
 2. Earnings alternate columns + Symbol click panel (chart / quote / correlated news)
 3. Harden WIIM + bullet summary quality on article view
 4. Surface “Why this score?” beside materiality in drawer + article

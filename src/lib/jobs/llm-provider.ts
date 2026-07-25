@@ -18,12 +18,22 @@ export type LlmChatResult = {
   keyIndex: number;
 };
 
-/** Default: Llama 3.3 70B instruct on OpenRouter's free pool — solid JSON. */
-const DEFAULT_OPENROUTER_MODEL = "meta-llama/llama-3.3-70b-instruct:free";
+/**
+ * Default free model — keep in sync with what OpenRouter still lists as
+ * `:free`. Older slugs (e.g. llama-3.3-70b-instruct:free) get retired and
+ * return 404 "unavailable for free".
+ */
+const DEFAULT_OPENROUTER_MODEL = "openai/gpt-oss-20b:free";
 
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
 
 let roundRobin = 0;
+let lastFailure: string | null = null;
+
+/** Last OpenRouter failure detail (for user-facing errors / ops). */
+export function getLastOpenRouterFailure(): string | null {
+  return lastFailure;
+}
 
 /** Parsed key pool (trim, drop empties). Exposed for tests. */
 export function getOpenRouterApiKeys(): string[] {
@@ -58,10 +68,17 @@ export async function openRouterChatCompletion(options: {
   timeoutMs?: number;
 }): Promise<LlmChatResult | null> {
   const keys = getOpenRouterApiKeys();
-  if (keys.length === 0) return null;
+  if (keys.length === 0) {
+    lastFailure = "OpenRouter is not configured.";
+    return null;
+  }
 
   const model = getOpenRouterModel();
   const start = roundRobin % keys.length;
+  lastFailure = null;
+  let sawRateLimit = false;
+  let lastStatus: number | null = null;
+  let lastMessage: string | null = null;
 
   for (let attempt = 0; attempt < keys.length; attempt++) {
     const keyIndex = (start + attempt) % keys.length;
@@ -92,10 +109,15 @@ export async function openRouterChatCompletion(options: {
         signal: AbortSignal.timeout(options.timeoutMs ?? 25_000),
       });
 
+      lastStatus = res.status;
+
       if (res.status === 429 || res.status === 402) {
+        sawRateLimit = true;
+        lastMessage = await readOpenRouterError(res);
         continue;
       }
       if (!res.ok) {
+        lastMessage = await readOpenRouterError(res);
         continue;
       }
 
@@ -104,22 +126,64 @@ export async function openRouterChatCompletion(options: {
         model?: string;
       };
       const content = payload.choices?.[0]?.message?.content?.trim();
-      if (!content) continue;
+      if (!content) {
+        lastMessage = "OpenRouter returned an empty completion.";
+        continue;
+      }
 
+      lastFailure = null;
       return {
         content,
         model: payload.model ?? model,
         keyIndex,
       };
-    } catch {
+    } catch (err) {
+      lastMessage =
+        err instanceof Error ? err.message : "OpenRouter request failed.";
       continue;
     }
+  }
+
+  if (lastMessage?.toLowerCase().includes("unavailable for free")) {
+    lastFailure = `Free model unavailable (${model}). Set OPENROUTER_MODEL to a current free slug (e.g. openai/gpt-oss-20b:free).`;
+  } else if (sawRateLimit) {
+    lastFailure =
+      "OpenRouter free-tier rate limit hit. Try again in a minute, or add more keys via OPENROUTER_API_KEYS.";
+  } else if (lastStatus === 401 || lastStatus === 403) {
+    lastFailure = "OpenRouter rejected the API key.";
+  } else if (lastMessage) {
+    lastFailure = lastMessage;
+  } else {
+    lastFailure = "OpenRouter request failed.";
   }
 
   return null;
 }
 
+async function readOpenRouterError(res: Response): Promise<string> {
+  try {
+    const body = (await res.json()) as {
+      error?: { message?: string } | string;
+    };
+    if (typeof body.error === "string" && body.error.trim()) {
+      return body.error.trim();
+    }
+    if (
+      body.error &&
+      typeof body.error === "object" &&
+      typeof body.error.message === "string" &&
+      body.error.message.trim()
+    ) {
+      return body.error.message.trim();
+    }
+  } catch {
+    // ignore JSON parse failures
+  }
+  return `OpenRouter HTTP ${res.status}`;
+}
+
 /** Test helper — reset round-robin cursor. */
 export function resetOpenRouterRoundRobin() {
   roundRobin = 0;
+  lastFailure = null;
 }
