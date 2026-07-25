@@ -94,7 +94,7 @@ export function CatalystArticleView({
   return (
     <article
       className={cn(
-        "feed-helvetica mx-auto flex w-full flex-1 flex-col gap-5",
+        "desk-arial mx-auto flex w-full flex-1 flex-col gap-5",
         variant === "page" ? "max-w-3xl pb-10" : "max-w-none pb-2",
       )}
     >
