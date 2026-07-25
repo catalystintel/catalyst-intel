@@ -94,7 +94,7 @@ Quality gate drops only `form4_routine` (confirmed paperwork), not unenriched `f
 | Item 3.01 delisting     | `Quantum-Si Inc: Delisting Risk (Stock Could Lose Its Listing)`    |
 | Item 5.02 management    | `Acme Corp: CEO Change (Departure)`                                |
 | 424B prospectus         | `Acme Corp: New Stock Offering Filed (Potential Dilution Ahead)`   |
-| Form 425                | `Acme Corp: Merger or Acquisition News (Deal in Play)`             |
+| Form 425                | `Acme Corp Announces Acquisition — Deal in Play`                   |
 | Item 1.05 cybersecurity | `CrowdStrike: Material Cybersecurity Incident`                     |
 | Form 4 code P           | `Tesla, Inc.: Form 4 Insider Buy`                                  |
 | Form 4 code S           | `Form 4 Insider Sell - Nvidia Corporation`                         |

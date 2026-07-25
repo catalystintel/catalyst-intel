@@ -325,6 +325,9 @@ function prefersStoredGroundRuleTitle(c: FeedCatalyst, title: string): boolean {
   if (/—\s*Structured note/i.test(title)) return true;
   if (/Structured note pricing supplement/i.test(title)) return true;
   if (/Merger or Acquisition News/i.test(title)) return true;
+  if (/\bAnnounces Acquisition\s*[—–-]\s*Deal in Play/i.test(title)) {
+    return true;
+  }
   if (
     /^Schedule 13[DG]\s*-/i.test(title) ||
     /:\s*Schedule 13[DG]$/i.test(title)
@@ -461,15 +464,24 @@ function canonicalizeGroundRuleTitle(c: FeedCatalyst, title: string): string {
     return formatAnalystRatingTitle(subject);
   }
 
-  // Narrative / legacy 424B + 425 → `{Company}: Event (tagline)`.
+  // Narrative / legacy 424B + 425 → current ground-rule titles.
   if (
     /New Stock Offering Filed/i.test(title) ||
     /^Prospectus \/ Offering \(424B\)\s*-/i.test(title)
   ) {
     return formatProspectusOfferingTitle(subject);
   }
-  if (/Merger or Acquisition News/i.test(title)) {
-    return format425MergerTitle(subject);
+  if (
+    /Merger or Acquisition News/i.test(title) ||
+    /\bAnnounces Acquisition\s*[—–-]\s*Deal in Play/i.test(title)
+  ) {
+    const company =
+      title.match(
+        /^(.+?)\s+Announces Acquisition\s*[—–-]\s*Deal in Play$/i,
+      )?.[1] ??
+      title.match(/^(.+?):\s*Merger or Acquisition News/i)?.[1] ??
+      subject;
+    return format425MergerTitle(company);
   }
 
   // Narrative 8-K company-first titles → recompute with current company.
@@ -693,7 +705,8 @@ function secOfferingOwnershipDisplayTitle(c: FeedCatalyst): string | null {
     form === "425" ||
     form.startsWith("425/") ||
     /merger \/ acquisition \(425\)/i.test(headline) ||
-    /Merger or Acquisition News/i.test(title);
+    /Merger or Acquisition News/i.test(title) ||
+    /\bAnnounces Acquisition\s*[—–-]\s*Deal in Play/i.test(title);
   if (is425) {
     return format425MergerTitle(subject);
   }

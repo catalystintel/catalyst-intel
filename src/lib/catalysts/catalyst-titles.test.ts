@@ -260,7 +260,7 @@ describe("offering / ownership / clinical / macro / analyst titles", () => {
       "Acme Corp: New Stock Offering Filed (Potential Dilution Ahead)",
     );
     expect(format425MergerTitle("Acme Corp")).toBe(
-      "Acme Corp: Merger or Acquisition News (Deal in Play)",
+      "Acme Corp Announces Acquisition — Deal in Play",
     );
     expect(formatSchedule13DTitle("Acme Corp")).toBe("Acme Corp: Schedule 13D");
     expect(formatSchedule13GTitle("Acme Corp")).toBe("Acme Corp: Schedule 13G");
