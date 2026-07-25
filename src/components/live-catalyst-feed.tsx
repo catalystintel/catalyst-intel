@@ -1222,9 +1222,12 @@ function CatalystFeedList({
                 dismissing && "row-dismiss pointer-events-none",
               )}
               style={{
+                // Cap stagger — long delays + fill-mode left lower rows faded.
                 animationDelay: dismissing
                   ? undefined
-                  : `${Math.min(index, 28) * 22}ms`,
+                  : index < 10
+                    ? `${index * 16}ms`
+                    : "0ms",
               }}
               aria-hidden={dismissing || undefined}
             >
