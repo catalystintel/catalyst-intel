@@ -29,8 +29,8 @@ describe("earningsToNormalized", () => {
       symbol: "AAPL",
       companyName: "Apple Inc.",
       type: "Earnings",
-      title: "Earnings Report Q1 - Apple Inc.",
-      headline: "Earnings Report Q1 - Apple Inc.",
+      title: "Apple Inc.: Earnings Report Q1",
+      headline: "Apple Inc.: Earnings Report Q1",
       eventCategory: "earnings",
       subcategory: "amc",
     });
@@ -42,7 +42,7 @@ describe("earningsToNormalized", () => {
       date: "2026-04-24",
       hour: "bmo",
     });
-    expect(item?.title).toBe("Earnings Report Q2 - MSFT");
+    expect(item?.title).toBe("MSFT: Earnings Report Q2");
     expect(item?.companyName).toBe("MSFT");
   });
 });
@@ -59,8 +59,8 @@ describe("fdaToNormalized", () => {
     });
     expect(item).toMatchObject({
       type: "FDA Approval",
-      title: "FDA Approval - Pfizer Inc",
-      headline: "FDA Approval - Pfizer Inc",
+      title: "Pfizer Inc: FDA Approval",
+      headline: "Pfizer Inc: FDA Approval",
       subcategory: "fda_approval",
     });
   });
