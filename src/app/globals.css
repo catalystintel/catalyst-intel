@@ -101,11 +101,11 @@
   --desk-text-dim: #6a6b70;
   --desk-accent: #3a3a3a;
   --desk-accent-fg: #17181a;
-  /* Warm amber-orange (matches dark LIVE chip hue) — readable on paper. */
-  --desk-live: #d48912;
-  --desk-warn-bg: rgba(232, 145, 30, 0.16);
-  --desk-warn-border: rgba(212, 130, 20, 0.45);
-  --desk-warn-text: #9a5200;
+  --desk-live: #9a6b00;
+  /* Stale-ingest banner only: warm orange, readable (not pale wash, not muddy brown). */
+  --desk-warn-bg: rgba(255, 170, 40, 0.2);
+  --desk-warn-border: rgba(230, 140, 20, 0.5);
+  --desk-warn-text: #b86a00;
   --desk-nav-active: rgba(0, 0, 0, 0.05);
   --desk-overlay-soft: rgba(0, 0, 0, 0.035);
   --desk-overlay-strong: rgba(0, 0, 0, 0.07);
@@ -164,8 +164,9 @@
   --desk-accent: #cfcfcf;
   --desk-accent-fg: #e8e8e8;
   --desk-live: #f0c14b;
-  --desk-warn-bg: rgba(240, 170, 50, 0.16);
-  --desk-warn-border: rgba(240, 193, 75, 0.5);
+  /* Stale-ingest banner: keep LIVE gold, slightly stronger than body muted. */
+  --desk-warn-bg: rgba(240, 193, 75, 0.14);
+  --desk-warn-border: rgba(240, 193, 75, 0.4);
   --desk-warn-text: #f0c14b;
   --desk-nav-active: rgba(255, 255, 255, 0.07);
   --desk-overlay-soft: rgba(255, 255, 255, 0.05);
