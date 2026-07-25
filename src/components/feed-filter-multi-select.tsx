@@ -7,6 +7,7 @@ import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
@@ -93,34 +94,36 @@ export function FeedFilterMultiSelect({
             aria-label={`Search ${label}`}
           />
         </div>
-        <DropdownMenuLabel className="font-mono text-[0.65rem] tracking-wide text-[var(--desk-text-dim)] uppercase">
-          {label}
-        </DropdownMenuLabel>
-        <div className="max-h-56 overflow-y-auto py-1">
-          {filtered.length === 0 ? (
-            <p className="px-2 py-3 font-mono text-[0.7rem] text-[var(--desk-text-dim)]">
-              No matches
-            </p>
-          ) : (
-            filtered.map((opt) => (
-              <DropdownMenuCheckboxItem
-                key={opt.value}
-                checked={selectedSet.has(opt.value)}
-                onCheckedChange={() => toggle(opt.value)}
-                className="font-mono text-[0.72rem] text-[var(--desk-text-secondary)]"
-              >
-                <span className="flex min-w-0 flex-1 items-center justify-between gap-2 pr-4">
-                  <span className="truncate">{opt.label}</span>
-                  {typeof opt.count === "number" ? (
-                    <span className="shrink-0 tabular-nums opacity-60">
-                      {opt.count}
-                    </span>
-                  ) : null}
-                </span>
-              </DropdownMenuCheckboxItem>
-            ))
-          )}
-        </div>
+        <DropdownMenuGroup>
+          <DropdownMenuLabel className="font-mono text-[0.65rem] tracking-wide text-[var(--desk-text-dim)] uppercase">
+            {label}
+          </DropdownMenuLabel>
+          <div className="max-h-56 overflow-y-auto py-1">
+            {filtered.length === 0 ? (
+              <p className="px-2 py-3 font-mono text-[0.7rem] text-[var(--desk-text-dim)]">
+                No matches
+              </p>
+            ) : (
+              filtered.map((opt) => (
+                <DropdownMenuCheckboxItem
+                  key={opt.value}
+                  checked={selectedSet.has(opt.value)}
+                  onCheckedChange={() => toggle(opt.value)}
+                  className="font-mono text-[0.72rem] text-[var(--desk-text-secondary)]"
+                >
+                  <span className="flex min-w-0 flex-1 items-center justify-between gap-2 pr-4">
+                    <span className="truncate">{opt.label}</span>
+                    {typeof opt.count === "number" ? (
+                      <span className="shrink-0 tabular-nums opacity-60">
+                        {opt.count}
+                      </span>
+                    ) : null}
+                  </span>
+                </DropdownMenuCheckboxItem>
+              ))
+            )}
+          </div>
+        </DropdownMenuGroup>
         {selected.length > 0 ? (
           <>
             <DropdownMenuSeparator className="bg-[var(--desk-border)]" />
