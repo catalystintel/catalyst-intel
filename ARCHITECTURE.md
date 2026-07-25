@@ -23,7 +23,7 @@ flowchart LR
         Job["fetchAllCatalystSources()\nphased A→B→C"]
         CatalystsAPI["/api/catalysts\n(rate-limited)"]
         Proxy["src/proxy.ts\n(session refresh + redirects)"]
-        Dashboard["/dashboard, /admin, /profile\n(pages)"]
+        Dashboard["/catalyst-feed, /admin, /profile\n(pages)"]
     end
 
     Vendors["SEC · Nasdaq · Finnhub\nPolygon · openFDA · …"]

@@ -26,7 +26,7 @@ import { formatMarketCapMillions } from "@/lib/catalysts/enrich-article-format";
 import { isLocalDevUi, LOCAL_DEV_ONLY_LABEL } from "@/lib/dev/local-dev-ui";
 import { formatRelativeAge, formatTimeDate } from "@/lib/format/relative-time";
 import { CATEGORY_LABELS } from "@/lib/jobs/parse-8k-items";
-import { dashboardHref } from "@/lib/nav/dashboard-href";
+import { feedHref } from "@/lib/nav/feed-href";
 import { cn } from "@/lib/utils";
 
 export interface CatalystArticleViewProps {
@@ -85,14 +85,14 @@ export function CatalystArticleView({
   return (
     <article
       className={cn(
-        "mx-auto flex w-full flex-1 flex-col gap-5",
+        "feed-helvetica mx-auto flex w-full flex-1 flex-col gap-5",
         variant === "page" ? "max-w-3xl pb-10" : "max-w-none pb-2",
       )}
     >
       {variant === "page" ? (
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--desk-border)] pb-3">
           <Link
-            href={dashboardHref({ catalystId: catalyst.id })}
+            href={feedHref({ catalystId: catalyst.id })}
             className="inline-flex items-center gap-1.5 font-mono text-[0.72rem] tracking-wide text-[var(--desk-text-muted)] uppercase transition-colors hover:text-[var(--desk-text)]"
           >
             <ArrowLeft className="size-3.5" />
@@ -449,7 +449,7 @@ export function CatalystArticleView({
                 >
                   {item.catalystId != null ? (
                     <Link
-                      href={`/dashboard/catalyst/${item.catalystId}`}
+                      href={`/catalyst-feed/catalyst/${item.catalystId}`}
                       className="flex flex-col transition-colors hover:opacity-90"
                     >
                       {inner}

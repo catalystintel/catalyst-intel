@@ -2,7 +2,7 @@
  * Live-tape deep links. `c` re-opens the split panel on that catalyst after
  * navigating away (e.g. full article → back to feed).
  */
-export function dashboardHref(opts?: {
+export function feedHref(opts?: {
   catalystId?: number | null;
   ticker?: string | null;
 }): string {
@@ -13,10 +13,10 @@ export function dashboardHref(opts?: {
     params.set("c", String(opts.catalystId));
   }
   const qs = params.toString();
-  return qs ? `/dashboard?${qs}` : "/dashboard";
+  return qs ? `/catalyst-feed?${qs}` : "/catalyst-feed";
 }
 
-export function parseDashboardCatalystId(
+export function parseFeedCatalystId(
   raw: string | string[] | undefined,
 ): number | undefined {
   const value = Array.isArray(raw) ? raw[0] : raw;

@@ -104,7 +104,7 @@ export function CatalystDetailDrawer({
 
               <div className="flex flex-wrap gap-2">
                 <Link
-                  href={`/dashboard/catalyst/${catalyst.id}`}
+                  href={`/catalyst-feed/catalyst/${catalyst.id}`}
                   onClick={onClose}
                   className="inline-flex items-center gap-1.5 rounded-sm bg-[var(--desk-live)] px-3 py-1.5 font-mono text-xs font-semibold tracking-wide text-[#121212] uppercase hover:brightness-110"
                 >
