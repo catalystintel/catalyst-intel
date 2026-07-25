@@ -56,6 +56,12 @@ describe("deriveTakeaways", () => {
     expect(bullets[0]).toContain("Alpha beat EPS");
     expect(bullets[2]).toContain("Guidance was raised");
   });
+
+  it("skips AccNo / Size metadata blobs", () => {
+    expect(
+      deriveTakeaways("<b>AccNo: 0000950103-26-011123</b> Size: 245 KB"),
+    ).toEqual([]);
+  });
 });
 
 describe("extractRelatedSymbols", () => {

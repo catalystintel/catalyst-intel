@@ -7,6 +7,7 @@ import { catalysts, companies, rawSources } from "@/db/schema";
 import { getCurrentAppUser } from "@/lib/auth/current-user";
 import {
   extractArticleBody,
+  extractFilingProofMeta,
   resolveArticleSummary,
 } from "@/lib/catalysts/article-content";
 import {
@@ -30,7 +31,7 @@ interface RouteContext {
 }
 
 /**
- * Authenticated single-catalyst payload for the in-app article view.
+ * Authenticated single-catalyst payload for the in-app details view.
  * Includes derived summary + body text from stored raw_content.
  */
 export async function GET(request: NextRequest, context: RouteContext) {
@@ -192,6 +193,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
     sourceUrl: row.sourceUrl,
     sourceProvider: row.sourceProvider,
     sector: row.sector,
+    rawContent: row.rawContent,
   };
 
   return withRateLimitHeaders(
@@ -204,6 +206,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
         bodySource,
         detailCards,
         enrichment,
+        filingProofMeta: extractFilingProofMeta(row.rawContent),
       },
     }),
     limitResult,

@@ -3,7 +3,6 @@ import { clusterRecentCatalysts } from "@/lib/jobs/cluster-events";
 import { purgeStaleCatalysts } from "@/lib/jobs/data-retention";
 import { fetchClinicalTrials } from "@/lib/jobs/fetch-clinicaltrials";
 import { fetchFinnhubCatalysts } from "@/lib/jobs/fetch-finnhub-catalysts";
-import { fetchForm4Api } from "@/lib/jobs/fetch-form4api";
 import { listLaterSourceStubs } from "@/lib/jobs/fetch-later-stubs";
 import { fetchMacroCalendar } from "@/lib/jobs/fetch-macro-calendar";
 import { fetchNasdaqHalts } from "@/lib/jobs/fetch-nasdaq-halts";
@@ -115,7 +114,8 @@ async function runSourceInner(
         // Defer retention to fetchAllCatalystSources so parallel keyless
         // inserts (openFDA, etc.) are not wiped mid-orchestrator run.
         const result = await fetchSecEdgar({ mode: "primary", purge: false });
-        return toSourceResult("sec-edgar", result);
+        const base = toSourceResult("sec-edgar", result);
+        return result.message ? { ...base, message: result.message } : base;
       } catch (error) {
         return {
           source: "sec-edgar",
@@ -146,8 +146,6 @@ async function runSourceInner(
       return fetchOpenFda();
     case "clinicaltrials":
       return fetchClinicalTrials();
-    case "form4api":
-      return fetchForm4Api();
     default: {
       const _exhaustive: never = id;
       return {

@@ -1,7 +1,7 @@
 import { Skeleton, SkeletonCard } from "@/components/loading-skeleton";
 
 /**
- * Content-only fallback while an article streams in.
+ * Content-only fallback while event details stream in.
  * The shared `(desk)` layout keeps the real AppShell chrome mounted.
  */
 export default function CatalystArticleLoading() {

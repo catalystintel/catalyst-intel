@@ -361,6 +361,7 @@ export const feedSelectFields = {
   sourceUrl: rawSources.url,
   sourceProvider: rawSources.provider,
   sector: companies.sector,
+  rawContent: rawSources.rawContent,
 } as const;
 
 export async function queryFeedPage(

@@ -63,7 +63,7 @@ describe("deriveIngestionRunStatus", () => {
         [
           source({ source: "sec-edgar", status: "error", errors: 1 }),
           source({
-            source: "form4api",
+            source: "finnhub",
             configured: false,
             status: "skipped",
             message: "no key",
@@ -94,7 +94,7 @@ describe("toSourceSnapshots", () => {
     expect(
       toSourceSnapshots([
         source({
-          source: "form4api",
+          source: "finnhub",
           configured: false,
           status: "skipped",
           message: "no key",

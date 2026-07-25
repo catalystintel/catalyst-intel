@@ -1,6 +1,6 @@
 /**
  * Ground-rule title formatters for API-ingested catalyst subjects.
- * Keep formats stable for tape + Read (see FEED-TITLE-GUIDELINES.md).
+ * Keep formats stable for tape + Details (see FEED-TITLE-GUIDELINES.md).
  */
 
 import { haltReasonLabel } from "@/lib/catalysts/halt-reason-codes";
