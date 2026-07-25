@@ -21,6 +21,22 @@ const nextConfig: NextConfig = {
       },
     ];
   },
+  async redirects() {
+    return [
+      // `/dashboard` was renamed to `/catalyst-feed` to match the sidebar
+      // label. Keep old bookmarks / external links working indefinitely.
+      {
+        source: "/dashboard",
+        destination: "/catalyst-feed",
+        permanent: true,
+      },
+      {
+        source: "/dashboard/:path*",
+        destination: "/catalyst-feed/:path*",
+        permanent: true,
+      },
+    ];
+  },
   async rewrites() {
     return [
       {

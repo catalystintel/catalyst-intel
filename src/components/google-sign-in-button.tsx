@@ -34,7 +34,7 @@ function GoogleIcon() {
  * than a Server Action + redirect(). Falls back to /auth/login if JS fails.
  */
 export function GoogleSignInButton({
-  next = "/dashboard",
+  next = "/catalyst-feed",
   configured,
 }: {
   next?: string;

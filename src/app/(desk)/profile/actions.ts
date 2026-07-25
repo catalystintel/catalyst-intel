@@ -56,7 +56,7 @@ export async function updateDisplayName(
     .run();
 
   revalidatePath("/profile");
-  revalidatePath("/dashboard");
+  revalidatePath("/catalyst-feed");
 
   return {
     status: "success",

@@ -42,7 +42,7 @@ const PRIMARY_NAV: NavItem[] = [
     key: "live",
     label: "Catalyst Feed",
     icon: LayoutDashboard,
-    href: "/dashboard",
+    href: "/catalyst-feed",
   },
   {
     key: "news",
@@ -91,7 +91,7 @@ export function getPrimaryNav(isAdmin: boolean): NavItem[] {
 /** Resolve active nav key from the current URL (shared desk layout). */
 export function navKeyFromPathname(pathname: string | null): NavKey {
   if (!pathname) return "live";
-  if (pathname.startsWith("/dashboard")) return "live";
+  if (pathname.startsWith("/catalyst-feed")) return "live";
   if (pathname.startsWith("/analytics")) return "analytics";
   if (pathname.startsWith("/admin")) return "admin";
   if (pathname.startsWith("/alerts")) return "alerts";

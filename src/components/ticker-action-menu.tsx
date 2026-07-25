@@ -110,7 +110,7 @@ export function TickerActionMenu({
           className="font-mono text-[0.72rem]"
           onClick={() => {
             if (onOpenArticle) onOpenArticle();
-            else router.push(`/dashboard/catalyst/${catalystId}`);
+            else router.push(`/catalyst-feed/catalyst/${catalystId}`);
           }}
         >
           <BookOpen className="size-3.5" />

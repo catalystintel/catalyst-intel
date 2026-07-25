@@ -30,11 +30,11 @@ describe("getRequestOrigin", () => {
 
 describe("safeNextPath", () => {
   it("allows relative app paths", () => {
-    expect(safeNextPath("/dashboard")).toBe("/dashboard");
+    expect(safeNextPath("/catalyst-feed")).toBe("/catalyst-feed");
   });
 
   it("rejects open redirects", () => {
-    expect(safeNextPath("https://evil.example")).toBe("/dashboard");
-    expect(safeNextPath("//evil.example")).toBe("/dashboard");
+    expect(safeNextPath("https://evil.example")).toBe("/catalyst-feed");
+    expect(safeNextPath("//evil.example")).toBe("/catalyst-feed");
   });
 });

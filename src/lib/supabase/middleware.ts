@@ -6,7 +6,7 @@ import { supabaseCookieOptions } from "@/lib/supabase/cookie-options";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 
 const PROTECTED_PREFIXES = [
-  "/dashboard",
+  "/catalyst-feed",
   "/admin",
   "/profile",
   "/watchlist",

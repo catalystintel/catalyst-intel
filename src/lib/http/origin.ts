@@ -25,7 +25,7 @@ export function getRequestOrigin(headerList: Headers): string {
 /** Only allow same-app relative paths for post-login redirects. */
 export function safeNextPath(
   next: string | null | undefined,
-  fallback = "/dashboard",
+  fallback = "/catalyst-feed",
 ): string {
   if (!next || !next.startsWith("/") || next.startsWith("//")) {
     return fallback;
