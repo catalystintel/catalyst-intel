@@ -12,7 +12,8 @@ Tape titles should answer **what happened** and **to whom** in one glance:
 
 `{Company Name}: {Event phrase}`  
 or for halts: `Halts ({Company Name}): {reason}`  
-or for FDA approvals: `{Company Name} Receives FDA Approval!`
+or for FDA approvals: `{Company Name} Receives FDA Approval!`  
+or for acquisition announcements: `{Company Name} Announces Acquisition — Deal in Play`
 
 Prefer stored ground-rule titles from ingest (`title` / mirrored `headline`) over taxonomy chips (“8-K filing”, “Price target (Street)”).
 
@@ -20,6 +21,8 @@ Prefer stored ground-rule titles from ingest (`title` / mirrored `headline`) ove
 
 - Good: `Acme Corp: Delisting Risk (Stock Could Lose Its Listing)`
 - Bad: `Acme Corp — Delisting Risk — Stock Could Lose Its Listing`
+
+Exceptions (no colon; fixed product copy): FDA (`Receives FDA Approval!`) and Acquisition Announcement (`Announces Acquisition — Deal in Play`).
 
 Macro titles with no issuer keep an em dash for the period only: `CPI — {Month Year}`, `Jobs Report (NFP) — {Month Year}`.
 
@@ -49,7 +52,7 @@ Macro titles with no issuer keep an em dash for the period only: `CPI — {Month
 | 8-K Non-catalyst only (7.01 / 8.01 / 9.01 / routine) | Suppressed by quality gate (not on tape)                                                                |
 | S-3                                                  | `{Company Name}: Shelf Registration (S-3)`                                                              |
 | 424B                                                 | `{Company Name}: New Stock Offering Filed (Potential Dilution Ahead)`                                   |
-| 425                                                  | `{Company Name}: Merger or Acquisition News (Deal in Play)`                                             |
+| Acquisition Announcement (425)                       | `{Company Name} Announces Acquisition — Deal in Play`                                                   |
 | 13D                                                  | `{Company Name}: Schedule 13D`                                                                          |
 | 13G                                                  | `{Company Name}: Schedule 13G`                                                                          |
 | Clinical trials                                      | `{Company Name}: Clinical Trial` (status / study name in Event chip + summary)                          |
@@ -75,7 +78,7 @@ Implemented in `src/lib/catalysts/catalyst-titles.ts`:
 | `{Company}: Form 4 Insider Buy/Sell/…`    | `formatForm4InsiderTitle`          |
 | `{Company}: Shelf Registration (S-3)`     | `formatShelfRegistrationTitle`     |
 | 424B dilution narrative                   | `formatProspectusOfferingTitle`    |
-| 425 M&A narrative                         | `format425MergerTitle`             |
+| Acquisition Announcement (425)            | `format425MergerTitle`             |
 | `{Company}: Schedule 13D/G`               | `formatSchedule13DTitle` / `13G`   |
 | `{Company}: Clinical Trial`               | `formatClinicalTrialTitle`         |
 | `CPI — {Month Year}`                      | `formatCpiTitle`                   |
