@@ -5,7 +5,10 @@ import {
   earningsQuarterLabel,
   formatEarningsReportTitle,
   formatFdaApprovalTitle,
+  formatForm4InsiderTitle,
   formatHaltTitle,
+  formatSec8kItemTitle,
+  form4TitleKindFromSubcategory,
   looksLikeResultsOfOperationsTitle,
   resolveDisplayCompanyName,
 } from "./catalyst-titles";
@@ -142,5 +145,30 @@ describe("earningsQuarterLabel + formatEarningsReportTitle", () => {
       ),
     ).toBe(true);
     expect(looksLikeResultsOfOperationsTitle("Guidance update")).toBe(false);
+  });
+});
+
+describe("formatSec8kItemTitle / formatForm4InsiderTitle", () => {
+  it("builds 8-K item titles", () => {
+    expect(formatSec8kItemTitle("Material agreement", "PEDEVCO CORP")).toBe(
+      "Material agreement - PEDEVCO CORP",
+    );
+    expect(formatSec8kItemTitle(null, null)).toBe(
+      "8-K Event - Unknown company",
+    );
+  });
+
+  it("builds Form 4 buy/sell/mixed titles", () => {
+    expect(formatForm4InsiderTitle("buy", "Tesla, Inc.")).toBe(
+      "Form 4 Insider Buy - Tesla, Inc.",
+    );
+    expect(formatForm4InsiderTitle("sell", "Nvidia Corporation")).toBe(
+      "Form 4 Insider Sell - Nvidia Corporation",
+    );
+    expect(formatForm4InsiderTitle("mixed", "Acme Corp")).toBe(
+      "Form 4 Insider Buy & Sell - Acme Corp",
+    );
+    expect(form4TitleKindFromSubcategory("insider_buy")).toBe("buy");
+    expect(form4TitleKindFromSubcategory("form4_mixed")).toBe("mixed");
   });
 });

@@ -90,6 +90,31 @@ describe("evaluateCatalystQuality", () => {
     ).toBe("drop");
   });
 
+  it("drops routine-only 8-K (mine safety / ethics / votes)", () => {
+    expect(
+      evaluateCatalystQuality({
+        provider: "sec-edgar",
+        eventCategory: "other",
+        ticker: "ACME",
+        itemCodes: [
+          { code: "1.04", label: "Mine safety", category: "other" },
+          { code: "9.01", label: "Exhibits", category: "other" },
+        ],
+      }).decision,
+    ).toBe("drop");
+
+    expect(
+      evaluateCatalystQuality({
+        provider: "sec-edgar",
+        eventCategory: "governance",
+        ticker: "ACME",
+        itemCodes: [
+          { code: "5.07", label: "Shareholder vote", category: "governance" },
+        ],
+      }).decision,
+    ).toBe("drop");
+  });
+
   it("keeps 8-K with a gold item even if exhibits tag along", () => {
     expect(
       evaluateCatalystQuality({
@@ -100,6 +125,28 @@ describe("evaluateCatalystQuality", () => {
           { code: "2.02", label: "Earnings", category: "earnings" },
           { code: "9.01", label: "Exhibits", category: "other" },
         ],
+      }).decision,
+    ).toBe("keep");
+  });
+
+  it("drops Form 4 routine ownership paperwork", () => {
+    expect(
+      evaluateCatalystQuality({
+        provider: "sec-edgar",
+        eventCategory: "insider",
+        subcategory: "form4_routine",
+        ticker: "AAPL",
+      }).decision,
+    ).toBe("drop");
+  });
+
+  it("keeps Form 4 open-market buy", () => {
+    expect(
+      evaluateCatalystQuality({
+        provider: "sec-edgar",
+        eventCategory: "insider",
+        subcategory: "insider_buy",
+        ticker: "AAPL",
       }).decision,
     ).toBe("keep");
   });
