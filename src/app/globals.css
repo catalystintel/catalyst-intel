@@ -262,6 +262,11 @@
     font-family: Helvetica, "Helvetica Neue", Arial, sans-serif;
   }
 
+  /* Blotter primary title lines — bold for scanability. */
+  .feed-helvetica .feed-article-title {
+    font-weight: 700;
+  }
+
   .desk-grid {
     background-color: var(--background);
     background-image:
