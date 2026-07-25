@@ -11,6 +11,7 @@ import {
   type GicsSectorKey,
 } from "@/lib/companies/gics-sectors";
 import { isEventCategoryKey } from "@/lib/catalysts/taxonomy";
+import { isLocalDevUi } from "@/lib/dev/local-dev-ui";
 import type { EventCategoryKey } from "@/lib/jobs/parse-8k-items";
 
 /**
@@ -196,7 +197,8 @@ export function feedApiQuery(
   if (filters.formFilters.length > 0) {
     params.set("forms", filters.formFilters.join(","));
   }
-  if (filters.sourceFilters.length > 0) {
+  // Source facet is local-dev only. Never send in deploy builds.
+  if (isLocalDevUi() && filters.sourceFilters.length > 0) {
     params.set("sources", filters.sourceFilters.join(","));
   }
   // Always request the ticker gate (server also enforces unconditionally).

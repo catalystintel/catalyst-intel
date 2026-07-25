@@ -1,7 +1,11 @@
 import { eq } from "drizzle-orm";
 
 import { db } from "@/db/client";
-import { isLibsqlConfigured, isSchemaMissingError } from "@/db/env";
+import {
+  isLibsqlConfigured,
+  isLocalSqliteWriteError,
+  isSchemaMissingError,
+} from "@/db/env";
 import { users } from "@/db/schema";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
@@ -98,17 +102,28 @@ async function getDevBypassAppUser(): Promise<AppUser> {
   const role = adminRoleForEmail(email);
 
   try {
-    await db
-      .insert(users)
-      .values({ supabaseUserId, email, role })
-      .onConflictDoNothing()
-      .run();
-
-    const row = await db
+    // Prefer read-first: INSERT on every request needs a write lock and fails
+    // hard with SQLITE_READONLY when Next still holds a stale local.db handle
+    // (common after migrate/rm while `npm run dev` is up).
+    let row = await db
       .select()
       .from(users)
       .where(eq(users.supabaseUserId, supabaseUserId))
       .get();
+
+    if (!row) {
+      await db
+        .insert(users)
+        .values({ supabaseUserId, email, role })
+        .onConflictDoNothing()
+        .run();
+
+      row = await db
+        .select()
+        .from(users)
+        .where(eq(users.supabaseUserId, supabaseUserId))
+        .get();
+    }
 
     if (!row) {
       throw new Error("Failed to create the dev bypass user.");
@@ -124,6 +139,12 @@ async function getDevBypassAppUser(): Promise<AppUser> {
     if (isSchemaMissingError(err)) {
       throw new Error(
         "Local database schema is missing (no users table). Run npm run db:migrate, then restart the dev server.",
+        { cause: err },
+      );
+    }
+    if (isLocalSqliteWriteError(err)) {
+      throw new Error(
+        "Local database is not writable (SQLITE_READONLY/busy). Stop every npm run dev, run npm run db:migrate if needed, then start a single dev server.",
         { cause: err },
       );
     }

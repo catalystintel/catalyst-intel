@@ -98,8 +98,8 @@ export default async function Home() {
             Catalyst Intel
           </h1>
           <p className="mt-4 max-w-lg text-base text-pretty text-[var(--desk-text-secondary)] sm:text-lg">
-            Material SEC filings on a black-and-white trading blotter — Symbol,
-            Title, Time. Open Read for a plain-language summary.
+            Material catalysts on a trading blotter — Symbol, Title, Time. Open
+            Read for a plain-language summary.
           </p>
           <div className="mt-8 flex flex-col items-start gap-3 sm:flex-row sm:flex-wrap sm:items-center">
             <Link

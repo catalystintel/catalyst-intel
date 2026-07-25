@@ -3,11 +3,13 @@
 import { ExternalLink } from "lucide-react";
 
 import { originalSourceLabel } from "@/lib/catalysts/article-content";
+import { isLocalDevUi, LOCAL_DEV_ONLY_LABEL } from "@/lib/dev/local-dev-ui";
 import { cn } from "@/lib/utils";
 
 /**
- * Admin-only “view original source” control (JTBD proof).
- * Primary reading stays in-app; this opens the vendor/filing URL externally.
+ * Local-dev only “view original vendor URL” control (ingest proof).
+ * Deployed product treats Catalyst Intel as the source — this never ships
+ * outside `next dev`.
  */
 export function EdgarProofLink({
   url,
@@ -21,13 +23,15 @@ export function EdgarProofLink({
   className?: string;
   compact?: boolean;
 }) {
-  const label = originalSourceLabel(provider);
+  if (!isLocalDevUi()) return null;
+
+  const label = `${originalSourceLabel(provider)} ${LOCAL_DEV_ONLY_LABEL}`;
   const shortLabel =
     provider === "sec-edgar"
-      ? "EDGAR"
+      ? `EDGAR ${LOCAL_DEV_ONLY_LABEL}`
       : provider === "nasdaq-halts"
-        ? "Nasdaq"
-        : "Source";
+        ? `Nasdaq ${LOCAL_DEV_ONLY_LABEL}`
+        : `Source ${LOCAL_DEV_ONLY_LABEL}`;
 
   if (!url) {
     return (
@@ -36,10 +40,10 @@ export function EdgarProofLink({
           "inline-flex items-center gap-1 font-mono text-[0.68rem] text-[var(--desk-text-dim)]",
           className,
         )}
-        title="No original source URL stored for this row"
+        title={`No original source URL stored for this row ${LOCAL_DEV_ONLY_LABEL}`}
       >
         <ExternalLink className="size-3 opacity-50" />
-        {compact ? "—" : "No source link"}
+        {compact ? "—" : `No source link ${LOCAL_DEV_ONLY_LABEL}`}
       </span>
     );
   }

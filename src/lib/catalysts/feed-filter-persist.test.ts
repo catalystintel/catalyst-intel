@@ -138,6 +138,18 @@ describe("feed-filter-persist", () => {
     expect(params.get("window")).toBe("24h");
     // Always sent — tape gate is not optional.
     expect(params.get("tickerOnly")).toBe("1");
+    // Source facet is local-dev only; vitest runs with NODE_ENV=test.
+    expect(params.get("sources")).toBeNull();
+  });
+
+  it("feedApiQuery includes sources only in development", () => {
+    vi.stubEnv("NODE_ENV", "development");
+    const qs = feedApiQuery({
+      ...DEFAULT_FEED_FILTERS,
+      sourceFilters: ["sec-edgar"],
+    });
+    expect(new URLSearchParams(qs).get("sources")).toBe("sec-edgar");
+    vi.unstubAllEnvs();
   });
 
   it("defaults missing tickerOnly to true on read", () => {

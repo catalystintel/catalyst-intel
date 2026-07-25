@@ -11,7 +11,7 @@
 /** Kick in before the tape is user-visibly stale between cron ticks. */
 const STALE_AFTER_MS = 4 * 60_000;
 
-/** Same threshold the Live feed uses for the “stale tape” banner. */
+/** Threshold for silent background refetch on `GET /api/catalysts` (no UI banner). */
 export const INGESTION_STALE_AFTER_MS = STALE_AFTER_MS;
 /** Minimum gap between successful trigger attempts in the same isolate. */
 const RETRIGGER_COOLDOWN_MS = 3 * 60_000;

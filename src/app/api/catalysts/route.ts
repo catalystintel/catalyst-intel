@@ -27,6 +27,7 @@ import {
   rateLimitExceededResponse,
   withRateLimitHeaders,
 } from "@/lib/http/rate-limit-response";
+import { isLocalDevUi } from "@/lib/dev/local-dev-ui";
 import { fetchAllCatalystSources } from "@/lib/jobs/fetch-all-sources";
 import {
   markRefetchCompleted,
@@ -59,6 +60,10 @@ export async function GET(request: NextRequest) {
   }
 
   const filters = parseFeedQueryFromSearchParams(request.nextUrl.searchParams);
+  // Vendor Source facet is local-dev only — ignore crafted `sources=` in deploy.
+  if (!isLocalDevUi()) {
+    filters.sources = [];
+  }
   const cursor = parseFeedCursor(request.nextUrl.searchParams.get("cursor"));
   const limitParam = Number(
     request.nextUrl.searchParams.get("limit") ?? String(FEED_PAGE_SIZE),
@@ -96,6 +101,13 @@ export async function GET(request: NextRequest) {
     lastIngestedAt ? new Date(lastIngestedAt) : null,
   );
 
+  const publicFacets =
+    facets == null
+      ? undefined
+      : isLocalDevUi()
+        ? facets
+        : { ...facets, sources: [] };
+
   return withRateLimitHeaders(
     NextResponse.json({
       catalysts: rows,
@@ -105,7 +117,7 @@ export async function GET(request: NextRequest) {
       since: filters.since,
       total: total ?? undefined,
       nextCursor,
-      facets: facets ?? undefined,
+      facets: publicFacets,
     }),
     limitResult,
   );
