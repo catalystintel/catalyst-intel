@@ -48,9 +48,7 @@ const PRIMARY_NAV: NavItem[] = [
     key: "news",
     label: "News Feed",
     icon: Newspaper,
-    comingSoon: true,
-    comingSoonHint:
-      "A dedicated headline stream, separate from the Catalyst Feed.",
+    href: "/news-feed",
   },
   { key: "alerts", label: "Alerts", icon: Bell, href: "/alerts" },
   { key: "watchlist", label: "Watchlists", icon: Star, href: "/watchlist" },
@@ -58,8 +56,7 @@ const PRIMARY_NAV: NavItem[] = [
     key: "reports",
     label: "Reports",
     icon: Bookmark,
-    comingSoon: true,
-    comingSoonHint: "Saved, shareable digests of catalysts you're tracking.",
+    href: "/reports",
   },
   {
     key: "analytics",
@@ -92,10 +89,12 @@ export function getPrimaryNav(isAdmin: boolean): NavItem[] {
 export function navKeyFromPathname(pathname: string | null): NavKey {
   if (!pathname) return "live";
   if (pathname.startsWith("/catalyst-feed")) return "live";
+  if (pathname.startsWith("/news-feed")) return "news";
   if (pathname.startsWith("/analytics")) return "analytics";
   if (pathname.startsWith("/admin")) return "admin";
   if (pathname.startsWith("/alerts")) return "alerts";
   if (pathname.startsWith("/watchlist")) return "watchlist";
+  if (pathname.startsWith("/reports")) return "reports";
   if (pathname.startsWith("/profile")) return "profile";
   return "live";
 }
