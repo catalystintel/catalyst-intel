@@ -1,3 +1,7 @@
+import {
+  formatFdaApprovalTitle,
+  resolveDisplayCompanyName,
+} from "@/lib/catalysts/catalyst-titles";
 import { resolveTickerFromName } from "@/lib/catalysts/ticker-resolver";
 import { RETENTION_DAYS } from "@/lib/jobs/data-retention";
 import {
@@ -159,6 +163,8 @@ export async function fetchOpenFda(): Promise<SourceFetchResult> {
       row.products?.[0]?.brand_name ||
       "Drug approval";
     const sponsor = row.sponsor_name?.trim() || null;
+    const companyName = resolveDisplayCompanyName(sponsor);
+    const displayTitle = formatFdaApprovalTitle(companyName);
     const { submission, dateYmd: date } = picked;
     const classLabel =
       submission.submission_class_code_description?.trim() ||
@@ -176,13 +182,10 @@ export async function fetchOpenFda(): Promise<SourceFetchResult> {
       rawContent: row,
       ticker: resolved?.ticker ?? null,
       tickerSource: resolved?.source ?? "unresolved",
-      companyName: sponsor,
+      companyName,
       type: "FDA Approval",
-      title: `${sponsor ?? "Sponsor"} — ${brand}`,
-      headline:
-        submission.submission_type?.trim().toUpperCase() === "ORIG"
-          ? "FDA original approval"
-          : "FDA approval update",
+      title: displayTitle,
+      headline: displayTitle,
       eventCategory: "regulatory",
       subcategory: "openfda_approval",
       timestamp: toIsoTimestamp(date),

@@ -225,6 +225,31 @@ export type TitleLineOptions = {
  * `Company — official item blurb` (or trader label) so the wide Title column
  * carries a usable event summary.
  */
+/**
+ * Ground-rule API titles are stored on `title` (and usually mirrored on
+ * `headline`). Prefer them over generic taxonomy chips so the tape shows
+ * `Halts (…)` / `FDA Approval - …` / `Earnings Report Qn - …`.
+ */
+function prefersStoredGroundRuleTitle(c: FeedCatalyst, title: string): boolean {
+  if (!title || looksLikeSourceLabel(title)) return false;
+  if (/^Halts\s*\(/i.test(title)) return true;
+  if (/^FDA Approval\s*-/i.test(title)) return true;
+  if (/^Earnings Report\s+Q/i.test(title)) return true;
+
+  if (c.sourceProvider === "nasdaq-halts") return true;
+  if (c.type === "FDA Approval" || c.subcategory === "openfda_approval") {
+    return true;
+  }
+  if (
+    c.sourceProvider === "finnhub" &&
+    c.eventCategory === "earnings" &&
+    /earnings report/i.test(title)
+  ) {
+    return true;
+  }
+  return false;
+}
+
 export function titleLine(
   c: FeedCatalyst,
   options: TitleLineOptions = {},
@@ -233,6 +258,10 @@ export function titleLine(
   const headline = normalizeDisplayText(c.headline ?? "");
   const title = normalizeDisplayText(c.title ?? "");
   const subject = tapeSubject(c);
+
+  if (prefersStoredGroundRuleTitle(c, title)) {
+    return stripSourceNames(title) || title;
+  }
 
   // Real news / wire copy wins when it is not a publisher or generic chip.
   if (

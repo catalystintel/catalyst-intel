@@ -1,3 +1,9 @@
+import {
+  earningsQuarterLabel,
+  formatEarningsReportTitle,
+  formatFdaApprovalTitle,
+  resolveDisplayCompanyName,
+} from "@/lib/catalysts/catalyst-titles";
 import { categorizeNewsHeadline } from "@/lib/catalysts/news-category";
 import { RETENTION_DAYS } from "@/lib/jobs/data-retention";
 import {
@@ -8,7 +14,10 @@ import {
   type SourceFetchResult,
 } from "@/lib/jobs/ingest-pipeline";
 import { getFinnhubApiKey } from "@/lib/jobs/vendor-env";
-import { upsertCompanyProfile } from "@/lib/jobs/company-enrichment";
+import {
+  getCompanyName,
+  upsertCompanyProfile,
+} from "@/lib/jobs/company-enrichment";
 
 const BASE = "https://finnhub.io/api/v1";
 
@@ -130,12 +139,19 @@ function daysAgoIso(days: number, now: Date = new Date()): string {
   return d.toISOString().slice(0, 10);
 }
 
-function earningsToNormalized(row: EarningsRow): NormalizedCatalyst | null {
+/** @internal exported for unit tests. */
+export function earningsToNormalized(
+  row: EarningsRow,
+  companyName?: string | null,
+): NormalizedCatalyst | null {
   const symbol = row.symbol?.trim().toUpperCase();
   if (!symbol || !row.date) return null;
 
   const hour = row.hour?.trim() || "unknown";
   const externalId = `finnhub:earnings:${symbol}:${row.date}:${hour}`;
+  const displayName = resolveDisplayCompanyName(companyName, symbol);
+  const quarter = earningsQuarterLabel(row.quarter, row.date);
+  const displayTitle = formatEarningsReportTitle(quarter, displayName);
 
   return {
     provider: "finnhub",
@@ -143,10 +159,10 @@ function earningsToNormalized(row: EarningsRow): NormalizedCatalyst | null {
     url: `https://finnhub.io/quote/${symbol}`,
     rawContent: row,
     ticker: symbol,
-    companyName: symbol,
+    companyName: displayName,
     type: "Earnings",
-    title: `${symbol} — Earnings ${row.date}`,
-    headline: "Earnings calendar",
+    title: displayTitle,
+    headline: displayTitle,
     eventCategory: "earnings",
     subcategory: hour === "bmo" || hour === "amc" ? hour : "earnings_calendar",
     timestamp: new Date(`${row.date}T12:00:00.000Z`).toISOString(),
@@ -158,11 +174,20 @@ function earningsToNormalized(row: EarningsRow): NormalizedCatalyst | null {
       .filter(Boolean)
       .join(" · "),
     confidence: 70,
-    tags: ["finnhub", "earnings", hour],
+    tags: ["finnhub", "earnings", hour, quarter],
   };
 }
 
-function fdaToNormalized(row: FdaRow): NormalizedCatalyst | null {
+function looksLikeFdaApproval(row: FdaRow): boolean {
+  const blob = [row.catalyst, row.status, row.drug]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+  return /\bapprov/.test(blob);
+}
+
+/** @internal exported for unit tests. */
+export function fdaToNormalized(row: FdaRow): NormalizedCatalyst | null {
   const symbol = row.symbol?.trim().toUpperCase() || null;
   const date = row.date?.trim();
   if (!date) return null;
@@ -170,6 +195,8 @@ function fdaToNormalized(row: FdaRow): NormalizedCatalyst | null {
   const drug = row.drug?.trim() || "FDA event";
   const key = `${symbol ?? "UNK"}:${date}:${drug}`.toLowerCase();
   const externalId = `finnhub:fda:${key}`;
+  const companyName = resolveDisplayCompanyName(row.company?.trim(), symbol);
+  const isApproval = looksLikeFdaApproval(row);
 
   return {
     provider: "finnhub",
@@ -177,16 +204,20 @@ function fdaToNormalized(row: FdaRow): NormalizedCatalyst | null {
     url: null,
     rawContent: row,
     ticker: symbol,
-    companyName: row.company?.trim() || symbol,
-    type: "FDA Calendar",
-    title: `${symbol ?? row.company ?? "Issuer"} — ${drug}`,
-    headline: row.catalyst?.trim() || "FDA catalyst",
+    companyName,
+    type: isApproval ? "FDA Approval" : "FDA Calendar",
+    title: isApproval
+      ? formatFdaApprovalTitle(companyName)
+      : `${companyName} — ${drug}`,
+    headline: isApproval
+      ? formatFdaApprovalTitle(companyName)
+      : row.catalyst?.trim() || "FDA catalyst",
     eventCategory: "regulatory",
-    subcategory: "fda_calendar",
+    subcategory: isApproval ? "fda_approval" : "fda_calendar",
     timestamp: new Date(`${date}T12:00:00.000Z`).toISOString(),
     summary: [row.indication, row.status].filter(Boolean).join(" · ") || null,
     confidence: 65,
-    tags: ["finnhub", "fda", "regulatory"],
+    tags: ["finnhub", "fda", "regulatory", ...(isApproval ? ["approval"] : [])],
   };
 }
 
@@ -425,8 +456,49 @@ export async function fetchFinnhubCatalysts(options?: {
     earningsCalendar?: EarningsRow[];
   }>("/calendar/earnings", apiKey, { from, to });
   const earnings = earningsPayload.earningsCalendar ?? [];
-  for (const row of earnings.slice(0, 40)) {
-    const item = earningsToNormalized(row);
+  const earningsSlice = earnings.slice(0, 40);
+
+  // Resolve display names before titling: companies table, then Finnhub profile2.
+  const earningsSymbols = uniqueSymbols(earningsSlice, [], 40);
+  const nameBySymbol = new Map<string, string>();
+  for (const symbol of earningsSymbols) {
+    const stored = await getCompanyName(symbol);
+    if (stored) nameBySymbol.set(symbol, stored);
+  }
+  // Cap live profile lookups so earnings titling does not burn the free-tier quota.
+  const needsProfile = earningsSymbols
+    .filter((symbol) => !nameBySymbol.has(symbol))
+    .slice(0, 12);
+  for (const symbol of needsProfile) {
+    try {
+      const profile = await finnhubGet<ProfileRow>("/stock/profile2", apiKey, {
+        symbol,
+      });
+      if (profile?.name?.trim()) {
+        nameBySymbol.set(symbol, profile.name.trim());
+      }
+      if (profile?.ticker || symbol) {
+        await upsertCompanyProfile({
+          ticker: profile?.ticker || symbol,
+          name: profile?.name,
+          industry: profile?.finnhubIndustry,
+          marketCapMillions: profile?.marketCapitalization,
+        });
+      }
+    } catch (error) {
+      console.warn(
+        `Finnhub profile2 for ${symbol} unavailable:`,
+        error instanceof Error ? error.message : error,
+      );
+    }
+  }
+
+  for (const row of earningsSlice) {
+    const symbol = row.symbol?.trim().toUpperCase();
+    const item = earningsToNormalized(
+      row,
+      symbol ? (nameBySymbol.get(symbol) ?? null) : null,
+    );
     if (item) normalized.push(item);
   }
 
@@ -517,7 +589,9 @@ export async function fetchFinnhubCatalysts(options?: {
     }
   }
 
+  // Enrich remaining analyst/news symbols not already profiled for earnings.
   for (const symbol of symbolSet) {
+    if (nameBySymbol.has(symbol)) continue;
     try {
       const profile = await finnhubGet<ProfileRow>("/stock/profile2", apiKey, {
         symbol,
