@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 
-/** Matches live blotter: Symbol · Title · Time (+ Action). */
+/** Matches live blotter: Symbol · Title · Time (+ Actions). */
 const PREVIEW_GRID =
   "grid-cols-[4.5rem_minmax(0,1fr)] sm:grid-cols-[5rem_minmax(0,1fr)_156px] lg:grid-cols-[5rem_minmax(0,1fr)_160px_minmax(200px,max-content)]";
 
@@ -179,7 +179,7 @@ export default async function Home() {
                 Time
               </div>
               <div role="columnheader" className="hidden text-right lg:block">
-                Action
+                Actions
               </div>
             </div>
 
