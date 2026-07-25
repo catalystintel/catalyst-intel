@@ -4,8 +4,8 @@ import { navKeyFromPathname } from "./nav-items";
 
 describe("navKeyFromPathname", () => {
   it("maps desk routes to nav keys", () => {
-    expect(navKeyFromPathname("/dashboard")).toBe("live");
-    expect(navKeyFromPathname("/dashboard/catalyst/12")).toBe("live");
+    expect(navKeyFromPathname("/catalyst-feed")).toBe("live");
+    expect(navKeyFromPathname("/catalyst-feed/catalyst/12")).toBe("live");
     expect(navKeyFromPathname("/analytics")).toBe("analytics");
     expect(navKeyFromPathname("/admin")).toBe("admin");
     expect(navKeyFromPathname("/alerts")).toBe("alerts");

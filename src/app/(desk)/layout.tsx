@@ -11,7 +11,7 @@ import { isSupabaseConfigured } from "@/lib/supabase/env";
 
 /**
  * Shared chrome for all authenticated desk routes
- * (`/dashboard`, `/analytics`, `/admin`, `/alerts`, `/watchlist`, `/profile`).
+ * (`/catalyst-feed`, `/analytics`, `/admin`, `/alerts`, `/watchlist`, `/profile`).
  *
  * Keeps the real sidebar/header mounted across navigations so route
  * `loading.tsx` files only skeleton the content pane — never the chrome.

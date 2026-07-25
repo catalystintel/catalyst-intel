@@ -6,6 +6,11 @@ The same content is shown on **Admin → What's new**
 (`src/lib/ops/whats-new.ts` is the source of truth — update both the TS list
 and keep this file in sync when you ship, or regenerate from that module).
 
+## 2026-07-25 — Catalyst Feed URL rename
+
+- `/dashboard` is now `/catalyst-feed` — matches the sidebar label; old links 308-redirect automatically.
+- Article deep link moved from `/dashboard/catalyst/[id]` to `/catalyst-feed/catalyst/[id]`.
+
 ## 2026-07-24 — Security hardening & error monitoring
 
 - Webhook alerts reject private/local/metadata URLs (SSRF guard) and do not follow redirects.
@@ -40,7 +45,7 @@ and keep this file in sync when you ship, or regenerate from that module).
 
 ### UI surfaces
 
-- Live feed, article detail, watchlist, alerts, analytics, profile, Admin ops console.
+- Live feed (`/catalyst-feed`), article detail, watchlist, alerts, analytics, profile, Admin ops console.
 
 ### Docs
 

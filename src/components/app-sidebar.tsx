@@ -40,10 +40,10 @@ export function AppSidebar({
       aria-label="Primary navigation"
     >
       <Link
-        href="/dashboard"
+        href="/catalyst-feed"
         onClick={onNavigate}
         aria-label="Catalyst Intel home"
-        title="Back to dashboard"
+        title="Back to Catalyst Feed"
         className={cn(
           "mb-5 flex items-center gap-2.5 rounded-md transition-colors",
           "hover:bg-[var(--desk-overlay-soft)] focus-visible:bg-[var(--desk-overlay-soft)] focus-visible:outline-none",

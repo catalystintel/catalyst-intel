@@ -133,13 +133,13 @@ Visit [http://localhost:3000](http://localhost:3000).
 2. That first sign-in creates your row in the local `users` table and syncs `role` from the
    admin email allowlist (`ADMIN_EMAILS` or the defaults in `src/lib/auth/admin.ts`).
 3. Only allowlisted emails can open `/admin` or trigger the manual fetch API. Everyone else
-   lands on the Live feed (`/dashboard`) after login.
+   lands on the Live feed (`/catalyst-feed`) after login.
 
 ### 7. Populate real data
 
 Sign in as an allowlisted admin, go to `/admin`, and click **"Fetch SEC EDGAR now"**. This pulls
 the latest 8-K filings from SEC EDGAR's free feed, resolves tickers where possible, and stores
-them. Then check `/dashboard` (Live) to see them listed.
+them. Then check `/catalyst-feed` (Live) to see them listed.
 
 ### 8. (Optional) Keep data flowing continuously while developing
 
@@ -150,7 +150,7 @@ npm run cron
 ```
 
 This fetches immediately, then re-fetches every `CRON_INTERVAL_MINUTES` (default `1`). Leave it
-running while you develop and `/dashboard` stays up to date. Stop with `Ctrl+C`.
+running while you develop and `/catalyst-feed` stays up to date. Stop with `Ctrl+C`.
 
 **Production:** ETL is driven by [cron-job.org](https://cron-job.org) (job title e.g.
 `catalyst-intel prod ETL`) every **1 minute**, POSTing
@@ -195,8 +195,8 @@ Vercel; production is `main`. Env vars for each environment (and CI/CD triggers)
 - **Per-vendor watermarks** (`vendor_fetch_state`): each source keeps its own `last_fetched_at`.
   After a Polygon HTTP 429 the cursor does **not** advance, so the next tick widens the news
   window / price enrich batch and does not permanently miss results — see [FETCH-ORDER.md](FETCH-ORDER.md).
-- **IA:** `/` is marketing for signed-out users (signed-in users redirect to Live). `/dashboard`
-  is the Live feed; `/profile` is account + sign-out.
+- **IA:** `/` is marketing for signed-out users (signed-in users redirect to Live). `/catalyst-feed`
+  is the Live feed (old `/dashboard` links 308-redirect here); `/profile` is account + sign-out.
 - **Live presence:** while the Live tab is visible/focused, the client soft-refetches
   `GET /api/catalysts` on an interval (no full page reload). Hidden tabs pause; unfocused
   but visible tabs poll more slowly.

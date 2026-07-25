@@ -11,9 +11,9 @@ Sign in with Google before checking authenticated surfaces.
 
 ## JTBD 1 — Filing hits → ticker + event + materiality (act / dismiss)
 
-- [ ] Live feed (`/dashboard`) shows **ticker** and **event type** (headline / category) within one soft-poll cycle (~20s when tab focused) after a new SEC ingest.
+- [ ] Live feed (`/catalyst-feed`) shows **ticker** and **event type** (headline / category) within one soft-poll cycle (~20s when tab focused) after a new SEC ingest.
 - [ ] Each row shows a **materiality / impact** badge (High / Medium / Low + numeric score). Scores are rule-based from event category when AI scoring is absent.
-- [ ] **Read** (amber) opens the **in-app article** at `/dashboard/catalyst/[id]` (not an external tab).
+- [ ] **Read** (amber) opens the **in-app article** at `/catalyst-feed/catalyst/[id]` (not an external tab).
 - [ ] Clicking the row **Title** also navigates to the in-app article.
 - [ ] **Dismiss** removes the row from the feed for this browser (local dismiss list); it does not delete the DB row.
 - [ ] Article page shows ticker, category, summary, and best-available stored body; secondary CTA opens the original source.
@@ -34,7 +34,7 @@ Sign in with Google before checking authenticated surfaces.
 
 - [ ] Every feed row has a visible **Proof / original source** control (desktop Proof column; mobile under the title).
 - [ ] Clicking Proof opens the stored vendor URL in a new tab (SEC EDGAR when applicable) and does **not** replace the in-app reader.
-- [ ] Title / **Read** open `/dashboard/catalyst/[id]` with summary + stored body inside the app.
+- [ ] Title / **Read** open `/catalyst-feed/catalyst/[id]` with summary + stored body inside the app.
 - [ ] Article page secondary CTA is **Original on SEC/source** (or provider-specific label).
 
 ---

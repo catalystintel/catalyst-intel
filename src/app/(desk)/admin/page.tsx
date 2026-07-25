@@ -21,7 +21,7 @@ export default async function AdminPage() {
   }
 
   if (!user.isAdmin) {
-    redirect("/dashboard");
+    redirect("/catalyst-feed");
   }
 
   // Independent reads - run them concurrently instead of one round-trip at a

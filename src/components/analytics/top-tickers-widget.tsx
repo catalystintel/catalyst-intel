@@ -23,7 +23,7 @@ export function TopTickersWidget({ tickers }: { tickers: TickerStat[] }) {
       {tickers.map((t, index) => (
         <li key={t.ticker}>
           <Link
-            href={`/dashboard?ticker=${encodeURIComponent(t.ticker)}`}
+            href={`/catalyst-feed?ticker=${encodeURIComponent(t.ticker)}`}
             className="flex items-center gap-3 py-2.5 transition-colors hover:bg-[var(--desk-overlay-soft)]"
           >
             <span className="w-5 shrink-0 font-mono text-[0.72rem] text-[var(--desk-text-dim)] tabular-nums">

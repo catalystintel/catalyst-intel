@@ -11,7 +11,7 @@ import {
   type FeedQueryFilters,
 } from "@/lib/catalysts/feed-query";
 import { withDbRetry } from "@/lib/db/with-db-retry";
-import { parseDashboardCatalystId } from "@/lib/nav/dashboard-href";
+import { parseFeedCatalystId } from "@/lib/nav/feed-href";
 
 function ssrFeedFilters(nowIso: string): FeedQueryFilters {
   // Same shared query as `/api/catalysts` — ticker gate always applied
@@ -30,15 +30,15 @@ function ssrFeedFilters(nowIso: string): FeedQueryFilters {
   };
 }
 
-export default async function DashboardPage({
+export default async function CatalystFeedPage({
   searchParams,
 }: {
   searchParams: Promise<{ ticker?: string; c?: string }>;
 }) {
   const { ticker, c } = await searchParams;
-  const initialSelectedId = parseDashboardCatalystId(c);
+  const initialSelectedId = parseFeedCatalystId(c);
 
-  // Auth / DB setup handled by `dashboard/layout.tsx`.
+  // Auth / DB setup handled by the shared `(desk)/layout.tsx`.
   const user = await getCurrentAppUser();
   if (!user) {
     return null;

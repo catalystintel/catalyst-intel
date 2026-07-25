@@ -174,7 +174,7 @@ gh secret set STAGING_LIBSQL_AUTH_TOKEN --body "<same value as Vercel Preview LI
 
 ### 1. Create two Turso databases
 
-**Required before Google login can land on `/dashboard` on Vercel.** Without
+**Required before Google login can land on `/catalyst-feed` on Vercel.** Without
 `LIBSQL_URL` + `LIBSQL_AUTH_TOKEN`, Auth succeeds but the app falls back to
 `file:local.db`, which serverless cannot open (`ConnectionFailed`).
 
@@ -238,7 +238,7 @@ node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 3. Confirm cron-job.org (or `/admin` → **Fetch all sources now**) returns HTTP 200 against
    production.
 4. Sign in with Google on the live URL using an allowlisted admin email (or set
-   `ADMIN_EMAILS` on Vercel), open `/admin`, run **Fetch all sources now**, confirm `/dashboard`
+   `ADMIN_EMAILS` on Vercel), open `/admin`, run **Fetch all sources now**, confirm `/catalyst-feed`
    shows multi-source data.
 
 #### Keyless sources checklist (only `SEC_EDGAR_USER_AGENT` required)
@@ -257,7 +257,7 @@ breakdown and `raw_sources.provider` counts should include:
 | `polygon-news` / `polygon-prices` | `skipped` without `POLYGON_API_KEY` | Soft-fail OK. Free tier: ~5 REST req/min; same-day aggs often 403 timeframe — prices enrich prior sessions in small batches and soft-skip 429/403 |
 | `form4api`                        | `skipped` without `FORM4_API_KEY`   | EDGAR Form 4 still works via `sec-edgar`                                                                                                          |
 
-On `/dashboard`, Source column should show **SEC EDGAR**, **Nasdaq Halts**, **Macro**, **openFDA**,
+On `/catalyst-feed`, Source column should show **SEC EDGAR**, **Nasdaq Halts**, **Macro**, **openFDA**,
 and/or **ClinicalTrials** (not only SEC).
 
 ## Database migrations in CI/CD
@@ -338,7 +338,7 @@ traffic. Full multi-source runs remain on cron-job.org / Admin "Fetch all".
 | **Staging**    | Sign in with an allowlisted admin email on the staging Preview URL → `/admin` → run a fetch; or point a cron-job.org job at the staging URL.   |
 | **Production** | **cron-job.org** every 1 min → `/api/admin/fetch/all` + `x-cron-secret`; or watch the self-healing backstop kick in on real traffic.           |
 
-To confirm data actually landed, check `/dashboard` (Live feed) or open Drizzle Studio
+To confirm data actually landed, check `/catalyst-feed` (Live feed) or open Drizzle Studio
 (`npm run db:studio` locally; point `LIBSQL_URL`/`LIBSQL_AUTH_TOKEN` at a remote Turso DB to
 inspect staging/production the same way).
 

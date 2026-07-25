@@ -480,7 +480,7 @@ export function LiveCatalystFeed({
   useEffect(() => {
     if (typeof window === "undefined") return;
     const url = new URL(window.location.href);
-    if (!url.pathname.startsWith("/dashboard")) return;
+    if (!url.pathname.startsWith("/catalyst-feed")) return;
     const current = url.searchParams.get("c");
     const next = selectedId != null ? String(selectedId) : null;
     if (current === next) return;

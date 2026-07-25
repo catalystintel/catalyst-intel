@@ -13,6 +13,14 @@ export type WhatsNewEntry = {
 /** Newest first — update this when shipping user-visible or ops-visible work. */
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
+    date: "2026-07-25",
+    title: "Catalyst Feed URL rename",
+    bullets: [
+      "`/dashboard` is now `/catalyst-feed` — matches the sidebar label; old links 308-redirect automatically.",
+      "Article deep link moved from `/dashboard/catalyst/[id]` to `/catalyst-feed/catalyst/[id]`.",
+    ],
+  },
+  {
     date: "2026-07-24",
     title: "Security hardening & error monitoring",
     bullets: [
@@ -66,8 +74,8 @@ export const PLATFORM_MAP: {
   {
     title: "UI surfaces",
     bullets: [
-      "Live feed `/dashboard` — poll while tab visible; filters, watchlist, playbook/quiet mode.",
-      "Article detail drawer / `/dashboard/catalyst/[id]` — proof URL, materiality, takeaways.",
+      "Live feed `/catalyst-feed` — poll while tab visible; filters, watchlist, playbook/quiet mode.",
+      "Article detail drawer / `/catalyst-feed/catalyst/[id]` — proof URL, materiality, takeaways.",
       "Watchlist, Alerts (email/webhook rules + test fire), Analytics, Profile.",
       "Admin (allowlisted emails) — ingest controls, run audit, migrations, NYSE status.",
     ],
