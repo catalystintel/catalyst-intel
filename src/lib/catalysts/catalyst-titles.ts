@@ -227,15 +227,62 @@ export function looksLikeResultsOfOperationsTitle(
   );
 }
 
+/** `{Company} New Deal Announced — Major Contract or Partnership` (Item 1.01) */
+export function formatMaterialAgreementTitle(
+  companyName: string | null | undefined,
+): string {
+  return `${resolveDisplayCompanyName(companyName)} New Deal Announced — Major Contract or Partnership`;
+}
+
+/** `{Company} — Bankruptcy Filing — Equity at Risk` (Item 1.03) */
+export function formatBankruptcyFilingTitle(
+  companyName: string | null | undefined,
+): string {
+  return `${resolveDisplayCompanyName(companyName)} — Bankruptcy Filing — Equity at Risk`;
+}
+
+/** `{Company} — Delisting Risk — Stock Could Lose Its Listing` (Item 3.01) */
+export function formatDelistingRiskTitle(
+  companyName: string | null | undefined,
+): string {
+  return `${resolveDisplayCompanyName(companyName)} — Delisting Risk — Stock Could Lose Its Listing`;
+}
+
+/** `{Company} — Executive Change — CEO/CFO Departure or Appointment` (Item 5.02) */
+export function formatOfficerDirectorChangeTitle(
+  companyName: string | null | undefined,
+): string {
+  return `${resolveDisplayCompanyName(companyName)} — Executive Change — CEO/CFO Departure or Appointment`;
+}
+
 /**
- * Ground-rule 8-K title from the primary item label (Title Case).
- * Example: `Material Agreement - Acme Corp`
- * Earnings (Item 2.02) should use {@link formatEarningsReportTitle} instead.
+ * Narrative tape titles for high-signal 8-K items (company-first).
+ * Other items keep `{Label} - {Company}`.
+ */
+const NARRATIVE_8K_BY_LABEL: Record<
+  string,
+  (companyName: string | null | undefined) => string
+> = {
+  "material agreement": formatMaterialAgreementTitle,
+  "bankruptcy / receivership": formatBankruptcyFilingTitle,
+  "delisting risk": formatDelistingRiskTitle,
+  "officer / director change": formatOfficerDirectorChangeTitle,
+};
+
+/**
+ * Ground-rule 8-K title from the primary item label.
+ * Narrative items (1.01 / 1.03 / 3.01 / 5.02) use company-first copy; others
+ * stay `{Label} - {Company}`. Earnings (Item 2.02) should use
+ * {@link formatEarningsReportTitle} instead.
  */
 export function formatSec8kItemTitle(
   itemLabel: string | null | undefined,
   companyName: string | null | undefined,
 ): string {
+  const key = itemLabel?.replace(/\s+/g, " ").trim().toLowerCase() ?? "";
+  const narrative = NARRATIVE_8K_BY_LABEL[key];
+  if (narrative) return narrative(companyName);
+
   const label = titleCaseEventLabel(itemLabel) || "8-K Event";
   return `${label} - ${resolveDisplayCompanyName(companyName)}`;
 }
@@ -286,11 +333,18 @@ export function formatShelfRegistrationTitle(
   return `Shelf Registration (S-3) - ${resolveDisplayCompanyName(companyName)}`;
 }
 
-/** `Prospectus / Offering (424B) - {Company Name}` */
+/** `{Company} New Stock Offering Filed — Potential Dilution Ahead` (424B) */
 export function formatProspectusOfferingTitle(
   companyName: string | null | undefined,
 ): string {
-  return `Prospectus / Offering (424B) - ${resolveDisplayCompanyName(companyName)}`;
+  return `${resolveDisplayCompanyName(companyName)} New Stock Offering Filed — Potential Dilution Ahead`;
+}
+
+/** `{Company} — Merger or Acquisition News: Deal in Play` (Form 425) */
+export function format425MergerTitle(
+  companyName: string | null | undefined,
+): string {
+  return `${resolveDisplayCompanyName(companyName)} — Merger or Acquisition News: Deal in Play`;
 }
 
 /** `Schedule 13D - {Company Name}` */

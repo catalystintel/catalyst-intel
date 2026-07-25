@@ -10,6 +10,7 @@ import {
   earningsQuarterLabel,
   formatEarningsReportTitle,
   formatForm4InsiderTitle,
+  format425MergerTitle,
   formatProspectusOfferingTitle,
   formatSchedule13DTitle,
   formatSchedule13GTitle,
@@ -46,6 +47,7 @@ const SEC_FEED_TYPES = [
   { type: "4", count: 40 },
   { type: "S-3", count: 40 },
   { type: "424B", count: 40 },
+  { type: "425", count: 40 },
   { type: "SC 13D", count: 40 },
   { type: "SC 13G", count: 40 },
 ] as const;
@@ -204,6 +206,8 @@ function entryToNormalized(
     title = formatShelfRegistrationTitle(companyName);
   } else if (formMeta.subcategory === "424b") {
     title = formatProspectusOfferingTitle(companyName);
+  } else if (formMeta.subcategory === "425") {
+    title = format425MergerTitle(companyName);
   } else if (formMeta.subcategory === "13d") {
     title = formatSchedule13DTitle(companyName);
   } else if (formMeta.subcategory === "13g") {

@@ -881,8 +881,7 @@ function FeedFilters({
         <p className="font-mono text-[0.72rem] text-[var(--desk-text-dim)]">
           Quiet playbook on · {watchlistCount} watchlist ticker
           {watchlistCount === 1 ? "" : "s"} · {playbookCount} categor
-          {playbookCount === 1 ? "y" : "ies"} — edit under Watchlists / Alerts
-          playbook.
+          {playbookCount === 1 ? "y" : "ies"} — edit under Watchlists.
         </p>
       ) : null}
       <div className="flex flex-wrap items-center gap-2">
