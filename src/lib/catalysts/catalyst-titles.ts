@@ -1,6 +1,6 @@
 /**
  * Ground-rule title formatters for API-ingested catalyst subjects.
- * Halts / FDA Approval / Earnings — keep formats stable for tape + Read.
+ * Keep formats stable for tape + Read (see FEED-TITLE-GUIDELINES.md).
  */
 
 import { haltReasonLabel } from "@/lib/catalysts/halt-reason-codes";
@@ -17,6 +17,77 @@ export function resolveDisplayCompanyName(
     return name;
   }
   return "Unknown company";
+}
+
+const TITLE_CASE_SMALL = new Set([
+  "a",
+  "an",
+  "and",
+  "as",
+  "at",
+  "but",
+  "by",
+  "for",
+  "in",
+  "nor",
+  "of",
+  "on",
+  "or",
+  "the",
+  "to",
+  "vs",
+]);
+
+function titleCaseToken(token: string, forceCap: boolean): string {
+  if (!token) return token;
+  // Keep form / item tokens like 8-K, S-3, 424B, 13D as-is (aside from casing).
+  if (/^(?:8-?K|S-3|424B\d*|(?:SC\s*)?13[DG](?:\/A)?)$/i.test(token)) {
+    return token.toUpperCase().replace(/^SC\s*/i, "SC ");
+  }
+  // Short market / regulatory acronyms stay uppercase.
+  if (/^(?:FD|FDA|SEC|NFP|CPI|FOMC|LULD|XML|IPO)$/i.test(token)) {
+    return token.toUpperCase();
+  }
+  if (/^\d/.test(token)) return token;
+
+  const lower = token.toLowerCase();
+  if (!forceCap && TITLE_CASE_SMALL.has(lower)) return lower;
+  return lower.charAt(0).toUpperCase() + lower.slice(1);
+}
+
+/**
+ * Title Case for 8-K / event labels (`Material Agreement`, `Change of Control`).
+ * Slash compounds capitalize each side: `Officer / Director Change`.
+ */
+export function titleCaseEventLabel(label: string | null | undefined): string {
+  const trimmed = label?.replace(/\s+/g, " ").trim();
+  if (!trimmed) return "";
+
+  return trimmed
+    .split(" ")
+    .map((word, index) => {
+      if (word === "/" || word === "-" || word === "—") return word;
+      if (word.includes("/")) {
+        return word
+          .split("/")
+          .map((part) => titleCaseToken(part, true))
+          .join("/");
+      }
+      // Parenthetical form codes: `(S-3)`, `(424B)`, `(13D)`.
+      const paren = word.match(/^\((.+)\)$/);
+      if (paren) {
+        return `(${titleCaseToken(paren[1], true)})`;
+      }
+      // Hyphenated compounds: `Non-Reliance` (form codes handled in token helper).
+      if (word.includes("-") && !/^(?:8-?K|S-3)$/i.test(word)) {
+        return word
+          .split("-")
+          .map((part) => titleCaseToken(part, true))
+          .join("-");
+      }
+      return titleCaseToken(word, index === 0);
+    })
+    .join(" ");
 }
 
 /** `Halts (Company Name) — {reason}` */
@@ -157,7 +228,7 @@ export function looksLikeResultsOfOperationsTitle(
 }
 
 /**
- * Ground-rule 8-K title from the primary item label.
+ * Ground-rule 8-K title from the primary item label (Title Case).
  * Example: `Material Agreement - Acme Corp`
  * Earnings (Item 2.02) should use {@link formatEarningsReportTitle} instead.
  */
@@ -165,7 +236,7 @@ export function formatSec8kItemTitle(
   itemLabel: string | null | undefined,
   companyName: string | null | undefined,
 ): string {
-  const label = itemLabel?.replace(/\s+/g, " ").trim() || "8-K Event";
+  const label = titleCaseEventLabel(itemLabel) || "8-K Event";
   return `${label} - ${resolveDisplayCompanyName(companyName)}`;
 }
 
@@ -206,4 +277,72 @@ export function form4TitleKindFromSubcategory(
     default:
       return "transaction";
   }
+}
+
+/** `Shelf Registration (S-3) - {Company Name}` */
+export function formatShelfRegistrationTitle(
+  companyName: string | null | undefined,
+): string {
+  return `Shelf Registration (S-3) - ${resolveDisplayCompanyName(companyName)}`;
+}
+
+/** `Prospectus / Offering (424B) - {Company Name}` */
+export function formatProspectusOfferingTitle(
+  companyName: string | null | undefined,
+): string {
+  return `Prospectus / Offering (424B) - ${resolveDisplayCompanyName(companyName)}`;
+}
+
+/** `Schedule 13D - {Company Name}` */
+export function formatSchedule13DTitle(
+  companyName: string | null | undefined,
+): string {
+  return `Schedule 13D - ${resolveDisplayCompanyName(companyName)}`;
+}
+
+/** `Schedule 13G - {Company Name}` */
+export function formatSchedule13GTitle(
+  companyName: string | null | undefined,
+): string {
+  return `Schedule 13G - ${resolveDisplayCompanyName(companyName)}`;
+}
+
+/** `Clinical Trial - {Company Name}` */
+export function formatClinicalTrialTitle(
+  companyName: string | null | undefined,
+): string {
+  return `Clinical Trial - ${resolveDisplayCompanyName(companyName)}`;
+}
+
+/** `CPI — {Month Year}` */
+export function formatCpiTitle(forMonth: string | null | undefined): string {
+  const month = forMonth?.replace(/\s+/g, " ").trim() || "Month unavailable";
+  return `CPI — ${month}`;
+}
+
+/** `Jobs Report (NFP) — {Month Year}` */
+export function formatJobsReportTitle(
+  forMonth: string | null | undefined,
+): string {
+  const month = forMonth?.replace(/\s+/g, " ").trim() || "Month unavailable";
+  return `Jobs Report (NFP) — ${month}`;
+}
+
+/** `FOMC Rate Decision` */
+export function formatFomcRateDecisionTitle(): string {
+  return "FOMC Rate Decision";
+}
+
+/** `Price Target - {Company Name}` */
+export function formatPriceTargetTitle(
+  companyName: string | null | undefined,
+): string {
+  return `Price Target - ${resolveDisplayCompanyName(companyName)}`;
+}
+
+/** `Analyst Rating - {Company Name}` */
+export function formatAnalystRatingTitle(
+  companyName: string | null | undefined,
+): string {
+  return `Analyst Rating - ${resolveDisplayCompanyName(companyName)}`;
 }

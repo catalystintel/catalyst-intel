@@ -10,7 +10,11 @@ import {
   earningsQuarterLabel,
   formatEarningsReportTitle,
   formatForm4InsiderTitle,
+  formatProspectusOfferingTitle,
+  formatSchedule13DTitle,
+  formatSchedule13GTitle,
   formatSec8kItemTitle,
+  formatShelfRegistrationTitle,
   form4TitleKindFromSubcategory,
 } from "@/lib/catalysts/catalyst-titles";
 import {
@@ -196,6 +200,14 @@ function entryToNormalized(
     }
   } else if (isForm4) {
     title = formatForm4InsiderTitle("transaction", companyName);
+  } else if (formMeta.subcategory === "s3") {
+    title = formatShelfRegistrationTitle(companyName);
+  } else if (formMeta.subcategory === "424b") {
+    title = formatProspectusOfferingTitle(companyName);
+  } else if (formMeta.subcategory === "13d") {
+    title = formatSchedule13DTitle(companyName);
+  } else if (formMeta.subcategory === "13g") {
+    title = formatSchedule13GTitle(companyName);
   }
 
   return {
