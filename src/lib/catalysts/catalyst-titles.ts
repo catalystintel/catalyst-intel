@@ -40,8 +40,14 @@ export function formatFdaApprovalTitle(
 }
 
 /**
- * Map Finnhub `quarter` (1–4) or a calendar/fiscal date into Q1–Q4.
- * Prefers the explicit quarter field when present.
+ * Map a report period into Q1–Q4 for ground-rule earnings titles.
+ *
+ * Priority:
+ * 1. Explicit Finnhub `quarter` (1–4) when present
+ * 2. Calendar quarter of a concrete date (period end, earnings date, or
+ *    SEC `Filed:` / filing timestamp) — fiscal-calendar heuristic when the
+ *    issuer does not supply a quarter field
+ * 3. `Q?` when nothing usable is available
  */
 export function earningsQuarterLabel(
   quarter?: number | null,
@@ -72,6 +78,62 @@ export function earningsQuarterLabel(
   return "Q?";
 }
 
+const MONTH_INDEX: Record<string, number> = {
+  january: 1,
+  february: 2,
+  march: 3,
+  april: 4,
+  may: 5,
+  june: 6,
+  july: 7,
+  august: 8,
+  september: 9,
+  october: 10,
+  november: 11,
+  december: 12,
+};
+
+/** Parse `YYYY-MM-DD` or `Month D, YYYY` into an ISO date (UTC-safe). */
+function parseLooseYmd(raw: string): string | null {
+  const trimmed = raw.trim();
+  if (/^\d{4}-\d{2}-\d{2}/.test(trimmed)) return trimmed.slice(0, 10);
+
+  const named = trimmed.match(/^([A-Za-z]+)\s+(\d{1,2}),\s+(\d{4})$/);
+  if (!named) return null;
+  const month = MONTH_INDEX[named[1].toLowerCase()];
+  const day = Number(named[2]);
+  const year = Number(named[3]);
+  if (!month || !Number.isFinite(day) || !Number.isFinite(year)) return null;
+  return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+}
+
+/**
+ * Best available date for quarter inference when Finnhub `quarter` is absent.
+ * Prefers period-end wording, then SEC `Filed: YYYY-MM-DD`, then ISO timestamp.
+ */
+export function earningsDateForQuarterInference(options: {
+  periodEndYmd?: string | null;
+  summary?: string | null;
+  timestamp?: string | null;
+}): string | null {
+  const periodEnd = parseLooseYmd(options.periodEndYmd ?? "");
+  if (periodEnd) return periodEnd;
+
+  const summary = options.summary?.replace(/\s+/g, " ") ?? "";
+  const periodMatch = summary.match(
+    /(?:quarter|period|three months)\s+ended\s+(\d{4}-\d{2}-\d{2}|[A-Za-z]+\s+\d{1,2},\s+\d{4})/i,
+  );
+  const fromPeriod = periodMatch?.[1] ? parseLooseYmd(periodMatch[1]) : null;
+  if (fromPeriod) return fromPeriod;
+
+  const filed = summary.match(/Filed:\s*(\d{4}-\d{2}-\d{2})/i)?.[1];
+  if (filed) return filed;
+
+  const ts = options.timestamp?.trim();
+  if (ts && /^\d{4}-\d{2}-\d{2}/.test(ts)) return ts.slice(0, 10);
+  return null;
+}
+
 /** `Earnings Report {Qn} - {Company Name}` */
 export function formatEarningsReportTitle(
   quarterLabel: string,
@@ -81,4 +143,15 @@ export function formatEarningsReportTitle(
     ? quarterLabel.trim().toUpperCase()
     : `Q${quarterLabel.trim()}`;
   return `Earnings Report ${q} - ${resolveDisplayCompanyName(companyName)}`;
+}
+
+/** True for SEC Item 2.02 / “Results of Operations…” style earnings subjects. */
+export function looksLikeResultsOfOperationsTitle(
+  ...texts: Array<string | null | undefined>
+): boolean {
+  return texts.some((text) =>
+    /results of operations(?:\s+and\s+financial\s+condition)?/i.test(
+      text ?? "",
+    ),
+  );
 }

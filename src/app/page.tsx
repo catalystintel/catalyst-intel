@@ -21,7 +21,7 @@ const DEMO_ROWS: {
 }[] = [
   {
     ticker: "NVDA",
-    title: "Item 2.02 — Results of Operations and Financial Condition",
+    title: "Earnings Report Q3 - NVIDIA Corp",
     time: "10:23 AM ET · Jul 25, 2026",
     timeShort: "10:23 AM",
   },

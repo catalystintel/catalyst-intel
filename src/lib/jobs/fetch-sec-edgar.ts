@@ -6,6 +6,11 @@ import {
   type NormalizedCatalyst,
 } from "@/lib/jobs/ingest-pipeline";
 import {
+  earningsDateForQuarterInference,
+  earningsQuarterLabel,
+  formatEarningsReportTitle,
+} from "@/lib/catalysts/catalyst-titles";
+import {
   classifySecFormType,
   parseFilingSummary,
 } from "@/lib/jobs/parse-8k-items";
@@ -159,6 +164,26 @@ function entryToNormalized(
     tags = ["8k", ...(parsed.items.map((i) => `item-${i.code}`) ?? [])];
   }
 
+  const isItem202Earnings =
+    eventCategory === "earnings" &&
+    (itemCodes?.some((i) => i.code === "2.02") ||
+      /^earnings\s*\/\s*results$/i.test(headline ?? ""));
+
+  let title = `${companyName} \u2014 ${formType} filing`;
+  if (isItem202Earnings) {
+    // Ground-rule tape title; quarter from Filed: date / filing timestamp.
+    const quarter = earningsQuarterLabel(
+      null,
+      earningsDateForQuarterInference({
+        summary: summaryText,
+        timestamp,
+      }),
+    );
+    title = formatEarningsReportTitle(quarter, companyName);
+    headline = title;
+    tags = [...(tags ?? []), quarter];
+  }
+
   return {
     provider: "sec-edgar",
     externalId: `sec-edgar:${accessionNumber}`,
@@ -176,7 +201,7 @@ function entryToNormalized(
     tickerSource,
     companyName,
     type: formType,
-    title: `${companyName} \u2014 ${formType} filing`,
+    title,
     headline,
     eventCategory,
     subcategory,
