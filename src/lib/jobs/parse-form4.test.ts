@@ -72,6 +72,26 @@ const AWARD_XML = `<?xml version="1.0"?>
   </nonDerivativeTable>
 </ownershipDocument>`;
 
+const RICH_BUY_XML = `<?xml version="1.0"?>
+<ownershipDocument>
+  <reportingOwner>
+    <reportingOwnerId>
+      <rptOwnerName>Doe Jane</rptOwnerName>
+    </reportingOwnerId>
+  </reportingOwner>
+  <nonDerivativeTable>
+    <nonDerivativeTransaction>
+      <transactionCoding>
+        <transactionCode>P</transactionCode>
+      </transactionCoding>
+      <transactionAmounts>
+        <transactionShares>10000</transactionShares>
+        <transactionPricePerShare>12.50</transactionPricePerShare>
+      </transactionAmounts>
+    </nonDerivativeTransaction>
+  </nonDerivativeTable>
+</ownershipDocument>`;
+
 describe("parseForm4OwnershipXml", () => {
   it("classifies open-market P as insider_buy", () => {
     expect(parseForm4OwnershipXml(BUY_XML)).toMatchObject({
@@ -79,6 +99,18 @@ describe("parseForm4OwnershipXml", () => {
       buyCount: 1,
       sellCount: 0,
     });
+  });
+
+  it("extracts owner shares and value on buys", () => {
+    const parsed = parseForm4OwnershipXml(RICH_BUY_XML);
+    expect(parsed).toMatchObject({
+      subcategory: "insider_buy",
+      ownerName: "Doe Jane",
+      totalShares: 10000,
+      totalValue: 125000,
+    });
+    expect(parsed?.investorSummary).toMatch(/Doe Jane/);
+    expect(parsed?.keyFacts?.some((f) => f.label === "Value")).toBe(true);
   });
 
   it("classifies open-market S as insider_sell", () => {

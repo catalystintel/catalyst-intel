@@ -33,7 +33,7 @@ export interface ArticleRelatedHeadline {
   url: string | null;
   publishedAt: string | null;
   source: string | null;
-  /** Present when the headline maps to a stored catalyst (in-app Read). */
+  /** Present when the headline maps to a stored catalyst (in-app Details). */
   catalystId: number | null;
 }
 
@@ -493,7 +493,7 @@ async function fetchArticleEnrichmentInner(options: {
 
 /**
  * Lightweight quote + profile for the Live tape split panel.
- * Skips related-headline fan-out used by the full article enrichment path.
+ * Skips related-headline fan-out used by the details enrichment path.
  */
 export async function fetchMarketQuoteBundle(options: {
   symbol: string | null | undefined;

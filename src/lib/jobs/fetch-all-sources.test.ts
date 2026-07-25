@@ -31,7 +31,6 @@ describe("fetch order catalog", () => {
       "clinicaltrials",
       "polygon-news",
       "polygon-prices",
-      "form4api",
     ]);
   });
 
@@ -40,7 +39,7 @@ describe("fetch order catalog", () => {
       ...CATALYST_SOURCE_IDS,
     ]);
     expect(CATALYST_SOURCE_CATALOG.map((s) => s.order)).toEqual([
-      1, 2, 3, 4, 5, 6, 7, 8, 9,
+      1, 2, 3, 4, 5, 6, 7, 8,
     ]);
   });
 
@@ -58,7 +57,7 @@ describe("fetch order catalog", () => {
     });
     expect(FETCH_PHASES[1]).toMatchObject({
       mode: "parallel",
-      sources: ["finnhub", "form4api"],
+      sources: ["finnhub"],
     });
     expect(FETCH_PHASES[2]).toMatchObject({
       mode: "sequential",

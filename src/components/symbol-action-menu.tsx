@@ -13,7 +13,7 @@ import {
 import { cn } from "@/lib/utils";
 
 /**
- * Symbol cell menu: filter tape, open panel/article, watchlist, dismiss.
+ * Symbol cell menu: filter tape, open panel/details, watchlist, dismiss.
  * Dropdown opens with symbol + company identity above the actions.
  */
 export function SymbolActionMenu({
@@ -34,7 +34,7 @@ export function SymbolActionMenu({
   onWatchlist: boolean;
   onFilterToSymbol: () => void;
   onOpenPanel: () => void;
-  /** Prefer in-place article modal over navigating away. */
+  /** Prefer in-place details modal over navigating away. */
   onOpenArticle?: () => void;
   onAddWatchlist: () => void;
   onDismiss: () => void;
@@ -114,7 +114,7 @@ export function SymbolActionMenu({
           }}
         >
           <BookOpen className="size-3.5" />
-          Open full article
+          Open details
         </DropdownMenuItem>
         <DropdownMenuSeparator className="bg-[var(--desk-border)]" />
         <DropdownMenuItem

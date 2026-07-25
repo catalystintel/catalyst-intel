@@ -1,6 +1,6 @@
 /**
  * Live-tape deep links. `c` re-opens the split panel on that catalyst after
- * navigating away (e.g. full article → back to feed).
+ * navigating away (e.g. details → back to feed).
  */
 export function feedHref(opts?: {
   catalystId?: number | null;

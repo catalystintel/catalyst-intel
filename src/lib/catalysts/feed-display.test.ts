@@ -37,6 +37,7 @@ function base(overrides: Partial<FeedCatalyst> = {}): FeedCatalyst {
     sourceUrl: "https://example.com",
     sourceProvider: "sec-edgar",
     sector: null,
+    keyFacts: [],
     ...overrides,
   };
 }
@@ -321,6 +322,23 @@ describe("titleLine", () => {
         }),
       ),
     ).toBe("Acme Corp New Stock Offering Filed — Potential Dilution Ahead");
+
+    expect(
+      titleLine(
+        base({
+          type: "424B2",
+          subcategory: "424b",
+          eventCategory: "capital",
+          headline: "Structured note / pricing supplement",
+          title: "C — Structured note · 8.67%",
+          companyName: "Citigroup Inc",
+          keyFacts: [
+            { label: "Type", value: "Pricing supplement (structured note)" },
+            { label: "Coupon", value: "8.67%" },
+          ],
+        }),
+      ),
+    ).toBe("C — Structured note · 8.67%");
 
     expect(
       titleLine(

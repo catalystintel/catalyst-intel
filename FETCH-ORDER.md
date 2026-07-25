@@ -74,8 +74,13 @@ Each source id has a row with `last_fetched_at` / `last_status`:
 - **`polygon-prices`** still drains a null-`historical_impact` queue; after a 429 the next tick
   bumps the enrich batch (up to 6). If news was rate-limited in the same tick, prices are
   deferred so we do not stack another 429 on the shared budget.
+- **`sec-edgar`** Atom feeds use per-form watermarks (`sec-edgar:8-K`, `sec-edgar:4`, …) and
+  `start=` pagination (up to 5×100) when a page is full of unknown accessions — so Form 4/8-K
+  bursts cannot silently roll off `getcurrent`. EOD **daily-index** (`master.YYYYMMDD.idx`)
+  reconciles via `sec-edgar:daily-index` for multi-hour/day gaps.
 
-See `src/lib/jobs/vendor-fetch-state.ts` and `src/lib/jobs/polygon-news-window.ts`.
+See `src/lib/jobs/vendor-fetch-state.ts`, `src/lib/jobs/polygon-news-window.ts`,
+`src/lib/jobs/sec-atom-pagination.ts`, and `src/lib/jobs/sec-daily-index.ts`.
 
 ## Admin UI
 

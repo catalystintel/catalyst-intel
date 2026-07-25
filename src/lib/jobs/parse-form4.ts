@@ -38,6 +38,16 @@ export interface Form4Direction {
   buyCount: number;
   sellCount: number;
   codes: string[];
+  /** Reporting owner display name when present in ownership XML. */
+  ownerName?: string | null;
+  /** Sum of transaction shares across coded rows (best-effort). */
+  totalShares?: number | null;
+  /** Sum of transaction values when price×shares available. */
+  totalValue?: number | null;
+  /** Key facts for split view / summary. */
+  keyFacts?: { label: string; value: string }[];
+  investorSummary?: string | null;
+  titleOverride?: string | null;
 }
 
 /** Accession folder segment (dashes stripped) for EDGAR archive paths. */
@@ -121,8 +131,56 @@ function transactionCodeFromNode(node: unknown): string | null {
   return code ? code.charAt(0) : null;
 }
 
-function collectTransactionCodes(doc: Record<string, unknown>): string[] {
-  const codes: string[] = [];
+function textValue(node: unknown): string | null {
+  if (node == null) return null;
+  if (typeof node === "string" || typeof node === "number") {
+    const s = String(node).trim();
+    return s || null;
+  }
+  if (typeof node === "object") {
+    const record = node as Record<string, unknown>;
+    if (record["#text"] != null) return textValue(record["#text"]);
+    if (record.value != null) return textValue(record.value);
+  }
+  return null;
+}
+
+function numberValue(node: unknown): number | null {
+  const raw = textValue(node);
+  if (!raw) return null;
+  const n = Number(raw.replace(/,/g, ""));
+  return Number.isFinite(n) ? n : null;
+}
+
+function reportingOwnerName(doc: Record<string, unknown>): string | null {
+  const owners = toArray(
+    doc.reportingOwner as
+      Record<string, unknown> | Record<string, unknown>[] | undefined,
+  );
+  for (const owner of owners) {
+    const id = owner.reportingOwnerId as Record<string, unknown> | undefined;
+    const name = textValue(id?.rptOwnerName);
+    if (name) return name;
+  }
+  return null;
+}
+
+interface TxAgg {
+  codes: string[];
+  totalShares: number;
+  totalValue: number;
+  shareHits: number;
+  valueHits: number;
+}
+
+function collectTransactions(doc: Record<string, unknown>): TxAgg {
+  const agg: TxAgg = {
+    codes: [],
+    totalShares: 0,
+    totalValue: 0,
+    shareHits: 0,
+    valueHits: 0,
+  };
   const tables = [
     doc.nonDerivativeTable as Record<string, unknown> | undefined,
     doc.derivativeTable as Record<string, unknown> | undefined,
@@ -142,15 +200,45 @@ function collectTransactionCodes(doc: Record<string, unknown>): string[] {
     ];
     for (const tx of transactions) {
       const code = transactionCodeFromNode(tx);
-      if (code) codes.push(code);
+      if (code) agg.codes.push(code);
+
+      const amounts = tx.transactionAmounts as
+        Record<string, unknown> | undefined;
+      const shares = numberValue(amounts?.transactionShares);
+      const price = numberValue(amounts?.transactionPricePerShare);
+      if (shares != null) {
+        agg.totalShares += shares;
+        agg.shareHits++;
+      }
+      const explicitValue = numberValue(amounts?.transactionTotalValue);
+      if (explicitValue != null) {
+        agg.totalValue += explicitValue;
+        agg.valueHits++;
+      } else if (shares != null && price != null) {
+        agg.totalValue += shares * price;
+        agg.valueHits++;
+      }
     }
   }
 
-  return codes;
+  return agg;
+}
+
+function formatShares(n: number): string {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(2)}M shares`;
+  if (n >= 10_000) return `${Math.round(n).toLocaleString("en-US")} shares`;
+  return `${n.toLocaleString("en-US", { maximumFractionDigits: 2 })} shares`;
+}
+
+function formatUsd(n: number): string {
+  if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(2)}M`;
+  if (n >= 1_000) return `$${Math.round(n).toLocaleString("en-US")}`;
+  return `$${n.toFixed(2)}`;
 }
 
 /**
- * Parse Form 4 ownership XML into buy/sell/mixed subcategories.
+ * Parse Form 4 ownership XML into buy/sell/mixed subcategories plus
+ * best-effort shares / $ / owner for investor-facing summaries.
  * Returns null when no transaction codes are found.
  */
 export function parseForm4OwnershipXml(xml: string): Form4Direction | null {
@@ -170,7 +258,8 @@ export function parseForm4OwnershipXml(xml: string): Form4Direction | null {
   const doc = parsed.ownershipDocument as Record<string, unknown> | undefined;
   if (!doc) return null;
 
-  const codes = collectTransactionCodes(doc);
+  const agg = collectTransactions(doc);
+  const codes = agg.codes;
   if (codes.length === 0) return null;
 
   let buyCount = 0;
@@ -182,32 +271,25 @@ export function parseForm4OwnershipXml(xml: string): Form4Direction | null {
     else if (ROUTINE_CODES.has(code)) routineCount++;
   }
 
+  const ownerName = reportingOwnerName(doc);
+  const totalShares = agg.shareHits > 0 ? agg.totalShares : null;
+  const totalValue = agg.valueHits > 0 ? agg.totalValue : null;
+
+  let subcategory: Form4Subcategory = "form4";
+  let headline = "Form 4 insider transaction";
+  let verb = "reported an insider transaction";
   if (buyCount > 0 && sellCount === 0) {
-    return {
-      subcategory: "insider_buy",
-      headline: "Insider buy (Form 4)",
-      buyCount,
-      sellCount,
-      codes,
-    };
-  }
-  if (sellCount > 0 && buyCount === 0) {
-    return {
-      subcategory: "insider_sell",
-      headline: "Insider sell (Form 4)",
-      buyCount,
-      sellCount,
-      codes,
-    };
-  }
-  if (buyCount > 0 && sellCount > 0) {
-    return {
-      subcategory: "form4_mixed",
-      headline: "Mixed insider transactions (Form 4)",
-      buyCount,
-      sellCount,
-      codes,
-    };
+    subcategory = "insider_buy";
+    headline = "Insider buy (Form 4)";
+    verb = "bought shares";
+  } else if (sellCount > 0 && buyCount === 0) {
+    subcategory = "insider_sell";
+    headline = "Insider sell (Form 4)";
+    verb = "sold shares";
+  } else if (buyCount > 0 && sellCount > 0) {
+    subcategory = "form4_mixed";
+    headline = "Mixed insider transactions (Form 4)";
+    verb = "reported mixed buy and sell transactions";
   }
 
   if (routineCount > 0) {
@@ -220,11 +302,51 @@ export function parseForm4OwnershipXml(xml: string): Form4Direction | null {
     };
   }
 
+  const keyFacts: { label: string; value: string }[] = [
+    { label: "Form", value: "4" },
+    {
+      label: "Direction",
+      value:
+        subcategory === "insider_buy"
+          ? "Buy"
+          : subcategory === "insider_sell"
+            ? "Sell"
+            : subcategory === "form4_mixed"
+              ? "Mixed"
+              : "Transaction",
+    },
+  ];
+  if (ownerName) keyFacts.push({ label: "Insider", value: ownerName });
+  if (totalShares != null) {
+    keyFacts.push({ label: "Shares", value: formatShares(totalShares) });
+  }
+  if (totalValue != null && totalValue > 0) {
+    keyFacts.push({ label: "Value", value: formatUsd(totalValue) });
+  }
+
+  const ownerBit = ownerName ? ` ${ownerName}` : " An insider";
+  const shareBit = totalShares != null ? ` (${formatShares(totalShares)})` : "";
+  const valueBit =
+    totalValue != null && totalValue > 0
+      ? ` totaling ~${formatUsd(totalValue)}`
+      : "";
+  const investorSummary = `${ownerBit.trim()} ${verb} on a Form 4${shareBit}${valueBit}. Form 4 filings report officer/director/10% owner trades — useful for conviction and selling pressure screens.`;
+
+  const titleOverride = ownerName
+    ? `${headline.replace(" (Form 4)", "")}: ${ownerName}${totalValue != null && totalValue > 0 ? ` · ${formatUsd(totalValue)}` : totalShares != null ? ` · ${formatShares(totalShares)}` : ""}`
+    : null;
+
   return {
-    subcategory: "form4",
-    headline: "Form 4 insider transaction",
+    subcategory,
+    headline,
     buyCount,
     sellCount,
     codes,
+    ownerName,
+    totalShares,
+    totalValue,
+    keyFacts,
+    investorSummary,
+    titleOverride,
   };
 }

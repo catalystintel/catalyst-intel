@@ -1,5 +1,5 @@
 /**
- * Article body + summary helpers for the in-app catalyst reader.
+ * Event body + summary helpers for the in-app catalyst details view.
  * Prefers stored vendor text (summary / description / Atom abstract) over
  * scraping arbitrary URLs. Heuristic extractive + metadata synthesis until
  * Groq is wired — never leave the reader with a blank or jargon-only blurb
@@ -109,9 +109,35 @@ export interface SummaryItemCode {
   label?: string | null;
 }
 
+/** True when text is primarily EDGAR Atom AccNo/Size metadata (never article body). */
+export function isAccNoMetadataBlob(text: string | null | undefined): boolean {
+  const t = text?.replace(/\s+/g, " ").trim() ?? "";
+  if (!t) return false;
+  if (!/\baccno:\s*[\d-]+/i.test(t)) return false;
+  const withoutMeta = t
+    .replace(/filed:\s*[\d-]+/gi, "")
+    .replace(/accno:\s*[\d-]+/gi, "")
+    .replace(/size:\s*[\d.]+\s*kb/gi, "")
+    .replace(/\s+/g, " ")
+    .trim();
+  // AccNo present and little else (ignore short Item headers alone).
+  if (withoutMeta.length < 48) return true;
+  if (
+    /\bsize:\s*[\d.]+/i.test(t) &&
+    withoutMeta.length < 120 &&
+    !/\b(shelf|offering|prospectus|insider|halt|earnings|dilution)\b/i.test(
+      withoutMeta,
+    )
+  ) {
+    return true;
+  }
+  return false;
+}
+
 /**
  * Pull the best available article/filing body from stored raw_sources JSON
  * and catalyst fields. Does not fetch external HTML.
+ * AccNo/Size Atom blurbs are never returned as body.
  */
 export function extractArticleBody(input: {
   provider?: string | null;
@@ -123,12 +149,43 @@ export function extractArticleBody(input: {
   const provider = input.provider?.trim() || null;
   const raw = asRecord(input.rawContent);
   const storedSummary = input.summary?.trim() ? stripHtml(input.summary) : null;
+  const extracted = asRecord(raw?.extracted);
+
+  // Prefer structured SEC extract (plain-text snippets / investor summary).
+  if (extracted) {
+    const snippets = Array.isArray(extracted.bodySnippets)
+      ? (extracted.bodySnippets as unknown[])
+          .filter(
+            (s): s is string => typeof s === "string" && s.trim().length > 0,
+          )
+          .map((s) => s.trim())
+          .filter((s) => !isAccNoMetadataBlob(s))
+      : [];
+    const investor =
+      typeof extracted.investorSummary === "string"
+        ? extracted.investorSummary.trim()
+        : "";
+    const pending =
+      typeof extracted.completeness === "string" &&
+      extracted.completeness === "thin" &&
+      snippets.length === 0
+        ? "Cover / pricing fields were not parsed from the primary document yet — triage summary above is the best available text."
+        : "";
+    const combined = [investor, ...snippets, pending]
+      .filter(Boolean)
+      .filter((s) => !isAccNoMetadataBlob(s))
+      .join("\n\n");
+    if (combined) {
+      return { body: combined, source: "raw" };
+    }
+  }
 
   let fromRaw: string | null = null;
 
   switch (provider) {
     case "sec-edgar":
       fromRaw = stringField(raw, "summary", "description");
+      if (fromRaw && isAccNoMetadataBlob(fromRaw)) fromRaw = null;
       break;
     case "nasdaq-halts":
       fromRaw = stringField(raw, "description", "summary", "title");
@@ -217,10 +274,12 @@ export function extractArticleBody(input: {
       );
   }
 
+  if (fromRaw && isAccNoMetadataBlob(fromRaw)) fromRaw = null;
   if (fromRaw && fromRaw.length > 0) {
     return { body: fromRaw, source: "raw" };
   }
-  if (storedSummary) {
+
+  if (storedSummary && !isAccNoMetadataBlob(storedSummary)) {
     return { body: storedSummary, source: "summary" };
   }
 
@@ -230,6 +289,44 @@ export function extractArticleBody(input: {
   }
 
   return { body: "", source: "empty" };
+}
+
+/** Key facts grid from stored SEC (or similar) extract payload. */
+export function extractKeyFacts(
+  rawContent: unknown,
+): { label: string; value: string }[] {
+  const raw = asRecord(rawContent);
+  const extracted = asRecord(raw?.extracted);
+  if (!extracted || !Array.isArray(extracted.keyFacts)) return [];
+  const out: { label: string; value: string }[] = [];
+  for (const fact of extracted.keyFacts) {
+    const rec = asRecord(fact);
+    if (!rec) continue;
+    const label = stringField(rec, "label");
+    const value = stringField(rec, "value");
+    if (!label || !value) continue;
+    out.push({ label, value });
+    if (out.length >= 8) break;
+  }
+  return out;
+}
+
+/** Accession / size as secondary proof meta only — never primary body. */
+export function extractFilingProofMeta(rawContent: unknown): {
+  accessionNumber: string | null;
+  filed: string | null;
+  size: string | null;
+} {
+  const raw = asRecord(rawContent);
+  const atom = stringField(raw, "summary", "description") ?? "";
+  return {
+    accessionNumber:
+      stringField(raw, "accessionNumber") ||
+      atom.match(/AccNo:\s*([\d-]+)/i)?.[1] ||
+      null,
+    filed: atom.match(/Filed:\s*([\d-]+)/i)?.[1] || null,
+    size: atom.match(/Size:\s*([\d.]+\s*KB)/i)?.[1] || null,
+  };
 }
 
 export interface ArticleSummaryResult {
@@ -275,6 +372,9 @@ export function isWeakSummary(text: string | null | undefined): boolean {
   const lower = cleaned.toLowerCase();
   const wordCount = cleaned.split(/\s+/).filter(Boolean).length;
   if (wordCount < 8) return true;
+
+  // Atom AccNo / Size metadata alone is not investor content.
+  if (isAccNoMetadataBlob(cleaned)) return true;
 
   // Title/headline joins and other non-prose blobs without a real sentence.
   if (!hasRealSentence(cleaned) && cleaned.length < 280) return true;
@@ -433,10 +533,36 @@ function rawDetailSentence(
       return extractiveSummary(desc, { maxSentences: 2, maxChars: 280 });
     }
     case "sec-edgar": {
+      const extracted = asRecord(raw.extracted);
+      if (extracted) {
+        const facts = Array.isArray(extracted.keyFacts)
+          ? (extracted.keyFacts as unknown[])
+              .map((f) => {
+                const rec = asRecord(f);
+                if (!rec) return null;
+                const label = stringField(rec, "label");
+                const value = stringField(rec, "value");
+                if (!label || !value) return null;
+                return `${label} ${value}`;
+              })
+              .filter((s): s is string => Boolean(s))
+              .slice(0, 4)
+          : [];
+        if (facts.length) return `Key facts: ${facts.join(" · ")}.`;
+        const investor = stringField(extracted, "investorSummary");
+        if (investor && investor.length >= 40) {
+          return extractiveSummary(investor, {
+            maxSentences: 2,
+            maxChars: 280,
+          });
+        }
+      }
       const atom = stringField(raw, "summary", "description");
       if (!atom || atom.length < 40) return null;
-      // Prefer plain language over dumping raw Item legalese twice.
       if (/^item\s+\d+\.\d+/i.test(atom) && atom.length < 120) return null;
+      if (/\baccno:\s*[\d-]+/i.test(atom) && /\bsize:\s*/i.test(atom)) {
+        return null;
+      }
       return extractiveSummary(atom, { maxSentences: 2, maxChars: 260 });
     }
     default:
@@ -545,13 +671,27 @@ export function synthesizeReadableSummary(input: ArticleSummaryInput): string {
 export function resolveArticleSummary(
   input: ArticleSummaryInput,
 ): ArticleSummaryResult {
+  const extracted = asRecord(asRecord(input.rawContent)?.extracted);
+  const investor =
+    typeof extracted?.investorSummary === "string"
+      ? stripHtml(extracted.investorSummary)
+      : "";
+  if (investor && !isWeakSummary(investor)) {
+    return { summary: extractiveSummary(investor), generated: false };
+  }
+
   const stored = input.summary?.trim() ? stripHtml(input.summary) : "";
-  if (!isWeakSummary(stored)) {
+  if (stored && !isAccNoMetadataBlob(stored) && !isWeakSummary(stored)) {
     return { summary: extractiveSummary(stored), generated: false };
   }
 
   const body = input.body?.trim() ? stripHtml(input.body) : "";
-  if (!isWeakSummary(body) && body !== stored) {
+  if (
+    body &&
+    !isAccNoMetadataBlob(body) &&
+    !isWeakSummary(body) &&
+    body !== stored
+  ) {
     return { summary: extractiveSummary(body), generated: true };
   }
 

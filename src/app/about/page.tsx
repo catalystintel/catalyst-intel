@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 export const metadata: Metadata = {
   title: "About · Catalyst Intel",
   description:
-    "Material market catalysts on a trading blotter — Symbol, Title, Time. Scan the event, open Read for the story, then act or dismiss.",
+    "Material market catalysts on a trading blotter — Symbol, Title, Time. Scan the event, open Details for the story, then act or dismiss.",
 };
 
 const BENEFITS = [
@@ -19,7 +19,7 @@ const BENEFITS = [
   },
   {
     title: "Story before the chart",
-    body: "Open any row for a plain-language summary and the in-desk article. Understand the why before you size the trade.",
+    body: "Open any row for a plain-language summary and expanded event details. Understand the why before you size the trade.",
   },
   {
     title: "Your book, not the whole tape",
@@ -61,9 +61,9 @@ export default function AboutPage() {
             .
           </p>
           <p className="text-pretty text-[var(--desk-text-secondary)]">
-            The feed surfaces the catalyst early. Open Read for a plain-language
-            summary and the full in-desk article — then act, dismiss, or quiet
-            the name into your playbook.
+            The feed surfaces the catalyst early. Open Details for a
+            plain-language summary and fuller event text — then act, dismiss, or
+            quiet the name into your playbook.
           </p>
         </section>
 

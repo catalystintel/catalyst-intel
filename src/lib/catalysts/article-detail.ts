@@ -1,5 +1,5 @@
 /**
- * Structured detail cards for the in-app article reader.
+ * Structured detail cards for the in-app event details view.
  * Earnings is first-class; other categories expose structured raw fields when present.
  */
 

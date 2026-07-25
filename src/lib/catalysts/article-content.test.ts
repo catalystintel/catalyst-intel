@@ -52,6 +52,32 @@ describe("extractArticleBody", () => {
     expect(result.body).toContain("Item 2.02");
   });
 
+  it("never returns AccNo/Size Atom blob as article body", () => {
+    const atom = "Filed: 2026-07-24 AccNo: 0001193125-26-316280 Size: 973 KB";
+    const result = extractArticleBody({
+      provider: "sec-edgar",
+      rawContent: {
+        summary: atom,
+        formType: "424B2",
+        extracted: {
+          completeness: "thin",
+          investorSummary:
+            "Citigroup Inc. (C-PR) filed a 424B2 prospectus supplement (capital markets).",
+          bodySnippets: [],
+          keyFacts: [
+            { label: "Form", value: "424B2" },
+            { label: "Type", value: "Prospectus supplement" },
+          ],
+        },
+      },
+      summary: atom,
+      title: "C-PR — Prospectus supplement (424B2)",
+    });
+    expect(result.body).not.toMatch(/AccNo/i);
+    expect(result.body).not.toMatch(/Size:\s*\d/i);
+    expect(result.body).toMatch(/prospectus|424B2|capital/i);
+  });
+
   it("reads Polygon description", () => {
     const result = extractArticleBody({
       provider: "polygon",

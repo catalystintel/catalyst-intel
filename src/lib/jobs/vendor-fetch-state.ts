@@ -50,11 +50,16 @@ export async function touchVendorFetchState(options: {
   message?: string | null;
   advanceWatermark: boolean;
   now?: Date;
+  /**
+   * When advancing, use this ISO instead of `now` (e.g. newest Atom `updated`
+   * or end-of-day for daily-index reconcile).
+   */
+  watermarkAt?: string;
 }): Promise<void> {
   const nowIso = (options.now ?? new Date()).toISOString();
   const existing = await getVendorFetchState(options.sourceId);
   const lastFetchedAt = options.advanceWatermark
-    ? nowIso
+    ? (options.watermarkAt ?? nowIso)
     : (existing?.lastFetchedAt ?? null);
 
   await db

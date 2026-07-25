@@ -130,7 +130,7 @@ export function LiveCatalystFeed({
   isAdmin: boolean;
   /** Pre-fills the symbol filter, e.g. arriving via `?symbol=` from Analytics. */
   initialSymbolFilter?: string;
-  /** Re-opens the split panel, e.g. arriving via `?c=` after full article. */
+  /** Re-opens the split panel, e.g. arriving via `?c=` after details. */
   initialSelectedId?: number;
 }) {
   const query = useLiveFeedQuery(initialCatalysts, {
@@ -895,7 +895,7 @@ function FeedFilters({
         <div
           className="flex flex-wrap items-center gap-1"
           role="group"
-          aria-label="Filter by article posting time"
+          aria-label="Filter by event posting time"
         >
           {FEED_TIME_WINDOWS.map((w) => (
             <FilterChip
@@ -1062,7 +1062,7 @@ function CatalystFeedList({
   const [pendingNew, setPendingNew] = useState(0);
   const knownListIds = useRef<Set<number>>(new Set(catalysts.map((c) => c.id)));
 
-  // Warm the first visible article routes so a click often skips cold SSR.
+  // Warm the first visible details routes so a click often skips cold SSR.
   useEffect(() => {
     for (const c of catalysts.slice(0, 8)) {
       onPrefetch(c.id);
@@ -1255,10 +1255,10 @@ function CatalystFeedList({
                   <FeedActionButton
                     variant="primary"
                     onClick={() => onRead(catalyst.id)}
-                    tip="Open the full article"
+                    tip="Open event details"
                   >
                     <BookOpen className="size-3" />
-                    Read
+                    Details
                   </FeedActionButton>
                   <FeedActionButton
                     onClick={() => onDismiss(catalyst.id)}
@@ -1314,10 +1314,10 @@ function CatalystFeedList({
                   <FeedActionButton
                     variant="primary"
                     onClick={() => onRead(catalyst.id)}
-                    tip="Open the full article"
+                    tip="Open event details"
                   >
                     <BookOpen className="size-3" />
-                    Read
+                    Details
                   </FeedActionButton>
                   <FeedActionButton
                     onClick={() => onDismiss(catalyst.id)}

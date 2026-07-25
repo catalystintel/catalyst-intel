@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { Sparkles } from "lucide-react";
+import { Info, Sparkles } from "lucide-react";
 
+import { DeskTip } from "@/components/desk-tip";
 import { Skeleton } from "@/components/loading-skeleton";
 import type { AiLean } from "@/db/schema";
 import type { TriageResult } from "@/lib/jobs/llm-triage";
@@ -12,7 +13,7 @@ type PanelState =
   | { kind: "idle" }
   | { kind: "loading" }
   | { kind: "ready"; analysis: TriageResult }
-  | { kind: "error"; message: string };
+  | { kind: "unavailable"; message: string };
 
 const LEAN_LABEL: Record<AiLean, string> = {
   bullish: "Bullish lean",
@@ -28,12 +29,23 @@ const LEAN_CLASS: Record<AiLean, string> = {
   uncertain: "text-[var(--desk-text-dim)]",
 };
 
+const AI_INFO_TIP =
+  "Short plain-English triage grounded in this event’s stored filing text and key facts. Shared for every viewer once computed. Not a prediction or buy/sell advice.";
+
 function AnalysisBody({ analysis }: { analysis: TriageResult }) {
   return (
     <div className="ai-analysis-reveal flex flex-col gap-2.5">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <p className="font-mono text-[0.65rem] tracking-[0.14em] text-[var(--desk-text-dim)] uppercase">
+        <p className="inline-flex items-center gap-1.5 font-mono text-[0.65rem] tracking-[0.14em] text-[var(--desk-text-dim)] uppercase">
           AI analysis
+          <DeskTip content={AI_INFO_TIP} side="bottom">
+            <span
+              className="inline-flex size-3.5 items-center justify-center rounded-full border border-[var(--desk-border-strong)] text-[var(--desk-text-dim)] hover:text-[var(--desk-text)]"
+              aria-label="About AI analysis"
+            >
+              <Info className="size-2.5" aria-hidden />
+            </span>
+          </DeskTip>
         </p>
         <span
           className={cn(
@@ -61,8 +73,7 @@ function AnalysisBody({ analysis }: { analysis: TriageResult }) {
         ))}
       </ul>
       <p className="font-mono text-[0.6rem] leading-snug tracking-wide text-[var(--desk-text-dim)]">
-        Grounded in the filing text only — not a prediction. Shared for every
-        viewer once computed.
+        Grounded in the filing text only — not a prediction.
       </p>
     </div>
   );
@@ -102,10 +113,9 @@ export function AiAnalysisPanel({
       };
       if (!res.ok || !data.analysis) {
         setState({
-          kind: "error",
+          kind: "unavailable",
           message:
-            data.error ??
-            "AI analysis unavailable right now. Try again in a minute.",
+            "AI analysis is not available at the moment. You can try again shortly.",
         });
         return;
       }
@@ -113,8 +123,9 @@ export function AiAnalysisPanel({
       onAnalyzed?.(data.analysis);
     } catch {
       setState({
-        kind: "error",
-        message: "Network error while analyzing. Try again shortly.",
+        kind: "unavailable",
+        message:
+          "AI analysis is not available at the moment. You can try again shortly.",
       });
     }
   }
@@ -194,32 +205,40 @@ export function AiAnalysisPanel({
                 </span>
               </span>
               <p className="max-w-[16rem] font-mono text-[0.65rem] leading-snug text-[var(--desk-text-dim)]">
-                Reading the filing and writing a short grounded triage.
+                Reading the filing text and writing a short plain-English
+                triage.
               </p>
             </div>
           </>
         ) : (
           <>
-            <button
-              type="button"
-              onClick={() => void runAnalyze()}
-              className="btn-press inline-flex items-center gap-1.5 rounded-sm bg-[var(--desk-live)] px-3 py-1.5 font-mono text-xs font-semibold tracking-wide text-[#121212] uppercase hover:brightness-110"
-            >
-              <Sparkles className="size-3.5" aria-hidden />
-              See AI analysis
-            </button>
-            {state.kind === "error" ? (
+            <div className="relative flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => void runAnalyze()}
+                className="btn-press inline-flex items-center gap-1.5 rounded-sm bg-[var(--desk-live)] px-3 py-1.5 font-mono text-xs font-semibold tracking-wide text-[#121212] uppercase hover:brightness-110"
+              >
+                <Sparkles className="size-3.5" aria-hidden />
+                See AI analysis
+              </button>
+              <DeskTip content={AI_INFO_TIP} side="bottom">
+                <button
+                  type="button"
+                  className="inline-flex size-6 items-center justify-center rounded-sm border border-[var(--desk-border-strong)] text-[var(--desk-text-dim)] hover:bg-[var(--desk-overlay-strong)] hover:text-[var(--desk-text)]"
+                  aria-label="About AI analysis"
+                >
+                  <Info className="size-3.5" aria-hidden />
+                </button>
+              </DeskTip>
+            </div>
+            {state.kind === "unavailable" ? (
               <p
-                role="alert"
-                className="max-w-[18rem] font-mono text-[0.65rem] leading-snug text-rose-400"
+                role="status"
+                className="max-w-[18rem] font-mono text-[0.65rem] leading-snug text-[var(--desk-text-muted)]"
               >
                 {state.message}
               </p>
-            ) : (
-              <p className="max-w-[16rem] font-mono text-[0.65rem] leading-snug text-[var(--desk-text-dim)]">
-                One-time compute — then visible to everyone on this event.
-              </p>
-            )}
+            ) : null}
           </>
         )}
       </div>

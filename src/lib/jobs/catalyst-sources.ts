@@ -15,7 +15,6 @@ export const CATALYST_SOURCE_IDS = [
   "clinicaltrials",
   "polygon-news",
   "polygon-prices",
-  "form4api",
 ] as const;
 
 export type CatalystSourceId = (typeof CATALYST_SOURCE_IDS)[number];
@@ -113,16 +112,6 @@ export const CATALYST_SOURCE_CATALOG: readonly CatalystSourceMeta[] = [
       "historical_impact + session_context enrichment from daily aggs (after news; free tier ~5 req/min)",
     keyEnv: "POLYGON_API_KEY",
   },
-  {
-    id: "form4api",
-    order: 9,
-    label: "Form4API",
-    priority: "should",
-    phase: "B",
-    contributes:
-      "Intentionally skipped (quality-first): duplicates SEC EDGAR Form 4 Atom",
-    keyEnv: "FORM4_API_KEY",
-  },
 ] as const;
 
 export interface FetchPhaseDef {
@@ -136,8 +125,10 @@ export interface FetchPhaseDef {
 /**
  * Runtime phases for fetchAllCatalystSources:
  * - A: keyless Must sources in parallel
- * - B: optional-key Should sources in parallel (Finnhub, Form4API)
+ * - B: optional-key Should sources (Finnhub)
  * - C: Polygon news then prices (sequential; shared free-tier budget)
+ *
+ * Form4API was removed — SEC EDGAR Form 4 (+ ownership XML) covers insiders.
  */
 export const FETCH_PHASES: readonly FetchPhaseDef[] = [
   {
@@ -156,7 +147,7 @@ export const FETCH_PHASES: readonly FetchPhaseDef[] = [
     id: "B",
     label: "Optional keys (parallel)",
     mode: "parallel",
-    sources: ["finnhub", "form4api"],
+    sources: ["finnhub"],
   },
   {
     id: "C",

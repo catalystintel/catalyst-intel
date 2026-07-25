@@ -104,7 +104,7 @@ export default async function Home() {
           </h1>
           <p className="mt-4 max-w-lg text-base text-pretty text-[var(--desk-text-secondary)] sm:text-lg">
             Material catalysts on a trading blotter — Symbol, Title, Time. Open
-            Read for a plain-language summary.
+            Details for a plain-language summary.
           </p>
           <p className="mt-3 max-w-lg text-sm text-pretty text-[var(--desk-text-muted)] sm:text-base">
             During Open Early Access, every feature is free — feed, alerts,
@@ -222,7 +222,7 @@ export default async function Home() {
                   <div className="mt-2 flex flex-wrap items-center gap-1.5 lg:hidden">
                     <PreviewActionChip variant="primary">
                       <BookOpen className="size-3" />
-                      Read
+                      Details
                     </PreviewActionChip>
                     <PreviewActionChip>
                       <X className="size-3" />
@@ -241,7 +241,7 @@ export default async function Home() {
                   <div className="flex w-full min-w-0 flex-nowrap items-center justify-end gap-1">
                     <PreviewActionChip variant="primary">
                       <BookOpen className="size-3" />
-                      Read
+                      Details
                     </PreviewActionChip>
                     <PreviewActionChip>
                       <X className="size-3" />

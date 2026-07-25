@@ -47,6 +47,8 @@ export interface FeedCatalyst {
   sourceProvider: string | null;
   /** companies.sector when the catalyst is linked to a company row. */
   sector: string | null;
+  /** Structured investor facts for split triage (from SEC extract etc.). */
+  keyFacts: { label: string; value: string }[];
 }
 
 /** Newest event time first; tie-break by higher id. */
@@ -92,6 +94,8 @@ export interface RawCatalystRow {
   sourceUrl: string | null;
   sourceProvider?: string | null;
   sector?: string | null;
+  /** Optional raw_sources.raw_content for keyFacts extraction. */
+  rawContent?: unknown;
 }
 
 function toEventCategory(
@@ -122,6 +126,35 @@ function normalizeAiBullets(value: unknown): string[] | null {
 function normalizeAiLean(value: string | null | undefined): AiLean | null {
   if (!value || !AI_LEAN_SET.has(value as AiLean)) return null;
   return value as AiLean;
+}
+
+function normalizeKeyFacts(
+  rawContent: unknown,
+): { label: string; value: string }[] {
+  if (
+    !rawContent ||
+    typeof rawContent !== "object" ||
+    Array.isArray(rawContent)
+  ) {
+    return [];
+  }
+  const extracted = (rawContent as Record<string, unknown>).extracted;
+  if (!extracted || typeof extracted !== "object" || Array.isArray(extracted)) {
+    return [];
+  }
+  const facts = (extracted as Record<string, unknown>).keyFacts;
+  if (!Array.isArray(facts)) return [];
+  const out: { label: string; value: string }[] = [];
+  for (const fact of facts) {
+    if (!fact || typeof fact !== "object") continue;
+    const rec = fact as Record<string, unknown>;
+    const label = typeof rec.label === "string" ? rec.label.trim() : "";
+    const value = typeof rec.value === "string" ? rec.value.trim() : "";
+    if (!label || !value) continue;
+    out.push({ label, value });
+    if (out.length >= 6) break;
+  }
+  return out;
 }
 
 /**
@@ -158,5 +191,6 @@ export function toFeedCatalyst(row: RawCatalystRow): FeedCatalyst {
     sourceUrl: row.sourceUrl,
     sourceProvider: row.sourceProvider ?? null,
     sector: normalizeToGicsLabel(row.sector) ?? row.sector ?? null,
+    keyFacts: normalizeKeyFacts(row.rawContent),
   };
 }

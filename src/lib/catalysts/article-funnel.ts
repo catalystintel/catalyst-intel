@@ -1,10 +1,13 @@
 /**
  * Benzinga-like article funnel helpers (IA only — keep B&W desk chrome).
- * Feed triage → Read page depth: WIIM, takeaways, related symbols, Δ, thumb.
+ * Feed triage → Details depth: WIIM, takeaways, related symbols, Δ, thumb.
  */
 
 import type { ArticleDetailCard } from "@/lib/catalysts/article-detail";
-import { stripHtml } from "@/lib/catalysts/article-content";
+import {
+  isAccNoMetadataBlob,
+  stripHtml,
+} from "@/lib/catalysts/article-content";
 
 const SENTENCE_SPLIT = /(?<=[.!?])\s+(?=[A-Z0-9"'(])/;
 const SYMBOL_RE = /^[A-Z][A-Z0-9.]{0,9}$/;
@@ -131,15 +134,18 @@ export function deriveTakeaways(
   body?: string | null,
   max = 3,
 ): string[] {
+  const summaryClean = summary?.trim() ? stripHtml(summary) : "";
+  const bodyClean = body?.trim() ? stripHtml(body) : "";
   const text =
-    (summary?.trim() ? stripHtml(summary) : "") ||
-    (body?.trim() ? stripHtml(body) : "");
+    (summaryClean && !isAccNoLike(summaryClean) ? summaryClean : "") ||
+    (bodyClean && !isAccNoLike(bodyClean) ? bodyClean : "");
   if (!text) return [];
 
   const sentences = text
     .split(SENTENCE_SPLIT)
     .map((s) => s.trim())
-    .filter((s) => s.length >= 12);
+    .filter((s) => s.length >= 12)
+    .filter((s) => !isAccNoLike(s));
 
   if (sentences.length >= 2) {
     return sentences
@@ -151,14 +157,15 @@ export function deriveTakeaways(
   const parts = text
     .split(/\s*[·;|]\s+/)
     .map((s) => s.trim())
-    .filter((s) => s.length >= 18);
+    .filter((s) => s.length >= 18)
+    .filter((s) => !isAccNoLike(s));
   if (parts.length >= 2) {
     return parts
       .slice(0, max)
       .map((s) => (s.length > 160 ? `${s.slice(0, 157).trim()}…` : s));
   }
 
-  if (text.length < 40) return [text];
+  if (text.length < 40) return isAccNoLike(text) ? [] : [text];
 
   const bullets: string[] = [];
   let rest = text;
@@ -175,7 +182,12 @@ export function deriveTakeaways(
       break;
     }
   }
-  return bullets;
+  return bullets.filter((b) => !isAccNoLike(b));
+}
+
+/** AccNo / Size Atom blobs are never useful takeaways. */
+function isAccNoLike(text: string): boolean {
+  return isAccNoMetadataBlob(text);
 }
 
 /**
