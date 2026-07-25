@@ -156,11 +156,14 @@ export function TapeSplitPanel({
     if (!ticker) return;
 
     let cancelled = false;
-    setChartRange(DEFAULT_CHART_RANGE);
-    setRangePerf(null);
     const id = window.setTimeout(() => {
+      if (cancelled) return;
+      // Reset lookback when the selected row changes (async to satisfy
+      // react-hooks/set-state-in-effect — sync setState in effects is banned).
+      setChartRange(DEFAULT_CHART_RANGE);
+      setRangePerf(null);
+      setQuoteLoading(true);
       void (async () => {
-        setQuoteLoading(true);
         try {
           const res = await fetch(
             `/api/market/quote?symbol=${encodeURIComponent(ticker)}`,
@@ -191,15 +194,13 @@ export function TapeSplitPanel({
   }, [ticker]);
 
   useEffect(() => {
-    if (!ticker || chartRange === "1D") {
-      setRangePerf(null);
-      setRangePerfLoading(false);
-      return;
-    }
+    // 1D uses the session quote — ignore cached multi-day performance.
+    if (!ticker || chartRange === "1D") return;
 
     let cancelled = false;
-    setRangePerfLoading(true);
     const id = window.setTimeout(() => {
+      if (cancelled) return;
+      setRangePerfLoading(true);
       void (async () => {
         try {
           const res = await fetch(
