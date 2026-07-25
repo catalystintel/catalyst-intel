@@ -5,6 +5,11 @@
  *
  * In production the same job is triggered by cron-job.org every 1 minute
  * hitting `/api/admin/fetch/all` — see ARCHITECTURE.md and DEPLOYMENT.md.
+ *
+ * Must run with `--conditions=react-server` (see the `cron` npm script) so
+ * `import "server-only"` in `@/db/client` resolves to its no-op export
+ * instead of throwing — that guard exists to keep libSQL out of the browser
+ * bundle, not to block this standalone script.
  */
 async function main() {
   try {
