@@ -16,7 +16,7 @@ export function ArticleLoadError({ catalystId }: { catalystId: number }) {
     <div className="flex flex-1 items-center justify-center px-4 py-16">
       <div className="w-full max-w-lg rounded-lg border border-border p-6 text-sm">
         <h1 className="text-base font-semibold tracking-tight">
-          Could not load this article
+          Could not load these details
         </h1>
         <p className="mt-2 text-muted-foreground">
           The desk is up, but this catalyst&apos;s details didn&apos;t arrive in

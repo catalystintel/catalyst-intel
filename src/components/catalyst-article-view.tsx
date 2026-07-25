@@ -29,6 +29,12 @@ import { CATEGORY_LABELS } from "@/lib/jobs/parse-8k-items";
 import { feedHref } from "@/lib/nav/feed-href";
 import { cn } from "@/lib/utils";
 
+export type FilingProofMeta = {
+  accessionNumber: string | null;
+  filed: string | null;
+  size: string | null;
+};
+
 export interface CatalystArticleViewProps {
   catalyst: FeedCatalyst;
   summary: string;
@@ -45,6 +51,8 @@ export interface CatalystArticleViewProps {
   deltaSincePublish?: DeltaSincePublish | null;
   /** Soft-fail vendor enrichment (profile / related / quote). */
   enrichment?: ArticleEnrichment | null;
+  /** Accession/size — secondary proof only (never article body). */
+  filingProofMeta?: FilingProofMeta | null;
   /** `dialog` hides the feed back-link (modal chrome owns dismiss). */
   variant?: "page" | "dialog";
   /**
@@ -55,7 +63,7 @@ export interface CatalystArticleViewProps {
 }
 
 /**
- * Full in-app article reader for a single catalyst.
+ * Expanded in-app event details for a single catalyst.
  * Catalyst Intel is the product source of truth; vendor URL proof links are
  * local-dev only.
  */
@@ -72,6 +80,7 @@ export function CatalystArticleView({
   thumbUrl = null,
   deltaSincePublish = null,
   enrichment = null,
+  filingProofMeta = null,
   variant = "page",
 }: CatalystArticleViewProps) {
   const categoryLabel = catalyst.eventCategory
@@ -105,7 +114,7 @@ export function CatalystArticleView({
             />
             <span className="inline-flex items-center gap-1.5 font-mono text-[0.65rem] tracking-[0.14em] text-[var(--desk-live)] uppercase">
               <BookOpen className="size-3.5" />
-              Article
+              Details
             </span>
           </div>
         </div>
@@ -161,8 +170,8 @@ export function CatalystArticleView({
 
         {!symbol ? (
           <p className="font-mono text-[0.72rem] leading-snug text-[var(--desk-text-dim)]">
-            No tradable symbol on this catalyst — use the summary and article
-            body below.
+            No tradable symbol on this catalyst — use the summary and text
+            below.
           </p>
         ) : null}
 
@@ -310,10 +319,33 @@ export function CatalystArticleView({
         </section>
       ) : null}
 
+      {catalyst.keyFacts.length > 0 ? (
+        <section className="flex flex-col gap-2">
+          <h2 className="font-mono text-[0.65rem] tracking-[0.14em] text-[var(--desk-text-dim)] uppercase">
+            Key facts
+          </h2>
+          <dl className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+            {catalyst.keyFacts.slice(0, 8).map((fact) => (
+              <div
+                key={`${fact.label}:${fact.value}`}
+                className="rounded-sm border border-[var(--desk-border)] bg-[var(--desk-overlay-soft)] px-2.5 py-2"
+              >
+                <dt className="font-mono text-[0.6rem] tracking-[0.12em] text-[var(--desk-text-dim)] uppercase">
+                  {fact.label}
+                </dt>
+                <dd className="mt-0.5 text-sm font-medium text-[var(--desk-text)]">
+                  {fact.value}
+                </dd>
+              </div>
+            ))}
+          </dl>
+        </section>
+      ) : null}
+
       <section className="flex flex-col gap-2">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
           <h2 className="font-mono text-[0.65rem] tracking-[0.14em] text-[var(--desk-text-dim)] uppercase">
-            Article body
+            Full text
           </h2>
           {isLocalDevUi() ? (
             <span className="font-mono text-[0.6rem] tracking-wide text-[var(--desk-text-dim)] uppercase">
@@ -331,10 +363,13 @@ export function CatalystArticleView({
           </div>
         ) : (
           <p className="rounded-sm border border-dashed border-[var(--desk-border-strong)] px-4 py-4 text-sm text-[var(--desk-text-muted)]">
-            No stored article text for this row yet. Summary and takeaways above
+            No stored event text for this row yet. Summary and takeaways above
             are the available in-app content.
           </p>
         )}
+        {isLocalDevUi() && filingProofMeta ? (
+          <FilingProofMetaLine meta={filingProofMeta} />
+        ) : null}
       </section>
 
       {catalyst.items.length > 0 ? (
@@ -449,7 +484,7 @@ export function CatalystArticleView({
                 >
                   {item.catalystId != null ? (
                     <Link
-                      href={`/catalyst-feed/catalyst/${item.catalystId}`}
+                      href={`/dashboard/catalyst/${item.catalystId}`}
                       className="flex flex-col transition-colors hover:opacity-90"
                     >
                       {inner}
@@ -671,12 +706,27 @@ function toneClass(tone?: DetailTone): string {
 function bodySourceLabel(source: ArticleBodySource): string {
   switch (source) {
     case "raw":
-      return "From stored payload";
+      return "from extract / raw";
     case "summary":
-      return "From summary field";
+      return "from summary";
     case "title":
-      return "Title fallback";
+      return "from title";
     default:
-      return "Unavailable";
+      return "empty";
   }
+}
+
+/** Local-dev only — AccNo/Size as proof metadata, never primary copy. */
+function FilingProofMetaLine({ meta }: { meta: FilingProofMeta }) {
+  const parts = [
+    meta.filed ? `Filed ${meta.filed}` : null,
+    meta.accessionNumber ? `AccNo ${meta.accessionNumber}` : null,
+    meta.size ? `Size ${meta.size}` : null,
+  ].filter(Boolean);
+  if (parts.length === 0) return null;
+  return (
+    <p className="font-mono text-[0.6rem] tracking-wide text-[var(--desk-text-dim)] uppercase">
+      Filing proof · {parts.join(" · ")} {LOCAL_DEV_ONLY_LABEL}
+    </p>
+  );
 }

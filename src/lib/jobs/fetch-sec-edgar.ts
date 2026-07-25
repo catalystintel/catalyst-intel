@@ -1,5 +1,8 @@
 import { XMLParser } from "fast-xml-parser";
+import { inArray } from "drizzle-orm";
 
+import { db } from "@/db/client";
+import { rawSources } from "@/db/schema";
 import {
   ingestNormalizedCatalysts,
   type IngestPipelineResult,
@@ -24,6 +27,10 @@ import {
   selectPrimaryItem,
 } from "@/lib/jobs/parse-8k-items";
 import {
+  enrichSecFilingDocuments,
+  sanitizeSecAtomSummaries,
+} from "@/lib/jobs/enrich-sec-filings";
+import {
   accessionToFolder,
   candidateForm4XmlUrls,
   extractForm4XmlHrefsFromIndex,
@@ -32,28 +39,63 @@ import {
 } from "@/lib/jobs/parse-form4";
 
 import {
+  SEC_ATOM_MAX_PAGES,
+  SEC_ATOM_PAGE_SIZE,
+  accessionFromAtomId,
+  feedUrlForType,
+  newestUpdatedIso,
+  oldestUpdatedIso,
+  secFormVendorSourceId,
+  shouldPaginateFurther,
+} from "./sec-atom-pagination";
+import {
+  SEC_DAILY_INDEX_VENDOR_ID,
+  dailyIndexCandidateDates,
+  formatReconciledThroughMessage,
+  masterIdxUrl,
+  masterRowToNormalized,
+  parseMasterIdx,
+  parseReconciledThrough,
+} from "./sec-daily-index";
+import {
   type SecFetchMode,
+  SecEdgarRequestError,
   fetchSecUrl,
   getSecUserAgent,
 } from "./sec-edgar-http";
 import { getSymbolByCik } from "./symbol-lookup";
+import {
+  getVendorFetchState,
+  touchVendorFetchState,
+} from "./vendor-fetch-state";
 
 /**
  * Current filing Atom feeds live on www.sec.gov (Akamai CDN), not data.sec.gov.
  * data.sec.gov hosts JSON submissions APIs; there is no equivalent Atom feed there.
+ * count=100 is EDGAR max; overflow uses `start=` pagination (see sec-atom-pagination).
  */
 const SEC_FEED_TYPES = [
-  { type: "8-K", count: 100 },
-  { type: "4", count: 40 },
-  { type: "S-3", count: 40 },
-  { type: "424B", count: 40 },
-  { type: "425", count: 40 },
-  { type: "SC 13D", count: 40 },
-  { type: "SC 13G", count: 40 },
+  { type: "8-K", count: SEC_ATOM_PAGE_SIZE },
+  { type: "4", count: SEC_ATOM_PAGE_SIZE },
+  { type: "S-3", count: SEC_ATOM_PAGE_SIZE },
+  { type: "424B", count: SEC_ATOM_PAGE_SIZE },
+  { type: "425", count: SEC_ATOM_PAGE_SIZE },
+  { type: "SC 13D", count: SEC_ATOM_PAGE_SIZE },
+  { type: "SC 13G", count: SEC_ATOM_PAGE_SIZE },
 ] as const;
 
+export type SecFeedFetchStats = {
+  type: string;
+  fetched: number;
+  errors: number;
+  pages: number;
+  overflowTriggered: boolean;
+  hitMaxPages: boolean;
+};
+
 export type FetchSecEdgarResult = IngestPipelineResult & {
-  feeds: { type: string; fetched: number; errors: number }[];
+  feeds: SecFeedFetchStats[];
+  message?: string;
 };
 
 export interface FetchSecEdgarOptions {
@@ -89,7 +131,7 @@ export function stripHtml(html: string): string {
  * Parses titles like "8-K - PEDEVCO CORP (0001141197) (Filer)".
  * Form 3/4/5 Atom entries use "(Reporting)" instead of "(Filer)" for the
  * insider's own role — without it here, the regex silently fails and the
- * entry falls back to the raw, unparsed title with no CIK/symbol.
+ * entry falls back to the raw, unparsed title with no CIK/ticker.
  */
 export function parseFilingTitle(title: string) {
   const match = title.match(
@@ -110,11 +152,6 @@ function toEntryArray(entry: unknown): AtomEntry[] {
   return Array.isArray(entry) ? (entry as AtomEntry[]) : [entry as AtomEntry];
 }
 
-function feedUrlForType(formType: string, count: number): string {
-  const encoded = encodeURIComponent(formType);
-  return `https://www.sec.gov/cgi-bin/browse-edgar?action=getcurrent&type=${encoded}&output=atom&count=${count}`;
-}
-
 function parseFeedXml(feedXml: string): AtomEntry[] {
   const parser = new XMLParser({
     ignoreAttributes: false,
@@ -123,6 +160,22 @@ function parseFeedXml(feedXml: string): AtomEntry[] {
   });
   const parsed = parser.parse(feedXml);
   return toEntryArray(parsed?.feed?.entry);
+}
+
+async function findExistingSecExternalIds(
+  externalIds: string[],
+): Promise<Set<string>> {
+  if (externalIds.length === 0) return new Set();
+  const rows = await db
+    .select({ externalId: rawSources.externalId })
+    .from(rawSources)
+    .where(inArray(rawSources.externalId, externalIds))
+    .all();
+  return new Set(rows.map((r) => r.externalId));
+}
+
+async function sleep(ms: number): Promise<void> {
+  await new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 function entryToNormalized(
@@ -326,6 +379,32 @@ export async function enrichForm4Directions(
             item.headline = item.title;
           }
           raw.form4Direction = direction;
+          if (direction.keyFacts?.length) {
+            raw.extracted = {
+              eventKind: direction.subcategory,
+              completeness:
+                direction.totalShares != null || direction.totalValue != null
+                  ? "full"
+                  : "partial",
+              investorSummary: direction.investorSummary,
+              bodySnippets: direction.investorSummary
+                ? [direction.investorSummary]
+                : [],
+              keyFacts: direction.keyFacts,
+              titleOverride: direction.titleOverride,
+              headlineOverride: direction.headline,
+              sourceDoc: url,
+            };
+          }
+          if (direction.investorSummary) {
+            item.summary = direction.investorSummary;
+          }
+          if (direction.titleOverride) {
+            const symbol = item.symbol?.trim().toUpperCase();
+            item.title = symbol
+              ? `${symbol} — ${direction.titleOverride}`
+              : direction.titleOverride;
+          }
           break;
         } catch {
           continue;
@@ -338,8 +417,8 @@ export async function enrichForm4Directions(
 }
 
 /**
- * Fetches current SEC EDGAR Atom feeds (8-K + Form 4, S-3/424B, 13D/G),
- * normalizes, dedupes by accession, and inserts catalysts.
+ * Fetches current SEC EDGAR Atom feeds with overflow pagination, optionally
+ * reconciles daily-index master.idx for gaps, normalizes, enriches, and inserts.
  */
 export async function fetchSecEdgar(
   options: FetchSecEdgarOptions = {},
@@ -355,37 +434,140 @@ export async function fetchSecEdgar(
 
   const symbolByCik = await getSymbolByCik(userAgent, { mode });
 
-  const feedStats: { type: string; fetched: number; errors: number }[] = [];
+  const feedStats: SecFeedFetchStats[] = [];
   const normalized: NormalizedCatalyst[] = [];
+  const noteParts: string[] = [];
 
   for (const feed of feeds) {
     let fetched = 0;
     let errors = 0;
-    try {
-      const res = await fetchSecUrl(feedUrlForType(feed.type, feed.count), {
-        userAgent,
-        mode,
-      });
-      const feedXml = await res.text();
-      const entries = parseFeedXml(feedXml);
-      fetched = entries.length;
+    let pages = 0;
+    let overflowTriggered = false;
+    let hitMaxPages = false;
+    let lastPageKnownHit = false;
+    let lastPageFull = false;
+    const pageUpdated: string[] = [];
 
-      for (const entry of entries) {
-        try {
-          const item = entryToNormalized(entry, symbolByCik);
-          if (!item) {
-            errors++;
-            continue;
-          }
-          normalized.push(item);
-        } catch {
-          errors++;
+    const formState = await getVendorFetchState(
+      secFormVendorSourceId(feed.type),
+    );
+    const watermarkIso = formState?.lastFetchedAt ?? null;
+
+    try {
+      for (let pageIndex = 0; pageIndex < SEC_ATOM_MAX_PAGES; pageIndex++) {
+        if (pageIndex > 0) {
+          overflowTriggered = true;
+          await sleep(120);
         }
+
+        const start = pageIndex * feed.count;
+        const res = await fetchSecUrl(
+          feedUrlForType(feed.type, feed.count, start),
+          { userAgent, mode },
+        );
+        const feedXml = await res.text();
+        const entries = parseFeedXml(feedXml);
+        pages++;
+        fetched += entries.length;
+
+        const accessionsOnPage: string[] = [];
+        const updatedOnPage: Array<string | null> = [];
+
+        for (const entry of entries) {
+          const acc = accessionFromAtomId(entry.id);
+          if (acc) accessionsOnPage.push(acc);
+          updatedOnPage.push(entry.updated ?? null);
+          if (entry.updated) pageUpdated.push(entry.updated);
+
+          try {
+            const item = entryToNormalized(entry, symbolByCik);
+            if (!item) {
+              errors++;
+              continue;
+            }
+            normalized.push(item);
+          } catch {
+            errors++;
+          }
+        }
+
+        const externalIds = accessionsOnPage.map((a) => `sec-edgar:${a}`);
+        const existing = await findExistingSecExternalIds(externalIds);
+        const knownHit = externalIds.some((id) => existing.has(id));
+        lastPageKnownHit = knownHit;
+        lastPageFull = entries.length >= feed.count;
+
+        const continuePaging = shouldPaginateFurther({
+          pageIndex,
+          pageEntryCount: entries.length,
+          pageSize: feed.count,
+          maxPages: SEC_ATOM_MAX_PAGES,
+          knownHit,
+          watermarkIso,
+          oldestUpdatedIso: oldestUpdatedIso(updatedOnPage),
+        });
+
+        if (!continuePaging) break;
       }
-    } catch {
+
+      hitMaxPages =
+        pages >= SEC_ATOM_MAX_PAGES && lastPageFull && !lastPageKnownHit;
+
+      const newest = newestUpdatedIso(pageUpdated);
+      await touchVendorFetchState({
+        sourceId: secFormVendorSourceId(feed.type),
+        status: "ok",
+        message: overflowTriggered
+          ? `pages=${pages};overflow`
+          : `pages=${pages}`,
+        advanceWatermark: true,
+        watermarkAt: newest ?? undefined,
+      });
+    } catch (error) {
       errors++;
+      const rateLimited =
+        error instanceof SecEdgarRequestError && error.status === 429;
+      await touchVendorFetchState({
+        sourceId: secFormVendorSourceId(feed.type),
+        status: rateLimited ? "rate_limited" : "error",
+        message:
+          error instanceof Error ? error.message.slice(0, 200) : "feed error",
+        advanceWatermark: false,
+      });
     }
-    feedStats.push({ type: feed.type, fetched, errors });
+
+    if (overflowTriggered) {
+      noteParts.push(`${feed.type}:pages=${pages}`);
+    }
+    if (hitMaxPages) {
+      noteParts.push(`${feed.type}:hitMaxPages`);
+    }
+
+    feedStats.push({
+      type: feed.type,
+      fetched,
+      errors,
+      pages,
+      overflowTriggered,
+      hitMaxPages,
+    });
+  }
+
+  // EOD / gap repair via daily-index master.idx (yesterday + today if published).
+  try {
+    const dailyItems = await fetchDailyIndexCatchUp({
+      userAgent,
+      mode,
+      symbolByCik,
+    });
+    if (dailyItems.length > 0) {
+      normalized.push(...dailyItems);
+      noteParts.push(`daily-index:+${dailyItems.length}`);
+    }
+  } catch (error) {
+    noteParts.push(
+      `daily-index:error=${error instanceof Error ? error.message.slice(0, 80) : "fail"}`,
+    );
   }
 
   const seen = new Set<string>();
@@ -396,6 +578,8 @@ export async function fetchSecEdgar(
   });
 
   await enrichForm4Directions(unique, { userAgent, mode });
+  await enrichSecFilingDocuments(unique, { userAgent, mode });
+  sanitizeSecAtomSummaries(unique);
 
   const result = await ingestNormalizedCatalysts(unique, {
     purge: options.purge !== false,
@@ -405,5 +589,76 @@ export async function fetchSecEdgar(
     ...result,
     fetched: unique.length,
     feeds: feedStats,
+    ...(noteParts.length > 0 ? { message: noteParts.join("; ") } : {}),
   };
+}
+
+/**
+ * Download master.idx for candidate dates not yet reconciled; return
+ * normalized rows for configured form types (caller dedupes + ingests).
+ */
+async function fetchDailyIndexCatchUp(options: {
+  userAgent: string;
+  mode: SecFetchMode;
+  symbolByCik: Map<number, string>;
+}): Promise<NormalizedCatalyst[]> {
+  const state = await getVendorFetchState(SEC_DAILY_INDEX_VENDOR_ID);
+  const reconciledThrough = parseReconciledThrough(state?.lastMessage);
+  const candidates = dailyIndexCandidateDates();
+  const out: NormalizedCatalyst[] = [];
+  let latestReconciled = reconciledThrough;
+
+  for (const yyyymmdd of candidates) {
+    if (reconciledThrough && yyyymmdd <= reconciledThrough) continue;
+
+    const url = masterIdxUrl(yyyymmdd);
+    let text: string;
+    try {
+      const res = await fetchSecUrl(url, {
+        userAgent: options.userAgent,
+        mode: options.mode,
+      });
+      text = await res.text();
+    } catch (error) {
+      if (error instanceof SecEdgarRequestError && error.status === 404) {
+        // Not published yet (today before EOD) — skip without failing the tick.
+        continue;
+      }
+      throw error;
+    }
+
+    const rows = parseMasterIdx(text);
+    const batch: NormalizedCatalyst[] = [];
+    for (const row of rows) {
+      const item = masterRowToNormalized(row, options.symbolByCik);
+      if (item) batch.push(item);
+    }
+
+    const existing = await findExistingSecExternalIds(
+      batch.map((item) => item.externalId),
+    );
+    for (const item of batch) {
+      if (!existing.has(item.externalId)) out.push(item);
+    }
+
+    latestReconciled =
+      !latestReconciled || yyyymmdd > latestReconciled
+        ? yyyymmdd
+        : latestReconciled;
+  }
+
+  if (latestReconciled && latestReconciled !== reconciledThrough) {
+    const y = latestReconciled.slice(0, 4);
+    const m = latestReconciled.slice(4, 6);
+    const d = latestReconciled.slice(6, 8);
+    await touchVendorFetchState({
+      sourceId: SEC_DAILY_INDEX_VENDOR_ID,
+      status: "ok",
+      message: formatReconciledThroughMessage(latestReconciled),
+      advanceWatermark: true,
+      watermarkAt: new Date(`${y}-${m}-${d}T23:59:59.000Z`).toISOString(),
+    });
+  }
+
+  return out;
 }

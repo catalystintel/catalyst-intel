@@ -302,6 +302,8 @@ function prefersStoredGroundRuleTitle(c: FeedCatalyst, title: string): boolean {
   // Legacy and narrative 424B / 425 titles.
   if (/New Stock Offering Filed\s*—/i.test(title)) return true;
   if (/^Prospectus \/ Offering \(424B\)\s*-/i.test(title)) return true;
+  if (/—\s*Structured note/i.test(title)) return true;
+  if (/Structured note pricing supplement/i.test(title)) return true;
   if (/Merger or Acquisition News:\s*Deal in Play$/i.test(title)) return true;
   if (/^Schedule 13[DG]\s*-/i.test(title)) return true;
   // Narrative 8-K company-first titles (1.01 / 1.03 / 3.01 / 5.02).
@@ -552,6 +554,13 @@ function secOfferingOwnershipDisplayTitle(c: FeedCatalyst): string | null {
     /prospectus \/ offering \(424b\)/i.test(title) ||
     /New Stock Offering Filed\s*—/i.test(title);
   if (is424) {
+    const looksStructured =
+      /structured note|pricing supplement/i.test(title) ||
+      /structured note|pricing supplement/i.test(headline) ||
+      c.keyFacts.some((f) => /structured note/i.test(`${f.label} ${f.value}`));
+    if (looksStructured) {
+      return stripSourceNames(title) || title;
+    }
     return formatProspectusOfferingTitle(subject);
   }
 

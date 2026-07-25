@@ -8,6 +8,11 @@ import { CategoryBadge } from "@/components/category-badge";
 import { EdgarProofLink } from "@/components/edgar-proof-link";
 import { TradingViewAdvancedChart } from "@/components/tradingview-advanced-chart";
 import { Button } from "@/components/ui/button";
+import {
+  isAccNoMetadataBlob,
+  isWeakSummary,
+} from "@/lib/catalysts/article-content";
+import { deriveTakeaways } from "@/lib/catalysts/article-funnel";
 import type { FeedCatalyst } from "@/lib/catalysts/feed-catalyst";
 import type {
   ArticleCompanyProfile,
@@ -15,6 +20,7 @@ import type {
 } from "@/lib/catalysts/enrich-article";
 import { toTradingViewSymbol } from "@/lib/catalysts/enrich-article-format";
 import { sectorLabel, titleLine } from "@/lib/catalysts/feed-display";
+import { plainEnglishForSecForm } from "@/lib/catalysts/sec-form-plain-english";
 import { formatEventTime, formatRelativeAge } from "@/lib/format/relative-time";
 import { CATEGORY_LABELS } from "@/lib/jobs/parse-8k-items";
 import type { TriageResult } from "@/lib/jobs/llm-triage";
@@ -82,7 +88,7 @@ function MetaCell({
 
 /**
  * Right-hand Live tape triage panel: identity, short summary / AI, then chart.
- * Full filing body / takeaways live in the article modal (`onRead`).
+ * Fuller event text lives in the details view (`onRead`).
  */
 export function TapeSplitPanel({
   catalyst,
@@ -125,10 +131,21 @@ export function TapeSplitPanel({
     ? CATEGORY_LABELS[catalyst.eventCategory]
     : null;
   const subcategory = catalyst.subcategory?.replace(/_/g, " ") || null;
+  const rawSummary = catalyst.summary?.trim() || "";
   const summaryText =
-    catalyst.summary?.trim() ||
+    (rawSummary &&
+    !isAccNoMetadataBlob(rawSummary) &&
+    !isWeakSummary(rawSummary)
+      ? rawSummary
+      : null) ||
     catalyst.headline?.trim() ||
     catalyst.title.trim();
+  const formBlurb = plainEnglishForSecForm(catalyst.type);
+  const takeaways = deriveTakeaways(
+    rawSummary && !isAccNoMetadataBlob(rawSummary) ? rawSummary : null,
+    null,
+    3,
+  ).filter((t) => !isAccNoMetadataBlob(t));
   const companyName =
     market?.profile?.name?.trim() || catalyst.companyName?.trim() || null;
 
@@ -386,7 +403,7 @@ export function TapeSplitPanel({
               className="inline-flex items-center gap-1.5 rounded-sm bg-[var(--desk-live)] px-3 py-1.5 font-mono text-xs font-semibold tracking-wide text-[#121212] uppercase hover:brightness-110"
             >
               <BookOpen className="size-3.5" />
-              Full article
+              Details
             </button>
             <EdgarProofLink
               url={catalyst.sourceUrl}
@@ -409,8 +426,61 @@ export function TapeSplitPanel({
             <p className="mt-2 line-clamp-5 text-sm leading-relaxed text-[var(--desk-text-secondary)]">
               {summaryText}
             </p>
+            {formBlurb ? (
+              <p className="mt-2 text-[0.8rem] leading-snug text-[var(--desk-text-muted)]">
+                {formBlurb}
+              </p>
+            ) : null}
+            {takeaways.length > 0 ? (
+              <ul className="mt-3 flex list-none flex-col gap-1.5 pl-0">
+                {takeaways.map((bullet, i) => (
+                  <li
+                    key={`takeaway-${i}`}
+                    className="flex gap-2 text-sm leading-snug text-[var(--desk-text-secondary)]"
+                  >
+                    <span
+                      className="mt-2 size-1 shrink-0 rounded-full bg-[var(--desk-live)]"
+                      aria-hidden
+                    />
+                    <span>{bullet}</span>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+            {catalyst.keyFacts.length > 0 ? (
+              <dl className="mt-3 grid grid-cols-2 gap-2">
+                {catalyst.keyFacts.slice(0, 6).map((fact) => (
+                  <div
+                    key={`${fact.label}:${fact.value}`}
+                    className="rounded-sm border border-[var(--desk-border)] bg-[var(--desk-overlay-soft)] px-2.5 py-2"
+                  >
+                    <dt className="font-mono text-[0.6rem] tracking-[0.12em] text-[var(--desk-text-dim)] uppercase">
+                      {fact.label}
+                    </dt>
+                    <dd className="mt-0.5 text-sm font-medium text-[var(--desk-text)]">
+                      {fact.value}
+                    </dd>
+                  </div>
+                ))}
+              </dl>
+            ) : catalyst.items.length > 0 ? (
+              <ul className="mt-3 space-y-1">
+                {catalyst.items.slice(0, 4).map((item) => (
+                  <li
+                    key={item.code}
+                    className="font-mono text-[0.7rem] text-[var(--desk-text-muted)]"
+                  >
+                    <span className="text-[var(--desk-text-secondary)]">
+                      Item {item.code}
+                    </span>
+                    {item.label ? ` · ${item.label}` : null}
+                  </li>
+                ))}
+              </ul>
+            ) : null}
             <p className="mt-2 font-mono text-[0.62rem] tracking-wide text-[var(--desk-text-dim)]">
-              Open Full article for body, takeaways, and filing detail.
+              Opening Details adds fuller event text — split stays available
+              with best data collected so far.
             </p>
           </div>
 

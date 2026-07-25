@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Loader2, X } from "lucide-react";
 
 import { CatalystArticleView } from "@/components/catalyst-article-view";
+import type { FilingProofMeta } from "@/components/catalyst-article-view";
 import {
   Dialog,
   DialogContent,
@@ -31,6 +32,7 @@ type ArticlePayload = {
   bodySource: ArticleBodySource;
   detailCards?: ArticleDetailCard[];
   enrichment?: ArticleEnrichment | null;
+  filingProofMeta?: FilingProofMeta | null;
 };
 
 type LoadState =
@@ -45,8 +47,8 @@ type LoadState =
   | { status: "error"; catalystId: number; message: string };
 
 /**
- * Full-article reading surface as a highlighted modal — deeper than the
- * tape split triage panel (body, takeaways, detail cards, enrichment).
+ * Expanded event-details modal — deeper than the tape split triage panel
+ * (full text, takeaways, detail cards, enrichment).
  */
 export function CatalystArticleDialog({
   catalystId,
@@ -86,7 +88,7 @@ export function CatalystArticleDialog({
           error?: string;
         };
         if (!res.ok || !data.catalyst || !data.article) {
-          throw new Error(data.error ?? "Could not load article.");
+          throw new Error(data.error ?? "Could not load details.");
         }
         if (cancelled) return;
         setLoad({
@@ -102,7 +104,7 @@ export function CatalystArticleDialog({
           status: "error",
           catalystId: id,
           message:
-            err instanceof Error ? err.message : "Could not load article.",
+            err instanceof Error ? err.message : "Could not load details.",
         });
       }
     })();
@@ -129,7 +131,7 @@ export function CatalystArticleDialog({
   const heading =
     ready != null
       ? titleLine(ready.catalyst, { maxBlurbChars: 200 })
-      : "Article";
+      : "Details";
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -144,20 +146,20 @@ export function CatalystArticleDialog({
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
               <p className="font-mono text-[0.65rem] tracking-[0.14em] text-[var(--desk-live)] uppercase">
-                Full article
+                Details
               </p>
               <DialogTitle className="mt-1 line-clamp-2 text-base font-semibold tracking-tight text-[var(--desk-text)] sm:text-lg">
                 {heading}
               </DialogTitle>
               <DialogDescription className="sr-only">
-                In-app article reader for this catalyst
+                Expanded event details for this catalyst
               </DialogDescription>
             </div>
             <button
               type="button"
               onClick={() => onOpenChange(false)}
               className="inline-flex size-8 shrink-0 items-center justify-center rounded-md border border-[var(--desk-border-strong)] text-[var(--desk-text-muted)] transition-colors hover:bg-[var(--desk-overlay-strong)] hover:text-[var(--desk-text)]"
-              aria-label="Close article"
+              aria-label="Close details"
             >
               <X className="size-4" />
             </button>
@@ -169,7 +171,7 @@ export function CatalystArticleDialog({
             <div className="flex min-h-[240px] flex-col items-center justify-center gap-2 text-[var(--desk-text-muted)]">
               <Loader2 className="size-5 animate-spin text-[var(--desk-live)]" />
               <p className="font-mono text-xs tracking-wide uppercase">
-                Loading article…
+                Loading details…
               </p>
             </div>
           ) : null}
@@ -205,6 +207,7 @@ export function CatalystArticleDialog({
                 ready.catalyst.historicalImpact,
               )}
               enrichment={ready.article.enrichment ?? null}
+              filingProofMeta={ready.article.filingProofMeta ?? null}
             />
           ) : null}
         </div>
