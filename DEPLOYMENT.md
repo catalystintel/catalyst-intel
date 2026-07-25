@@ -109,45 +109,45 @@ env vars are required today.
 
 ### Staging (Vercel → Environment: **Preview**, used by the `dev` branch)
 
-| Variable                        | Required?   | Notes                                                       |
-| ------------------------------- | ----------- | ----------------------------------------------------------- |
-| `NEXT_PUBLIC_SUPABASE_URL`      | Yes         | Same Supabase project is fine for MVP                       |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Yes         | Same as local                                               |
-| `SEC_EDGAR_USER_AGENT`          | Yes         | Same contact string is fine                                 |
-| `LIBSQL_URL`                    | Yes         | Turso **staging** DB URL                                    |
-| `LIBSQL_AUTH_TOKEN`             | Yes         | Turso **staging** DB token                                  |
-| `NEXT_PUBLIC_POSTHOG_KEY`       | Recommended | Same PostHog project is fine for MVP                        |
-| `NEXT_PUBLIC_POSTHOG_HOST`      | Recommended | `https://us.i.posthog.com` or EU host                       |
-| `ADMIN_EMAILS`                  | No          | Override admin allowlist if needed (same defaults as local) |
-| `CRON_SECRET`                   | Recommended | So you can manually trigger fetch against staging           |
-| `FINNHUB_API_KEY`               | No          | Enables Finnhub catalysts + NYSE listings (Admin / cron)    |
-| `POLYGON_API_KEY`               | No          | Enables Polygon/Benzinga news + price enrichment            |
-| `FORM4_API_KEY`                 | No          | Optional Form4API enrichment                                |
-| `RESEND_API_KEY`                | No          | Enables email alert delivery + feedback emails              |
-| `RESEND_FROM_EMAIL`             | No          | Optional From for Resend (defaults to onboarding sender)    |
-| `FEEDBACK_TO_EMAIL`             | No*         | Inbox for `/api/feedback` (*required for the feedback box)  |
-| `OPENROUTER_API_KEY`            | No          | On-demand AI analysis (or `OPENROUTER_API_KEYS` comma pool) |
+| Variable                        | Required?   | Notes                                                            |
+| ------------------------------- | ----------- | ---------------------------------------------------------------- |
+| `NEXT_PUBLIC_SUPABASE_URL`      | Yes         | Same Supabase project is fine for MVP                            |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Yes         | Same as local                                                    |
+| `SEC_EDGAR_USER_AGENT`          | Yes         | Same contact string is fine                                      |
+| `LIBSQL_URL`                    | Yes         | Turso **staging** DB URL                                         |
+| `LIBSQL_AUTH_TOKEN`             | Yes         | Turso **staging** DB token                                       |
+| `NEXT_PUBLIC_POSTHOG_KEY`       | Recommended | Same PostHog project is fine for MVP                             |
+| `NEXT_PUBLIC_POSTHOG_HOST`      | Recommended | `https://us.i.posthog.com` or EU host                            |
+| `ADMIN_EMAILS`                  | No          | Override admin allowlist if needed (same defaults as local)      |
+| `CRON_SECRET`                   | Recommended | So you can manually trigger fetch against staging                |
+| `FINNHUB_API_KEY`               | No          | Enables Finnhub catalysts + NYSE listings (Admin / cron)         |
+| `POLYGON_API_KEY`               | No          | Enables Polygon/Benzinga news + price enrichment                 |
+| `FORM4_API_KEY`                 | No          | Optional Form4API enrichment                                     |
+| `RESEND_API_KEY`                | No          | Enables email alert delivery + feedback emails                   |
+| `RESEND_FROM_EMAIL`             | No          | Optional From for Resend (defaults to onboarding sender)         |
+| `FEEDBACK_TO_EMAIL`             | No          | Feedback inbox (defaults to `catalyst.intel.feedback@gmail.com`) |
+| `OPENROUTER_API_KEY`            | No          | On-demand AI analysis (or `OPENROUTER_API_KEYS` comma pool)      |
 
 ### Production (Vercel → Environment: **Production**, used by `main`)
 
-| Variable                        | Required?   | Notes                                                       |
-| ------------------------------- | ----------- | ----------------------------------------------------------- |
-| `NEXT_PUBLIC_SUPABASE_URL`      | Yes         | Same Supabase project is fine for MVP                       |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Yes         | Same as local/staging                                       |
-| `SEC_EDGAR_USER_AGENT`          | Yes         | Same contact string is fine                                 |
-| `LIBSQL_URL`                    | Yes         | Turso **production** DB URL (separate DB)                   |
-| `LIBSQL_AUTH_TOKEN`             | Yes         | Turso **production** DB token                               |
-| `NEXT_PUBLIC_POSTHOG_KEY`       | Recommended | Same PostHog project is fine for MVP                        |
-| `NEXT_PUBLIC_POSTHOG_HOST`      | Recommended | `https://us.i.posthog.com` or EU host                       |
-| `ADMIN_EMAILS`                  | No          | Override admin allowlist if needed (same defaults as local) |
-| `CRON_SECRET`                   | Yes         | Must match the value configured in cron-job.org             |
-| `FINNHUB_API_KEY`               | No          | Enables Finnhub catalysts + NYSE listings (Admin / cron)    |
-| `POLYGON_API_KEY`               | No          | Enables Polygon/Benzinga news + price enrichment            |
-| `FORM4_API_KEY`                 | No          | Optional Form4API enrichment                                |
-| `RESEND_API_KEY`                | No          | Enables email alert delivery + feedback emails              |
-| `RESEND_FROM_EMAIL`             | No          | Optional From for Resend                                    |
-| `FEEDBACK_TO_EMAIL`             | No*         | Inbox for `/api/feedback` (*required for the feedback box)  |
-| `OPENROUTER_API_KEY`            | No          | On-demand AI analysis (or `OPENROUTER_API_KEYS` comma pool) |
+| Variable                        | Required?   | Notes                                                            |
+| ------------------------------- | ----------- | ---------------------------------------------------------------- |
+| `NEXT_PUBLIC_SUPABASE_URL`      | Yes         | Same Supabase project is fine for MVP                            |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Yes         | Same as local/staging                                            |
+| `SEC_EDGAR_USER_AGENT`          | Yes         | Same contact string is fine                                      |
+| `LIBSQL_URL`                    | Yes         | Turso **production** DB URL (separate DB)                        |
+| `LIBSQL_AUTH_TOKEN`             | Yes         | Turso **production** DB token                                    |
+| `NEXT_PUBLIC_POSTHOG_KEY`       | Recommended | Same PostHog project is fine for MVP                             |
+| `NEXT_PUBLIC_POSTHOG_HOST`      | Recommended | `https://us.i.posthog.com` or EU host                            |
+| `ADMIN_EMAILS`                  | No          | Override admin allowlist if needed (same defaults as local)      |
+| `CRON_SECRET`                   | Yes         | Must match the value configured in cron-job.org                  |
+| `FINNHUB_API_KEY`               | No          | Enables Finnhub catalysts + NYSE listings (Admin / cron)         |
+| `POLYGON_API_KEY`               | No          | Enables Polygon/Benzinga news + price enrichment                 |
+| `FORM4_API_KEY`                 | No          | Optional Form4API enrichment                                     |
+| `RESEND_API_KEY`                | No          | Enables email alert delivery + feedback emails                   |
+| `RESEND_FROM_EMAIL`             | No          | Optional From for Resend                                         |
+| `FEEDBACK_TO_EMAIL`             | No          | Feedback inbox (defaults to `catalyst.intel.feedback@gmail.com`) |
+| `OPENROUTER_API_KEY`            | No          | On-demand AI analysis (or `OPENROUTER_API_KEYS` comma pool)      |
 
 ### GitHub repo secrets (for the deploy migration workflow)
 
