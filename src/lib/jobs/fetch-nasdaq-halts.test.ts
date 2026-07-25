@@ -112,6 +112,14 @@ describe("classifySecFormType", () => {
     });
   });
 
+  it("maps Form 425 to deals", () => {
+    expect(classifySecFormType("425")).toMatchObject({
+      category: "deals",
+      subcategory: "425",
+      headline: "Merger / Acquisition (425)",
+    });
+  });
+
   it("maps 13D/G ownership forms", () => {
     expect(classifySecFormType("SC 13D")).toMatchObject({
       category: "deals",

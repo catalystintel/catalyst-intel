@@ -3,15 +3,20 @@ import { describe, expect, it } from "vitest";
 import {
   earningsDateForQuarterInference,
   earningsQuarterLabel,
+  format425MergerTitle,
   formatAnalystRatingTitle,
+  formatBankruptcyFilingTitle,
   formatClinicalTrialTitle,
   formatCpiTitle,
+  formatDelistingRiskTitle,
   formatEarningsReportTitle,
   formatFdaApprovalTitle,
   formatFomcRateDecisionTitle,
   formatForm4InsiderTitle,
   formatHaltTitle,
   formatJobsReportTitle,
+  formatMaterialAgreementTitle,
+  formatOfficerDirectorChangeTitle,
   formatPriceTargetTitle,
   formatProspectusOfferingTitle,
   formatSchedule13DTitle,
@@ -160,13 +165,34 @@ describe("earningsQuarterLabel + formatEarningsReportTitle", () => {
 });
 
 describe("formatSec8kItemTitle / formatForm4InsiderTitle", () => {
-  it("builds Title Case 8-K item titles", () => {
+  it("builds narrative titles for high-signal 8-K items", () => {
     expect(formatSec8kItemTitle("Material agreement", "PEDEVCO CORP")).toBe(
-      "Material Agreement - PEDEVCO CORP",
+      "PEDEVCO CORP New Deal Announced — Major Contract or Partnership",
     );
     expect(formatSec8kItemTitle("Officer / director change", "Acme Corp")).toBe(
-      "Officer / Director Change - Acme Corp",
+      "Acme Corp — Executive Change — CEO/CFO Departure or Appointment",
     );
+    expect(formatSec8kItemTitle("Delisting risk", "Quantum-Si Inc")).toBe(
+      "Quantum-Si Inc — Delisting Risk — Stock Could Lose Its Listing",
+    );
+    expect(formatSec8kItemTitle("Bankruptcy / receivership", "Acme Corp")).toBe(
+      "Acme Corp — Bankruptcy Filing — Equity at Risk",
+    );
+    expect(formatMaterialAgreementTitle("Acme Corp")).toBe(
+      "Acme Corp New Deal Announced — Major Contract or Partnership",
+    );
+    expect(formatBankruptcyFilingTitle("Acme Corp")).toBe(
+      "Acme Corp — Bankruptcy Filing — Equity at Risk",
+    );
+    expect(formatDelistingRiskTitle("Acme Corp")).toBe(
+      "Acme Corp — Delisting Risk — Stock Could Lose Its Listing",
+    );
+    expect(formatOfficerDirectorChangeTitle("Acme Corp")).toBe(
+      "Acme Corp — Executive Change — CEO/CFO Departure or Appointment",
+    );
+  });
+
+  it("keeps Title Case `{Label} - {Company}` for other 8-K items", () => {
     expect(formatSec8kItemTitle("Change of control", "Acme Corp")).toBe(
       "Change of Control - Acme Corp",
     );
@@ -201,12 +227,15 @@ describe("formatSec8kItemTitle / formatForm4InsiderTitle", () => {
 });
 
 describe("offering / ownership / clinical / macro / analyst titles", () => {
-  it("formats S-3 / 424B / 13D / 13G ground-rule titles", () => {
+  it("formats S-3 / 424B / 425 / 13D / 13G ground-rule titles", () => {
     expect(formatShelfRegistrationTitle("Acme Corp")).toBe(
       "Shelf Registration (S-3) - Acme Corp",
     );
     expect(formatProspectusOfferingTitle("Acme Corp")).toBe(
-      "Prospectus / Offering (424B) - Acme Corp",
+      "Acme Corp New Stock Offering Filed — Potential Dilution Ahead",
+    );
+    expect(format425MergerTitle("Acme Corp")).toBe(
+      "Acme Corp — Merger or Acquisition News: Deal in Play",
     );
     expect(formatSchedule13DTitle("Acme Corp")).toBe(
       "Schedule 13D - Acme Corp",
