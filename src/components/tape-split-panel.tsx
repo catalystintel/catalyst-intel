@@ -76,7 +76,7 @@ function MetaCell({
 }
 
 /**
- * Right-hand Live tape triage panel: identity, chart, short summary, AI.
+ * Right-hand Live tape triage panel: identity, short summary / AI, then chart.
  * Full filing body / takeaways live in the article modal (`onRead`).
  */
 export function TapeSplitPanel({
@@ -284,32 +284,22 @@ export function TapeSplitPanel({
       </div>
 
       <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
-        {!ticker ? (
-          <div className="shrink-0 border-b border-[var(--desk-border)] bg-[var(--desk-overlay-soft)] px-4 py-3">
-            <p className="font-mono text-[0.65rem] tracking-[0.14em] text-[var(--desk-text-dim)] uppercase">
-              Filing context
-            </p>
-            <p className="mt-1.5 text-sm leading-snug text-[var(--desk-text-secondary)]">
-              No tradable ticker resolved for this row — chart and quote are
-              skipped. Review the filing summary below.
-            </p>
-            <p className="mt-2 font-mono text-[0.7rem] tracking-wide text-[var(--desk-text-dim)]">
-              {[catalyst.type, subcategory].filter(Boolean).join(" · ")}
-            </p>
-          </div>
-        ) : null}
+        <div className="flex flex-col gap-4 border-b border-[var(--desk-border)] px-4 py-4">
+          {!ticker ? (
+            <div className="rounded-sm border border-[var(--desk-border)] bg-[var(--desk-overlay-soft)] px-3 py-3">
+              <p className="font-mono text-[0.65rem] tracking-[0.14em] text-[var(--desk-text-dim)] uppercase">
+                Filing context
+              </p>
+              <p className="mt-1.5 text-sm leading-snug text-[var(--desk-text-secondary)]">
+                No tradable ticker resolved for this row — chart and quote are
+                skipped. Review the filing summary below.
+              </p>
+              <p className="mt-2 font-mono text-[0.7rem] tracking-wide text-[var(--desk-text-dim)]">
+                {[catalyst.type, subcategory].filter(Boolean).join(" · ")}
+              </p>
+            </div>
+          ) : null}
 
-        {tvSymbol ? (
-          <div className="shrink-0 border-b border-[var(--desk-border)] bg-[#0b0d10]">
-            <TradingViewAdvancedChart
-              key={tvSymbol}
-              symbol={tvSymbol}
-              className="h-[280px] sm:h-[340px]"
-            />
-          </div>
-        ) : null}
-
-        <div className="flex flex-col gap-4 px-4 py-4">
           <div className="flex flex-wrap items-center gap-2">
             <button
               type="button"
@@ -388,6 +378,16 @@ export function TapeSplitPanel({
             ) : null}
           </dl>
         </div>
+
+        {tvSymbol ? (
+          <div className="shrink-0 bg-[#0b0d10]">
+            <TradingViewAdvancedChart
+              key={tvSymbol}
+              symbol={tvSymbol}
+              className="h-[280px] sm:h-[340px]"
+            />
+          </div>
+        ) : null}
       </div>
     </aside>
   );
