@@ -6,7 +6,11 @@ import { ArrowLeft, BookOpen, ExternalLink } from "lucide-react";
 import { CategoryBadge } from "@/components/category-badge";
 import type { FeedCatalyst } from "@/lib/catalysts/feed-catalyst";
 import { benzingaPanelForCategory } from "@/lib/catalysts/benzinga-analogs";
-import { sourceDisplay, titleLine } from "@/lib/catalysts/feed-display";
+import {
+  sectorLabel,
+  sourceDisplay,
+  titleLine,
+} from "@/lib/catalysts/feed-display";
 import {
   originalSourceLabel,
   type ArticleBodySource,
@@ -138,6 +142,23 @@ export function CatalystArticleView({
             <p className="mt-1 text-sm leading-snug text-[var(--desk-text)]">
               {whyMoving}
             </p>
+          </div>
+        ) : null}
+
+        {catalyst.materialityReasons.length > 0 ? (
+          <div
+            className="rounded-sm border border-[var(--desk-border)] px-3 py-2.5"
+            role="note"
+            aria-label="Why this score"
+          >
+            <p className="font-mono text-[0.62rem] tracking-[0.14em] text-[var(--desk-text-dim)] uppercase">
+              Why this score
+            </p>
+            <ul className="mt-1.5 list-disc space-y-1 pl-4 text-sm leading-snug text-[var(--desk-text-secondary)]">
+              {catalyst.materialityReasons.map((reason) => (
+                <li key={reason}>{reason}</li>
+              ))}
+            </ul>
           </div>
         ) : null}
 

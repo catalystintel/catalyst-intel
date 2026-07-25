@@ -18,11 +18,9 @@ Three environments, one app:
     (This is a single Next.js app - tests cover both frontend pages and backend API/lib code.)
 - **Vercel CD** (`vercel.json`): deploys **only** on push to `dev` (staging) and `main`
   (production). Feature branches do **not** get Vercel deploys.
-- **Scheduled ETL** (`.github/workflows/fetch-sec-edgar-cron.yml`): scheduled GitHub Action hits
-  both the production and staging URLs' `/api/admin/fetch/all` multi-source orchestrator with
-  `x-cron-secret` (matrix job, each side optional). Inert until that environment's secrets are
-  set. See "Why GitHub Actions cron" below for the observed real-world cadence and the in-app
-  self-healing backstop.
+- **Scheduled ETL (production):** [cron-job.org](https://cron-job.org) POSTs
+  `/api/admin/fetch/all` every **1 minute** with `x-cron-secret`. See "Production scheduler"
+  below for setup and the in-app self-healing backstop.
 
 ## Env vars cheat sheet
 
@@ -78,7 +76,7 @@ so iOS Safari does not lose the verifier the way a Server Action `redirect()` so
 **Admin access** is enforced server-side from the verified Supabase session email against
 `ADMIN_EMAILS` (or the built-in defaults). The local `users.role` column is synced as a cache
 and is **not** the source of truth — do not rely on `npm run make-admin` alone. Manual fetch
-via `/admin` uses the same allowlist; GitHub Actions cron still uses `x-cron-secret`.
+via `/admin` uses the same allowlist; cron-job.org uses `x-cron-secret`.
 
 ## Multi-source fetch order
 
@@ -96,13 +94,13 @@ then prices (sequential). `POST /api/admin/fetch/all` returns `fetchOrder`,
 
 Per-IP fixed-window limits live in `src/lib/http/rate-limit.ts` (in-memory Map):
 
-| Route                                        | Default          | Notes                                 |
-| -------------------------------------------- | ---------------- | ------------------------------------- |
-| `GET /api/catalysts`                         | 90 / minute / IP | Live feed soft-refetch                |
-| `POST /api/admin/fetch/all` (session)        | 6 / minute / IP  | Admin multi-source orchestrator       |
-| `POST /api/admin/fetch/[source]` (session)   | 6 / minute / IP  | Per-source admin trigger              |
-| `POST /api/admin/fetch/sec-edgar` (session)  | 6 / minute / IP  | Legacy SEC-only trigger (still works) |
-| Same admin routes with valid `x-cron-secret` | **bypassed**     | GitHub Actions cron must keep working |
+| Route                                        | Default          | Notes                                            |
+| -------------------------------------------- | ---------------- | ------------------------------------------------ |
+| `GET /api/catalysts`                         | 90 / minute / IP | Live feed soft-refetch                           |
+| `POST /api/admin/fetch/all` (session)        | 6 / minute / IP  | Admin multi-source orchestrator                  |
+| `POST /api/admin/fetch/[source]` (session)   | 6 / minute / IP  | Per-source admin trigger                         |
+| `POST /api/admin/fetch/sec-edgar` (session)  | 6 / minute / IP  | Legacy SEC-only trigger (still works)            |
+| Same admin routes with valid `x-cron-secret` | **bypassed**     | Production cron (cron-job.org) must keep working |
 
 Responses that exceed the limit return **429** with `Retry-After` and `X-RateLimit-*`
 headers. This store is **per Vercel isolate** — fine for MVP spam protection; shared Redis
@@ -140,32 +138,12 @@ env vars are required today.
 | `NEXT_PUBLIC_POSTHOG_KEY`       | Recommended | Same PostHog project is fine for MVP                        |
 | `NEXT_PUBLIC_POSTHOG_HOST`      | Recommended | `https://us.i.posthog.com` or EU host                       |
 | `ADMIN_EMAILS`                  | No          | Override admin allowlist if needed (same defaults as local) |
-| `CRON_SECRET`                   | Yes         | Must match the GitHub repo secret below                     |
+| `CRON_SECRET`                   | Yes         | Must match the value configured in cron-job.org             |
 | `FINNHUB_API_KEY`               | No          | Enables Finnhub catalysts + NYSE listings (Admin / cron)    |
 | `POLYGON_API_KEY`               | No          | Enables Polygon/Benzinga news + price enrichment            |
 | `FORM4_API_KEY`                 | No          | Optional Form4API enrichment                                |
 | `RESEND_API_KEY`                | No          | Enables email alert delivery (webhook works without it)     |
 | `RESEND_FROM_EMAIL`             | No          | Optional From for Resend                                    |
-
-### GitHub repo secrets (for the scheduled ETL workflow)
-
-`fetch-sec-edgar-cron.yml` runs a matrix job against **both** environments, so staging gets the
-same automated ingestion attempts as production. Each pair below is independent — a missing pair
-just skips that environment's job (logs a message, exits 0) instead of failing the workflow.
-
-| Secret                | Notes                                                                               |
-| --------------------- | ----------------------------------------------------------------------------------- |
-| `PROD_APP_URL`        | Production Vercel URL, e.g. `https://catalyst-intel.vercel.app` (no trailing slash) |
-| `CRON_SECRET`         | Same value as Vercel **Production** `CRON_SECRET`                                   |
-| `STAGING_APP_URL`     | Staging (Preview) Vercel URL for the `dev` branch (no trailing slash)               |
-| `STAGING_CRON_SECRET` | Same value as Vercel **Preview** `CRON_SECRET`                                      |
-
-```bash
-gh secret set PROD_APP_URL --body "https://<your-production-domain>"
-gh secret set CRON_SECRET --body "<same value as Vercel Production>"
-gh secret set STAGING_APP_URL --body "https://<your-staging-preview-domain>"
-gh secret set STAGING_CRON_SECRET --body "<same value as Vercel Preview>"
-```
 
 ### GitHub repo secrets (for the deploy migration workflow)
 
@@ -255,15 +233,15 @@ node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 
 1. Push / merge into `dev` → Vercel staging deploy + GitHub Actions CI.
 2. Promote `dev` → `main` (only when you ask) → Vercel production deploy + CI.
-3. Actions → `Fetch catalysts (scheduled ETL)` → **Run workflow** → expect HTTP 200 for each
-   environment that has its secrets configured.
+3. Confirm cron-job.org (or `/admin` → **Fetch all sources now**) returns HTTP 200 against
+   production.
 4. Sign in with Google on the live URL using an allowlisted admin email (or set
    `ADMIN_EMAILS` on Vercel), open `/admin`, run **Fetch all sources now**, confirm `/dashboard`
    shows multi-source data.
 
 #### Keyless sources checklist (only `SEC_EDGAR_USER_AGENT` required)
 
-After **Fetch all sources now** (or a successful GHA cron run), the admin per-source
+After **Fetch all sources now** (or a successful cron-job.org run), the admin per-source
 breakdown and `raw_sources.provider` counts should include:
 
 | Provider                          | Expected status                     | Notes                                                                                                                                             |
@@ -330,59 +308,33 @@ same driver and schema as local SQLite; only the URL/token change.
 
 ## Production scheduler: cron-job.org (every 1 minute)
 
-**Primary prod ETL clock** is an external [cron-job.org](https://cron-job.org) job (example title:
+**Sole prod ETL clock** is [cron-job.org](https://cron-job.org) (example title:
 `catalyst-intel prod ETL`) that POSTs:
 
 `https://catalyst-intel.vercel.app/api/admin/fetch/all`
 
 with header `x-cron-secret: <CRON_SECRET>` every **1 minute** (`* * * * *`).
 
-Agents and humans should treat this as the source of truth for prod cadence — not GHA alone.
-GitHub Actions `fetch-sec-edgar-cron.yml` may still exist as an optional backup; historically it
-drifted far past its configured `*/5` interval. See [ARCHITECTURE.md](ARCHITECTURE.md).
+Vercel Hobby allows one cron/day only; external cron-job.org gives reliable 1-min cadence without
+Vercel Pro. See [ARCHITECTURE.md](ARCHITECTURE.md).
 
 Polygon free-tier (~5 REST req/min) will still hit **429** under a 1-min full orchestrator. The
 app holds per-vendor `last_fetched_at` on rate-limit so the **next** tick widens the news window
 and price enrich batch instead of permanently missing data — see [FETCH-ORDER.md](FETCH-ORDER.md).
 
-## Why GitHub Actions cron every 5 minutes (legacy / backup)
-
-Closest free option to "every 1-2 minutes." Vercel Hobby allows one cron/day; Pro is $20/mo for
-per-minute.
-
-**Real-world cadence is worse than the configured interval, not just "occasional drift."**
-Pulling actual run history (`gh run list --workflow=fetch-sec-edgar-cron.yml`) shows gaps of
-45 minutes to 3.5+ hours between scheduled runs, averaging ~75 minutes, against a configured
-`*/5 * * * *`. GitHub throttles/coalesces frequent `schedule` triggers under load far more than
-the docs imply — treat this workflow as "best-effort, roughly hourly," not "every 5 minutes."
-
-**Self-healing backstop:** because the scheduler can't be trusted to hit its own interval,
-`GET /api/catalysts` checks the most recent ingestion timestamp on every read and fires a
-non-blocking multi-source refetch (SEC EDGAR + Nasdaq halts) if the data is stale (>4 min old),
-with a 3-minute cooldown and a 10-minute cooldown after a failed attempt
-(`src/lib/jobs/ingestion-freshness.ts`). Tightened from the original 10 min / 5 min / 15 min
-after confirming via `gh run list --workflow=fetch-sec-edgar-cron.yml` that real gaps between
-cron runs are commonly 45 min to 3.5+ hours - this backstop, not the cron schedule, is what
-actually keeps the tape near-live day to day. Full multi-source runs remain on GHA cron / Admin
-"Fetch all".
-
-**Decision: keep GitHub Actions cron while on Vercel Hobby.** GitHub Actions here is a scheduler
-pinging `/api/admin/fetch/all` — it never touches Turso directly, the route handler does.
-The ideal end-state is GitHub Actions reserved purely for CI (`ci.yml`) and Vercel's native
-`crons` config (in `vercel.json`) driving ETL, since it removes one moving part and Vercel Cron
-auto-sends `Authorization: Bearer $CRON_SECRET`, matching the secret this project already uses.
-But Vercel Cron on Hobby is capped at once/day with ±59min timing precision — switching now would
-regress the scheduled path from ~hourly to once a day. Revisit this the moment the project moves
-to Vercel Pro.
+**Self-healing backstop:** `GET /api/catalysts` checks the most recent ingestion timestamp on
+every read and fires a non-blocking multi-source refetch if data is stale (>4 min old), with a
+3-minute cooldown and a 10-minute cooldown after a failed attempt
+(`src/lib/jobs/ingestion-freshness.ts`). This covers scheduler gaps whenever there is real
+traffic. Full multi-source runs remain on cron-job.org / Admin "Fetch all".
 
 ## Testing ETL end-to-end
 
-| Where          | How                                                                                                                                                                                                                            |
-| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **Local**      | `npm run cron` (continuous multi-source, every `CRON_INTERVAL_MINUTES`, default 1) or `/admin` → "Fetch all sources now" / per-source buttons.                                                                                 |
-| **Staging**    | Sign in with an allowlisted admin email on the staging Preview URL → `/admin` → run a fetch; or set `STAGING_APP_URL`/`STAGING_CRON_SECRET` so a scheduled workflow covers it; or point a cron-job.org job at the staging URL. |
-| **Production** | **cron-job.org** every 1 min → `/api/admin/fetch/all` + `x-cron-secret` (primary). Optional GHA backup.                                                                                                                        |
-| **Production** | Same as staging, against the production URL/secrets, or watch the self-healing backstop kick in on real traffic.                                                                                                               |
+| Where          | How                                                                                                                                            |
+| -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Local**      | `npm run cron` (continuous multi-source, every `CRON_INTERVAL_MINUTES`, default 1) or `/admin` → "Fetch all sources now" / per-source buttons. |
+| **Staging**    | Sign in with an allowlisted admin email on the staging Preview URL → `/admin` → run a fetch; or point a cron-job.org job at the staging URL.   |
+| **Production** | **cron-job.org** every 1 min → `/api/admin/fetch/all` + `x-cron-secret`; or watch the self-healing backstop kick in on real traffic.           |
 
 To confirm data actually landed, check `/dashboard` (Live feed) or open Drizzle Studio
 (`npm run db:studio` locally; point `LIBSQL_URL`/`LIBSQL_AUTH_TOKEN` at a remote Turso DB to
@@ -400,7 +352,7 @@ Goal: know about production failures without watching Vercel logs all day.
 | Client React error boundary  | `src/app/error.tsx` → PostHog `captureException`      | Same                                    |
 | Ingest enrichment soft-fails | `fetch-all-sources.ts` → `reportServerError`          | PostHog + Vercel function logs          |
 | Ingest audit trail           | `ingestion_runs` + Admin panel                        | `/admin`                                |
-| Cron HTTP failures           | GHA `fetch-sec-edgar-cron.yml` exits non-zero         | GitHub Actions email / UI               |
+| Cron HTTP failures           | cron-job.org job history / failure notifications      | cron-job.org dashboard                  |
 | Liveness probe               | `GET /api/health`                                     | Uptime monitor (see below)              |
 | Product analytics            | PostHog pageviews / custom events                     | PostHog insights                        |
 
@@ -410,7 +362,7 @@ Vercel Runtime Logs remain the source of truth for raw `console.error` output.
 
 1. **PostHog** — set `NEXT_PUBLIC_POSTHOG_KEY` (+ host) on Preview and Production. In PostHog, enable **Error tracking** and create an alert (Slack/email) for exception spikes.
 2. **Uptime** — point UptimeRobot / Better Stack / Checkly at `https://<host>/api/health` every 1–5 minutes; alert on non-200.
-3. **GitHub Actions** — ensure repo notification settings email you on failed workflow runs for `Fetch catalysts (scheduled ETL)`.
+3. **GitHub Actions** — ensure repo notification settings email you on failed workflow runs for CI and migrations (`ci.yml`, `migrate.yml`).
 4. **Vercel** — enable deployment failure notifications for the project.
 5. **Cron secret** — treat `CRON_SECRET` like root access (rotate if leaked); it bypasses admin session checks by design.
 
