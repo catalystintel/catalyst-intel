@@ -6,12 +6,18 @@
  *
  * Only materializes a cluster when 2+ catalysts actually merge — a lone
  * event never gets a clusterId (see db/schema.ts eventClusters).
+ *
+ * Feed queries show only the cluster primary (or unclustered rows).
  */
 
-import { and, gte, inArray, isNull, isNotNull } from "drizzle-orm";
+import { and, eq, gte, inArray, isNull, isNotNull } from "drizzle-orm";
 
 import { db } from "@/db/client";
-import { catalysts, eventClusters } from "@/db/schema";
+import { catalysts, eventClusters, rawSources } from "@/db/schema";
+import {
+  areNearDuplicateTitles,
+  pickClusterPrimary,
+} from "@/lib/jobs/dedupe-catalysts";
 
 export const CLUSTER_WINDOW_MINUTES = 45;
 const DEFAULT_LOOKBACK_MINUTES = 180;
@@ -22,6 +28,9 @@ export interface ClusterableRow {
   timestamp: string;
   impactScore: number | null;
   eventCategory: string | null;
+  provider?: string | null;
+  title?: string | null;
+  headline?: string | null;
 }
 
 export interface ClusterGroup {
@@ -34,9 +43,33 @@ export interface ClusterGroup {
 }
 
 /**
+ * Whether two same-ticker rows in a time window should share a cluster.
+ * Related cascade (halt + filing / wire retelling) merges; unrelated
+ * Form 4 vs earnings on a busy name does not.
+ */
+export function shouldClusterTogether(
+  a: ClusterableRow,
+  b: ClusterableRow,
+): boolean {
+  const catA = a.eventCategory ?? "";
+  const catB = b.eventCategory ?? "";
+
+  if (catA && catA === catB) return true;
+
+  // Halt cascades with the filing / wire that follows.
+  if (catA === "trading_halt" || catB === "trading_halt") return true;
+
+  const titleA = a.headline ?? a.title;
+  const titleB = b.headline ?? b.title;
+  if (areNearDuplicateTitles(titleA, titleB)) return true;
+
+  return false;
+}
+
+/**
  * Pure grouping logic (no DB) — groups same-ticker rows into windows where
- * consecutive events are within `windowMinutes` of the window's start, then
- * keeps only groups with 2+ members. Exported for unit testing.
+ * consecutive related events are within `windowMinutes` of the window's
+ * start, then keeps only groups with 2+ members. Exported for unit testing.
  */
 export function groupIntoWindows(
   rows: ClusterableRow[],
@@ -65,9 +98,7 @@ export function groupIntoWindows(
         current = [];
         return;
       }
-      const primary = current.reduce((best, row) =>
-        (row.impactScore ?? 0) > (best.impactScore ?? 0) ? row : best,
-      );
+      const primary = pickClusterPrimary(current);
       groups.push({
         ticker,
         category: primary.eventCategory,
@@ -89,7 +120,11 @@ export function groupIntoWindows(
         continue;
       }
 
-      if (t - windowStartMs <= windowMs) {
+      const relatedToWindow = current.some((member) =>
+        shouldClusterTogether(member, row),
+      );
+
+      if (t - windowStartMs <= windowMs && relatedToWindow) {
         current.push(row);
       } else {
         flush();
@@ -125,8 +160,12 @@ export async function clusterRecentCatalysts(options?: {
       timestamp: catalysts.timestamp,
       impactScore: catalysts.impactScore,
       eventCategory: catalysts.eventCategory,
+      title: catalysts.title,
+      headline: catalysts.headline,
+      provider: rawSources.provider,
     })
     .from(catalysts)
+    .leftJoin(rawSources, eq(catalysts.rawSourceId, rawSources.id))
     .where(
       and(
         isNotNull(catalysts.ticker),
@@ -137,8 +176,19 @@ export async function clusterRecentCatalysts(options?: {
     .all();
 
   const clusterable: ClusterableRow[] = rows
-    .filter((r): r is ClusterableRow & { ticker: string } => Boolean(r.ticker))
-    .map((r) => ({ ...r, ticker: r.ticker as string }));
+    .filter((r): r is (typeof rows)[number] & { ticker: string } =>
+      Boolean(r.ticker),
+    )
+    .map((r) => ({
+      id: r.id,
+      ticker: r.ticker,
+      timestamp: r.timestamp,
+      impactScore: r.impactScore,
+      eventCategory: r.eventCategory,
+      title: r.title,
+      headline: r.headline,
+      provider: r.provider,
+    }));
 
   const groups = groupIntoWindows(clusterable, windowMinutes);
 

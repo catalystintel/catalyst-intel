@@ -140,4 +140,58 @@ describe("groupIntoWindows", () => {
 
     expect(groups[0].primaryId).toBe(1);
   });
+
+  it("prefers SEC over Polygon when impact ties", () => {
+    const groups = groupIntoWindows(
+      [
+        {
+          id: 1,
+          ticker: "ACME",
+          timestamp: "2026-07-20T13:00:00.000Z",
+          impactScore: 70,
+          eventCategory: "deals",
+          provider: "polygon",
+          title: "Acme announces material agreement",
+        },
+        {
+          id: 2,
+          ticker: "ACME",
+          timestamp: "2026-07-20T13:05:00.000Z",
+          impactScore: 70,
+          eventCategory: "deals",
+          provider: "sec-edgar",
+          title: "Material Agreement - Acme",
+        },
+      ],
+      45,
+    );
+
+    expect(groups[0].primaryId).toBe(2);
+  });
+
+  it("does not merge unrelated Form 4 and earnings on the same ticker", () => {
+    const groups = groupIntoWindows(
+      [
+        {
+          id: 1,
+          ticker: "ACME",
+          timestamp: "2026-07-20T13:00:00.000Z",
+          impactScore: 70,
+          eventCategory: "earnings",
+          title: "Earnings Report Q2 - Acme",
+        },
+        {
+          id: 2,
+          ticker: "ACME",
+          timestamp: "2026-07-20T13:10:00.000Z",
+          impactScore: 55,
+          eventCategory: "insider",
+          title: "Form 4 Insider Buy - Acme",
+        },
+      ],
+      45,
+    );
+
+    expect(groups).toHaveLength(0);
+  });
 });

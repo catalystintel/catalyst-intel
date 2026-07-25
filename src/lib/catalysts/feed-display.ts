@@ -11,6 +11,8 @@ import {
   earningsDateForQuarterInference,
   earningsQuarterLabel,
   formatEarningsReportTitle,
+  formatForm4InsiderTitle,
+  form4TitleKindFromSubcategory,
   looksLikeResultsOfOperationsTitle,
 } from "@/lib/catalysts/catalyst-titles";
 
@@ -177,9 +179,11 @@ export function stripSourceNames(text: string): string {
 const GENERIC_EVENT_HEADLINES = new Set([
   ...SEC_ITEM_HEADLINE_LABELS,
   "form 4 insider transaction",
+  "form 4 routine ownership",
   "insider buy (form 4)",
   "insider sell (form 4)",
   "form 4 insider buy & sell",
+  "mixed insider transactions (form 4)",
   "beneficial ownership (13d)",
   "beneficial ownership (13g)",
   "prospectus / offering (424b)",
@@ -241,6 +245,16 @@ function prefersStoredGroundRuleTitle(c: FeedCatalyst, title: string): boolean {
   if (/^Halts\s*\(/i.test(title)) return true;
   if (/^FDA Approval\s*-/i.test(title)) return true;
   if (/^Earnings Report\s+Q/i.test(title)) return true;
+  if (/^Form 4 Insider\b/i.test(title)) return true;
+  // 8-K ground-rule: `{Item label} - {Company}` (not the old "— 8-K filing").
+  if (
+    c.sourceProvider === "sec-edgar" &&
+    /(?:8-?K|8k)/i.test(c.type) &&
+    /\s-\s/.test(title) &&
+    !/(?:8-?K|Form\s*4).*filing$/i.test(title)
+  ) {
+    return true;
+  }
 
   if (c.sourceProvider === "nasdaq-halts") return true;
   if (c.type === "FDA Approval" || c.subcategory === "openfda_approval") {
@@ -308,6 +322,41 @@ function earningsReportDisplayTitle(c: FeedCatalyst): string | null {
   );
 }
 
+/**
+ * Legacy Form 4 rows → ground-rule `Form 4 Insider Buy/Sell - Company`.
+ */
+function form4DisplayTitle(c: FeedCatalyst): string | null {
+  const isForm4 =
+    c.eventCategory === "insider" ||
+    c.subcategory === "insider_buy" ||
+    c.subcategory === "insider_sell" ||
+    c.subcategory === "form4_mixed" ||
+    c.subcategory === "form4" ||
+    /^(?:4(?:\/|$)|form\s*4)/i.test(c.type ?? "");
+  if (!isForm4) return null;
+
+  const title = normalizeDisplayText(c.title ?? "");
+  if (/^Form 4 Insider\b/i.test(title)) {
+    return stripSourceNames(title) || title;
+  }
+
+  const kind = form4TitleKindFromSubcategory(c.subcategory);
+  // Only rewrite when we know buy/sell/mixed, or the stored title is generic.
+  if (
+    kind === "transaction" &&
+    title &&
+    !isGenericEventHeadline(title) &&
+    !/(?:form\s*4|insider).*(?:filing|transaction)/i.test(title)
+  ) {
+    return null;
+  }
+
+  return formatForm4InsiderTitle(
+    kind,
+    tapeSubject(c) ?? c.companyName ?? c.ticker,
+  );
+}
+
 export function titleLine(
   c: FeedCatalyst,
   options: TitleLineOptions = {},
@@ -323,6 +372,9 @@ export function titleLine(
 
   const earningsTitle = earningsReportDisplayTitle(c);
   if (earningsTitle) return earningsTitle;
+
+  const form4Title = form4DisplayTitle(c);
+  if (form4Title) return form4Title;
 
   // Real news / wire copy wins when it is not a publisher or generic chip.
   if (
