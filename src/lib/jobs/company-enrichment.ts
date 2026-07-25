@@ -94,3 +94,24 @@ export async function getCompanyMarketCapMillions(
     .get();
   return row?.marketCap ?? null;
 }
+
+/**
+ * Looks up a stored company display name for a ticker.
+ * Returns null when missing or when the stored name is just the ticker itself
+ * (so callers can try a richer vendor profile next).
+ */
+export async function getCompanyName(
+  ticker: string | null | undefined,
+): Promise<string | null> {
+  const t = ticker?.trim().toUpperCase();
+  if (!t) return null;
+  const row = await db
+    .select({ name: companies.name })
+    .from(companies)
+    .where(eq(companies.ticker, t))
+    .get();
+  const name = row?.name?.trim() || null;
+  if (!name) return null;
+  if (name.toUpperCase() === t) return null;
+  return name;
+}
