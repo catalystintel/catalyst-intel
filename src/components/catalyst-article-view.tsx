@@ -6,11 +6,7 @@ import { ArrowLeft, BookOpen, ExternalLink } from "lucide-react";
 import { CategoryBadge } from "@/components/category-badge";
 import type { FeedCatalyst } from "@/lib/catalysts/feed-catalyst";
 import { benzingaPanelForCategory } from "@/lib/catalysts/benzinga-analogs";
-import {
-  sectorLabel,
-  sourceDisplay,
-  titleLine,
-} from "@/lib/catalysts/feed-display";
+import { sourceDisplay, titleLine } from "@/lib/catalysts/feed-display";
 import {
   originalSourceLabel,
   type ArticleBodySource,

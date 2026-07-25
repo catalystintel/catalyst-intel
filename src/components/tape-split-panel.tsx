@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { BookOpen, XIcon } from "lucide-react";
 
-import { AiAnalysisPanel } from "@/components/ai-analysis-panel";
 import { CategoryBadge } from "@/components/category-badge";
 import { EdgarProofLink } from "@/components/edgar-proof-link";
 import { TradingViewAdvancedChart } from "@/components/tradingview-advanced-chart";
@@ -15,14 +14,8 @@ import type {
   ArticleMarketQuote,
 } from "@/lib/catalysts/enrich-article";
 import { toTradingViewSymbol } from "@/lib/catalysts/enrich-article-format";
-import {
-  sectorLabel,
-  sourceDisplay,
-  titleLine,
-} from "@/lib/catalysts/feed-display";
 import { formatEventTime, formatRelativeAge } from "@/lib/format/relative-time";
 import { CATEGORY_LABELS } from "@/lib/jobs/parse-8k-items";
-import type { TriageResult } from "@/lib/jobs/llm-triage";
 import { cn } from "@/lib/utils";
 
 type QuotePayload = {
@@ -52,50 +45,19 @@ function formatChange(
   };
 }
 
-function MetaCell({
-  label,
-  value,
-  tabular = false,
-  className,
-}: {
-  label: string;
-  value: string;
-  tabular?: boolean;
-  className?: string;
-}) {
-  return (
-    <div className={className}>
-      <dt className="tracking-[0.14em] text-[var(--desk-text-dim)] uppercase">
-        {label}
-      </dt>
-      <dd
-        className={cn(
-          "mt-1 text-sm text-[var(--desk-text)]",
-          tabular && "tabular-nums",
-        )}
-      >
-        {value}
-      </dd>
-    </div>
-  );
-}
-
 /**
- * Right-hand Live tape panel: event identity, proof, summary, optional chart.
+ * Right-hand Live tape panel: quote strip, TradingView chart, catalyst details.
  */
 export function TapeSplitPanel({
   catalyst,
   onClose,
   onDismiss,
-  onAiAnalyzed,
   className,
   mobileOverlay = false,
 }: {
   catalyst: FeedCatalyst;
   onClose: () => void;
   onDismiss?: () => void;
-  /** Persist AI triage into the Live tape row so reopen stays instant. */
-  onAiAnalyzed?: (analysis: TriageResult) => void;
   className?: string;
   /** Full-screen overlay on small viewports. */
   mobileOverlay?: boolean;
@@ -104,29 +66,13 @@ export function TapeSplitPanel({
   const [market, setMarket] = useState<QuotePayload | null>(null);
   const [quoteLoading, setQuoteLoading] = useState(Boolean(ticker));
 
-  const source = sourceDisplay(catalyst);
-  const eventTitle = titleLine(catalyst);
-  const categoryLabel = catalyst.eventCategory
-    ? CATEGORY_LABELS[catalyst.eventCategory]
-    : null;
-  const subcategory = catalyst.subcategory?.replace(/_/g, " ") || null;
-  const summaryText =
-    catalyst.summary?.trim() ||
-    catalyst.headline?.trim() ||
-    catalyst.title.trim();
-  const companyName =
-    market?.profile?.name?.trim() || catalyst.companyName?.trim() || null;
-
-  const eyebrow = [categoryLabel, catalyst.type?.trim() || null, source.name]
-    .filter(Boolean)
-    .join(" · ");
-
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
     };
     document.addEventListener("keydown", onKey);
     const prev = document.body.style.overflow;
+    // Lock scroll only when the panel is a full-screen mobile overlay.
     if (mobileOverlay && typeof window !== "undefined") {
       const mq = window.matchMedia("(max-width: 1023px)");
       if (mq.matches) document.body.style.overflow = "hidden";
@@ -141,6 +87,8 @@ export function TapeSplitPanel({
     if (!ticker) return;
 
     let cancelled = false;
+    // Defer so setState is not synchronous in the effect body
+    // (react-hooks/set-state-in-effect).
     const id = window.setTimeout(() => {
       void (async () => {
         setQuoteLoading(true);
@@ -194,36 +142,21 @@ export function TapeSplitPanel({
       )}
     >
       <div className="flex shrink-0 items-start justify-between gap-3 border-b border-[var(--desk-border)] bg-[var(--desk-header)] px-4 py-3">
-        <div className="min-w-0 flex-1">
-          <p className="font-mono text-[0.65rem] tracking-[0.14em] text-[var(--desk-live)] uppercase">
-            {eyebrow || "Catalyst"}
+        <div className="min-w-0">
+          <p className="font-mono text-[0.65rem] tracking-[0.18em] text-[var(--desk-live)] uppercase">
+            {catalyst.headline ?? "Catalyst"}
           </p>
           <h2
             id={`tape-split-${catalyst.id}`}
-            className="mt-1 line-clamp-3 text-base font-semibold tracking-tight text-[var(--desk-text)] sm:text-lg"
+            className="mt-0.5 truncate font-mono text-xl font-semibold tracking-tight text-[var(--desk-text)]"
           >
-            {eventTitle}
+            {ticker ?? "—"}
           </h2>
-          <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1">
-            {ticker ? (
-              <span className="font-mono text-sm font-semibold tracking-wide text-[var(--desk-text)]">
-                {ticker}
-              </span>
-            ) : (
-              <span className="rounded-sm border border-amber-500/35 bg-amber-500/10 px-1.5 py-0.5 font-mono text-[0.65rem] tracking-wide text-amber-200 uppercase">
-                Ticker unresolved
-              </span>
-            )}
-            {companyName ? (
-              <span className="truncate text-sm text-[var(--desk-text-muted)]">
-                {companyName}
-              </span>
-            ) : null}
-            {catalyst.eventCategory ? (
-              <CategoryBadge category={catalyst.eventCategory} />
-            ) : null}
-          </div>
-
+          {(market?.profile?.name ?? catalyst.companyName) ? (
+            <p className="mt-0.5 truncate text-sm text-[var(--desk-text-muted)]">
+              {market?.profile?.name ?? catalyst.companyName}
+            </p>
+          ) : null}
           {ticker ? (
             <div className="mt-2 flex flex-wrap items-baseline gap-x-3 gap-y-1 font-mono text-sm tabular-nums">
               {quoteLoading && !market?.quote ? (
@@ -282,34 +215,29 @@ export function TapeSplitPanel({
       </div>
 
       <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
-        {!ticker ? (
-          <div className="shrink-0 border-b border-[var(--desk-border)] bg-[var(--desk-overlay-soft)] px-4 py-3">
-            <p className="font-mono text-[0.65rem] tracking-[0.14em] text-[var(--desk-text-dim)] uppercase">
-              Filing context
-            </p>
-            <p className="mt-1.5 text-sm leading-snug text-[var(--desk-text-secondary)]">
-              No tradable ticker resolved for this row — chart and quote are
-              skipped. Review the filing summary and original source below.
-            </p>
-            <p className="mt-2 font-mono text-[0.7rem] tracking-wide text-[var(--desk-text-dim)]">
-              {[source.name, catalyst.type, subcategory]
-                .filter(Boolean)
-                .join(" · ")}
-            </p>
-          </div>
-        ) : null}
-
-        {tvSymbol ? (
-          <div className="shrink-0 border-b border-[var(--desk-border)] bg-[#0b0d10]">
+        <div className="shrink-0 border-b border-[var(--desk-border)] bg-[#0b0d10]">
+          {tvSymbol ? (
             <TradingViewAdvancedChart
               key={tvSymbol}
               symbol={tvSymbol}
               className="h-[280px] sm:h-[340px]"
             />
-          </div>
-        ) : null}
+          ) : (
+            <div className="grid h-[180px] place-items-center px-4 text-center">
+              <p className="font-mono text-xs text-[var(--desk-text-muted)]">
+                No ticker on this catalyst — chart unavailable.
+              </p>
+            </div>
+          )}
+        </div>
 
         <div className="flex flex-col gap-4 px-4 py-4">
+          <div className="flex flex-wrap items-center gap-2">
+            {catalyst.eventCategory ? (
+              <CategoryBadge category={catalyst.eventCategory} />
+            ) : null}
+          </div>
+
           <div className="flex flex-wrap gap-2">
             <Link
               href={`/dashboard/catalyst/${catalyst.id}`}
@@ -318,11 +246,6 @@ export function TapeSplitPanel({
               <BookOpen className="size-3.5" />
               Full article
             </Link>
-            <EdgarProofLink
-              url={catalyst.sourceUrl}
-              provider={catalyst.sourceProvider}
-              className="h-auto rounded-sm px-3 py-1.5 text-xs uppercase"
-            />
             <button
               type="button"
               onClick={() => onDismiss?.()}
@@ -332,57 +255,44 @@ export function TapeSplitPanel({
             </button>
           </div>
 
-          <div>
-            <p className="font-mono text-[0.65rem] tracking-[0.14em] text-[var(--desk-text-dim)] uppercase">
-              Summary
-            </p>
-            <p className="mt-2 text-sm leading-relaxed text-[var(--desk-text-secondary)]">
-              {summaryText}
-            </p>
-          </div>
-
-          <AiAnalysisPanel
-            key={`ai-${catalyst.id}`}
-            catalystId={catalyst.id}
-            initial={
-              catalyst.aiBullets
-                ? {
-                    bullets: catalyst.aiBullets,
-                    lean: catalyst.aiLean ?? "uncertain",
-                    uncertain: catalyst.aiUncertain ?? true,
-                  }
-                : null
-            }
-            onAnalyzed={onAiAnalyzed}
-          />
-
           <dl className="grid grid-cols-2 gap-3 font-mono text-xs">
-            <MetaCell
-              label="Category"
-              value={
-                [categoryLabel, subcategory].filter(Boolean).join(" · ") || "—"
-              }
-            />
-            <MetaCell label="Form" value={catalyst.type || "—"} />
-            <MetaCell label="Source" value={source.name} />
-            <MetaCell label="Sector" value={sectorLabel(catalyst)} />
-            <MetaCell
-              label="Age"
-              value={formatRelativeAge(catalyst.timestamp)}
-              tabular
-            />
-            <MetaCell
-              label="Event time"
-              value={formatEventTime(catalyst.timestamp)}
-              tabular
-            />
-            {typeof catalyst.impactScore === "number" ? (
-              <MetaCell
-                label="Impact"
-                value={String(catalyst.impactScore)}
-                tabular
-              />
-            ) : null}
+            <div>
+              <dt className="tracking-[0.14em] text-[var(--desk-text-dim)] uppercase">
+                Category
+              </dt>
+              <dd className="mt-1 text-sm text-[var(--desk-text)]">
+                {catalyst.eventCategory
+                  ? CATEGORY_LABELS[catalyst.eventCategory]
+                  : "—"}
+                {catalyst.subcategory
+                  ? ` · ${catalyst.subcategory.replace(/_/g, " ")}`
+                  : ""}
+              </dd>
+            </div>
+            <div>
+              <dt className="tracking-[0.14em] text-[var(--desk-text-dim)] uppercase">
+                Form
+              </dt>
+              <dd className="mt-1 text-sm text-[var(--desk-text)]">
+                {catalyst.type}
+              </dd>
+            </div>
+            <div>
+              <dt className="tracking-[0.14em] text-[var(--desk-text-dim)] uppercase">
+                Age
+              </dt>
+              <dd className="mt-1 text-sm text-[var(--desk-text)] tabular-nums">
+                {formatRelativeAge(catalyst.timestamp)}
+              </dd>
+            </div>
+            <div className="col-span-2">
+              <dt className="tracking-[0.14em] text-[var(--desk-text-dim)] uppercase">
+                Event time
+              </dt>
+              <dd className="mt-1 text-sm text-[var(--desk-text)] tabular-nums">
+                {formatEventTime(catalyst.timestamp)}
+              </dd>
+            </div>
           </dl>
 
           {catalyst.materialityReasons.length > 0 ? (
@@ -395,6 +305,35 @@ export function TapeSplitPanel({
                   <li key={reason}>{reason}</li>
                 ))}
               </ul>
+            </div>
+          ) : null}
+
+          <div>
+            <p className="font-mono text-[0.65rem] tracking-[0.14em] text-[var(--desk-text-dim)] uppercase">
+              Summary
+            </p>
+            <p className="mt-2 text-sm leading-relaxed text-[var(--desk-text-secondary)]">
+              {catalyst.summary?.trim() ||
+                catalyst.headline?.trim() ||
+                catalyst.title}
+            </p>
+          </div>
+
+          {catalyst.tags.length > 0 ? (
+            <div>
+              <p className="font-mono text-[0.65rem] tracking-[0.14em] text-[var(--desk-text-dim)] uppercase">
+                Tags
+              </p>
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {catalyst.tags.map((tag) => (
+                  <span
+                    key={tag}
+                    className="rounded-sm border border-[var(--desk-border)] px-1.5 py-0.5 font-mono text-[0.65rem] text-[var(--desk-text-muted)]"
+                  >
+                    {tag}
+                  </span>
+                ))}
+              </div>
             </div>
           ) : null}
 
@@ -421,23 +360,17 @@ export function TapeSplitPanel({
             </div>
           ) : null}
 
-          {catalyst.tags.length > 0 ? (
-            <div>
-              <p className="font-mono text-[0.65rem] tracking-[0.14em] text-[var(--desk-text-dim)] uppercase">
-                Tags
-              </p>
-              <div className="mt-2 flex flex-wrap gap-1.5">
-                {catalyst.tags.map((tag) => (
-                  <span
-                    key={tag}
-                    className="rounded-sm border border-[var(--desk-border)] px-1.5 py-0.5 font-mono text-[0.65rem] text-[var(--desk-text-muted)]"
-                  >
-                    {tag}
-                  </span>
-                ))}
-              </div>
+          <div>
+            <p className="font-mono text-[0.65rem] tracking-[0.14em] text-[var(--desk-text-dim)] uppercase">
+              Original source
+            </p>
+            <div className="mt-2">
+              <EdgarProofLink
+                url={catalyst.sourceUrl}
+                provider={catalyst.sourceProvider}
+              />
             </div>
-          ) : null}
+          </div>
         </div>
       </div>
     </aside>

@@ -556,17 +556,12 @@ export function LiveCatalystFeed({
     timeWindow: filterState.timeWindow,
   });
 
-  const [nowMs, setNowMs] = useState(0);
-  useEffect(() => {
-    setNowMs(Date.now());
-    const id = window.setInterval(() => setNowMs(Date.now()), 30_000);
-    return () => window.clearInterval(id);
-  }, [lastIngestedAt, lastFetchedAt]);
-
+  // Compare ingest lag to the last successful poll clock (pure; no Date.now).
   const ingestStale =
-    nowMs > 0 &&
+    lastFetchedAt != null &&
     lastIngestedAt != null &&
-    nowMs - new Date(lastIngestedAt).getTime() > INGESTION_STALE_AFTER_MS;
+    new Date(lastFetchedAt).getTime() - new Date(lastIngestedAt).getTime() >
+      INGESTION_STALE_AFTER_MS;
 
   const lastUpdatedLabel = lastFetchedAt
     ? new Date(lastFetchedAt).toLocaleTimeString("en-US", {
