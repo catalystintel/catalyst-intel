@@ -30,5 +30,9 @@ export function safeNextPath(
   if (!next || !next.startsWith("/") || next.startsWith("//")) {
     return fallback;
   }
+  // `/dashboard` was renamed; keep stale login `?next=` bookmarks working.
+  if (next === "/dashboard" || next.startsWith("/dashboard/")) {
+    return `/catalyst-feed${next.slice("/dashboard".length)}`;
+  }
   return next;
 }
