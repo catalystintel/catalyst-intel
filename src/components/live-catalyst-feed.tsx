@@ -8,10 +8,9 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { useRouter } from "next/navigation";
+import { createPortal } from "react-dom";
 import {
   BookOpen,
-  Check,
   ChevronDown,
   ListFilter,
   Loader2,
@@ -21,17 +20,21 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
+import { CatalystArticleDialog } from "@/components/catalyst-article-dialog";
 import { FeedFilterMultiSelect } from "@/components/feed-filter-multi-select";
 import { TapeSplitPanel } from "@/components/tape-split-panel";
 import { TickerActionMenu } from "@/components/ticker-action-menu";
 import { Input } from "@/components/ui/input";
 import { useAutoFocusScrollRegion } from "@/hooks/use-auto-focus-scroll-region";
 import { useLiveFeedQuery } from "@/hooks/use-live-feed-query";
-import { type FeedCatalyst } from "@/lib/catalysts/feed-catalyst";
+import {
+  sortFeedNewestFirst,
+  type FeedCatalyst,
+} from "@/lib/catalysts/feed-catalyst";
 import {
   titleLine,
+  titleTooltipLine,
   eventLabel as feedEventLabel,
-  sourceDisplay,
 } from "@/lib/catalysts/feed-display";
 import {
   DEFAULT_PLAYBOOK_CATEGORIES,
@@ -45,6 +48,7 @@ import { FEED_TIME_WINDOWS } from "@/lib/catalysts/feed-time-window";
 import { classifyFeedEmpty } from "@/lib/catalysts/feed-empty-state";
 import {
   isFiltersDefault,
+  isPanelFiltersDefault,
   readPersistedFeedFilters,
   touchPersistedFeedFilters,
   writePersistedFeedFilters,
@@ -69,14 +73,12 @@ const DISMISS_STORAGE_KEY = "ci.dismissed-catalyst-ids";
 type Presence = "active" | "blurred" | "hidden";
 
 /**
- * Blotter: Title · Time · Event · Ticker · Action (hover toolbar).
- * Time is event occurrence (`catalysts.timestamp` in ET), never DB insert
- * Title is capped so the blotter stays dense; overflow uses ellipsis + hover
- * `title` for the full string. A trailing `1fr` track absorbs leftover width so
- * Action stays right-aligned when the split panel is closed.
+ * Blotter: Symbol · Title · Time (+ Action toolbar).
+ * Symbol leads as the row index. No Event / Source primary columns.
+ * Time = event occurrence ET.
  */
 const FEED_GRID =
-  "grid-cols-1 sm:grid-cols-[minmax(0,340px)_156px_88px_72px_1fr] lg:grid-cols-[minmax(0,400px)_160px_96px_80px_1fr_minmax(268px,max-content)]";
+  "grid-cols-[4.5rem_minmax(0,1fr)] sm:grid-cols-[5rem_minmax(0,1fr)_156px] lg:grid-cols-[5rem_minmax(0,1fr)_160px_minmax(200px,max-content)]";
 
 function readPresence(): Presence {
   if (typeof document === "undefined") return "active";
@@ -123,7 +125,6 @@ export function LiveCatalystFeed({
   /** Re-opens the split panel, e.g. arriving via `?c=` after full article. */
   initialSelectedId?: number;
 }) {
-  const router = useRouter();
   const query = useLiveFeedQuery(initialCatalysts, {
     tickerQuery: initialTickerFilter?.trim() ?? "",
   });
@@ -143,6 +144,7 @@ export function LiveCatalystFeed({
     clearFilters,
     refresh,
     loadMore,
+    prependOrMerge,
   } = query;
 
   const [presence, setPresence] = useState<Presence>("active");
@@ -166,6 +168,7 @@ export function LiveCatalystFeed({
   const [quietMode, setQuietMode] = useState(false);
   const [prefsLoaded, setPrefsLoaded] = useState(false);
   const [manualRefreshing, setManualRefreshing] = useState(false);
+  const [articleId, setArticleId] = useState<number | null>(null);
   const skipFilterAnimRef = useRef(true);
   const skipFlashRef = useRef(false);
   const knownIds = useRef(new Set(initialCatalysts.map((c) => c.id)));
@@ -232,13 +235,14 @@ export function LiveCatalystFeed({
                 formFilters: saved.formFilters,
                 sourceFilters: saved.sourceFilters,
                 timeWindow: saved.timeWindow,
+                tickerOnly: saved.tickerOnly,
               }
             : {}),
         }));
         setFiltersOpen(true);
       } else if (saved) {
         setFilterState(saved);
-        if (!isFiltersDefault(saved)) setFiltersOpen(true);
+        if (!isPanelFiltersDefault(saved)) setFiltersOpen(true);
       }
       setFiltersHydrated(true);
     }, 0);
@@ -418,12 +422,9 @@ export function LiveCatalystFeed({
     setSelectedId(id);
   }, []);
 
-  const openArticle = useCallback(
-    (id: number) => {
-      router.push(`/dashboard/catalyst/${id}`);
-    },
-    [router],
-  );
+  const openArticle = useCallback((id: number) => {
+    setArticleId(id);
+  }, []);
 
   const filterToTicker = useCallback(
     (ticker: string) => {
@@ -525,13 +526,15 @@ export function LiveCatalystFeed({
   const facetOptions = useMemo(() => buildFacetOptions(facets), [facets]);
 
   const visible = useMemo(() => {
-    return catalysts.filter((c) => {
+    const filtered = catalysts.filter((c) => {
       if (dismissedIds.has(c.id)) return false;
       return matchesQuietPlaybook(
         { ticker: c.ticker, eventCategory: c.eventCategory },
         { quietMode, watchlistTickers, playbookCategories },
       );
     });
+    // Always newest → oldest (event time), even after client overlays.
+    return sortFeedNewestFirst(filtered);
   }, [
     catalysts,
     dismissedIds,
@@ -540,11 +543,18 @@ export function LiveCatalystFeed({
     playbookCategories,
   ]);
 
-  const selected = selectedId
+  const selectedRaw = selectedId
     ? (catalysts.find((c) => c.id === selectedId) ?? null)
     : null;
+  // Ticker-only mode: don't open the split panel for unresolved names.
+  const selected =
+    selectedRaw &&
+    (!filterState.tickerOnly || Boolean(selectedRaw.ticker?.trim()))
+      ? selectedRaw
+      : null;
 
-  const panelFiltersActive = !isFiltersDefault(filterState);
+  // Ticker-only is a header toggle — don't drive Clear / Filters badge from it.
+  const panelFiltersActive = !isPanelFiltersDefault(filterState);
   const filtersActive = panelFiltersActive || quietMode;
 
   const emptyKind = classifyFeedEmpty({
@@ -595,6 +605,25 @@ export function LiveCatalystFeed({
           >
             Quiet playbook
             {quietMode ? (
+              <span className="size-1.5 rounded-full bg-[var(--desk-live)]" />
+            ) : null}
+          </button>
+          <button
+            type="button"
+            onClick={() =>
+              patchFilters({ tickerOnly: !filterState.tickerOnly })
+            }
+            title="When on, hide catalysts with no resolved symbol (no chart / quote)"
+            aria-pressed={filterState.tickerOnly}
+            className={cn(
+              "inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-[0.82rem] font-medium transition-colors",
+              filterState.tickerOnly
+                ? "border-[var(--desk-live)]/45 bg-[var(--desk-live)]/10 text-[var(--desk-live)]"
+                : "border-[var(--desk-border-strong)] bg-[var(--desk-overlay-soft)] text-[var(--desk-text-secondary)] hover:bg-[var(--desk-overlay-strong)] hover:text-[var(--desk-text)]",
+            )}
+          >
+            Symbol only
+            {filterState.tickerOnly ? (
               <span className="size-1.5 rounded-full bg-[var(--desk-live)]" />
             ) : null}
           </button>
@@ -765,8 +794,19 @@ export function LiveCatalystFeed({
               key={selected.id}
               catalyst={selected}
               onClose={() => setSelectedId(null)}
+              onRead={() => openArticle(selected.id)}
               onDismiss={() => {
                 if (selectedId !== null) dismissCatalyst(selectedId);
+              }}
+              onAiAnalyzed={(analysis) => {
+                prependOrMerge([
+                  {
+                    ...selected,
+                    aiBullets: analysis.bullets,
+                    aiLean: analysis.lean,
+                    aiUncertain: analysis.uncertain,
+                  },
+                ]);
               }}
               mobileOverlay
               className="fixed inset-0 z-50 w-full lg:static lg:inset-auto lg:z-auto lg:w-[min(52%,640px)] lg:min-w-[420px] lg:shrink-0 lg:border-l"
@@ -774,6 +814,14 @@ export function LiveCatalystFeed({
           </>
         ) : null}
       </div>
+
+      <CatalystArticleDialog
+        catalystId={articleId}
+        open={articleId != null}
+        onOpenChange={(next) => {
+          if (!next) setArticleId(null);
+        }}
+      />
     </section>
   );
 }
@@ -1088,7 +1136,10 @@ function CatalystFeedList({
           FEED_GRID,
         )}
       >
-        <div role="columnheader" className="col-span-1">
+        <div role="columnheader" className="min-w-0">
+          Symbol
+        </div>
+        <div role="columnheader" className="min-w-0">
           Title
         </div>
         <div
@@ -1098,16 +1149,7 @@ function CatalystFeedList({
         >
           Time
         </div>
-        <div role="columnheader" className="hidden sm:block">
-          Event
-        </div>
-        <div role="columnheader" className="hidden sm:block">
-          Ticker
-        </div>
-        <div
-          role="columnheader"
-          className="col-start-5 hidden text-right lg:col-start-6 lg:block"
-        >
+        <div role="columnheader" className="hidden text-right lg:block">
           Action
         </div>
       </div>
@@ -1131,12 +1173,30 @@ function CatalystFeedList({
           const dismissing = dismissingIds.has(catalyst.id);
           const selected = selectedId === catalyst.id;
           const eventLabel = feedEventLabel(catalyst);
-          const source = sourceDisplay(catalyst);
           const title = titleLine(catalyst);
+          const tooltipTitle = titleTooltipLine(catalyst);
           const onWatchlist = Boolean(
             catalyst.ticker &&
             watchlistTickers.includes(catalyst.ticker.toUpperCase()),
           );
+          const renderSymbol = () =>
+            catalyst.ticker ? (
+              <TickerActionMenu
+                ticker={catalyst.ticker}
+                companyName={catalyst.companyName}
+                catalystId={catalyst.id}
+                onWatchlist={onWatchlist}
+                onFilterToTicker={() => onFilterToTicker(catalyst.ticker!)}
+                onOpenPanel={() => onAct(catalyst.id)}
+                onOpenArticle={() => onRead(catalyst.id)}
+                onAddWatchlist={() => onQuiet(catalyst.ticker)}
+                onDismiss={() => onDismiss(catalyst.id)}
+              />
+            ) : (
+              <span className="truncate font-mono text-[0.88rem] font-semibold tracking-tight text-[var(--desk-text-dim)]">
+                —
+              </span>
+            );
           return (
             <article
               key={catalyst.id}
@@ -1168,27 +1228,19 @@ function CatalystFeedList({
               }}
               aria-hidden={dismissing || undefined}
             >
+              <div role="cell" className="relative z-[1] min-w-0">
+                {renderSymbol()}
+              </div>
+
               <div role="cell" className="min-w-0">
-                <span
-                  className="block truncate text-[0.86rem] font-medium tracking-tight text-[var(--desk-text-secondary)] transition-colors group-hover:text-[var(--desk-text)] group-focus-visible:text-[var(--desk-text)] max-sm:line-clamp-2 max-sm:whitespace-normal"
+                <FeedTitleWithTooltip
                   title={title}
-                >
-                  {title}
-                </span>
-                <span
-                  className="mt-0.5 hidden truncate font-mono text-[0.62rem] tracking-wide text-[var(--desk-text-dim)] sm:block"
-                  title={
-                    catalyst.tags.length > 0
-                      ? `${source.name} · ${catalyst.tags.slice(0, 3).join(" · ")}`
-                      : source.name
-                  }
-                >
-                  {source.name}
-                  {catalyst.tags.length > 0
-                    ? ` · ${catalyst.tags.slice(0, 3).join(" · ")}`
-                    : ""}
-                </span>
-                {/* Mobile: Title → Time → Event, then ticker/actions */}
+                  tooltipTitle={tooltipTitle}
+                  companyName={catalyst.companyName}
+                  eventLabel={eventLabel}
+                  ticker={catalyst.ticker}
+                />
+                {/* Mobile: Time under Title (Symbol is the leading index col) */}
                 <div className="mt-1.5 flex flex-col gap-1 sm:hidden">
                   <time
                     dateTime={catalyst.timestamp}
@@ -1196,28 +1248,8 @@ function CatalystFeedList({
                   >
                     {formatClockTime(catalyst.timestamp)}
                   </time>
-                  <span className="font-mono text-[0.68rem] text-[var(--desk-text-dim)]">
-                    {eventLabel}
-                  </span>
-                  {catalyst.ticker ? (
-                    <TickerActionMenu
-                      ticker={catalyst.ticker}
-                      catalystId={catalyst.id}
-                      onWatchlist={onWatchlist}
-                      onFilterToTicker={() =>
-                        onFilterToTicker(catalyst.ticker!)
-                      }
-                      onOpenPanel={() => onAct(catalyst.id)}
-                      onAddWatchlist={() => onQuiet(catalyst.ticker)}
-                      onDismiss={() => onDismiss(catalyst.id)}
-                    />
-                  ) : (
-                    <span className="font-mono text-[0.8rem] font-semibold text-[var(--desk-text)]">
-                      —
-                    </span>
-                  )}
                 </div>
-                {/* Touch: always-visible actions below meta/date (never same-line overlap). */}
+                {/* Touch: always-visible actions below meta (never same-line overlap). */}
                 <div
                   className="mt-2 flex flex-wrap items-center gap-1.5 lg:hidden"
                   onClick={(e) => e.stopPropagation()}
@@ -1230,13 +1262,6 @@ function CatalystFeedList({
                   >
                     <BookOpen className="size-3" />
                     Read
-                  </FeedActionButton>
-                  <FeedActionButton
-                    onClick={() => onAct(catalyst.id)}
-                    title="Open side panel (chart + triage)"
-                  >
-                    <Check className="size-3" />
-                    Act
                   </FeedActionButton>
                   <FeedActionButton
                     onClick={() => onDismiss(catalyst.id)}
@@ -1271,41 +1296,10 @@ function CatalystFeedList({
                 </time>
               </div>
 
-              <div role="cell" className="hidden min-w-0 sm:block">
-                <span
-                  className="inline-flex max-w-full truncate rounded-sm border border-[var(--desk-border-strong)] bg-[var(--desk-overlay-soft)] px-1.5 py-0.5 font-mono text-[0.68rem] text-[var(--desk-text-secondary)]"
-                  title={
-                    catalyst.eventCategory
-                      ? CATEGORY_LABELS[catalyst.eventCategory]
-                      : undefined
-                  }
-                >
-                  {eventLabel}
-                </span>
-              </div>
-
-              <div role="cell" className="hidden min-w-0 sm:block">
-                {catalyst.ticker ? (
-                  <TickerActionMenu
-                    ticker={catalyst.ticker}
-                    catalystId={catalyst.id}
-                    onWatchlist={onWatchlist}
-                    onFilterToTicker={() => onFilterToTicker(catalyst.ticker!)}
-                    onOpenPanel={() => onAct(catalyst.id)}
-                    onAddWatchlist={() => onQuiet(catalyst.ticker)}
-                    onDismiss={() => onDismiss(catalyst.id)}
-                  />
-                ) : (
-                  <span className="truncate font-mono text-[0.88rem] font-semibold tracking-tight text-[var(--desk-text)]">
-                    —
-                  </span>
-                )}
-              </div>
-
               {/* Desktop: hover / focus-within reveals action toolbar in its own column */}
               <div
                 role="cell"
-                className="relative z-0 col-start-5 hidden min-w-0 justify-end overflow-hidden lg:col-start-6 lg:flex"
+                className="relative z-0 hidden min-w-0 justify-end overflow-hidden lg:flex"
                 onClick={(e) => e.stopPropagation()}
                 onKeyDown={(e) => e.stopPropagation()}
               >
@@ -1324,13 +1318,6 @@ function CatalystFeedList({
                   >
                     <BookOpen className="size-3" />
                     Read
-                  </FeedActionButton>
-                  <FeedActionButton
-                    onClick={() => onAct(catalyst.id)}
-                    title="Open side panel (chart + triage)"
-                  >
-                    <Check className="size-3" />
-                    Act
                   </FeedActionButton>
                   <FeedActionButton
                     onClick={() => onDismiss(catalyst.id)}
@@ -1367,6 +1354,108 @@ function CatalystFeedList({
         ) : null}
       </div>
     </div>
+  );
+}
+
+function FeedTitleWithTooltip({
+  title,
+  tooltipTitle,
+  companyName,
+  eventLabel,
+  ticker,
+}: {
+  title: string;
+  /** Longer filing blurb for hover (not the truncated tape line). */
+  tooltipTitle: string;
+  companyName: string | null;
+  eventLabel: string;
+  ticker: string | null;
+}) {
+  const anchorRef = useRef<HTMLSpanElement>(null);
+  const [coords, setCoords] = useState<{
+    top: number;
+    left: number;
+    maxWidth: number;
+  } | null>(null);
+
+  const company = companyName?.trim() || null;
+  const symbol = ticker?.trim().toUpperCase() || null;
+  const meta = [symbol, company, eventLabel].filter(Boolean).join(" · ");
+  const tip = tooltipTitle.trim() || title;
+
+  const place = useCallback(() => {
+    const el = anchorRef.current;
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    const pad = 12;
+    const maxWidth = Math.min(560, window.innerWidth - pad * 2);
+    const left = Math.min(
+      Math.max(pad, r.left),
+      window.innerWidth - maxWidth - pad,
+    );
+    // Prefer below the title; flip above when near the bottom of the viewport.
+    const below = r.bottom + 8;
+    const estimatedHeight = 120;
+    const top =
+      below + estimatedHeight > window.innerHeight - pad
+        ? Math.max(pad, r.top - estimatedHeight - 8)
+        : below;
+    setCoords({ top, left, maxWidth });
+  }, []);
+
+  const hide = useCallback(() => setCoords(null), []);
+
+  useEffect(() => {
+    if (!coords) return;
+    const onReposition = () => hide();
+    window.addEventListener("scroll", onReposition, true);
+    window.addEventListener("resize", onReposition);
+    return () => {
+      window.removeEventListener("scroll", onReposition, true);
+      window.removeEventListener("resize", onReposition);
+    };
+  }, [coords, hide]);
+
+  return (
+    <span
+      ref={anchorRef}
+      className="block min-w-0"
+      onMouseEnter={place}
+      onMouseLeave={hide}
+      onFocus={place}
+      onBlur={hide}
+    >
+      <span className="block truncate text-[0.86rem] font-medium tracking-tight text-[var(--desk-text-secondary)] transition-colors group-hover:text-[var(--desk-text)] group-focus-visible:text-[var(--desk-text)] max-sm:line-clamp-2 max-sm:whitespace-normal">
+        {title}
+      </span>
+      {coords
+        ? createPortal(
+            <span
+              role="tooltip"
+              style={{
+                top: coords.top,
+                left: coords.left,
+                maxWidth: coords.maxWidth,
+              }}
+              className={cn(
+                "pointer-events-none fixed z-[80] w-max",
+                "rounded-md border border-[var(--desk-border-strong)] bg-[var(--desk-panel)] px-2.5 py-2",
+                "shadow-[0_12px_32px_rgba(0,0,0,0.5)]",
+              )}
+            >
+              <span className="block text-[0.8rem] leading-snug font-medium break-words whitespace-normal text-[var(--desk-text)]">
+                {tip}
+              </span>
+              {meta ? (
+                <span className="mt-1 block font-mono text-[0.65rem] leading-snug tracking-wide text-[var(--desk-text-dim)]">
+                  {meta}
+                </span>
+              ) : null}
+            </span>,
+            document.body,
+          )
+        : null}
+    </span>
   );
 }
 

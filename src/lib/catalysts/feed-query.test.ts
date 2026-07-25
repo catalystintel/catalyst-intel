@@ -47,6 +47,7 @@ describe("parseFeedQueryFromSearchParams", () => {
       forms: "8-K,424B",
       sources: "sec-edgar",
       window: "24h",
+      tickerOnly: "1",
     });
     const filters = parseFeedQueryFromSearchParams(params, {
       nowIso: "2026-07-24T20:00:00.000Z",
@@ -57,7 +58,15 @@ describe("parseFeedQueryFromSearchParams", () => {
     expect(filters.forms).toEqual(["8-K", "424B"]);
     expect(filters.sources).toEqual(["sec-edgar"]);
     expect(filters.timeWindow).toBe("24h");
+    expect(filters.tickerOnly).toBe(true);
     expect(filters.since).toBeTruthy();
+  });
+
+  it("defaults tickerOnly off when param absent", () => {
+    const filters = parseFeedQueryFromSearchParams(new URLSearchParams(), {
+      nowIso: "2026-07-24T20:00:00.000Z",
+    });
+    expect(filters.tickerOnly).toBe(false);
   });
 });
 

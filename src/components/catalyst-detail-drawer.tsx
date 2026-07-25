@@ -2,11 +2,10 @@
 
 import { useEffect } from "react";
 import Link from "next/link";
-import { BookOpen, Check, XIcon } from "lucide-react";
+import { BookOpen, XIcon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { CategoryBadge } from "@/components/category-badge";
-import { EdgarProofLink } from "@/components/edgar-proof-link";
 import type { FeedCatalyst } from "@/lib/catalysts/feed-catalyst";
 import { formatEventTime, formatRelativeAge } from "@/lib/format/relative-time";
 import { CATEGORY_LABELS } from "@/lib/jobs/parse-8k-items";
@@ -15,12 +14,10 @@ import { cn } from "@/lib/utils";
 export function CatalystDetailDrawer({
   catalyst,
   onClose,
-  onAct,
   onDismiss,
 }: {
   catalyst: FeedCatalyst | null;
   onClose: () => void;
-  onAct?: () => void;
   onDismiss?: () => void;
 }) {
   const open = catalyst !== null;
@@ -114,14 +111,6 @@ export function CatalystDetailDrawer({
                   <BookOpen className="size-3.5" />
                   Read article
                 </Link>
-                <button
-                  type="button"
-                  onClick={() => onAct?.()}
-                  className="inline-flex items-center gap-1.5 rounded-sm border border-[var(--desk-border-strong)] px-3 py-1.5 font-mono text-xs tracking-wide text-[var(--desk-text-muted)] uppercase hover:bg-[var(--desk-overlay-strong)] hover:text-[var(--desk-text)]"
-                >
-                  <Check className="size-3.5" />
-                  Act
-                </button>
                 <button
                   type="button"
                   onClick={() => onDismiss?.()}
@@ -232,18 +221,6 @@ export function CatalystDetailDrawer({
                   </ul>
                 </div>
               ) : null}
-
-              <div>
-                <p className="font-mono text-[0.65rem] tracking-[0.14em] text-[var(--desk-text-dim)] uppercase">
-                  Original source
-                </p>
-                <div className="mt-2">
-                  <EdgarProofLink
-                    url={catalyst.sourceUrl}
-                    provider={catalyst.sourceProvider}
-                  />
-                </div>
-              </div>
 
               <div className="rounded-md border border-dashed border-[var(--desk-border-strong)] bg-[var(--desk-overlay-soft)] px-3 py-3">
                 <p className="font-mono text-[0.65rem] tracking-[0.14em] text-[var(--desk-text-dim)] uppercase">

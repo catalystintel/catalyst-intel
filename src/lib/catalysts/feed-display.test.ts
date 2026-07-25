@@ -10,6 +10,7 @@ import {
   sourceDisplay,
   stripSourceNames,
   titleLine,
+  titleTooltipLine,
 } from "./feed-display";
 
 function base(overrides: Partial<FeedCatalyst> = {}): FeedCatalyst {
@@ -30,6 +31,9 @@ function base(overrides: Partial<FeedCatalyst> = {}): FeedCatalyst {
     tags: ["8k"],
     historicalImpact: null,
     materialityReasons: [],
+    aiBullets: null,
+    aiLean: null,
+    aiUncertain: null,
     sourceUrl: "https://example.com",
     sourceProvider: "sec-edgar",
     sector: null,
@@ -117,6 +121,24 @@ describe("titleLine", () => {
     ).toBe(
       "Liberty Global Ltd — Results of Operations and Financial Condition",
     );
+  });
+
+  it("tooltip title keeps longer SEC notices than the tape line", () => {
+    const long =
+      "Notice of Delisting or Failure to Satisfy a Continued Listing Rule or Standard; Transfer of Listing. This is a longer continuation of the official Item text for traders.";
+    const row = base({
+      companyName: "Quantum-Si Inc",
+      ticker: "QSI",
+      headline: "Delisting risk",
+      eventCategory: "distress",
+      items: [{ code: "3.01", label: "Delisting risk", category: "distress" }],
+      summary: `Item 3.01: ${long}`,
+    });
+    const tape = titleLine(row);
+    const tip = titleTooltipLine(row);
+    expect(tape.length).toBeLessThan(tip.length);
+    expect(tip).toContain("Transfer of Listing");
+    expect(tip).toContain("longer continuation");
   });
 
   it("keeps specific news headlines without forcing company prefix", () => {

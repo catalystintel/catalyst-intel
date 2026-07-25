@@ -33,18 +33,13 @@ export function isForm4ApiConfigured(): boolean {
   return getForm4ApiKey() !== null;
 }
 
-/** Groq free-tier LLM (grounded triage only — see lib/jobs/llm-triage.ts). */
-export function getGroqApiKey(): string | null {
-  const key = process.env.GROQ_API_KEY?.trim();
-  return key || null;
-}
-
-export function isGroqConfigured(): boolean {
-  return getGroqApiKey() !== null;
-}
-
-const DEFAULT_GROQ_MODEL = "llama-3.3-70b-versatile";
-
-export function getGroqModel(): string {
-  return process.env.GROQ_MODEL?.trim() || DEFAULT_GROQ_MODEL;
-}
+/**
+ * OpenRouter free-tier LLM for on-demand AI analysis.
+ * Prefer helpers in `llm-provider.ts` (key pool + failover). These thin
+ * wrappers remain for env-check call sites.
+ */
+export {
+  getOpenRouterApiKeys,
+  getOpenRouterModel,
+  isOpenRouterConfigured,
+} from "@/lib/jobs/llm-provider";

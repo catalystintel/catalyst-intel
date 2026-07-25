@@ -1,4 +1,4 @@
-import { desc, eq, lte } from "drizzle-orm";
+import { and, desc, eq, isNotNull, lte, ne } from "drizzle-orm";
 
 import { LiveCatalystFeed } from "@/components/live-catalyst-feed";
 import { PageEnter } from "@/components/page-enter";
@@ -54,8 +54,15 @@ export default async function DashboardPage({
       .leftJoin(companies, eq(catalysts.companyId, companies.id))
       // Exclude scheduled-future calendar entries (macro/earnings/FDA) - see
       // the matching filter + comment in /api/catalysts/route.ts.
-      .where(lte(catalysts.timestamp, new Date().toISOString()))
-      .orderBy(desc(catalysts.timestamp))
+      // Match product default: ticker-only tape (hide unresolved names).
+      .where(
+        and(
+          lte(catalysts.timestamp, new Date().toISOString()),
+          isNotNull(catalysts.ticker),
+          ne(catalysts.ticker, ""),
+        ),
+      )
+      .orderBy(desc(catalysts.timestamp), desc(catalysts.id))
       .limit(200)
       .all(),
   );

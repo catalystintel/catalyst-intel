@@ -121,7 +121,7 @@ export const catalysts = sqliteTable("catalysts", {
   materialityReasons: text("materiality_reasons", { mode: "json" }),
   // Session-time price/% snapshot; see SessionContext.
   sessionContext: text("session_context", { mode: "json" }),
-  // Grounded LLM triage (Groq) — 3 short bullets, never inventing facts. Null until triaged.
+  // Grounded on-demand LLM triage (OpenRouter) — 2–3 short bullets. Null until first analyze.
   aiBullets: text("ai_bullets", { mode: "json" }),
   aiLean: text("ai_lean", { enum: AI_LEAN_VALUES }),
   aiUncertain: integer("ai_uncertain", { mode: "boolean" }),
