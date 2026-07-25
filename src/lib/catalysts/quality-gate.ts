@@ -49,8 +49,20 @@ const GOLD_CATEGORIES = new Set<EventCategoryKey>([
   "capital",
 ]);
 
-/** 8-K items that, alone, are almost never tradeable on their own. */
-const BOILERPLATE_ONLY_CODES = new Set(["7.01", "8.01", "9.01"]);
+/**
+ * 8-K items that, alone (or only with other members of this set), are not
+ * day-trader catalysts — Reg FD / other / exhibits, plus routine paperwork.
+ * See docs/research/SEC-8K-FORM4-CLASSIFICATION.md.
+ */
+const NON_CATALYST_ONLY_CODES = new Set([
+  "7.01", // Reg FD
+  "8.01", // Other Events (too broad without exhibit signal)
+  "9.01", // Exhibits
+  "1.04", // Mine safety — statutory, rarely tradeable
+  "5.05", // Ethics code amendment — boilerplate governance
+  "5.08", // Director nominations — usually procedural
+  "5.07", // Shareholder vote results — often routine say-on-pay / annual
+]);
 
 /** ClinicalTrials statuses worth a tape row (not "still recruiting"). */
 const MATERIAL_CT_STATUSES = new Set([
@@ -61,16 +73,16 @@ const MATERIAL_CT_STATUSES = new Set([
   "ACTIVE NOT RECRUITING",
 ]);
 
-function isBoilerplateOnly8k(
+function isNonCatalystOnly8k(
   itemCodes: ParsedItem[] | null | undefined,
 ): boolean {
   if (!itemCodes || itemCodes.length === 0) return false;
-  return itemCodes.every((i) => BOILERPLATE_ONLY_CODES.has(i.code));
+  return itemCodes.every((i) => NON_CATALYST_ONLY_CODES.has(i.code));
 }
 
 function hasGoldItem(itemCodes: ParsedItem[] | null | undefined): boolean {
   if (!itemCodes?.length) return false;
-  return itemCodes.some((i) => !BOILERPLATE_ONLY_CODES.has(i.code));
+  return itemCodes.some((i) => !NON_CATALYST_ONLY_CODES.has(i.code));
 }
 
 /**
@@ -102,10 +114,27 @@ export function evaluateCatalystQuality(
     };
   }
 
-  if (isBoilerplateOnly8k(item.itemCodes)) {
+  if (isNonCatalystOnly8k(item.itemCodes)) {
     return {
       decision: "drop",
-      reason: "8-K is exhibits/Reg FD only — drop noise",
+      reason:
+        "8-K is non-catalyst paperwork only (Reg FD / exhibits / routine items)",
+    };
+  }
+
+  // Form 4: drop only when ownership XML resolved to routine paperwork
+  // (awards / tax withholding / gifts). Unenriched Atom rows stay — the
+  // enricher soft-fails under fetch caps; do not discard potentially material
+  // buys/sells we have not labeled yet.
+  if (
+    provider === "sec-edgar" &&
+    category === "insider" &&
+    (subcategory === "form4_routine" || subcategory === "form4_non_catalyst")
+  ) {
+    return {
+      decision: "drop",
+      reason:
+        "Form 4 routine ownership paperwork (award/tax/gift) — not an open-market catalyst",
     };
   }
 

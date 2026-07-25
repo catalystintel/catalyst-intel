@@ -2,14 +2,35 @@ import { XMLParser } from "fast-xml-parser";
 
 import type { NormalizedCatalyst } from "@/lib/jobs/ingest-pipeline";
 
-/** SEC transaction codes treated as purchase / acquisition. */
-const BUY_CODES = new Set(["P", "A", "M", "I", "L", "W", "Z"]);
+/**
+ * Open-market codes that day traders treat as catalysts.
+ * Awards (A), option exercises (M), tax withholding (F), gifts (G), etc.
+ * are ownership paperwork — see SEC-8K-FORM4-CLASSIFICATION.md.
+ */
+const MATERIAL_BUY_CODES = new Set(["P"]);
+const MATERIAL_SELL_CODES = new Set(["S"]);
 
-/** SEC transaction codes treated as sale / disposition. */
-const SELL_CODES = new Set(["S", "D", "F", "G", "H", "C", "U"]);
+/** Non-catalyst ownership codes we still recognize for routing to routine. */
+const ROUTINE_CODES = new Set([
+  "A",
+  "M",
+  "I",
+  "L",
+  "W",
+  "Z",
+  "D",
+  "F",
+  "G",
+  "H",
+  "C",
+  "U",
+  "V",
+  "J",
+  "K",
+]);
 
 export type Form4Subcategory =
-  "insider_buy" | "insider_sell" | "form4_mixed" | "form4";
+  "insider_buy" | "insider_sell" | "form4_mixed" | "form4" | "form4_routine";
 
 export interface Form4Direction {
   subcategory: Form4Subcategory;
@@ -154,9 +175,11 @@ export function parseForm4OwnershipXml(xml: string): Form4Direction | null {
 
   let buyCount = 0;
   let sellCount = 0;
+  let routineCount = 0;
   for (const code of codes) {
-    if (BUY_CODES.has(code)) buyCount++;
-    else if (SELL_CODES.has(code)) sellCount++;
+    if (MATERIAL_BUY_CODES.has(code)) buyCount++;
+    else if (MATERIAL_SELL_CODES.has(code)) sellCount++;
+    else if (ROUTINE_CODES.has(code)) routineCount++;
   }
 
   if (buyCount > 0 && sellCount === 0) {
@@ -183,6 +206,16 @@ export function parseForm4OwnershipXml(xml: string): Form4Direction | null {
       headline: "Mixed insider transactions (Form 4)",
       buyCount,
       sellCount,
+      codes,
+    };
+  }
+
+  if (routineCount > 0) {
+    return {
+      subcategory: "form4_routine",
+      headline: "Form 4 routine ownership",
+      buyCount: 0,
+      sellCount: 0,
       codes,
     };
   }

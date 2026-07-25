@@ -9,10 +9,14 @@ import {
   earningsDateForQuarterInference,
   earningsQuarterLabel,
   formatEarningsReportTitle,
+  formatForm4InsiderTitle,
+  formatSec8kItemTitle,
+  form4TitleKindFromSubcategory,
 } from "@/lib/catalysts/catalyst-titles";
 import {
   classifySecFormType,
   parseFilingSummary,
+  selectPrimaryItem,
 } from "@/lib/jobs/parse-8k-items";
 import {
   accessionToFolder,
@@ -169,6 +173,9 @@ function entryToNormalized(
     (itemCodes?.some((i) => i.code === "2.02") ||
       /^earnings\s*\/\s*results$/i.test(headline ?? ""));
 
+  const isForm4 =
+    formMeta.subcategory === "form4" || /^4(\/|$)/i.test(formType);
+
   let title = `${companyName} \u2014 ${formType} filing`;
   if (isItem202Earnings) {
     // Ground-rule tape title; quarter from Filed: date / filing timestamp.
@@ -182,6 +189,13 @@ function entryToNormalized(
     title = formatEarningsReportTitle(quarter, companyName);
     headline = title;
     tags = [...(tags ?? []), quarter];
+  } else if (is8k && itemCodes?.length) {
+    const primary = selectPrimaryItem(itemCodes);
+    if (primary) {
+      title = formatSec8kItemTitle(primary.label, companyName);
+    }
+  } else if (isForm4) {
+    title = formatForm4InsiderTitle("transaction", companyName);
   }
 
   return {
@@ -276,6 +290,18 @@ export async function enrichForm4Directions(
           item.subcategory = direction.subcategory;
           item.headline = direction.headline;
           item.tags = [...(item.tags ?? []), direction.subcategory];
+          item.title = formatForm4InsiderTitle(
+            form4TitleKindFromSubcategory(direction.subcategory),
+            item.companyName,
+          );
+          // Mirror ground-rule title onto headline for tape preference.
+          if (
+            direction.subcategory === "insider_buy" ||
+            direction.subcategory === "insider_sell" ||
+            direction.subcategory === "form4_mixed"
+          ) {
+            item.headline = item.title;
+          }
           raw.form4Direction = direction;
           break;
         } catch {

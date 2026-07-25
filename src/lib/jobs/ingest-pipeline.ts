@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, eq, gte } from "drizzle-orm";
 
 import { db } from "@/db/client";
 import { catalysts, companies, rawSources } from "@/db/schema";
@@ -12,6 +12,10 @@ import {
 } from "@/lib/catalysts/taxonomy";
 import { classifySession } from "@/lib/alerts/session";
 import type { ParsedItem } from "@/lib/jobs/parse-8k-items";
+import {
+  DEDUPE_WINDOW_MINUTES,
+  shouldSkipAsDuplicate,
+} from "@/lib/jobs/dedupe-catalysts";
 
 import { purgeStaleCatalysts } from "./data-retention";
 
@@ -146,6 +150,54 @@ export async function ingestNormalizedCatalysts(
       const timestamp = item.timestamp
         ? new Date(item.timestamp).toISOString()
         : new Date().toISOString();
+
+      // Cross-API near-dupe: same ticker + similar title in the window.
+      // Prefer keeping the better source (SEC over wire retellings).
+      if (ticker) {
+        const since = new Date(
+          Date.now() - DEDUPE_WINDOW_MINUTES * 60 * 1000,
+        ).toISOString();
+        const peers = await db
+          .select({
+            id: catalysts.id,
+            title: catalysts.title,
+            headline: catalysts.headline,
+            provider: rawSources.provider,
+            eventCategory: catalysts.eventCategory,
+            timestamp: catalysts.timestamp,
+            impactScore: catalysts.impactScore,
+          })
+          .from(catalysts)
+          .leftJoin(rawSources, eq(catalysts.rawSourceId, rawSources.id))
+          .where(
+            and(eq(catalysts.ticker, ticker), gte(catalysts.timestamp, since)),
+          )
+          .all();
+
+        const dupe = shouldSkipAsDuplicate(
+          {
+            ticker,
+            title: item.title,
+            headline: item.headline,
+            provider: item.provider,
+            eventCategory: category,
+            timestamp,
+          },
+          peers.map((p) => ({
+            id: p.id,
+            title: p.title,
+            headline: p.headline,
+            provider: p.provider ?? "unknown",
+            eventCategory: p.eventCategory,
+            timestamp: p.timestamp,
+            impactScore: p.impactScore,
+          })),
+        );
+        if (dupe.skip) {
+          skipped++;
+          continue;
+        }
+      }
 
       const rawRow = await db
         .insert(rawSources)

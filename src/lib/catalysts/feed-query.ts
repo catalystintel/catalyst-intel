@@ -11,6 +11,7 @@ import {
   eq,
   gte,
   inArray,
+  isNull,
   like,
   lte,
   or,
@@ -19,7 +20,7 @@ import {
 } from "drizzle-orm";
 
 import { db } from "@/db/client";
-import { catalysts, companies, rawSources } from "@/db/schema";
+import { catalysts, companies, eventClusters, rawSources } from "@/db/schema";
 import {
   GICS_SECTOR_KEYS,
   GICS_SECTOR_LABELS,
@@ -326,6 +327,14 @@ export function buildFeedWhere(
   // Always-on desk rule: no tickerless rows except CPI / Jobs (NFP).
   parts.push(tickerFeedGateSql());
 
+  // Cluster collapse: one row per story — primary only (or unclustered).
+  parts.push(
+    or(
+      isNull(catalysts.clusterId),
+      eq(catalysts.id, eventClusters.primaryCatalystId),
+    )!,
+  );
+
   return parts.length === 1 ? parts[0] : and(...parts);
 }
 
@@ -364,6 +373,7 @@ export async function queryFeedPage(
     .from(catalysts)
     .leftJoin(rawSources, eq(catalysts.rawSourceId, rawSources.id))
     .leftJoin(companies, eq(catalysts.companyId, companies.id))
+    .leftJoin(eventClusters, eq(catalysts.clusterId, eventClusters.id))
     .where(where)
     .orderBy(desc(catalysts.timestamp), desc(catalysts.id))
     .limit(options.limit)
@@ -379,6 +389,7 @@ export async function queryFeedTotal(
     .from(catalysts)
     .leftJoin(rawSources, eq(catalysts.rawSourceId, rawSources.id))
     .leftJoin(companies, eq(catalysts.companyId, companies.id))
+    .leftJoin(eventClusters, eq(catalysts.clusterId, eventClusters.id))
     .where(where)
     .get();
   return Number(row?.value ?? 0);
@@ -400,6 +411,7 @@ async function facetGroupBy(
     .from(catalysts)
     .leftJoin(rawSources, eq(catalysts.rawSourceId, rawSources.id))
     .leftJoin(companies, eq(catalysts.companyId, companies.id))
+    .leftJoin(eventClusters, eq(catalysts.clusterId, eventClusters.id))
     .where(where)
     .groupBy(column)
     .all();

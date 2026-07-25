@@ -155,3 +155,55 @@ export function looksLikeResultsOfOperationsTitle(
     ),
   );
 }
+
+/**
+ * Ground-rule 8-K title from the primary item label.
+ * Example: `Material Agreement - Acme Corp`
+ * Earnings (Item 2.02) should use {@link formatEarningsReportTitle} instead.
+ */
+export function formatSec8kItemTitle(
+  itemLabel: string | null | undefined,
+  companyName: string | null | undefined,
+): string {
+  const label = itemLabel?.replace(/\s+/g, " ").trim() || "8-K Event";
+  return `${label} - ${resolveDisplayCompanyName(companyName)}`;
+}
+
+export type Form4TitleKind = "buy" | "sell" | "mixed" | "transaction";
+
+/**
+ * Ground-rule Form 4 titles.
+ * Examples: `Form 4 Insider Buy - Acme Corp`, `Form 4 Insider Sell - Acme Corp`
+ */
+export function formatForm4InsiderTitle(
+  kind: Form4TitleKind,
+  companyName: string | null | undefined,
+): string {
+  const company = resolveDisplayCompanyName(companyName);
+  switch (kind) {
+    case "buy":
+      return `Form 4 Insider Buy - ${company}`;
+    case "sell":
+      return `Form 4 Insider Sell - ${company}`;
+    case "mixed":
+      return `Form 4 Insider Buy & Sell - ${company}`;
+    default:
+      return `Form 4 Insider Transaction - ${company}`;
+  }
+}
+
+/** Map Form 4 subcategory → ground-rule title kind. */
+export function form4TitleKindFromSubcategory(
+  subcategory: string | null | undefined,
+): Form4TitleKind {
+  switch (subcategory) {
+    case "insider_buy":
+      return "buy";
+    case "insider_sell":
+      return "sell";
+    case "form4_mixed":
+      return "mixed";
+    default:
+      return "transaction";
+  }
+}

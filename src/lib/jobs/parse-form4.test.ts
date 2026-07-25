@@ -54,8 +54,26 @@ const UNKNOWN_XML = `<?xml version="1.0"?>
   </nonDerivativeTable>
 </ownershipDocument>`;
 
+const TAX_WITHHOLD_XML = `<?xml version="1.0"?>
+<ownershipDocument>
+  <nonDerivativeTable>
+    <nonDerivativeTransaction>
+      <transactionCoding><transactionCode>F</transactionCode></transactionCoding>
+    </nonDerivativeTransaction>
+  </nonDerivativeTable>
+</ownershipDocument>`;
+
+const AWARD_XML = `<?xml version="1.0"?>
+<ownershipDocument>
+  <nonDerivativeTable>
+    <nonDerivativeTransaction>
+      <transactionCoding><transactionCode>A</transactionCode></transactionCoding>
+    </nonDerivativeTransaction>
+  </nonDerivativeTable>
+</ownershipDocument>`;
+
 describe("parseForm4OwnershipXml", () => {
-  it("classifies buy codes as insider_buy", () => {
+  it("classifies open-market P as insider_buy", () => {
     expect(parseForm4OwnershipXml(BUY_XML)).toMatchObject({
       subcategory: "insider_buy",
       buyCount: 1,
@@ -63,7 +81,7 @@ describe("parseForm4OwnershipXml", () => {
     });
   });
 
-  it("classifies sell codes as insider_sell", () => {
+  it("classifies open-market S as insider_sell", () => {
     expect(parseForm4OwnershipXml(SELL_XML)).toMatchObject({
       subcategory: "insider_sell",
       buyCount: 0,
@@ -76,6 +94,15 @@ describe("parseForm4OwnershipXml", () => {
       subcategory: "form4_mixed",
       buyCount: 1,
       sellCount: 1,
+    });
+  });
+
+  it("marks tax withholding / awards as form4_routine", () => {
+    expect(parseForm4OwnershipXml(TAX_WITHHOLD_XML)).toMatchObject({
+      subcategory: "form4_routine",
+    });
+    expect(parseForm4OwnershipXml(AWARD_XML)).toMatchObject({
+      subcategory: "form4_routine",
     });
   });
 
