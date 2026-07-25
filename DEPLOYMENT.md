@@ -125,6 +125,7 @@ env vars are required today.
 | `FORM4_API_KEY`                 | No          | Optional Form4API enrichment                                |
 | `RESEND_API_KEY`                | No          | Enables email alert delivery (webhook works without it)     |
 | `RESEND_FROM_EMAIL`             | No          | Optional From for Resend (defaults to onboarding sender)    |
+| `OPENROUTER_API_KEY`            | No          | On-demand AI analysis (or `OPENROUTER_API_KEYS` comma pool) |
 
 ### Production (Vercel → Environment: **Production**, used by `main`)
 
@@ -144,6 +145,7 @@ env vars are required today.
 | `FORM4_API_KEY`                 | No          | Optional Form4API enrichment                                |
 | `RESEND_API_KEY`                | No          | Enables email alert delivery (webhook works without it)     |
 | `RESEND_FROM_EMAIL`             | No          | Optional From for Resend                                    |
+| `OPENROUTER_API_KEY`            | No          | On-demand AI analysis (or `OPENROUTER_API_KEYS` comma pool) |
 
 ### GitHub repo secrets (for the deploy migration workflow)
 

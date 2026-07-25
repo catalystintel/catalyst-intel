@@ -1,48 +1,36 @@
 /**
- * Free-tier LLM triage (Groq) — grounded strictly in stored ingest text.
+ * Grounded LLM triage for catalysts — OpenRouter free models, on demand.
  *
  * This is explicitly NOT a predictive model and never invents facts: the
  * prompt only ever sees fields already persisted at ingest (title, headline,
- * summary, item codes, session move %) and is instructed to only restate
- * what's there. See docs/research/Catalyst-Intel-Client-Target-Guideline.md
- * ("False AI confidence" failure mode) — triage output must stay subordinate
- * to primary-source proof, never presented as verified truth.
+ * summary, item codes, truncated body, session move %) and is instructed to
+ * only restate what's there. See docs/research/
+ * Catalyst-Intel-Client-Target-Guideline.md ("False AI confidence").
  *
- * Soft-fails to `null` without GROQ_API_KEY, on any HTTP error, or when the
- * model's response isn't valid triage JSON — callers must treat `null` as
- * "not triaged yet", not as an error.
+ * Results are stored on the catalyst row (`aiBullets` / `aiLean` /
+ * `aiUncertain`) and shared for every subsequent viewer. Re-analysis is
+ * refused once stored. Soft-fails when OpenRouter is unconfigured or the
+ * model returns unusable JSON.
  */
 
-import { and, desc, eq, inArray, isNull, isNotNull } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 
 import { db } from "@/db/client";
-import { catalysts, type AiLean } from "@/db/schema";
-import { getGroqApiKey, getGroqModel } from "@/lib/jobs/vendor-env";
+import { catalysts, rawSources, type AiLean } from "@/db/schema";
+import { extractArticleBody } from "@/lib/catalysts/article-content";
+import {
+  isOpenRouterConfigured,
+  openRouterChatCompletion,
+} from "@/lib/jobs/llm-provider";
 
-const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
-const DEFAULT_BATCH_LIMIT = 8;
-
-/** Categories where a short LLM triage adds signal beyond the raw row. */
-const ELIGIBLE_CATEGORIES = new Set([
-  "earnings",
-  "deals",
-  "management",
-  "capital",
-  "distress",
-  "restructuring",
-  "governance",
-  "disclosure",
-  "regulatory",
-  "clinical",
-  "cyber",
-  "analyst",
-]);
+/** Cap body context so free-tier prompts stay short and focused. */
+const BODY_CONTEXT_CHARS = 2_800;
 
 const SYSTEM_PROMPT = `You are a financial filing triage assistant for active traders.
 Rules (must follow exactly):
-1. ONLY use facts explicitly present in the user's text. NEVER invent numbers, dates, names, or outcomes not stated.
+1. ONLY use facts explicitly present in the user's text. NEVER invent numbers, dates, names, prices, or outcomes not stated.
 2. If the text is too thin or ambiguous to support a lean, set lean to "uncertain" and uncertain to true.
-3. Output 1-3 short bullets (max ~18 words each), each a plain restatement or direct implication of stated facts — no speculation.
+3. Output exactly 2 or 3 short bullets (max ~20 words each). Each bullet is a plain restatement or direct implication of stated facts — no speculation, no advice.
 4. Respond with ONLY valid JSON matching: {"bullets": string[], "lean": "bullish"|"bearish"|"neutral"|"uncertain", "uncertain": boolean}`;
 
 export interface TriageInput {
@@ -54,6 +42,9 @@ export interface TriageInput {
   eventCategory?: string | null;
   itemCodes?: Array<{ code: string; label: string }> | null;
   sessionDeltaPct?: number | null;
+  /** Truncated article / filing body for extra grounding. */
+  bodyExcerpt?: string | null;
+  type?: string | null;
 }
 
 export interface TriageResult {
@@ -62,9 +53,14 @@ export interface TriageResult {
   uncertain: boolean;
 }
 
+export type AnalyzeCatalystResult =
+  | { ok: true; cached: boolean; analysis: TriageResult }
+  | { ok: false; error: string; status: number };
+
 function buildUserPrompt(input: TriageInput): string {
   const lines = [
     `Company: ${input.companyName ?? "unknown"} (${input.ticker ?? "no ticker"})`,
+    `Form/type: ${input.type ?? "unknown"}`,
     `Category: ${input.eventCategory ?? "unknown"}`,
     `Title: ${input.title}`,
   ];
@@ -74,7 +70,8 @@ function buildUserPrompt(input: TriageInput): string {
       `Filing items: ${input.itemCodes.map((i) => `${i.code} ${i.label}`).join("; ")}`,
     );
   }
-  if (input.summary) lines.push(`Text: ${input.summary}`);
+  if (input.summary) lines.push(`Summary: ${input.summary}`);
+  if (input.bodyExcerpt) lines.push(`Filing excerpt:\n${input.bodyExcerpt}`);
   if (typeof input.sessionDeltaPct === "number") {
     lines.push(
       `Session move since publish: ${input.sessionDeltaPct.toFixed(1)}%`,
@@ -83,12 +80,20 @@ function buildUserPrompt(input: TriageInput): string {
   return lines.join("\n");
 }
 
-function parseTriageResponse(content: string): TriageResult | null {
+export function parseTriageResponse(content: string): TriageResult | null {
   try {
-    const parsed = JSON.parse(content) as Partial<TriageResult>;
+    // Some free models wrap JSON in ``` fences — strip if present.
+    const trimmed = content
+      .trim()
+      .replace(/^```(?:json)?\s*/i, "")
+      .replace(/\s*```$/i, "");
+    const parsed = JSON.parse(trimmed) as Partial<TriageResult>;
     const bullets = Array.isArray(parsed.bullets)
       ? parsed.bullets
-          .filter((b): b is string => typeof b === "string")
+          .filter(
+            (b): b is string => typeof b === "string" && b.trim().length > 0,
+          )
+          .map((b) => b.trim())
           .slice(0, 3)
       : [];
     if (bullets.length === 0) return null;
@@ -113,123 +118,176 @@ function parseTriageResponse(content: string): TriageResult | null {
   }
 }
 
-/** Calls Groq for a single catalyst. Soft-fails to `null`. */
+/** Calls OpenRouter for a single catalyst. Soft-fails to `null`. */
 export async function triageCatalyst(
   input: TriageInput,
 ): Promise<TriageResult | null> {
-  const apiKey = getGroqApiKey();
-  if (!apiKey) return null;
+  if (!isOpenRouterConfigured()) return null;
 
-  try {
-    const res = await fetch(GROQ_URL, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: getGroqModel(),
-        temperature: 0.1,
-        max_tokens: 300,
-        response_format: { type: "json_object" },
-        messages: [
-          { role: "system", content: SYSTEM_PROMPT },
-          { role: "user", content: buildUserPrompt(input) },
-        ],
-      }),
-      signal: AbortSignal.timeout(20_000),
+  const chat = await openRouterChatCompletion({
+    temperature: 0.1,
+    maxTokens: 400,
+    jsonObject: true,
+    messages: [
+      { role: "system", content: SYSTEM_PROMPT },
+      { role: "user", content: buildUserPrompt(input) },
+    ],
+  });
+  if (!chat) {
+    // Retry once without response_format — some free backends reject it.
+    const fallback = await openRouterChatCompletion({
+      temperature: 0.1,
+      maxTokens: 400,
+      jsonObject: false,
+      messages: [
+        { role: "system", content: SYSTEM_PROMPT },
+        { role: "user", content: buildUserPrompt(input) },
+      ],
     });
-
-    if (!res.ok) return null;
-
-    const payload = (await res.json()) as {
-      choices?: Array<{ message?: { content?: string } }>;
-    };
-    const content = payload.choices?.[0]?.message?.content;
-    if (!content) return null;
-
-    return parseTriageResponse(content);
-  } catch {
-    return null;
+    if (!fallback) return null;
+    return parseTriageResponse(fallback.content);
   }
+
+  return parseTriageResponse(chat.content);
+}
+
+function storedAnalysis(row: {
+  aiBullets: unknown;
+  aiLean: string | null;
+  aiUncertain: boolean | null;
+}): TriageResult | null {
+  if (!Array.isArray(row.aiBullets) || row.aiBullets.length === 0) return null;
+  const bullets = row.aiBullets.filter(
+    (b): b is string => typeof b === "string" && b.trim().length > 0,
+  );
+  if (bullets.length === 0) return null;
+  const leanRaw = row.aiLean ?? "uncertain";
+  const lean: AiLean = (
+    ["bullish", "bearish", "neutral", "uncertain"] as const
+  ).includes(leanRaw as AiLean)
+    ? (leanRaw as AiLean)
+    : "uncertain";
+  return {
+    bullets,
+    lean,
+    uncertain: row.aiUncertain ?? lean === "uncertain",
+  };
 }
 
 /**
- * Batch-triages the highest-impact untriaged eligible catalysts from the
- * current ingest run. Capped small to respect Groq's free-tier rate limits
- * and keep each cron tick fast; remaining rows pick up next run.
+ * On-demand analyze: return cached triage if present, otherwise call the LLM
+ * once, persist, and return. Concurrent callers: first write wins; losers
+ * re-read the winner's stored result. Never re-analyzes a stored row.
  */
-export async function runLlmTriageBatch(options?: {
-  limit?: number;
-}): Promise<{ triaged: number; skipped: number }> {
-  if (!getGroqApiKey()) return { triaged: 0, skipped: 0 };
+export async function analyzeCatalystOnDemand(
+  catalystId: number,
+): Promise<AnalyzeCatalystResult> {
+  if (!isOpenRouterConfigured()) {
+    return {
+      ok: false,
+      status: 503,
+      error:
+        "AI analysis is not configured. Set OPENROUTER_API_KEY (or OPENROUTER_API_KEYS) in the environment.",
+    };
+  }
 
-  const limit = options?.limit ?? DEFAULT_BATCH_LIMIT;
-  const categories = [...ELIGIBLE_CATEGORIES];
-
-  const candidates = await db
+  const row = await db
     .select({
       id: catalysts.id,
       ticker: catalysts.ticker,
       companyName: catalysts.companyName,
+      type: catalysts.type,
       title: catalysts.title,
       headline: catalysts.headline,
       summary: catalysts.summary,
       eventCategory: catalysts.eventCategory,
       itemCodes: catalysts.itemCodes,
       historicalImpact: catalysts.historicalImpact,
+      aiBullets: catalysts.aiBullets,
+      aiLean: catalysts.aiLean,
+      aiUncertain: catalysts.aiUncertain,
+      sourceProvider: rawSources.provider,
+      rawContent: rawSources.rawContent,
     })
     .from(catalysts)
-    .where(
-      and(
-        isNull(catalysts.aiBullets),
-        isNotNull(catalysts.eventCategory),
-        inArray(catalysts.eventCategory, categories),
-      ),
-    )
-    .orderBy(desc(catalysts.impactScore), desc(catalysts.timestamp))
-    .limit(limit)
-    .all();
+    .leftJoin(rawSources, eq(catalysts.rawSourceId, rawSources.id))
+    .where(eq(catalysts.id, catalystId))
+    .get();
 
-  let triaged = 0;
-  let skipped = 0;
-
-  for (const row of candidates) {
-    const historicalImpact = row.historicalImpact as
-      { pctChange?: number } | null | undefined;
-
-    const result = await triageCatalyst({
-      ticker: row.ticker,
-      companyName: row.companyName,
-      title: row.title,
-      headline: row.headline,
-      summary: row.summary,
-      eventCategory: row.eventCategory,
-      itemCodes: Array.isArray(row.itemCodes)
-        ? (row.itemCodes as Array<{ code: string; label: string }>)
-        : null,
-      sessionDeltaPct:
-        typeof historicalImpact?.pctChange === "number"
-          ? historicalImpact.pctChange
-          : null,
-    });
-
-    if (!result) {
-      skipped++;
-      continue;
-    }
-
-    await db
-      .update(catalysts)
-      .set({
-        aiBullets: result.bullets,
-        aiLean: result.lean,
-        aiUncertain: result.uncertain,
-      })
-      .where(eq(catalysts.id, row.id))
-      .run();
-    triaged++;
+  if (!row) {
+    return { ok: false, status: 404, error: "Catalyst not found." };
   }
 
-  return { triaged, skipped };
+  const cached = storedAnalysis(row);
+  if (cached) {
+    return { ok: true, cached: true, analysis: cached };
+  }
+
+  const { body } = extractArticleBody({
+    provider: row.sourceProvider,
+    rawContent: row.rawContent,
+    summary: row.summary,
+    title: row.title,
+    headline: row.headline,
+  });
+  const bodyExcerpt =
+    body.trim().length > 0 ? body.trim().slice(0, BODY_CONTEXT_CHARS) : null;
+
+  const historicalImpact = row.historicalImpact as
+    { pctChange?: number } | null | undefined;
+
+  const result = await triageCatalyst({
+    ticker: row.ticker,
+    companyName: row.companyName,
+    type: row.type,
+    title: row.title,
+    headline: row.headline,
+    summary: row.summary,
+    eventCategory: row.eventCategory,
+    itemCodes: Array.isArray(row.itemCodes)
+      ? (row.itemCodes as Array<{ code: string; label: string }>)
+      : null,
+    sessionDeltaPct:
+      typeof historicalImpact?.pctChange === "number"
+        ? historicalImpact.pctChange
+        : null,
+    bodyExcerpt,
+  });
+
+  if (!result) {
+    return {
+      ok: false,
+      status: 502,
+      error:
+        "AI analysis failed or hit a free-tier rate limit. Try again in a minute.",
+    };
+  }
+
+  // First writer wins — never overwrite an existing analysis.
+  await db
+    .update(catalysts)
+    .set({
+      aiBullets: result.bullets,
+      aiLean: result.lean,
+      aiUncertain: result.uncertain,
+    })
+    .where(and(eq(catalysts.id, catalystId), isNull(catalysts.aiBullets)))
+    .run();
+
+  const after = await db
+    .select({
+      aiBullets: catalysts.aiBullets,
+      aiLean: catalysts.aiLean,
+      aiUncertain: catalysts.aiUncertain,
+    })
+    .from(catalysts)
+    .where(eq(catalysts.id, catalystId))
+    .get();
+
+  const final = after ? storedAnalysis(after) : result;
+  if (!final) {
+    return { ok: false, status: 502, error: "Failed to persist AI analysis." };
+  }
+
+  return { ok: true, cached: false, analysis: final };
 }

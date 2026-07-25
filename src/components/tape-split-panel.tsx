@@ -4,11 +4,13 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { BookOpen, XIcon } from "lucide-react";
 
+import { AiAnalysisPanel } from "@/components/ai-analysis-panel";
 import { CategoryBadge } from "@/components/category-badge";
 import { EdgarProofLink } from "@/components/edgar-proof-link";
 import { TradingViewAdvancedChart } from "@/components/tradingview-advanced-chart";
 import { Button } from "@/components/ui/button";
 import type { FeedCatalyst } from "@/lib/catalysts/feed-catalyst";
+import type { TriageResult } from "@/lib/jobs/llm-triage";
 import type {
   ArticleCompanyProfile,
   ArticleMarketQuote,
@@ -52,12 +54,15 @@ export function TapeSplitPanel({
   catalyst,
   onClose,
   onDismiss,
+  onAiAnalyzed,
   className,
   mobileOverlay = false,
 }: {
   catalyst: FeedCatalyst;
   onClose: () => void;
   onDismiss?: () => void;
+  /** Persist AI triage into the Live tape row so reopen stays instant. */
+  onAiAnalyzed?: (analysis: TriageResult) => void;
   className?: string;
   /** Full-screen overlay on small viewports. */
   mobileOverlay?: boolean;
@@ -318,6 +323,21 @@ export function TapeSplitPanel({
                 catalyst.title}
             </p>
           </div>
+
+          <AiAnalysisPanel
+            key={`ai-${catalyst.id}`}
+            catalystId={catalyst.id}
+            initial={
+              catalyst.aiBullets
+                ? {
+                    bullets: catalyst.aiBullets,
+                    lean: catalyst.aiLean ?? "uncertain",
+                    uncertain: catalyst.aiUncertain ?? true,
+                  }
+                : null
+            }
+            onAnalyzed={onAiAnalyzed}
+          />
 
           {catalyst.tags.length > 0 ? (
             <div>

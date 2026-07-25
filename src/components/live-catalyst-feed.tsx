@@ -143,6 +143,7 @@ export function LiveCatalystFeed({
     clearFilters,
     refresh,
     loadMore,
+    prependOrMerge,
   } = query;
 
   const [presence, setPresence] = useState<Presence>("active");
@@ -767,6 +768,16 @@ export function LiveCatalystFeed({
               onClose={() => setSelectedId(null)}
               onDismiss={() => {
                 if (selectedId !== null) dismissCatalyst(selectedId);
+              }}
+              onAiAnalyzed={(analysis) => {
+                prependOrMerge([
+                  {
+                    ...selected,
+                    aiBullets: analysis.bullets,
+                    aiLean: analysis.lean,
+                    aiUncertain: analysis.uncertain,
+                  },
+                ]);
               }}
               mobileOverlay
               className="fixed inset-0 z-50 w-full lg:static lg:inset-auto lg:z-auto lg:w-[min(52%,640px)] lg:min-w-[420px] lg:shrink-0 lg:border-l"

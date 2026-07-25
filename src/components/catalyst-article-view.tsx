@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { ArrowLeft, BookOpen, ExternalLink } from "lucide-react";
 
+import { AiAnalysisPanel } from "@/components/ai-analysis-panel";
 import { CategoryBadge } from "@/components/category-badge";
 import type { FeedCatalyst } from "@/lib/catalysts/feed-catalyst";
 import { benzingaPanelForCategory } from "@/lib/catalysts/benzinga-analogs";
@@ -246,7 +247,7 @@ export function CatalystArticleView({
           </h2>
           {summaryGenerated ? (
             <span className="font-mono text-[0.6rem] tracking-wide text-[var(--desk-text-dim)] uppercase">
-              Extractive · Groq later
+              Extractive
             </span>
           ) : null}
         </div>
@@ -271,6 +272,19 @@ export function CatalystArticleView({
           </p>
         )}
       </section>
+
+      <AiAnalysisPanel
+        catalystId={catalyst.id}
+        initial={
+          catalyst.aiBullets
+            ? {
+                bullets: catalyst.aiBullets,
+                lean: catalyst.aiLean ?? "uncertain",
+                uncertain: catalyst.aiUncertain ?? true,
+              }
+            : null
+        }
+      />
 
       {enrichment?.profile ? (
         <section className="flex flex-col gap-2">
