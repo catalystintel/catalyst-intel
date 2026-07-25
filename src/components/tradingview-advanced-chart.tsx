@@ -3,6 +3,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { Maximize2, Minimize2, X } from "lucide-react";
 
+import {
+  CHART_RANGES,
+  DEFAULT_CHART_RANGE,
+  chartRangeDef,
+  type ChartRangeKey,
+} from "@/lib/market/chart-range";
 import { cn } from "@/lib/utils";
 
 /**
@@ -15,29 +21,31 @@ const DEFAULT_CHART_STYLE = "2";
 /**
  * Build TradingView's free widgetembed iframe URL.
  *
- * The legacy `https://s.tradingview.com/tv.js` Advanced Chart loader now
- * 301s to `www.tradingview.com/tv.js` (404 HTML), so `TradingView.widget`
- * never exists and every chart rendered "Chart unavailable".
+ * Desk-owned `range` drives `interval`. We keep `withdateranges` off so the
+ * iframe bottom chips cannot diverge from the performance % we compute.
  */
 export function buildTradingViewEmbedUrl(
   symbol: string,
-  options?: { fullscreen?: boolean },
+  options?: { fullscreen?: boolean; range?: ChartRangeKey },
 ): string {
   const fullscreen = Boolean(options?.fullscreen);
+  const range = options?.range ?? DEFAULT_CHART_RANGE;
+  const interval = chartRangeDef(range).interval;
   const params = new URLSearchParams({
     symbol: symbol.trim(),
-    interval: "D",
+    interval,
     theme: "dark",
     style: DEFAULT_CHART_STYLE,
     locale: "en",
     timezone: "America/New_York",
-    withdateranges: "1",
+    withdateranges: "0",
     hidesidetoolbar: fullscreen ? "0" : "1",
     hidetoptoolbar: "0",
     symboledit: "0",
     saveimage: "0",
     toolbarbg: "0f1115",
     hideideas: "1",
+    hidelegend: "1",
     studies: "[]",
   });
   return `https://s.tradingview.com/widgetembed/?${params.toString()}`;
@@ -46,28 +54,32 @@ export function buildTradingViewEmbedUrl(
 /**
  * TradingView chart for the Live tape split panel.
  * Uses the widgetembed iframe (no broken tv.js dependency).
- * Optional expand control opens a near-fullscreen desk overlay.
  */
 export function TradingViewAdvancedChart({
   symbol,
   className,
   allowFullscreen = true,
+  range = DEFAULT_CHART_RANGE,
+  onRangeChange,
 }: {
   symbol: string;
   className?: string;
-  /** Show expand control for full-mode chart. */
   allowFullscreen?: boolean;
+  range?: ChartRangeKey;
+  onRangeChange?: (range: ChartRangeKey) => void;
 }) {
   const trimmed = symbol.trim();
   const [fullscreen, setFullscreen] = useState(false);
   const src = useMemo(
-    () => (trimmed ? buildTradingViewEmbedUrl(trimmed) : null),
-    [trimmed],
+    () => (trimmed ? buildTradingViewEmbedUrl(trimmed, { range }) : null),
+    [trimmed, range],
   );
   const fullSrc = useMemo(
     () =>
-      trimmed ? buildTradingViewEmbedUrl(trimmed, { fullscreen: true }) : null,
-    [trimmed],
+      trimmed
+        ? buildTradingViewEmbedUrl(trimmed, { fullscreen: true, range })
+        : null,
+    [trimmed, range],
   );
 
   useEffect(() => {
@@ -99,38 +111,71 @@ export function TradingViewAdvancedChart({
     );
   }
 
+  const rangeChips = onRangeChange ? (
+    <div
+      className="flex flex-wrap items-center gap-1 border-b border-[var(--desk-border)] bg-[var(--desk-header)] px-2 py-1.5"
+      role="group"
+      aria-label="Chart time range"
+    >
+      {CHART_RANGES.map((r) => {
+        const active = r.key === range;
+        return (
+          <button
+            key={r.key}
+            type="button"
+            onClick={() => onRangeChange(r.key)}
+            aria-pressed={active}
+            className={cn(
+              "rounded-sm px-2 py-0.5 font-mono text-[0.65rem] tracking-wide uppercase transition-colors",
+              active
+                ? "bg-[var(--desk-live)]/15 text-[var(--desk-live)]"
+                : "text-[var(--desk-text-muted)] hover:bg-[var(--desk-overlay-strong)] hover:text-[var(--desk-text)]",
+            )}
+          >
+            {r.label}
+          </button>
+        );
+      })}
+    </div>
+  ) : null;
+
   return (
     <>
       <div
         className={cn(
-          "relative min-h-[220px] w-full overflow-hidden",
+          "relative flex min-h-[220px] w-full flex-col overflow-hidden",
           className,
         )}
         data-tv-symbol={trimmed}
+        data-tv-range={range}
       >
-        {allowFullscreen ? (
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              setFullscreen(true);
-            }}
-            className="absolute top-2 right-2 z-10 inline-flex items-center gap-1.5 rounded-sm border border-[var(--desk-border-strong)] bg-[var(--desk-panel)]/90 px-2 py-1 font-mono text-[0.65rem] tracking-wide text-[var(--desk-text-secondary)] uppercase shadow-md backdrop-blur-sm transition-colors hover:border-[var(--desk-text-dim)] hover:text-[var(--desk-text)]"
-            title="Open chart full screen"
-          >
-            <Maximize2 className="size-3" />
-            Full
-          </button>
-        ) : null}
-        <iframe
-          title={`${trimmed} chart`}
-          src={src}
-          className="h-full w-full border-0"
-          style={{ minHeight: 220 }}
-          loading="lazy"
-          referrerPolicy="origin-when-cross-origin"
-          allow="fullscreen; clipboard-write"
-        />
+        {rangeChips}
+        <div className="relative min-h-0 flex-1">
+          {allowFullscreen ? (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setFullscreen(true);
+              }}
+              className="absolute top-2 right-2 z-10 inline-flex items-center gap-1.5 rounded-sm border border-[var(--desk-border-strong)] bg-[var(--desk-panel)]/90 px-2 py-1 font-mono text-[0.65rem] tracking-wide text-[var(--desk-text-secondary)] uppercase shadow-md backdrop-blur-sm transition-colors hover:border-[var(--desk-text-dim)] hover:text-[var(--desk-text)]"
+              title="Open chart full screen"
+            >
+              <Maximize2 className="size-3" />
+              Full
+            </button>
+          ) : null}
+          <iframe
+            key={`${trimmed}-${range}`}
+            title={`${trimmed} chart`}
+            src={src}
+            className="h-full w-full border-0"
+            style={{ minHeight: 220 }}
+            loading="lazy"
+            referrerPolicy="origin-when-cross-origin"
+            allow="fullscreen; clipboard-write"
+          />
+        </div>
       </div>
 
       {fullscreen && fullSrc ? (
@@ -140,9 +185,6 @@ export function TradingViewAdvancedChart({
           aria-modal="true"
           aria-label={`${trimmed} chart full screen`}
           onClick={() => setFullscreen(false)}
-          onKeyDown={(e) => {
-            if (e.key === "Escape") setFullscreen(false);
-          }}
         >
           <div
             className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-[var(--desk-border-strong)] bg-[var(--desk-panel)] shadow-[0_24px_80px_rgba(0,0,0,0.55)]"
@@ -165,8 +207,36 @@ export function TradingViewAdvancedChart({
                 <X className="size-3.5 opacity-70" />
               </button>
             </div>
+            {onRangeChange ? (
+              <div
+                className="flex flex-wrap items-center gap-1 border-b border-[var(--desk-border)] bg-[var(--desk-header)] px-3 py-1.5"
+                role="group"
+                aria-label="Chart time range"
+              >
+                {CHART_RANGES.map((r) => {
+                  const active = r.key === range;
+                  return (
+                    <button
+                      key={r.key}
+                      type="button"
+                      onClick={() => onRangeChange(r.key)}
+                      aria-pressed={active}
+                      className={cn(
+                        "rounded-sm px-2 py-0.5 font-mono text-[0.65rem] tracking-wide uppercase transition-colors",
+                        active
+                          ? "bg-[var(--desk-live)]/15 text-[var(--desk-live)]"
+                          : "text-[var(--desk-text-muted)] hover:bg-[var(--desk-overlay-strong)] hover:text-[var(--desk-text)]",
+                      )}
+                    >
+                      {r.label}
+                    </button>
+                  );
+                })}
+              </div>
+            ) : null}
             <div className="min-h-0 flex-1 bg-[#0b0d10]">
               <iframe
+                key={`full-${trimmed}-${range}`}
                 title={`${trimmed} chart full screen`}
                 src={fullSrc}
                 className="h-full w-full border-0"
