@@ -5,6 +5,7 @@ import { BookOpen, XIcon } from "lucide-react";
 
 import { AiAnalysisPanel } from "@/components/ai-analysis-panel";
 import { CategoryBadge } from "@/components/category-badge";
+import { EdgarProofLink } from "@/components/edgar-proof-link";
 import { TradingViewAdvancedChart } from "@/components/tradingview-advanced-chart";
 import { Button } from "@/components/ui/button";
 import type { FeedCatalyst } from "@/lib/catalysts/feed-catalyst";
@@ -84,6 +85,7 @@ export function TapeSplitPanel({
   onRead,
   onDismiss,
   onAiAnalyzed,
+  isAdmin = false,
   className,
   mobileOverlay = false,
 }: {
@@ -93,6 +95,8 @@ export function TapeSplitPanel({
   onDismiss?: () => void;
   /** Persist AI triage into the Live tape row so reopen stays instant. */
   onAiAnalyzed?: (analysis: TriageResult) => void;
+  /** Admins get an outbound original-source proof link. */
+  isAdmin?: boolean;
   className?: string;
   /** Full-screen overlay on small viewports. */
   mobileOverlay?: boolean;
@@ -304,7 +308,7 @@ export function TapeSplitPanel({
         ) : null}
 
         <div className="flex flex-col gap-4 px-4 py-4">
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <button
               type="button"
               onClick={() => onRead?.()}
@@ -313,6 +317,13 @@ export function TapeSplitPanel({
               <BookOpen className="size-3.5" />
               Full article
             </button>
+            {isAdmin ? (
+              <EdgarProofLink
+                url={catalyst.sourceUrl}
+                provider={catalyst.sourceProvider}
+                className="rounded-sm px-3 py-1.5 text-xs tracking-wide uppercase"
+              />
+            ) : null}
             <button
               type="button"
               onClick={() => onDismiss?.()}
