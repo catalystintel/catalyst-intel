@@ -258,8 +258,11 @@
     animation: page-enter 380ms cubic-bezier(0.22, 1, 0.36, 1) both;
   }
 
+  /* `backwards` (not `both`): during delay use the from-keyframe, but after
+     the animation ends fall back to normal styles. `both`/`forwards` could
+     leave staggered rows stuck at a mid opacity when a refresh interrupts. */
   .feed-row {
-    animation: feed-row-in 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
+    animation: feed-row-in 420ms cubic-bezier(0.22, 1, 0.36, 1) backwards;
   }
 
   .row-flash {
@@ -277,7 +280,7 @@
 
   /* Filter change: brief dim/return so the recalculated tape doesn't hard-cut. */
   .feed-filter-recalc {
-    animation: feed-filter-recalc 280ms ease both;
+    animation: feed-filter-recalc 280ms ease backwards;
   }
 
   .live-pulse {
