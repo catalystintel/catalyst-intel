@@ -137,7 +137,7 @@ export function CatalystArticleDialog({
         showCloseButton={false}
         overlayClassName="z-[100] bg-black/65 supports-backdrop-filter:backdrop-blur-sm"
         className={cn(
-          "z-[110] flex max-h-[min(92vh,920px)] w-[min(100%-1.5rem,52rem)] max-w-none translate-y-[-50%] flex-col gap-0 overflow-hidden rounded-xl border border-[var(--desk-border-strong)] bg-[var(--desk-panel)] p-0 text-[var(--desk-text)] shadow-[0_28px_90px_rgba(0,0,0,0.55)] ring-1 ring-[var(--desk-live)]/30 sm:max-w-none",
+          "feed-helvetica z-[110] flex max-h-[min(92vh,920px)] w-[min(100%-1.5rem,52rem)] max-w-none translate-y-[-50%] flex-col gap-0 overflow-hidden rounded-xl border border-[var(--desk-border-strong)] bg-[var(--desk-panel)] p-0 text-[var(--desk-text)] shadow-[0_28px_90px_rgba(0,0,0,0.55)] ring-1 ring-[var(--desk-live)]/30 sm:max-w-none",
         )}
       >
         <DialogHeader className="shrink-0 gap-0 border-b border-[var(--desk-border)] bg-[var(--desk-header)] px-4 py-3 sm:px-5">
