@@ -59,8 +59,8 @@ describe("fdaToNormalized", () => {
     });
     expect(item).toMatchObject({
       type: "FDA Approval",
-      title: "Pfizer Inc: FDA Approval",
-      headline: "Pfizer Inc: FDA Approval",
+      title: "Pfizer Inc Receives FDA Approval!",
+      headline: "Pfizer Inc Receives FDA Approval!",
       subcategory: "fda_approval",
     });
   });

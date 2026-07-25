@@ -437,7 +437,21 @@ describe("titleLine", () => {
           companyName: "Pfizer Inc",
         }),
       ),
-    ).toBe("Pfizer Inc: FDA Approval");
+    ).toBe("Pfizer Inc Receives FDA Approval!");
+
+    expect(
+      titleLine(
+        base({
+          sourceProvider: "finnhub",
+          type: "FDA Approval",
+          eventCategory: "regulatory",
+          subcategory: "fda_approval",
+          headline: "FDA approval update",
+          title: "Pfizer Inc: FDA Approval",
+          companyName: "Pfizer Inc",
+        }),
+      ),
+    ).toBe("Pfizer Inc Receives FDA Approval!");
 
     expect(
       titleLine(

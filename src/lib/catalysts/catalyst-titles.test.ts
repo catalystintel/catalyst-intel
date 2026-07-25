@@ -80,13 +80,15 @@ describe("haltReasonLabel", () => {
 describe("formatFdaApprovalTitle", () => {
   it("uses the sponsor / company name", () => {
     expect(formatFdaApprovalTitle("Pfizer Inc")).toBe(
-      "Pfizer Inc: FDA Approval",
+      "Pfizer Inc Receives FDA Approval!",
     );
   });
 
   it("falls back when sponsor is missing", () => {
-    expect(formatFdaApprovalTitle(null)).toBe("Unknown company: FDA Approval");
-    expect(formatFdaApprovalTitle("PFE")).toBe("PFE: FDA Approval");
+    expect(formatFdaApprovalTitle(null)).toBe(
+      "Unknown company Receives FDA Approval!",
+    );
+    expect(formatFdaApprovalTitle("PFE")).toBe("PFE Receives FDA Approval!");
   });
 });
 

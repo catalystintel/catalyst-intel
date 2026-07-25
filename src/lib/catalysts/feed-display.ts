@@ -292,12 +292,16 @@ export type TitleLineOptions = {
 /**
  * Ground-rule API titles are stored on `title` (and usually mirrored on
  * `headline`). Prefer them over generic taxonomy chips so the tape shows
- * `Halts (…)` / `{Company}: FDA Approval` / `{Company}: Earnings Report Qn`.
+ * `Halts (…)` / `{Company} Receives FDA Approval!` / `{Company}: Earnings Report Qn`.
  */
 function prefersStoredGroundRuleTitle(c: FeedCatalyst, title: string): boolean {
   if (!title || looksLikeSourceLabel(title)) return false;
   if (/^Halts\s*\(/i.test(title)) return true;
-  if (/^FDA Approval\s*-/i.test(title) || /:\s*FDA Approval$/i.test(title)) {
+  if (
+    /^FDA Approval\s*-/i.test(title) ||
+    /:\s*FDA Approval$/i.test(title) ||
+    /\bReceives FDA Approval!$/i.test(title)
+  ) {
     return true;
   }
   if (
@@ -405,10 +409,15 @@ function canonicalizeGroundRuleTitle(c: FeedCatalyst, title: string): string {
     const company = earningsQ[2] ?? earningsQ[3] ?? subject;
     return formatEarningsReportTitle(q, company);
   }
-  if (/^FDA Approval\s*-/i.test(title) || /:\s*FDA Approval$/i.test(title)) {
+  if (
+    /^FDA Approval\s*-/i.test(title) ||
+    /:\s*FDA Approval$/i.test(title) ||
+    /\bReceives FDA Approval!$/i.test(title)
+  ) {
     const company =
       title.match(/^FDA Approval\s*-\s*(.+)$/i)?.[1] ??
       title.match(/^(.+?):\s*FDA Approval$/i)?.[1] ??
+      title.match(/^(.+?)\s+Receives FDA Approval!$/i)?.[1] ??
       subject;
     return formatFdaApprovalTitle(company);
   }

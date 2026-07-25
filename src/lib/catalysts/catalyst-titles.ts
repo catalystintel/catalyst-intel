@@ -111,11 +111,11 @@ export function formatHaltTitle(
   return `Halts (${company}): ${reason}`;
 }
 
-/** `{Company Name}: FDA Approval` */
+/** `{Company Name} Receives FDA Approval!` */
 export function formatFdaApprovalTitle(
   companyName: string | null | undefined,
 ): string {
-  return `${resolveDisplayCompanyName(companyName)}: FDA Approval`;
+  return `${resolveDisplayCompanyName(companyName)} Receives FDA Approval!`;
 }
 
 /**
