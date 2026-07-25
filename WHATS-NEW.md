@@ -28,8 +28,8 @@ and keep this file in sync when you ship, or regenerate from that module).
 
 ### Schedule & ETL
 
-- GitHub Actions cron hits `POST /api/admin/fetch/all` with `x-cron-secret`.
-- Local: `npm run cron` or Admin → Fetch all / per-source.
+- cron-job.org (external pinger, every 1 min in prod) hits `POST /api/admin/fetch/all` with `x-cron-secret`.
+- Local: `npm run cron` (default every 1 min) or Admin → Fetch all / per-source.
 - Phased A→B→C orchestrator — see FETCH-ORDER.md.
 - Self-heal via stale `GET /api/catalysts`; 30-day retention; Admin ingestion audit.
 
