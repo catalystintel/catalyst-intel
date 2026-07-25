@@ -5,6 +5,11 @@
  */
 
 import {
+  formatCpiTitle,
+  formatFomcRateDecisionTitle,
+  formatJobsReportTitle,
+} from "@/lib/catalysts/catalyst-titles";
+import {
   ingestNormalizedCatalysts,
   toSourceResult,
   type NormalizedCatalyst,
@@ -90,7 +95,7 @@ export function buildUpcomingMacroEvents(
       id: `cpi-${row.date}`,
       date: row.date,
       timeEt: "08:30",
-      title: `CPI — ${row.forMonth}`,
+      title: formatCpiTitle(row.forMonth),
       subcategory: "cpi",
       summary: `Consumer Price Index release (${row.forMonth} data) · 8:30 AM ET · BLS`,
     });
@@ -102,7 +107,7 @@ export function buildUpcomingMacroEvents(
       id: `nfp-${row.date}`,
       date: row.date,
       timeEt: "08:30",
-      title: `NFP / Employment Situation — ${row.forMonth}`,
+      title: formatJobsReportTitle(row.forMonth),
       subcategory: "nfp",
       summary: `Nonfarm payrolls & unemployment (${row.forMonth}) · 8:30 AM ET · BLS`,
     });
@@ -114,7 +119,7 @@ export function buildUpcomingMacroEvents(
       id: `fomc-${date}`,
       date,
       timeEt: "14:00",
-      title: `FOMC rate decision`,
+      title: formatFomcRateDecisionTitle(),
       subcategory: "fomc",
       summary:
         "FOMC statement · ~2:00 PM ET · Federal Reserve (tentative schedule)",

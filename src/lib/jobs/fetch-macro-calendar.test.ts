@@ -13,8 +13,15 @@ describe("buildUpcomingMacroEvents", () => {
     expect(kinds.has("nfp")).toBe(true);
     expect(kinds.has("fomc")).toBe(true);
     expect(events.every((e) => e.date >= "2026-07-22")).toBe(true);
-    expect(events.find((e) => e.id === "fomc-2026-07-29")).toBeTruthy();
-    expect(events.find((e) => e.id === "cpi-2026-08-12")).toBeTruthy();
+    expect(events.find((e) => e.id === "fomc-2026-07-29")).toMatchObject({
+      title: "FOMC Rate Decision",
+    });
+    expect(events.find((e) => e.id === "cpi-2026-08-12")).toMatchObject({
+      title: "CPI — July 2026",
+    });
+    expect(events.find((e) => e.id === "nfp-2026-08-07")).toMatchObject({
+      title: "Jobs Report (NFP) — July 2026",
+    });
   });
 
   it("excludes past dates", () => {

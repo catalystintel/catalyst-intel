@@ -128,7 +128,7 @@ describe("titleLine", () => {
     ).toBe("Earnings Report Q3 - Liberty Global Ltd");
   });
 
-  it("tooltip title keeps longer SEC notices than the tape line", () => {
+  it("uses ground-rule 8-K titles instead of raw Item blurbs", () => {
     const long =
       "Notice of Delisting or Failure to Satisfy a Continued Listing Rule or Standard; Transfer of Listing. This is a longer continuation of the official Item text for traders.";
     const row = base({
@@ -139,11 +139,8 @@ describe("titleLine", () => {
       items: [{ code: "3.01", label: "Delisting risk", category: "distress" }],
       summary: `Item 3.01: ${long}`,
     });
-    const tape = titleLine(row);
-    const tip = titleTooltipLine(row);
-    expect(tape.length).toBeLessThan(tip.length);
-    expect(tip).toContain("Transfer of Listing");
-    expect(tip).toContain("longer continuation");
+    expect(titleLine(row)).toBe("Delisting Risk - Quantum-Si Inc");
+    expect(titleTooltipLine(row)).toBe("Delisting Risk - Quantum-Si Inc");
   });
 
   it("keeps specific news headlines without forcing company prefix", () => {
@@ -224,7 +221,91 @@ describe("titleLine", () => {
           title: "Material agreement — SEC",
         }),
       ),
-    ).toBe("Material agreement");
+    ).toBe("Material Agreement - NVIDIA Corp");
+  });
+
+  it("rewrites offering / ownership / clinical / macro / analyst titles", () => {
+    expect(
+      titleLine(
+        base({
+          type: "S-3",
+          subcategory: "s3",
+          eventCategory: "capital",
+          headline: "Shelf registration (S-3)",
+          title: "Acme Corp — S-3 filing",
+          companyName: "Acme Corp",
+        }),
+      ),
+    ).toBe("Shelf Registration (S-3) - Acme Corp");
+
+    expect(
+      titleLine(
+        base({
+          type: "424B5",
+          subcategory: "424b",
+          eventCategory: "capital",
+          headline: "Prospectus / offering (424B)",
+          title: "Acme Corp — 424B5 filing",
+          companyName: "Acme Corp",
+        }),
+      ),
+    ).toBe("Prospectus / Offering (424B) - Acme Corp");
+
+    expect(
+      titleLine(
+        base({
+          type: "SC 13D",
+          subcategory: "13d",
+          eventCategory: "deals",
+          headline: "Beneficial ownership (13D)",
+          title: "Acme Corp — SC 13D filing",
+          companyName: "Acme Corp",
+        }),
+      ),
+    ).toBe("Schedule 13D - Acme Corp");
+
+    expect(
+      titleLine(
+        base({
+          sourceProvider: "clinicaltrials",
+          type: "Clinical Trial",
+          eventCategory: "clinical",
+          headline: "Completed",
+          title: "Pfizer Inc — Study of drug X",
+          companyName: "Pfizer Inc",
+        }),
+      ),
+    ).toBe("Clinical Trial - Pfizer Inc");
+
+    expect(
+      titleLine(
+        base({
+          sourceProvider: "macro-calendar",
+          type: "Economics",
+          eventCategory: "macro",
+          subcategory: "nfp",
+          headline: "Macro calendar",
+          title: "NFP / Employment Situation — July 2026",
+          companyName: "US Macro",
+          ticker: null,
+        }),
+      ),
+    ).toBe("Jobs Report (NFP) — July 2026");
+
+    expect(
+      titleLine(
+        base({
+          sourceProvider: "finnhub",
+          type: "Analyst Actions",
+          eventCategory: "analyst",
+          subcategory: "price_target",
+          headline: "Price target (Street)",
+          title: "AAPL — Price target",
+          companyName: "Apple Inc.",
+          ticker: "AAPL",
+        }),
+      ),
+    ).toBe("Price Target - Apple Inc.");
   });
 
   it("prefers ground-rule Halt / FDA / Earnings titles over generic chips", () => {

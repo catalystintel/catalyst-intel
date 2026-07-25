@@ -3,14 +3,25 @@ import { describe, expect, it } from "vitest";
 import {
   earningsDateForQuarterInference,
   earningsQuarterLabel,
+  formatAnalystRatingTitle,
+  formatClinicalTrialTitle,
+  formatCpiTitle,
   formatEarningsReportTitle,
   formatFdaApprovalTitle,
+  formatFomcRateDecisionTitle,
   formatForm4InsiderTitle,
   formatHaltTitle,
+  formatJobsReportTitle,
+  formatPriceTargetTitle,
+  formatProspectusOfferingTitle,
+  formatSchedule13DTitle,
+  formatSchedule13GTitle,
   formatSec8kItemTitle,
+  formatShelfRegistrationTitle,
   form4TitleKindFromSubcategory,
   looksLikeResultsOfOperationsTitle,
   resolveDisplayCompanyName,
+  titleCaseEventLabel,
 } from "./catalyst-titles";
 import { haltReasonLabel } from "./halt-reason-codes";
 
@@ -149,13 +160,29 @@ describe("earningsQuarterLabel + formatEarningsReportTitle", () => {
 });
 
 describe("formatSec8kItemTitle / formatForm4InsiderTitle", () => {
-  it("builds 8-K item titles", () => {
+  it("builds Title Case 8-K item titles", () => {
     expect(formatSec8kItemTitle("Material agreement", "PEDEVCO CORP")).toBe(
-      "Material agreement - PEDEVCO CORP",
+      "Material Agreement - PEDEVCO CORP",
+    );
+    expect(formatSec8kItemTitle("Officer / director change", "Acme Corp")).toBe(
+      "Officer / Director Change - Acme Corp",
+    );
+    expect(formatSec8kItemTitle("Change of control", "Acme Corp")).toBe(
+      "Change of Control - Acme Corp",
     );
     expect(formatSec8kItemTitle(null, null)).toBe(
       "8-K Event - Unknown company",
     );
+  });
+
+  it("title-cases event labels without ugly double dashes", () => {
+    expect(titleCaseEventLabel("Material cybersecurity incident")).toBe(
+      "Material Cybersecurity Incident",
+    );
+    expect(titleCaseEventLabel("Financials non-reliance")).toBe(
+      "Financials Non-Reliance",
+    );
+    expect(titleCaseEventLabel("Reg FD disclosure")).toBe("Reg FD Disclosure");
   });
 
   it("builds Form 4 buy/sell/mixed titles", () => {
@@ -170,5 +197,37 @@ describe("formatSec8kItemTitle / formatForm4InsiderTitle", () => {
     );
     expect(form4TitleKindFromSubcategory("insider_buy")).toBe("buy");
     expect(form4TitleKindFromSubcategory("form4_mixed")).toBe("mixed");
+  });
+});
+
+describe("offering / ownership / clinical / macro / analyst titles", () => {
+  it("formats S-3 / 424B / 13D / 13G ground-rule titles", () => {
+    expect(formatShelfRegistrationTitle("Acme Corp")).toBe(
+      "Shelf Registration (S-3) - Acme Corp",
+    );
+    expect(formatProspectusOfferingTitle("Acme Corp")).toBe(
+      "Prospectus / Offering (424B) - Acme Corp",
+    );
+    expect(formatSchedule13DTitle("Acme Corp")).toBe(
+      "Schedule 13D - Acme Corp",
+    );
+    expect(formatSchedule13GTitle("Acme Corp")).toBe(
+      "Schedule 13G - Acme Corp",
+    );
+  });
+
+  it("formats clinical / macro / analyst ground-rule titles", () => {
+    expect(formatClinicalTrialTitle("Pfizer Inc")).toBe(
+      "Clinical Trial - Pfizer Inc",
+    );
+    expect(formatCpiTitle("July 2026")).toBe("CPI — July 2026");
+    expect(formatJobsReportTitle("July 2026")).toBe(
+      "Jobs Report (NFP) — July 2026",
+    );
+    expect(formatFomcRateDecisionTitle()).toBe("FOMC Rate Decision");
+    expect(formatPriceTargetTitle("Apple Inc.")).toBe(
+      "Price Target - Apple Inc.",
+    );
+    expect(formatAnalystRatingTitle("NVDA")).toBe("Analyst Rating - NVDA");
   });
 });

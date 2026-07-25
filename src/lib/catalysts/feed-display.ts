@@ -10,10 +10,22 @@ import type { FeedCatalyst } from "@/lib/catalysts/feed-catalyst";
 import {
   earningsDateForQuarterInference,
   earningsQuarterLabel,
+  formatAnalystRatingTitle,
+  formatClinicalTrialTitle,
+  formatCpiTitle,
   formatEarningsReportTitle,
+  formatFomcRateDecisionTitle,
   formatForm4InsiderTitle,
+  formatJobsReportTitle,
+  formatPriceTargetTitle,
+  formatProspectusOfferingTitle,
+  formatSchedule13DTitle,
+  formatSchedule13GTitle,
+  formatSec8kItemTitle,
+  formatShelfRegistrationTitle,
   form4TitleKindFromSubcategory,
   looksLikeResultsOfOperationsTitle,
+  titleCaseEventLabel,
 } from "@/lib/catalysts/catalyst-titles";
 
 export interface SourceDisplay {
@@ -186,6 +198,8 @@ const GENERIC_EVENT_HEADLINES = new Set([
   "mixed insider transactions (form 4)",
   "beneficial ownership (13d)",
   "beneficial ownership (13g)",
+  "schedule 13d",
+  "schedule 13g",
   "prospectus / offering (424b)",
   "shelf registration (s-3)",
   "8-k filing",
@@ -194,6 +208,23 @@ const GENERIC_EVENT_HEADLINES = new Set([
   "fda catalyst",
   "trading halt",
   "halt resumed",
+  "price target (street)",
+  "analyst ratings (consensus)",
+  "clinical trial update",
+  "macro calendar",
+]);
+
+/** ClinicalTrials.gov status chips — keep in Event cell, not Title. */
+const CLINICAL_STATUS_HEADLINES = new Set([
+  "completed",
+  "terminated",
+  "suspended",
+  "withdrawn",
+  "recruiting",
+  "active, not recruiting",
+  "not yet recruiting",
+  "enrolling by invitation",
+  "clinical trial update",
 ]);
 
 function isGenericEventHeadline(text: string): boolean {
@@ -246,6 +277,15 @@ function prefersStoredGroundRuleTitle(c: FeedCatalyst, title: string): boolean {
   if (/^FDA Approval\s*-/i.test(title)) return true;
   if (/^Earnings Report\s+Q/i.test(title)) return true;
   if (/^Form 4 Insider\b/i.test(title)) return true;
+  if (/^Shelf Registration \(S-3\)\s*-/i.test(title)) return true;
+  if (/^Prospectus \/ Offering \(424B\)\s*-/i.test(title)) return true;
+  if (/^Schedule 13[DG]\s*-/i.test(title)) return true;
+  if (/^Clinical Trial\s*-/i.test(title)) return true;
+  if (/^Price Target\s*-/i.test(title)) return true;
+  if (/^Analyst Rating\s*-/i.test(title)) return true;
+  if (/^CPI\s*—/i.test(title)) return true;
+  if (/^Jobs Report \(NFP\)\s*—/i.test(title)) return true;
+  if (/^FOMC Rate Decision$/i.test(title)) return true;
   // 8-K ground-rule: `{Item label} - {Company}` (not the old "— 8-K filing").
   if (
     c.sourceProvider === "sec-edgar" &&
@@ -257,6 +297,7 @@ function prefersStoredGroundRuleTitle(c: FeedCatalyst, title: string): boolean {
   }
 
   if (c.sourceProvider === "nasdaq-halts") return true;
+  if (c.sourceProvider === "macro-calendar") return true;
   if (c.type === "FDA Approval" || c.subcategory === "openfda_approval") {
     return true;
   }
@@ -268,6 +309,42 @@ function prefersStoredGroundRuleTitle(c: FeedCatalyst, title: string): boolean {
     return true;
   }
   return false;
+}
+
+/** Normalize legacy stored ground-rule titles to the current format. */
+function canonicalizeGroundRuleTitle(c: FeedCatalyst, title: string): string {
+  const subject = tapeSubject(c) ?? c.companyName ?? c.ticker;
+
+  // Legacy macro wording.
+  const nfpMonth = title.match(
+    /^NFP\s*\/\s*Employment Situation\s*[—–-]\s*(.+)$/i,
+  )?.[1];
+  if (nfpMonth) return formatJobsReportTitle(nfpMonth);
+  if (/^FOMC rate decision$/i.test(title)) {
+    return formatFomcRateDecisionTitle();
+  }
+  const cpiMonth = title.match(/^CPI\s*[—–-]\s*(.+)$/i)?.[1];
+  if (cpiMonth) return formatCpiTitle(cpiMonth);
+
+  // 8-K `{label} - {company}` → Title Case label.
+  if (
+    c.sourceProvider === "sec-edgar" &&
+    /(?:8-?K|8k)/i.test(c.type ?? "") &&
+    /\s-\s/.test(title) &&
+    !/^Earnings Report\s+Q/i.test(title) &&
+    !/(?:8-?K|Form\s*4).*filing$/i.test(title)
+  ) {
+    const split = title.match(/^(.+?)\s-\s(.+)$/);
+    if (
+      split &&
+      !looksLikeResultsOfOperationsTitle(split[1]) &&
+      !/^Form 4 Insider\b/i.test(split[1])
+    ) {
+      return formatSec8kItemTitle(split[1], split[2] || subject);
+    }
+  }
+
+  return title;
 }
 
 /**
@@ -357,6 +434,196 @@ function form4DisplayTitle(c: FeedCatalyst): string | null {
   );
 }
 
+/**
+ * 8-K item rows → Title Case `{Event} - {Company}` (legacy sentence-case /
+ * filing chrome / taxonomy chips).
+ */
+function sec8kDisplayTitle(c: FeedCatalyst): string | null {
+  const is8k =
+    c.sourceProvider === "sec-edgar" &&
+    (/(?:8-?K|8k)/i.test(c.type ?? "") || c.subcategory === "8k");
+  if (!is8k) return null;
+  if (c.items.some((i) => i.code === "2.02")) return null;
+  if (c.eventCategory === "earnings") return null;
+
+  const subject = tapeSubject(c) ?? c.companyName ?? c.ticker;
+  const primary =
+    c.items.find((i) => {
+      const h = normalizeDisplayText(c.headline ?? "").toLowerCase();
+      return h && i.label.toLowerCase() === h;
+    }) ?? c.items[0];
+
+  if (primary?.label && !/^earnings\s*\/\s*results$/i.test(primary.label)) {
+    return formatSec8kItemTitle(primary.label, subject);
+  }
+
+  const headline = normalizeDisplayText(c.headline ?? "");
+  if (headline && isSecCatalogHeadline(headline)) {
+    return formatSec8kItemTitle(headline, subject);
+  }
+
+  return null;
+}
+
+/** S-3 / 424B / 13D / 13G → ground-rule offering / ownership titles. */
+function secOfferingOwnershipDisplayTitle(c: FeedCatalyst): string | null {
+  const subject = tapeSubject(c) ?? c.companyName ?? c.ticker;
+  const sub = c.subcategory?.trim().toLowerCase() ?? "";
+  const form = (c.type ?? "").trim().toUpperCase();
+  const title = normalizeDisplayText(c.title ?? "");
+  const headline = normalizeDisplayText(c.headline ?? "").toLowerCase();
+
+  const isS3 =
+    sub === "s3" ||
+    form.startsWith("S-3") ||
+    /shelf registration \(s-3\)/i.test(headline) ||
+    /shelf registration \(s-3\)/i.test(title);
+  if (isS3) {
+    if (/^Shelf Registration \(S-3\)\s*-/i.test(title)) {
+      return stripSourceNames(title) || title;
+    }
+    return formatShelfRegistrationTitle(subject);
+  }
+
+  const is424 =
+    sub === "424b" ||
+    form.startsWith("424B") ||
+    /prospectus \/ offering \(424b\)/i.test(headline) ||
+    /prospectus \/ offering \(424b\)/i.test(title);
+  if (is424) {
+    if (/^Prospectus \/ Offering \(424B\)\s*-/i.test(title)) {
+      return stripSourceNames(title) || title;
+    }
+    return formatProspectusOfferingTitle(subject);
+  }
+
+  const is13d =
+    sub === "13d" ||
+    form.includes("13D") ||
+    /(?:beneficial ownership|schedule)\s*\(?13d\)?/i.test(headline) ||
+    /(?:beneficial ownership|schedule)\s*\(?13d\)?/i.test(title);
+  if (is13d && !form.includes("13G")) {
+    if (/^Schedule 13D\s*-/i.test(title)) {
+      return stripSourceNames(title) || title;
+    }
+    return formatSchedule13DTitle(subject);
+  }
+
+  const is13g =
+    sub === "13g" ||
+    form.includes("13G") ||
+    /(?:beneficial ownership|schedule)\s*\(?13g\)?/i.test(headline) ||
+    /(?:beneficial ownership|schedule)\s*\(?13g\)?/i.test(title);
+  if (is13g) {
+    if (/^Schedule 13G\s*-/i.test(title)) {
+      return stripSourceNames(title) || title;
+    }
+    return formatSchedule13GTitle(subject);
+  }
+
+  return null;
+}
+
+/** Clinical rows → `Clinical Trial - Company` (status stays in Event chip). */
+function clinicalDisplayTitle(c: FeedCatalyst): string | null {
+  const isClinical =
+    c.sourceProvider === "clinicaltrials" ||
+    c.eventCategory === "clinical" ||
+    /^clinical\s*trial/i.test(c.type ?? "");
+  if (!isClinical) return null;
+
+  const title = normalizeDisplayText(c.title ?? "");
+  if (/^Clinical Trial\s*-/i.test(title)) {
+    return stripSourceNames(title) || title;
+  }
+
+  return formatClinicalTrialTitle(tapeSubject(c) ?? c.companyName ?? c.ticker);
+}
+
+/** Macro calendar → CPI / Jobs Report (NFP) / FOMC Rate Decision. */
+function macroDisplayTitle(c: FeedCatalyst): string | null {
+  const isMacro =
+    c.sourceProvider === "macro-calendar" || c.eventCategory === "macro";
+  if (!isMacro) return null;
+
+  const title = normalizeDisplayText(c.title ?? "");
+  const sub = c.subcategory?.trim().toLowerCase() ?? "";
+
+  if (sub === "cpi" || /^CPI\b/i.test(title)) {
+    const month = title.match(/^CPI\s*[—–-]\s*(.+)$/i)?.[1] ?? null;
+    return formatCpiTitle(month);
+  }
+
+  if (sub === "nfp" || /NFP|Employment Situation|Jobs Report/i.test(title)) {
+    const month =
+      title.match(
+        /(?:Jobs Report \(NFP\)|NFP\s*\/\s*Employment Situation)\s*[—–-]\s*(.+)$/i,
+      )?.[1] ?? null;
+    return formatJobsReportTitle(month);
+  }
+
+  if (sub === "fomc" || /FOMC/i.test(title)) {
+    return formatFomcRateDecisionTitle();
+  }
+
+  return canonicalizeGroundRuleTitle(c, title) || null;
+}
+
+/** Analyst / price-target chips → ground-rule titles. */
+function analystDisplayTitle(c: FeedCatalyst): string | null {
+  const isAnalyst =
+    c.eventCategory === "analyst" ||
+    c.subcategory === "price_target" ||
+    c.subcategory === "recommendation_trend" ||
+    c.subcategory === "analyst_rating" ||
+    c.subcategory === "upgrade" ||
+    c.subcategory === "downgrade" ||
+    /^analyst/i.test(c.type ?? "");
+  if (!isAnalyst) return null;
+
+  const subject = tapeSubject(c) ?? c.companyName ?? c.ticker;
+  const title = normalizeDisplayText(c.title ?? "");
+  const headline = normalizeDisplayText(c.headline ?? "");
+  const headlineLower = headline.toLowerCase();
+  const sub = c.subcategory?.trim().toLowerCase() ?? "";
+
+  // Keep real Street/wire story headlines; only rewrite taxonomy chips.
+  if (
+    headline &&
+    !looksLikeSourceLabel(headline) &&
+    !isGenericEventHeadline(headline)
+  ) {
+    return null;
+  }
+
+  if (
+    sub === "price_target" ||
+    /price target/i.test(headlineLower) ||
+    /price target/i.test(title)
+  ) {
+    if (/^Price Target\s*-/i.test(title)) {
+      return stripSourceNames(title) || title;
+    }
+    return formatPriceTargetTitle(subject);
+  }
+
+  if (
+    sub === "recommendation_trend" ||
+    sub === "analyst_rating" ||
+    sub === "upgrade" ||
+    sub === "downgrade" ||
+    /analyst rating/i.test(headlineLower) ||
+    /recommendation trend/i.test(title)
+  ) {
+    if (/^Analyst Rating\s*-/i.test(title)) {
+      return stripSourceNames(title) || title;
+    }
+    return formatAnalystRatingTitle(subject);
+  }
+
+  return null;
+}
+
 export function titleLine(
   c: FeedCatalyst,
   options: TitleLineOptions = {},
@@ -367,7 +634,8 @@ export function titleLine(
   const subject = tapeSubject(c);
 
   if (prefersStoredGroundRuleTitle(c, title)) {
-    return stripSourceNames(title) || title;
+    const canonical = canonicalizeGroundRuleTitle(c, title);
+    return stripSourceNames(canonical) || canonical;
   }
 
   const earningsTitle = earningsReportDisplayTitle(c);
@@ -376,17 +644,57 @@ export function titleLine(
   const form4Title = form4DisplayTitle(c);
   if (form4Title) return form4Title;
 
-  // Real news / wire copy wins when it is not a publisher or generic chip.
+  const offeringTitle = secOfferingOwnershipDisplayTitle(c);
+  if (offeringTitle) return offeringTitle;
+
+  const clinicalTitle = clinicalDisplayTitle(c);
+  if (clinicalTitle) return clinicalTitle;
+
+  const macroTitle = macroDisplayTitle(c);
+  if (macroTitle) return macroTitle;
+
+  const analystTitle = analystDisplayTitle(c);
+  if (analystTitle) return analystTitle;
+
+  const sec8kTitle = sec8kDisplayTitle(c);
+  if (sec8kTitle) return sec8kTitle;
+
+  // Real news / wire copy wins when it is not a publisher, status, or chip.
   if (
     headline &&
     !looksLikeSourceLabel(headline) &&
-    !isGenericEventHeadline(headline)
+    !isGenericEventHeadline(headline) &&
+    !CLINICAL_STATUS_HEADLINES.has(headline.toLowerCase())
   ) {
     return stripSourceNames(headline) || headline;
   }
 
-  // Generic SEC / calendar event — enrich with company + filing blurb.
+  // Generic SEC / calendar event — prefer ground-rule `{Event} - Company`.
   if (headline && isGenericEventHeadline(headline)) {
+    if (isSecCatalogHeadline(headline) && subject) {
+      if (!/^earnings\s*\/\s*results$/i.test(headline)) {
+        return formatSec8kItemTitle(headline, subject);
+      }
+    }
+    if (/shelf registration \(s-3\)/i.test(headline) && subject) {
+      return formatShelfRegistrationTitle(subject);
+    }
+    if (/prospectus \/ offering \(424b\)/i.test(headline) && subject) {
+      return formatProspectusOfferingTitle(subject);
+    }
+    if (/(?:beneficial ownership|schedule)\s*\(?13d\)?/i.test(headline)) {
+      return formatSchedule13DTitle(subject);
+    }
+    if (/(?:beneficial ownership|schedule)\s*\(?13g\)?/i.test(headline)) {
+      return formatSchedule13GTitle(subject);
+    }
+    if (/price target/i.test(headline) && subject) {
+      return formatPriceTargetTitle(subject);
+    }
+    if (/analyst rating/i.test(headline) && subject) {
+      return formatAnalystRatingTitle(subject);
+    }
+
     const primaryCode =
       c.items.find((i) => i.label.toLowerCase() === headline.toLowerCase())
         ?.code ??
@@ -394,7 +702,7 @@ export function titleLine(
       null;
     const blurb =
       extractSecItemBlurb(c.summary, primaryCode, maxBlurbChars) ||
-      stripSourceNames(headline) ||
+      titleCaseEventLabel(stripSourceNames(headline) || headline) ||
       headline;
     if (subject) {
       // Avoid "ACME — ACME — Earnings…" when blurb somehow repeats subject.
@@ -407,7 +715,11 @@ export function titleLine(
   }
 
   let raw = "";
-  if (headline && !looksLikeSourceLabel(headline)) {
+  if (
+    headline &&
+    !looksLikeSourceLabel(headline) &&
+    !CLINICAL_STATUS_HEADLINES.has(headline.toLowerCase())
+  ) {
     raw = headline;
   } else if (title) {
     raw = title;
@@ -423,16 +735,25 @@ export function titleLine(
     if (fromTitle && !looksLikeSourceLabel(fromTitle)) return fromTitle;
   }
 
-  // Filing title "ACME — 8-K filing" with no usable headline: prefer subject + detail.
+  // Catalog label alone (after source strip) → ground-rule with company.
+  if (cleaned && isSecCatalogHeadline(cleaned) && subject) {
+    if (!/^earnings\s*\/\s*results$/i.test(cleaned)) {
+      return formatSec8kItemTitle(cleaned, subject);
+    }
+  }
+
+  // Filing title "ACME — 8-K filing" with no usable headline: prefer ground-rule.
   if (
     cleaned &&
     subject &&
     /(?:8-?K|Form\s*4|S-3|424B|SC\s*13).*filing$/i.test(cleaned)
   ) {
+    if (c.items[0]?.label) {
+      return formatSec8kItemTitle(c.items[0].label, subject);
+    }
     const event =
       (c.items[0] &&
         extractSecItemBlurb(c.summary, c.items[0].code, maxBlurbChars)) ||
-      c.items[0]?.label ||
       null;
     if (event) return `${subject} — ${event}`;
     return cleaned;
