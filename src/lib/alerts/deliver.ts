@@ -1,6 +1,7 @@
 import type { AlertChannel, AlertRuleConditions } from "@/db/schema";
 import { classifySession, sessionMatches } from "@/lib/alerts/session";
 import { validateWebhookUrl } from "@/lib/alerts/webhook-url";
+import { sendResendEmail } from "@/lib/email/resend";
 
 export interface AlertCatalystPayload {
   id: number;
@@ -110,18 +111,6 @@ async function deliverEmail(
   catalyst: AlertCatalystPayload,
   ruleName: string,
 ): Promise<{ ok: boolean; detail: string }> {
-  const apiKey = process.env.RESEND_API_KEY?.trim();
-  if (!apiKey) {
-    return {
-      ok: false,
-      detail: "RESEND_API_KEY not configured — email delivery skipped.",
-    };
-  }
-
-  const from =
-    process.env.RESEND_FROM_EMAIL?.trim() ||
-    "Catalyst Intel <onboarding@resend.dev>";
-
   const subject = `[Catalyst] ${catalyst.symbol ?? "—"} · ${catalyst.headline ?? catalyst.title}`;
   const proof = catalyst.sourceUrl
     ? `\nProof (EDGAR): ${catalyst.sourceUrl}`
@@ -138,30 +127,7 @@ async function deliverEmail(
     .filter(Boolean)
     .join("\n");
 
-  try {
-    const res = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ from, to: [to], subject, text }),
-      signal: AbortSignal.timeout(10_000),
-    });
-    if (!res.ok) {
-      const body = await res.text().catch(() => "");
-      return {
-        ok: false,
-        detail: `Resend HTTP ${res.status}${body ? `: ${body.slice(0, 180)}` : ""}`,
-      };
-    }
-    return { ok: true, detail: "Email sent via Resend" };
-  } catch (err) {
-    return {
-      ok: false,
-      detail: err instanceof Error ? err.message : "Email failed",
-    };
-  }
+  return sendResendEmail({ to, subject, text });
 }
 
 /**
@@ -256,6 +222,4 @@ export async function deliverAlertRules(options: {
   return results;
 }
 
-export function isResendConfigured(): boolean {
-  return Boolean(process.env.RESEND_API_KEY?.trim());
-}
+export { isResendConfigured } from "@/lib/email/resend";

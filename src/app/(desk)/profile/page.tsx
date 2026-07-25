@@ -58,8 +58,8 @@ export default async function ProfilePage() {
               {user.email}
             </p>
           </div>
-          <span className="ml-auto rounded-sm border border-[var(--desk-border-strong)] bg-[var(--desk-overlay-soft)] px-2 py-1 font-mono text-[0.6rem] tracking-[0.12em] text-[var(--desk-text-dim)] uppercase">
-            {user.isAdmin ? "Admin" : "Member"} · {user.subscription}
+          <span className="ml-auto rounded-sm border border-[rgba(240,193,75,0.35)] bg-[rgba(240,193,75,0.1)] px-2 py-1 font-mono text-[0.6rem] tracking-[0.12em] text-[var(--desk-live)] uppercase">
+            Early Access · Full access
           </span>
         </div>
 
@@ -80,6 +80,17 @@ export default async function ProfilePage() {
         <ThemeToggle />
       </section>
 
+      <section className="rounded-xl border border-[rgba(240,193,75,0.28)] bg-[rgba(240,193,75,0.08)] p-5">
+        <h2 className="text-sm font-semibold text-[var(--desk-text)]">
+          Open Early Access
+        </h2>
+        <p className="mt-1 text-sm text-[var(--desk-text-muted)]">
+          Every feature is free right now — feed, alerts, watchlists, playbook,
+          and AI. Paid Pro plans and access gating come later; for now you have
+          the full desk.
+        </p>
+      </section>
+
       <section className="rounded-xl border border-[var(--desk-border)] bg-[var(--desk-panel)] p-5">
         <h2 className="text-sm font-semibold text-[var(--desk-text)]">
           Coming soon
@@ -95,8 +106,8 @@ export default async function ProfilePage() {
           />
           <ComingSoonRow
             icon={<CreditCard className="size-4" />}
-            title="Billing & plan"
-            description="Upgrade to Pro for real-time alerts and extended history."
+            title="Billing &amp; Pro plans"
+            description="Later: Pro tiers and paid access. Not gated during Open Early Access."
           />
         </ul>
       </section>

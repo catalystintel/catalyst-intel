@@ -14,6 +14,15 @@ export type WhatsNewEntry = {
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
     date: "2026-07-25",
+    title: "Open Early Access + feedback",
+    bullets: [
+      "Marketing and in-app banners announce Open Early Access — every feature is free while we grow traffic.",
+      "Feedback box (bugs / feature requests / improvements) emails FEEDBACK_TO_EMAIL via Resend; also in the account menu.",
+      "Profile notes full access during Early Access; Pro billing stays “coming soon” (not gated yet).",
+    ],
+  },
+  {
+    date: "2026-07-25",
     title: "Catalyst Feed URL rename",
     bullets: [
       "`/dashboard` is now `/catalyst-feed` — matches the sidebar label; old links 308-redirect automatically.",
