@@ -6,23 +6,23 @@ import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = {
-  title: "About us · Catalyst Intel",
+  title: "About · Catalyst Intel",
   description:
-    "A real-time catalyst triage desk for traders who trade the why — live SEC material events on a dense trading-desk feed.",
+    "Material SEC events on a trading blotter — Symbol, Title, Time. Scan the catalyst, open Read for the story, then act or dismiss.",
 };
 
 const BENEFITS = [
   {
-    title: "Speed with structure",
-    body: "Material events land in a dense desk feed — Source, Sector, Title, and Time·date — so you can scan across monitors without hunting headlines.",
+    title: "Scan, don’t hunt",
+    body: "A dense blotter for multi-monitor desks. Material events land as rows you can read at a glance — not a headline firehose.",
   },
   {
-    title: "Trust the source",
-    body: "Every row deep-links back to the filing. Verify the catalyst yourself before you size the trade.",
+    title: "Story before the chart",
+    body: "Open any row for a plain-language summary and the path back to the filing. Understand the why before you size the trade.",
   },
   {
-    title: "Triage your book",
-    body: "Narrow the stream with filters, watchlists, and alerts so the desk stays focused on what moves your names — not the whole tape.",
+    title: "Your book, not the whole tape",
+    body: "Filters, watchlists, quiet playbook, and alerts narrow the stream to the names and event types you actually trade.",
   },
 ] as const;
 
@@ -32,34 +32,33 @@ export default function AboutPage() {
       <main className="page-enter relative z-10 mx-auto flex w-full max-w-3xl flex-1 flex-col gap-14 px-5 pt-6 pb-16 sm:px-8 sm:pt-10">
         <section className="max-w-2xl">
           <span className="font-mono text-[0.72rem] font-medium tracking-[0.14em] text-[var(--desk-text-dim)] uppercase">
-            About us
+            About
           </span>
           <h1 className="mt-3 text-3xl font-bold tracking-tight text-balance text-[var(--desk-text)] sm:text-4xl">
             Catalyst Intel
           </h1>
           <p className="mt-4 text-base text-pretty text-[var(--desk-text-secondary)] sm:text-lg">
-            A real-time catalyst triage desk for traders who trade the why — not
-            the chart alone.
+            A real-time catalyst desk for traders who need the event story first
+            — then the chart.
           </p>
         </section>
 
         <section className="space-y-4 border-t border-[var(--desk-border)] pt-10">
           <h2 className="text-lg font-semibold tracking-tight text-[var(--desk-text)]">
-            What you get
+            The desk
           </h2>
           <p className="text-pretty text-[var(--desk-text-secondary)]">
-            Live SEC material events — especially 8-Ks — ingested, normalized,
-            and scored into a trading-desk feed built for multi-monitor
-            scanning. Each row carries the fields you need at a glance:{" "}
+            Live material SEC events — especially 8-Ks — ingested as they hit
+            EDGAR and laid out for fast scanning. Each row carries{" "}
             <span className="font-mono text-[0.9em] text-[var(--desk-text)]">
-              Source · Sector · Title · Time·date
+              Symbol · Title · Time
             </span>
             .
           </p>
           <p className="text-pretty text-[var(--desk-text-secondary)]">
-            Open any item and jump straight to the filing. The feed is there to
-            surface the catalyst early; the deep-link is there so you can trust
-            it.
+            The feed surfaces the catalyst early. Open Read for a plain-language
+            summary and a path back to the filing so you can verify before you
+            trade.
           </p>
         </section>
 
@@ -69,18 +68,18 @@ export default function AboutPage() {
           </h2>
           <p className="text-pretty text-[var(--desk-text-secondary)]">
             SEC filings first. That is the core of the desk today — material
-            events as they hit EDGAR, organized for traders who need the story
-            before it becomes consensus noise.
+            events organized for traders who need the story before it becomes
+            consensus noise.
           </p>
           <p className="text-pretty text-[var(--desk-text-secondary)]">
-            FDA and clinical catalysts are planned as a second source family.
-            Same triage mindset; broader catalyst coverage over time.
+            FDA and clinical catalysts are next: same blotter, broader coverage
+            over time.
           </p>
         </section>
 
         <section className="space-y-6 border-t border-[var(--desk-border)] pt-10">
           <h2 className="text-lg font-semibold tracking-tight text-[var(--desk-text)]">
-            Built for the desk
+            Built for how you trade
           </h2>
           <ul className="grid gap-6 sm:gap-7">
             {BENEFITS.map((item) => (
@@ -98,8 +97,8 @@ export default function AboutPage() {
 
         <section className="border-t border-[var(--desk-border)] pt-10">
           <p className="max-w-xl text-pretty text-[var(--desk-text-secondary)]">
-            Open the live feed and scan catalysts as they land — structured for
-            the desk, linked to the source.
+            Sign in and open the live feed — scan catalysts as they land,
+            structured for the desk.
           </p>
           <div className="mt-6 flex flex-wrap items-center gap-3">
             <Link
