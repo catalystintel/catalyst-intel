@@ -3,7 +3,8 @@ import { redirect } from "next/navigation";
 
 import { AppShell } from "@/components/app-shell";
 import { DatabaseSetupNotice } from "@/components/database-setup-notice";
-import { isLibsqlConfigured } from "@/db/env";
+import { isLibsqlConfigured, isSchemaMissingError } from "@/db/env";
+import { isLocalSqliteReady } from "@/db/local-sqlite-ready";
 import { getCurrentAppUser } from "@/lib/auth/current-user";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
@@ -20,7 +21,7 @@ export default async function DeskLayout({
 }: {
   children: ReactNode;
 }) {
-  if (!isLibsqlConfigured()) {
+  if (!isLibsqlConfigured() || !isLocalSqliteReady()) {
     if (isSupabaseConfigured()) {
       const supabase = await createSupabaseServerClient();
       const {
@@ -33,7 +34,18 @@ export default async function DeskLayout({
     return <DatabaseSetupNotice />;
   }
 
-  const user = await getCurrentAppUser();
+  let user;
+  try {
+    user = await getCurrentAppUser();
+  } catch (err) {
+    // Empty/partial local.db used to throw through the whole desk (and Next
+    // then surfaces ThemeProvider / Performance.measure noise on top).
+    if (isSchemaMissingError(err)) {
+      return <DatabaseSetupNotice />;
+    }
+    throw err;
+  }
+
   if (!user) {
     redirect("/login");
   }

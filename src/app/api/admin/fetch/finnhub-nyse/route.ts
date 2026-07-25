@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-import { LIBSQL_SETUP_HINT, isLibsqlConfigured } from "@/db/env";
+import { databaseSetupHint, isLibsqlConfigured } from "@/db/env";
 import { authorizeAdminFetch, jsonWithAuth } from "@/lib/auth/admin-fetch";
 import { getCurrentAppUser } from "@/lib/auth/current-user";
 import { isValidCronSecret } from "@/lib/auth/cron-secret";
@@ -19,7 +19,7 @@ import { isFinnhubConfigured } from "@/lib/jobs/finnhub-env";
  */
 export async function POST(request: NextRequest) {
   if (!isLibsqlConfigured()) {
-    return NextResponse.json({ error: LIBSQL_SETUP_HINT }, { status: 503 });
+    return NextResponse.json({ error: databaseSetupHint() }, { status: 503 });
   }
 
   const providedSecret = request.headers.get("x-cron-secret");
