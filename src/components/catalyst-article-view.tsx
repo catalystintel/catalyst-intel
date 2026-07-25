@@ -484,7 +484,7 @@ export function CatalystArticleView({
                 >
                   {item.catalystId != null ? (
                     <Link
-                      href={`/dashboard/catalyst/${item.catalystId}`}
+                      href={`/catalyst-feed/catalyst/${item.catalystId}`}
                       className="flex flex-col transition-colors hover:opacity-90"
                     >
                       {inner}
