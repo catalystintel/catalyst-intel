@@ -32,6 +32,7 @@ import {
   type ArticleEnrichment,
 } from "@/lib/catalysts/enrich-article";
 import { toFeedCatalyst } from "@/lib/catalysts/feed-catalyst";
+import { getCurrentAppUser } from "@/lib/auth/current-user";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -154,11 +155,13 @@ export default async function CatalystArticlePage({ params }: PageProps) {
     catalyst.tags,
   );
   const thumbUrl = extractArticleThumbUrl(row.rawContent);
+  const user = await getCurrentAppUser();
 
   return (
     <PageEnter className="flex min-h-0 flex-1 flex-col overflow-y-auto p-4 sm:p-5">
       <CatalystArticleView
         catalyst={catalyst}
+        isAdmin={Boolean(user?.isAdmin)}
         summary={summary}
         summaryGenerated={generated}
         body={body}
