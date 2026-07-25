@@ -69,8 +69,10 @@ export async function sendResendEmail(options: {
   }
 }
 
+/** Default product-feedback inbox (override with FEEDBACK_TO_EMAIL). */
+export const DEFAULT_FEEDBACK_TO_EMAIL = "catalyst.intel.feedback@gmail.com";
+
 /** Inbox for product feedback (bugs / features / improvements). */
-export function feedbackInbox(): string | null {
-  const to = process.env.FEEDBACK_TO_EMAIL?.trim();
-  return to || null;
+export function feedbackInbox(): string {
+  return process.env.FEEDBACK_TO_EMAIL?.trim() || DEFAULT_FEEDBACK_TO_EMAIL;
 }

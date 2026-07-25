@@ -51,15 +51,6 @@ export async function POST(request: NextRequest) {
   }
 
   const inbox = feedbackInbox();
-  if (!inbox) {
-    return withRateLimitHeaders(
-      NextResponse.json(
-        { error: "Feedback inbox is not configured yet. Try again later." },
-        { status: 503 },
-      ),
-      limitResult,
-    );
-  }
 
   let body: unknown = {};
   try {
