@@ -297,6 +297,85 @@ export function CatalystArticleView({
         }
       />
 
+      {detailCards.length > 0 ? (
+        <section className="flex flex-col gap-3">
+          <h2 className="font-mono text-[0.65rem] tracking-[0.14em] text-[var(--desk-text-dim)] uppercase">
+            Detail
+          </h2>
+          <div className="flex flex-col gap-3">
+            {detailCards.map((card) => (
+              <DetailCardPanel key={card.id} card={card} />
+            ))}
+          </div>
+        </section>
+      ) : null}
+
+      <section className="flex flex-col gap-2">
+        <div className="flex flex-wrap items-baseline justify-between gap-2">
+          <h2 className="font-mono text-[0.65rem] tracking-[0.14em] text-[var(--desk-text-dim)] uppercase">
+            Article body
+          </h2>
+          {isLocalDevUi() ? (
+            <span className="font-mono text-[0.6rem] tracking-wide text-[var(--desk-text-dim)] uppercase">
+              {bodySourceLabel(bodySource)} {LOCAL_DEV_ONLY_LABEL}
+            </span>
+          ) : null}
+        </div>
+        {body ? (
+          <div
+            className={cn(
+              "rounded-sm border border-[var(--desk-border)] bg-[var(--desk-overlay-soft)] px-4 py-4 text-[0.92rem] leading-relaxed whitespace-pre-wrap text-[var(--desk-text-secondary)]",
+            )}
+          >
+            <HighlightedText text={body} />
+          </div>
+        ) : (
+          <p className="rounded-sm border border-dashed border-[var(--desk-border-strong)] px-4 py-4 text-sm text-[var(--desk-text-muted)]">
+            No stored article text for this row yet. Summary and takeaways above
+            are the available in-app content.
+          </p>
+        )}
+      </section>
+
+      {catalyst.items.length > 0 ? (
+        <section className="flex flex-col gap-2">
+          <h2 className="font-mono text-[0.65rem] tracking-[0.14em] text-[var(--desk-text-dim)] uppercase">
+            Filing items
+          </h2>
+          <ul className="flex flex-col gap-1.5">
+            {catalyst.items.map((item) => (
+              <li
+                key={item.code}
+                className="flex items-baseline gap-2 text-sm text-[var(--desk-text-secondary)]"
+              >
+                <span className="font-mono text-xs text-[var(--desk-text-dim)] tabular-nums">
+                  {item.code}
+                </span>
+                <span>{item.label}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+
+      {catalyst.tags.length > 0 ? (
+        <section className="flex flex-col gap-2">
+          <h2 className="font-mono text-[0.65rem] tracking-[0.14em] text-[var(--desk-text-dim)] uppercase">
+            Tags
+          </h2>
+          <div className="flex flex-wrap gap-1.5">
+            {catalyst.tags.map((tag) => (
+              <span
+                key={tag}
+                className="rounded-sm border border-[var(--desk-border)] px-1.5 py-0.5 font-mono text-[0.65rem] text-[var(--desk-text-muted)]"
+              >
+                {tag}
+              </span>
+            ))}
+          </div>
+        </section>
+      ) : null}
+
       {enrichment?.profile ? (
         <section className="flex flex-col gap-2">
           <h2 className="font-mono text-[0.65rem] tracking-[0.14em] text-[var(--desk-text-dim)] uppercase">
@@ -457,85 +536,6 @@ export function CatalystArticleView({
               ? ` · ${formatRelativeAge(enrichment.quote.asOf)}`
               : ""}
           </p>
-        </section>
-      ) : null}
-
-      {detailCards.length > 0 ? (
-        <section className="flex flex-col gap-3">
-          <h2 className="font-mono text-[0.65rem] tracking-[0.14em] text-[var(--desk-text-dim)] uppercase">
-            Detail
-          </h2>
-          <div className="flex flex-col gap-3">
-            {detailCards.map((card) => (
-              <DetailCardPanel key={card.id} card={card} />
-            ))}
-          </div>
-        </section>
-      ) : null}
-
-      <section className="flex flex-col gap-2">
-        <div className="flex flex-wrap items-baseline justify-between gap-2">
-          <h2 className="font-mono text-[0.65rem] tracking-[0.14em] text-[var(--desk-text-dim)] uppercase">
-            Article body
-          </h2>
-          {isLocalDevUi() ? (
-            <span className="font-mono text-[0.6rem] tracking-wide text-[var(--desk-text-dim)] uppercase">
-              {bodySourceLabel(bodySource)} {LOCAL_DEV_ONLY_LABEL}
-            </span>
-          ) : null}
-        </div>
-        {body ? (
-          <div
-            className={cn(
-              "rounded-sm border border-[var(--desk-border)] bg-[var(--desk-overlay-soft)] px-4 py-4 text-[0.92rem] leading-relaxed whitespace-pre-wrap text-[var(--desk-text-secondary)]",
-            )}
-          >
-            <HighlightedText text={body} />
-          </div>
-        ) : (
-          <p className="rounded-sm border border-dashed border-[var(--desk-border-strong)] px-4 py-4 text-sm text-[var(--desk-text-muted)]">
-            No stored article text for this row yet. Summary and takeaways above
-            are the available in-app content.
-          </p>
-        )}
-      </section>
-
-      {catalyst.items.length > 0 ? (
-        <section className="flex flex-col gap-2">
-          <h2 className="font-mono text-[0.65rem] tracking-[0.14em] text-[var(--desk-text-dim)] uppercase">
-            Filing items
-          </h2>
-          <ul className="flex flex-col gap-1.5">
-            {catalyst.items.map((item) => (
-              <li
-                key={item.code}
-                className="flex items-baseline gap-2 text-sm text-[var(--desk-text-secondary)]"
-              >
-                <span className="font-mono text-xs text-[var(--desk-text-dim)] tabular-nums">
-                  {item.code}
-                </span>
-                <span>{item.label}</span>
-              </li>
-            ))}
-          </ul>
-        </section>
-      ) : null}
-
-      {catalyst.tags.length > 0 ? (
-        <section className="flex flex-col gap-2">
-          <h2 className="font-mono text-[0.65rem] tracking-[0.14em] text-[var(--desk-text-dim)] uppercase">
-            Tags
-          </h2>
-          <div className="flex flex-wrap gap-1.5">
-            {catalyst.tags.map((tag) => (
-              <span
-                key={tag}
-                className="rounded-sm border border-[var(--desk-border)] px-1.5 py-0.5 font-mono text-[0.65rem] text-[var(--desk-text-muted)]"
-              >
-                {tag}
-              </span>
-            ))}
-          </div>
         </section>
       ) : null}
     </article>
