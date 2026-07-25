@@ -1431,7 +1431,7 @@ function FeedTitleWithTooltip({
       onFocus={place}
       onBlur={hide}
     >
-      <span className="block truncate text-[0.86rem] font-medium tracking-tight text-[var(--desk-text-secondary)] transition-colors group-hover:text-[var(--desk-text)] group-focus-visible:text-[var(--desk-text)] max-sm:line-clamp-2 max-sm:whitespace-normal">
+      <span className="feed-article-title block truncate text-[0.86rem] tracking-tight text-[var(--desk-text-secondary)] transition-colors group-hover:text-[var(--desk-text)] group-focus-visible:text-[var(--desk-text)] max-sm:line-clamp-2 max-sm:whitespace-normal">
         {title}
       </span>
       {coords
@@ -1449,7 +1449,7 @@ function FeedTitleWithTooltip({
                 "shadow-[0_12px_32px_rgba(0,0,0,0.5)]",
               )}
             >
-              <span className="block text-[0.8rem] leading-snug font-medium break-words whitespace-normal text-[var(--desk-text)]">
+              <span className="feed-article-title block text-[0.8rem] leading-snug break-words whitespace-normal text-[var(--desk-text)]">
                 {tip}
               </span>
               {meta ? (
