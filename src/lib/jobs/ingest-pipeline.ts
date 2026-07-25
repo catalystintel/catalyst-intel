@@ -2,7 +2,7 @@ import { and, eq, gte } from "drizzle-orm";
 
 import { db } from "@/db/client";
 import { catalysts, companies, rawSources } from "@/db/schema";
-import type { SentimentLean, TickerSource } from "@/db/schema";
+import type { SentimentLean, SymbolSource } from "@/db/schema";
 import { ensureIngestSummary } from "@/lib/catalysts/article-content";
 import { computeMateriality } from "@/lib/catalysts/materiality";
 import { evaluateCatalystQuality } from "@/lib/catalysts/quality-gate";
@@ -28,7 +28,7 @@ export interface NormalizedCatalyst {
   externalId: string;
   url?: string | null;
   rawContent: unknown;
-  ticker?: string | null;
+  symbol?: string | null;
   companyName?: string | null;
   type: string;
   title: string;
@@ -42,8 +42,8 @@ export interface NormalizedCatalyst {
   confidence?: number | null;
   tags?: string[] | null;
   historicalImpact?: unknown | null;
-  /** How `ticker` was resolved — see ticker-resolver.ts. Null = not applicable / vendor-native. */
-  tickerSource?: TickerSource | null;
+  /** How `symbol` was resolved — see symbol-resolver.ts. Null = not applicable / vendor-native. */
+  symbolSource?: SymbolSource | null;
   sentiment?: SentimentLean | null;
   sentimentReasoning?: string | null;
 }
@@ -70,31 +70,31 @@ export interface SourceFetchResult extends IngestPipelineResult {
   rateLimited?: boolean;
 }
 
-function normalizeTicker(ticker: string | null | undefined): string | null {
-  const t = ticker?.trim().toUpperCase();
+function normalizeSymbol(symbol: string | null | undefined): string | null {
+  const t = symbol?.trim().toUpperCase();
   return t || null;
 }
 
 async function resolveCompany(
-  ticker: string | null,
+  symbol: string | null,
   companyName: string | null | undefined,
 ): Promise<{ id: number | null; marketCapMillions: number | null }> {
-  if (!ticker) return { id: null, marketCapMillions: null };
+  if (!symbol) return { id: null, marketCapMillions: null };
 
   const existing = await db
     .select({ id: companies.id, marketCap: companies.marketCap })
     .from(companies)
-    .where(eq(companies.ticker, ticker))
+    .where(eq(companies.symbol, symbol))
     .get();
 
   if (existing) {
     return { id: existing.id, marketCapMillions: existing.marketCap };
   }
 
-  const name = companyName?.trim() || ticker;
+  const name = companyName?.trim() || symbol;
   const inserted = await db
     .insert(companies)
-    .values({ name, ticker })
+    .values({ name, symbol })
     .returning({ id: companies.id })
     .get();
   return { id: inserted.id, marketCapMillions: null };
@@ -145,15 +145,15 @@ export async function ingestNormalizedCatalysts(
         continue;
       }
 
-      const ticker = normalizeTicker(item.ticker);
+      const symbol = normalizeSymbol(item.symbol);
       const companyName = item.companyName?.trim() || null;
       const timestamp = item.timestamp
         ? new Date(item.timestamp).toISOString()
         : new Date().toISOString();
 
-      // Cross-API near-dupe: same ticker + similar title in the window.
+      // Cross-API near-dupe: same symbol + similar title in the window.
       // Prefer keeping the better source (SEC over wire retellings).
-      if (ticker) {
+      if (symbol) {
         const since = new Date(
           Date.now() - DEDUPE_WINDOW_MINUTES * 60 * 1000,
         ).toISOString();
@@ -170,13 +170,13 @@ export async function ingestNormalizedCatalysts(
           .from(catalysts)
           .leftJoin(rawSources, eq(catalysts.rawSourceId, rawSources.id))
           .where(
-            and(eq(catalysts.ticker, ticker), gte(catalysts.timestamp, since)),
+            and(eq(catalysts.symbol, symbol), gte(catalysts.timestamp, since)),
           )
           .all();
 
         const dupe = shouldSkipAsDuplicate(
           {
-            ticker,
+            symbol,
             title: item.title,
             headline: item.headline,
             provider: item.provider,
@@ -211,7 +211,7 @@ export async function ingestNormalizedCatalysts(
         .get();
 
       const { id: companyId, marketCapMillions } = await resolveCompany(
-        ticker,
+        symbol,
         companyName,
       );
 
@@ -239,7 +239,7 @@ export async function ingestNormalizedCatalysts(
         headline: item.headline,
         provider: item.provider,
         rawContent: item.rawContent,
-        ticker,
+        symbol,
         companyName,
         eventCategory: category,
         subcategory: item.subcategory,
@@ -251,7 +251,7 @@ export async function ingestNormalizedCatalysts(
         .insert(catalysts)
         .values({
           companyId,
-          ticker,
+          symbol,
           companyName,
           type: item.type,
           title: item.title,
@@ -266,7 +266,7 @@ export async function ingestNormalizedCatalysts(
           confidence: item.confidence ?? null,
           tags: item.tags ?? null,
           historicalImpact: item.historicalImpact ?? null,
-          tickerSource: item.tickerSource ?? null,
+          symbolSource: item.symbolSource ?? null,
           sentiment: item.sentiment ?? null,
           sentimentReasoning: item.sentimentReasoning ?? null,
           materialityReasons,

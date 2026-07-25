@@ -47,7 +47,7 @@ describe("parseFeedQueryFromSearchParams", () => {
       forms: "8-K,424B",
       sources: "sec-edgar",
       window: "24h",
-      tickerOnly: "1",
+      symbolOnly: "1",
     });
     const filters = parseFeedQueryFromSearchParams(params, {
       nowIso: "2026-07-24T20:00:00.000Z",
@@ -58,23 +58,23 @@ describe("parseFeedQueryFromSearchParams", () => {
     expect(filters.forms).toEqual(["8-K", "424B"]);
     expect(filters.sources).toEqual(["sec-edgar"]);
     expect(filters.timeWindow).toBe("24h");
-    expect(filters.tickerOnly).toBe(true);
+    expect(filters.symbolOnly).toBe(true);
     expect(filters.since).toBeTruthy();
   });
 
-  it("defaults tickerOnly on when param absent", () => {
+  it("defaults symbolOnly on when param absent", () => {
     const filters = parseFeedQueryFromSearchParams(new URLSearchParams(), {
       nowIso: "2026-07-24T20:00:00.000Z",
     });
-    expect(filters.tickerOnly).toBe(true);
+    expect(filters.symbolOnly).toBe(true);
   });
 
-  it("still parses tickerOnly false (gate remains always-on in SQL)", () => {
+  it("still parses symbolOnly false (gate remains always-on in SQL)", () => {
     const filters = parseFeedQueryFromSearchParams(
-      new URLSearchParams({ tickerOnly: "0" }),
+      new URLSearchParams({ symbolOnly: "0" }),
       { nowIso: "2026-07-24T20:00:00.000Z" },
     );
-    expect(filters.tickerOnly).toBe(false);
+    expect(filters.symbolOnly).toBe(false);
   });
 });
 

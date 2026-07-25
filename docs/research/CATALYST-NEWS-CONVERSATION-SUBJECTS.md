@@ -42,17 +42,17 @@
 - Soft-polls `GET /api/catalysts` (~20s focused / ~90s blurred; paused when tab hidden).
 - **Act** opens in-app Read / drawer; **Dismiss** hides row in-browser (`localStorage`, last 200 ids) — does **not** delete DB rows.
 - Materiality badge: High / Medium / Low + numeric score (rule-based when AI scoring absent).
-- Filters: ticker, time window (1h / 4h / 24h / All), category chips; **Quiet playbook** via `/watchlist` + `/api/playbook`.
+- Filters: symbol, time window (1h / 4h / 24h / All), category chips; **Quiet playbook** via `/watchlist` + `/api/playbook`.
 
 ### Column model (live grid)
 
-**Ticker/Event · Sector · Impact · Title · Proof · Time**
+**Symbol/Event · Sector · Impact · Title · Proof · Time**
 
 Older “Source | Sector | Title | Time” (or Title | Time | Event) copy is superseded for the live grid. Source (e.g. SEC EDGAR) appears under title actions / drawer.
 
 ### Article / Read (`/dashboard/catalyst/[id]`)
 
-- In-app article: ticker, category, summary, best-available stored body.
+- In-app article: symbol, category, summary, best-available stored body.
 - **Proof** / secondary CTA opens original vendor URL (SEC EDGAR when applicable) in a new tab — does not replace the reader.
 - **WIIM-lite** already in pipeline (`deriveWhyMoving` + optional session Δ); roadmap P0 is a WIIM-style one-liner + short bullet summary on Read (Benzinga IA borrow, not clone).
 - Full HTML scrape of vendor pages is intentionally out of scope (robots/ToS); surface vendor-provided text from ingest payloads.
@@ -61,7 +61,7 @@ Older “Source | Sector | Title | Time” (or Title | Time | Event) copy is sup
 
 | Route        | Role                                             |
 | ------------ | ------------------------------------------------ |
-| `/watchlist` | Tickers + playbook categories + Quiet mode       |
+| `/watchlist` | Symbols + playbook categories + Quiet mode       |
 | `/alerts`    | Webhook / email rules; push stub (“coming soon”) |
 | `/admin`     | Allowlisted ingest triggers + fetch order UI     |
 

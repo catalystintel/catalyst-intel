@@ -48,15 +48,15 @@ describe("fetchArticleEnrichment", () => {
     vi.unstubAllGlobals();
   });
 
-  it("returns empty enrichment without ticker or keys", async () => {
+  it("returns empty enrichment without symbol or keys", async () => {
     finnhubKey.mockReturnValue(null);
     polygonKey.mockReturnValue(null);
-    expect(await fetchArticleEnrichment({ ticker: null })).toEqual({
+    expect(await fetchArticleEnrichment({ symbol: null })).toEqual({
       profile: null,
       relatedHeadlines: [],
       quote: null,
     });
-    expect(await fetchArticleEnrichment({ ticker: "!!!" })).toEqual({
+    expect(await fetchArticleEnrichment({ symbol: "!!!" })).toEqual({
       profile: null,
       relatedHeadlines: [],
       quote: null,
@@ -74,7 +74,7 @@ describe("fetchArticleEnrichment", () => {
         if (url.includes("/stock/profile2")) {
           return Response.json({
             name: "Apple Inc",
-            ticker: "AAPL",
+            symbol: "AAPL",
             finnhubIndustry: "Technology",
             marketCapitalization: 3_200_000,
             exchange: "NASDAQ NMS",
@@ -121,7 +121,7 @@ describe("fetchArticleEnrichment", () => {
     );
 
     const result = await fetchArticleEnrichment({
-      ticker: "aapl",
+      symbol: "aapl",
       excludeCatalystId: 99,
     });
 
@@ -140,7 +140,7 @@ describe("fetchArticleEnrichment", () => {
       new Error("network down"),
     );
 
-    await expect(fetchArticleEnrichment({ ticker: "MSFT" })).resolves.toEqual({
+    await expect(fetchArticleEnrichment({ symbol: "MSFT" })).resolves.toEqual({
       profile: null,
       relatedHeadlines: [],
       quote: null,
@@ -164,8 +164,8 @@ describe("fetchArticleEnrichment", () => {
       }),
     );
 
-    await fetchArticleEnrichment({ ticker: "NVDA" });
-    await fetchArticleEnrichment({ ticker: "NVDA" });
+    await fetchArticleEnrichment({ symbol: "NVDA" });
+    await fetchArticleEnrichment({ symbol: "NVDA" });
 
     // profile + news + quote once each (3), not doubled
     expect(fetchMock).toHaveBeenCalledTimes(3);
@@ -199,7 +199,7 @@ describe("fetchArticleEnrichment", () => {
       },
     );
 
-    const result = await fetchArticleEnrichment({ ticker: "NVDA" });
+    const result = await fetchArticleEnrichment({ symbol: "NVDA" });
     expect(result.relatedHeadlines[0]?.title).toBe("NVDA rallies on AI demand");
     expect(result.quote?.provider).toBe("polygon");
     expect(result.quote?.changePercent).toBeCloseTo(5, 2);

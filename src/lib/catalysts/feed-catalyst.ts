@@ -18,7 +18,7 @@ const AI_LEAN_SET = new Set<AiLean>([
 /** A single catalyst as consumed by the Live feed UI. */
 export interface FeedCatalyst {
   id: number;
-  ticker: string | null;
+  symbol: string | null;
   companyName: string | null;
   type: string;
   title: string;
@@ -71,7 +71,7 @@ export function sortFeedNewestFirst<
 /** Shape shared by the DB row and the JSON API response before normalization. */
 export interface RawCatalystRow {
   id: number;
-  ticker: string | null;
+  symbol: string | null;
   companyName?: string | null;
   type: string;
   title: string;
@@ -134,7 +134,7 @@ function normalizeAiLean(value: string | null | undefined): AiLean | null {
 export function toFeedCatalyst(row: RawCatalystRow): FeedCatalyst {
   return {
     id: row.id,
-    ticker: row.ticker,
+    symbol: row.symbol,
     companyName: row.companyName ?? null,
     type: row.type,
     title: row.title,

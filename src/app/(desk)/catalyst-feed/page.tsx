@@ -14,17 +14,17 @@ import { withDbRetry } from "@/lib/db/with-db-retry";
 import { parseFeedCatalystId } from "@/lib/nav/feed-href";
 
 function ssrFeedFilters(nowIso: string): FeedQueryFilters {
-  // Same shared query as `/api/catalysts` — ticker gate always applied
-  // (CPI / Jobs NFP excepted via `tickerFeedGateSql`).
+  // Same shared query as `/api/catalysts` — symbol gate always applied
+  // (CPI / Jobs NFP excepted via `symbolFeedGateSql`).
   const defaults: FeedFilterState = DEFAULT_FEED_FILTERS;
   return {
-    q: defaults.tickerQuery,
+    q: defaults.symbolQuery,
     categories: defaults.categoryFilters,
     sectors: defaults.sectorFilters,
     forms: defaults.formFilters,
     sources: defaults.sourceFilters,
     timeWindow: defaults.timeWindow,
-    tickerOnly: true,
+    symbolOnly: true,
     since: null,
     until: nowIso,
   };
@@ -33,9 +33,9 @@ function ssrFeedFilters(nowIso: string): FeedQueryFilters {
 export default async function CatalystFeedPage({
   searchParams,
 }: {
-  searchParams: Promise<{ ticker?: string; c?: string }>;
+  searchParams: Promise<{ symbol?: string; c?: string }>;
 }) {
-  const { ticker, c } = await searchParams;
+  const { symbol, c } = await searchParams;
   const initialSelectedId = parseFeedCatalystId(c);
 
   // Auth / DB setup handled by the shared `(desk)/layout.tsx`.
@@ -53,7 +53,7 @@ export default async function CatalystFeedPage({
       <LiveCatalystFeed
         initialCatalysts={recentCatalysts.map(toFeedCatalyst)}
         isAdmin={user.isAdmin}
-        initialTickerFilter={ticker?.trim().toUpperCase() || undefined}
+        initialSymbolFilter={symbol?.trim().toUpperCase() || undefined}
         initialSelectedId={initialSelectedId}
       />
     </PageEnter>

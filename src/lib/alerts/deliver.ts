@@ -4,7 +4,7 @@ import { validateWebhookUrl } from "@/lib/alerts/webhook-url";
 
 export interface AlertCatalystPayload {
   id: number;
-  ticker: string | null;
+  symbol: string | null;
   headline: string | null;
   title: string;
   eventCategory: string | null;
@@ -33,7 +33,7 @@ export interface DeliveryResult {
 function conditionsMatch(
   catalyst: AlertCatalystPayload,
   conditions: AlertRuleConditions,
-  watchlistTickers?: Set<string>,
+  watchlistSymbols?: Set<string>,
 ): boolean {
   const cats = conditions.categories ?? [];
   if (cats.length > 0) {
@@ -52,8 +52,8 @@ function conditionsMatch(
   if (!sessionMatches(filingSession, conditions.sessions)) return false;
 
   if (conditions.watchlistOnly) {
-    const ticker = catalyst.ticker?.toUpperCase();
-    if (!ticker || !watchlistTickers?.has(ticker)) return false;
+    const symbol = catalyst.symbol?.toUpperCase();
+    if (!symbol || !watchlistSymbols?.has(symbol)) return false;
   }
 
   return true;
@@ -65,7 +65,7 @@ function buildBody(catalyst: AlertCatalystPayload, ruleName: string) {
     rule: ruleName,
     catalyst: {
       id: catalyst.id,
-      ticker: catalyst.ticker,
+      symbol: catalyst.symbol,
       headline: catalyst.headline ?? catalyst.title,
       eventCategory: catalyst.eventCategory,
       impactScore: catalyst.impactScore,
@@ -122,13 +122,13 @@ async function deliverEmail(
     process.env.RESEND_FROM_EMAIL?.trim() ||
     "Catalyst Intel <onboarding@resend.dev>";
 
-  const subject = `[Catalyst] ${catalyst.ticker ?? "—"} · ${catalyst.headline ?? catalyst.title}`;
+  const subject = `[Catalyst] ${catalyst.symbol ?? "—"} · ${catalyst.headline ?? catalyst.title}`;
   const proof = catalyst.sourceUrl
     ? `\nProof (EDGAR): ${catalyst.sourceUrl}`
     : "";
   const text = [
     `Rule: ${ruleName}`,
-    `Ticker: ${catalyst.ticker ?? "—"}`,
+    `Symbol: ${catalyst.symbol ?? "—"}`,
     `Event: ${catalyst.headline ?? catalyst.title}`,
     `Category: ${catalyst.eventCategory ?? "—"}`,
     `Materiality: ${catalyst.impactScore ?? "—"}`,
@@ -174,14 +174,14 @@ export async function deliverAlertRules(options: {
   /** When true, skip condition matching (admin test fire). */
   force?: boolean;
   /**
-   * Uppercase tickers on the rule owner's watchlist — required for
+   * Uppercase symbols on the rule owner's watchlist — required for
    * `watchlistOnly` conditions to match. Omit = treat as empty watchlist.
    */
-  watchlistTickers?: string[];
+  watchlistSymbols?: string[];
 }): Promise<DeliveryResult[]> {
   const results: DeliveryResult[] = [];
   const watchlistSet = new Set(
-    (options.watchlistTickers ?? []).map((t) => t.toUpperCase()),
+    (options.watchlistSymbols ?? []).map((t) => t.toUpperCase()),
   );
 
   for (const rule of options.rules) {

@@ -47,7 +47,7 @@ Primary wedge: **SEC filings (especially 8-K / material events)** ingested, norm
 | Persona                             | Profile                                                                                                         | Core job                                                                 |
 | ----------------------------------- | --------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
 | **P1 — Catalyst day trader**        | Trades opening range / AH gaps / halt resumes driven by filings & headlines. Screens open 6:00–16:00 ET.        | See material events in seconds; decide long/short/skip before the crowd. |
-| **P2 — Event-driven / news trader** | Explicitly waits for catalysts (offerings, M&A, guidance, investigations). Often pairs with charting + Level 2. | Filter noise; keep only event types + tickers that match their playbook. |
+| **P2 — Event-driven / news trader** | Explicitly waits for catalysts (offerings, M&A, guidance, investigations). Often pairs with charting + Level 2. | Filter noise; keep only event types + symbols that match their playbook. |
 
 ### Secondary (serve without diluting)
 
@@ -76,7 +76,7 @@ Positioning language: _trading desk_, not _AI SaaS_. Dense feed, keyboard-first,
 
 ### Jobs-to-be-done
 
-1. **When** a filing or material event hits, **I want** to know ticker + event type + materiality **in seconds**, **so I can** act or dismiss before liquidity thins.
+1. **When** a filing or material event hits, **I want** to know symbol + event type + materiality **in seconds**, **so I can** act or dismiss before liquidity thins.
 2. **When** my watchlist is quiet, **I want** only high-impact / playbook-matching catalysts, **so I** don’t drown in 8-K noise.
 3. **When** I see a headline, **I want** one-click proof (EDGAR accession / primary source), **so I** don’t trade rumors.
 4. **When** I’m away from the desk, **I want** push/email/webhook on _my_ rules, **so I** don’t miss AH/PM bombs.
@@ -96,7 +96,7 @@ Positioning language: _trading desk_, not _AI SaaS_. Dense feed, keyboard-first,
 ### Must-satisfy outcomes
 
 - Latency from public disclosure → visible row: **target &lt; 30–60s** (POC honesty: cron + poll today; tighten via scheduler + push later)
-- Every row: **Source | Sector | Title | Time·date** + ticker + deep link
+- Every row: **Source | Sector | Title | Time·date** + symbol + deep link
 - Filters that match trader playbooks (form type, item codes, sector, market cap, watchlist)
 - Scores that are **explainable** (why impact = High)
 - Legal clarity: intelligence tool, not advice; attribution to SEC/FDA sources
@@ -137,7 +137,7 @@ Do not claim “faster than Benzinga wire” without measurement. Claim **struct
 
 1. **Blotter density** — Rows over cards. First viewport = live tape. No marketing hero inside the app.
 2. **Provenance first** — Every event shows Source, timestamp (ET), and link to primary document.
-3. **Column grammar** — `Source | Sector | Title | Time·date` (+ ticker, score). Scannable in &lt;200ms per row.
+3. **Column grammar** — `Source | Sector | Title | Time·date` (+ symbol, score). Scannable in &lt;200ms per row.
 4. **Speed is a feature** — Visible “as of” / live indicator; stale data must scream, not whisper.
 5. **Explainable AI** — Scores show reasons (e.g., Item 2.01, offering size, halt). No black-box oracles.
 6. **Playbook filters** — Save filter presets (“Offerings only”, “Biotech 8-K”, “Watchlist High”).
@@ -158,9 +158,9 @@ Mapped to needs. Priority: **Must / Should / Later**.
 | --- | ------------------------------------------------------------------------- | ------------ |
 | M1  | Reliable SEC EDGAR ingest (8-K focus) + dedupe by accession               | JTBD 1       |
 | M2  | Live catalyst feed (poll → SSE/WS later) with Source\|Sector\|Title\|Time | JTBD 1, 3    |
-| M3  | Ticker resolution, sector, form/type, Item codes (8-K)                    | JTBD 2       |
+| M3  | Symbol resolution, sector, form/type, Item codes (8-K)                    | JTBD 2       |
 | M4  | Detail drawer: summary fields, raw link, company meta                     | JTBD 3       |
-| M5  | Filters: ticker, sector, form, category, time range                       | JTBD 2       |
+| M5  | Filters: symbol, sector, form, category, time range                       | JTBD 2       |
 | M6  | Auth + basic account; admin trigger & freshness monitor                   | Ops / trust  |
 | M7  | Retention + rate limits + legal disclaimer                                | Trust / cost |
 | M8  | Impact score v1 (rules + light LLM) with reasons                          | JTBD 1, 2    |
@@ -226,7 +226,7 @@ Supabase Google OAuth gates access
        ▼                 ▼                  ▼
 ┌──────────────────────────────────────────────────┐
 │              Ingestion layer                     │
-│  fetch · normalize · dedupe · ticker resolve     │
+│  fetch · normalize · dedupe · symbol resolve     │
 └──────────────────────┬───────────────────────────┘
                        ▼
 ┌──────────────────────────────────────────────────┐
@@ -260,7 +260,7 @@ Sign in → Live Feed
 
 ```
 New catalyst written
-  → Evaluate user rules (ticker/sector/score/form)
+  → Evaluate user rules (symbol/sector/score/form)
   → Deduplicate / rate-limit
   → Deliver email | webhook | push
   → Deep link → detail
@@ -276,7 +276,7 @@ New catalyst written
 | **Catalyst detail** (drawer or `/c/[id]`) | Proof & understand | Headline, items, score reasons, EDGAR link, company                |
 | **Watchlists**                            | Playbook focus     | CRUD lists; feed toggle “Watchlist only”                           |
 | **Alerts**                                | Away-from-desk     | Rule builder; delivery channels; quiet hours                       |
-| **Archive / Search**                      | Post-hoc research  | Query by ticker/accession/date                                     |
+| **Archive / Search**                      | Post-hoc research  | Query by symbol/accession/date                                     |
 | **Profile**                               | Account            | Name, prefs (timezone ET default), disclaimer ack                  |
 | **Admin**                                 | Ops                | Manual fetch, freshness, ingest errors, retention                  |
 | **Login**                                 | Gate               | Google OAuth only (current)                                        |
@@ -303,7 +303,7 @@ New catalyst written
 | -------------------------------------- | ---------------------------------------- |
 | Ingest lag p50 / p95 (disclosure → DB) | &lt; 30s / &lt; 90s (post-scheduler fix) |
 | Dedupe accuracy (accession)            | 100%                                     |
-| Ticker resolve rate on 8-K             | &gt; 95%                                 |
+| Symbol resolve rate on 8-K             | &gt; 95%                                 |
 
 ### Business (early)
 
@@ -350,14 +350,14 @@ New catalyst written
 | Built                                           | Planned                         |
 | ----------------------------------------------- | ------------------------------- |
 | Next.js app, Turso/libSQL, Supabase Google auth | LLM scoring (Groq/Qwen planned) |
-| `fetchSecEdgar`, 8-K item parse, ticker lookup  | Watchlists, alerts, FDA ingest  |
+| `fetchSecEdgar`, 8-K item parse, symbol lookup  | Watchlists, alerts, FDA ingest  |
 | Live poll feed, detail drawer, admin            | SSE/WS, billing, API            |
 | PostHog optional                                | Historical reaction analytics   |
 
 ## Appendix B — Tone & brand notes
 
 - Name always **Catalyst Intel**.
-- UI: desk blotter, muted status colors, monospace for times/tickers where helpful.
+- UI: desk blotter, muted status colors, monospace for times/symbols where helpful.
 - Avoid purple gradient “AI platform” aesthetics; avoid cream/terracotta editorial look.
 - Copy: short, operational (“Live”, “Stale”, “High impact”, “Source: SEC EDGAR”).
 

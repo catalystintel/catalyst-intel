@@ -69,7 +69,7 @@ export async function POST(request: NextRequest) {
     ? await db
         .select({
           id: catalysts.id,
-          ticker: catalysts.ticker,
+          symbol: catalysts.symbol,
           headline: catalysts.headline,
           title: catalysts.title,
           eventCategory: catalysts.eventCategory,
@@ -84,7 +84,7 @@ export async function POST(request: NextRequest) {
     : await db
         .select({
           id: catalysts.id,
-          ticker: catalysts.ticker,
+          symbol: catalysts.symbol,
           headline: catalysts.headline,
           title: catalysts.title,
           eventCategory: catalysts.eventCategory,

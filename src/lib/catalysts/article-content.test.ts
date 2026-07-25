@@ -128,7 +128,7 @@ describe("resolveArticleSummary", () => {
       body: null,
       title: "AAPL — 8-K filing",
       headline: "Earnings / results",
-      ticker: "AAPL",
+      symbol: "AAPL",
       companyName: "Apple Inc",
       eventCategory: "earnings",
       type: "8-K",
@@ -149,7 +149,7 @@ describe("ensureIngestSummary / provider samples", () => {
       title: "AAPL — Form 4",
       headline: "Open market purchase",
       provider: "form4api",
-      ticker: "AAPL",
+      symbol: "AAPL",
       companyName: "Apple Inc",
       eventCategory: "insider",
       type: "Form 4",
@@ -169,7 +169,7 @@ describe("ensureIngestSummary / provider samples", () => {
       title: "Tesla, Inc. — 8-K filing",
       headline: "Officer / director change",
       provider: "sec-edgar",
-      ticker: "TSLA",
+      symbol: "TSLA",
       companyName: "Tesla, Inc.",
       eventCategory: "management",
       type: "8-K",
@@ -190,7 +190,7 @@ describe("ensureIngestSummary / provider samples", () => {
       title: "XYZ — Trading halt",
       headline: "Trading halt",
       provider: "nasdaq-halts",
-      ticker: "XYZ",
+      symbol: "XYZ",
       companyName: "XYZ",
       eventCategory: "trading_halt",
       subcategory: "halt",
@@ -214,7 +214,7 @@ describe("ensureIngestSummary / provider samples", () => {
       title: "NVDA — Earnings 2026-08-01",
       headline: "Earnings",
       provider: "finnhub",
-      ticker: "NVDA",
+      symbol: "NVDA",
       companyName: "NVIDIA Corp",
       eventCategory: "earnings",
       type: "Earnings",
@@ -238,7 +238,7 @@ describe("ensureIngestSummary / provider samples", () => {
       title: "Acme wins major defense contract",
       headline: "Defense contract win",
       provider: "polygon",
-      ticker: "ACME",
+      symbol: "ACME",
       companyName: "Acme Dynamics",
       eventCategory: "news",
       type: "News",
@@ -256,9 +256,9 @@ describe("ensureIngestSummary / provider samples", () => {
 });
 
 describe("synthesizeReadableSummary", () => {
-  it("never returns empty when ticker + category exist", () => {
+  it("never returns empty when symbol + category exist", () => {
     const text = synthesizeReadableSummary({
-      ticker: "MSFT",
+      symbol: "MSFT",
       eventCategory: "disclosure",
       title: "MSFT — 8-K",
       provider: "sec-edgar",

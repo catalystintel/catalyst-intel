@@ -9,7 +9,7 @@
 /**
  * Vendor (Finnhub/Yahoo-style) country/market suffix → TradingView exchange
  * prefix. Only 2-3 letter codes are listed here — single-letter suffixes
- * (".A", ".B", ".PR"...) are legitimate US share-class/security tickers
+ * (".A", ".B", ".PR"...) are legitimate US share-class/security symbols
  * (e.g. "BRK.B") and must never be treated as a stray vendor suffix.
  */
 const VENDOR_SUFFIX_EXCHANGE: Record<string, string> = {
@@ -25,8 +25,8 @@ const VENDOR_SUFFIX_EXCHANGE: Record<string, string> = {
 
 /**
  * Splits a Yahoo/Finnhub-style dual-listing suffix (e.g. "BNS.TO") off a
- * ticker, but only when the suffix is a *known* 2-3 letter market code —
- * this avoids mangling real share-class tickers like "BRK.B" or "BF.A".
+ * symbol, but only when the suffix is a *known* 2-3 letter market code —
+ * this avoids mangling real share-class symbols like "BRK.B" or "BF.A".
  */
 function splitKnownVendorSuffix(
   raw: string,
@@ -39,47 +39,47 @@ function splitKnownVendorSuffix(
 }
 
 /**
- * Map ticker + vendor exchange string → TradingView `EXCHANGE:TICKER`.
+ * Map symbol + vendor exchange string → TradingView `EXCHANGE:SYMBOL`.
  *
  * Vendors sometimes canonicalize a bare, dual-listed query to their foreign
- * listing and hand back a suffixed ticker instead (e.g. Finnhub's
- * `/stock/profile2?symbol=BNS` returns `ticker: "BNS.TO"`,
+ * listing and hand back a suffixed symbol instead (e.g. Finnhub's
+ * `/stock/profile2?symbol=BNS` returns `symbol: "BNS.TO"`,
  * `exchange: "TORONTO STOCK EXCHANGE"`). TradingView has no symbol matching
- * that literal string — it needs the bare ticker plus a real exchange
+ * that literal string — it needs the bare symbol plus a real exchange
  * prefix (`TSX:BNS`) — so we always strip a *known* vendor suffix before
  * applying the exchange-prefix rules below, and fall back to the suffix's
  * own market code when the exchange string itself doesn't say enough.
  */
 export function toTradingViewSymbol(
-  ticker: string,
+  symbol: string,
   exchange: string | null | undefined,
 ): string {
-  const raw = ticker.trim().toUpperCase();
+  const raw = symbol.trim().toUpperCase();
   if (!raw) return raw;
   const ex = (exchange ?? "").toUpperCase();
 
   const vendorSuffix = splitKnownVendorSuffix(raw);
-  const symbol = vendorSuffix?.base ?? raw;
+  const base = vendorSuffix?.base ?? raw;
 
-  if (ex.includes("NASDAQ")) return `NASDAQ:${symbol}`;
+  if (ex.includes("NASDAQ")) return `NASDAQ:${base}`;
   if (
     ex.includes("AMEX") ||
     ex.includes("NYSE MKT") ||
     ex.includes("NYSE ARCA") ||
     ex.includes("ARCA")
   ) {
-    return `AMEX:${symbol}`;
+    return `AMEX:${base}`;
   }
-  if (ex.includes("NYSE") || ex.includes("NEW YORK")) return `NYSE:${symbol}`;
-  if (ex.includes("OTC") || ex.includes("PINK")) return `OTC:${symbol}`;
-  if (ex.includes("VENTURE")) return `TSXV:${symbol}`;
-  if (ex.includes("TORONTO") || ex.includes("TSX")) return `TSX:${symbol}`;
-  if (ex.includes("LONDON")) return `LSE:${symbol}`;
+  if (ex.includes("NYSE") || ex.includes("NEW YORK")) return `NYSE:${base}`;
+  if (ex.includes("OTC") || ex.includes("PINK")) return `OTC:${base}`;
+  if (ex.includes("VENTURE")) return `TSXV:${base}`;
+  if (ex.includes("TORONTO") || ex.includes("TSX")) return `TSX:${base}`;
+  if (ex.includes("LONDON")) return `LSE:${base}`;
 
   if (vendorSuffix)
     return `${vendorSuffix.exchangePrefix}:${vendorSuffix.base}`;
 
-  return symbol;
+  return base;
 }
 
 /** Format Finnhub market cap (millions USD) for desk display. */

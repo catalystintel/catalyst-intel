@@ -41,13 +41,13 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const { quote, profile } = await fetchMarketQuoteBundle({ ticker: raw });
-  const ticker = (profile?.ticker ?? raw).toUpperCase();
-  const tradingViewSymbol = toTradingViewSymbol(ticker, profile?.exchange);
+  const { quote, profile } = await fetchMarketQuoteBundle({ symbol: raw });
+  const symbol = (profile?.symbol ?? raw).toUpperCase();
+  const tradingViewSymbol = toTradingViewSymbol(symbol, profile?.exchange);
 
   return withRateLimitHeaders(
     NextResponse.json({
-      ticker,
+      symbol,
       tradingViewSymbol,
       quote,
       profile,

@@ -16,7 +16,7 @@ import {
   deriveTakeaways,
   deriveWhyMoving,
   extractArticleThumbUrl,
-  extractRelatedTickers,
+  extractRelatedSymbols,
   parseDeltaSincePublish,
 } from "@/lib/catalysts/article-funnel";
 import {
@@ -24,7 +24,7 @@ import {
   getCatalystRawContent,
 } from "@/lib/catalysts/article-page-data";
 import {
-  fetchLatestEarningsForTicker,
+  fetchLatestEarningsForSymbol,
   needsEarningsEnrichment,
 } from "@/lib/catalysts/enrich-earnings";
 import {
@@ -90,7 +90,7 @@ export default async function CatalystArticlePage({ params }: PageProps) {
     title: row.title,
     headline: row.headline,
     body,
-    ticker: row.ticker,
+    symbol: row.symbol,
     companyName: row.companyName,
     eventCategory: row.eventCategory,
     subcategory: row.subcategory,
@@ -106,7 +106,7 @@ export default async function CatalystArticlePage({ params }: PageProps) {
     type: row.type,
     headline: row.headline,
     title: row.title,
-    ticker: row.ticker,
+    symbol: row.symbol,
     companyName: row.companyName,
     provider: row.sourceProvider,
     tags: catalyst.tags,
@@ -116,17 +116,17 @@ export default async function CatalystArticlePage({ params }: PageProps) {
 
   const shouldFetchEarnings =
     isEarningsCatalyst(earningsMeta) &&
-    Boolean(row.ticker) &&
+    Boolean(row.symbol) &&
     needsEarningsEnrichment(row.rawContent);
 
   // Vendors are optional chrome — never spend more than 1s on them.
   const [enrichedEarnings, enrichment] = await withTimeBudget(
     Promise.all([
-      shouldFetchEarnings && row.ticker
-        ? fetchLatestEarningsForTicker(row.ticker)
+      shouldFetchEarnings && row.symbol
+        ? fetchLatestEarningsForSymbol(row.symbol)
         : Promise.resolve(null),
       fetchArticleEnrichment({
-        ticker: row.ticker,
+        symbol: row.symbol,
         excludeCatalystId: row.id,
       }),
     ]),
@@ -149,9 +149,9 @@ export default async function CatalystArticlePage({ params }: PageProps) {
     delta: deltaSincePublish,
   });
   const takeaways = deriveTakeaways(summary, body);
-  const relatedTickers = extractRelatedTickers(
+  const relatedSymbols = extractRelatedSymbols(
     row.rawContent,
-    row.ticker,
+    row.symbol,
     catalyst.tags,
   );
   const thumbUrl = extractArticleThumbUrl(row.rawContent);
@@ -169,7 +169,7 @@ export default async function CatalystArticlePage({ params }: PageProps) {
         detailCards={detailCards}
         whyMoving={whyMoving}
         takeaways={takeaways}
-        relatedTickers={relatedTickers}
+        relatedSymbols={relatedSymbols}
         thumbUrl={thumbUrl}
         deltaSincePublish={deltaSincePublish}
         enrichment={enrichment}

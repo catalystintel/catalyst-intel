@@ -64,13 +64,13 @@ export async function GET(request: NextRequest) {
   }
 
   const performance = await fetchRangePerformance({
-    ticker: raw,
+    symbol: raw,
     range: rangeRaw,
   });
 
   return withRateLimitHeaders(
     NextResponse.json({
-      ticker: raw.toUpperCase(),
+      symbol: raw.toUpperCase(),
       ...performance,
     }),
     limitResult,

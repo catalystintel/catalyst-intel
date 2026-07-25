@@ -26,7 +26,7 @@ import {
 import { cn } from "@/lib/utils";
 
 type QuotePayload = {
-  ticker: string;
+  symbol: string;
   tradingViewSymbol: string;
   quote: ArticleMarketQuote | null;
   profile: ArticleCompanyProfile | null;
@@ -108,9 +108,9 @@ export function TapeSplitPanel({
   /** Full-screen overlay on small viewports. */
   mobileOverlay?: boolean;
 }) {
-  const ticker = catalyst.ticker?.trim().toUpperCase() || null;
+  const symbol = catalyst.symbol?.trim().toUpperCase() || null;
   const [market, setMarket] = useState<QuotePayload | null>(null);
-  const [quoteLoading, setQuoteLoading] = useState(Boolean(ticker));
+  const [quoteLoading, setQuoteLoading] = useState(Boolean(symbol));
   const [chartRange, setChartRange] =
     useState<ChartRangeKey>(DEFAULT_CHART_RANGE);
   const [rangePerf, setRangePerf] = useState<{
@@ -153,7 +153,7 @@ export function TapeSplitPanel({
   }, [onClose, mobileOverlay]);
 
   useEffect(() => {
-    if (!ticker) return;
+    if (!symbol) return;
 
     let cancelled = false;
     const id = window.setTimeout(() => {
@@ -166,7 +166,7 @@ export function TapeSplitPanel({
       void (async () => {
         try {
           const res = await fetch(
-            `/api/market/quote?symbol=${encodeURIComponent(ticker)}`,
+            `/api/market/quote?symbol=${encodeURIComponent(symbol)}`,
             { credentials: "same-origin" },
           );
           if (!res.ok) throw new Error("quote failed");
@@ -175,8 +175,8 @@ export function TapeSplitPanel({
         } catch {
           if (!cancelled) {
             setMarket({
-              ticker,
-              tradingViewSymbol: toTradingViewSymbol(ticker, null),
+              symbol,
+              tradingViewSymbol: toTradingViewSymbol(symbol, null),
               quote: null,
               profile: null,
             });
@@ -191,11 +191,11 @@ export function TapeSplitPanel({
       cancelled = true;
       window.clearTimeout(id);
     };
-  }, [ticker]);
+  }, [symbol]);
 
   useEffect(() => {
     // 1D uses the session quote — ignore cached multi-day performance.
-    if (!ticker || chartRange === "1D") return;
+    if (!symbol || chartRange === "1D") return;
 
     let cancelled = false;
     const id = window.setTimeout(() => {
@@ -204,7 +204,7 @@ export function TapeSplitPanel({
       void (async () => {
         try {
           const res = await fetch(
-            `/api/market/performance?symbol=${encodeURIComponent(ticker)}&range=${encodeURIComponent(chartRange)}`,
+            `/api/market/performance?symbol=${encodeURIComponent(symbol)}&range=${encodeURIComponent(chartRange)}`,
             { credentials: "same-origin" },
           );
           if (!res.ok) throw new Error("performance failed");
@@ -232,11 +232,11 @@ export function TapeSplitPanel({
       cancelled = true;
       window.clearTimeout(id);
     };
-  }, [ticker, chartRange]);
+  }, [symbol, chartRange]);
 
   const tvSymbol =
     market?.tradingViewSymbol ??
-    (ticker ? toTradingViewSymbol(ticker, null) : null);
+    (symbol ? toTradingViewSymbol(symbol, null) : null);
 
   const useRangeMove = chartRange !== "1D";
   const displayPrice = useRangeMove
@@ -272,13 +272,13 @@ export function TapeSplitPanel({
             {eventTitle}
           </h2>
           <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1">
-            {ticker ? (
+            {symbol ? (
               <span className="font-mono text-sm font-semibold tracking-wide text-[var(--desk-text)]">
-                {ticker}
+                {symbol}
               </span>
             ) : (
               <span className="rounded-sm border border-[var(--desk-warn-border)] bg-[var(--desk-warn-bg)] px-1.5 py-0.5 font-mono text-[0.65rem] tracking-wide text-[var(--desk-warn-text)] uppercase">
-                Ticker unresolved
+                Symbol unresolved
               </span>
             )}
             {companyName ? (
@@ -291,7 +291,7 @@ export function TapeSplitPanel({
             ) : null}
           </div>
 
-          {ticker ? (
+          {symbol ? (
             <div className="mt-2 flex flex-wrap items-baseline gap-x-3 gap-y-1 font-mono text-sm tabular-nums">
               {quoteLoading && !market?.quote ? (
                 <span className="text-[var(--desk-text-dim)]">Loading…</span>
@@ -364,13 +364,13 @@ export function TapeSplitPanel({
 
       <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
         <div className="flex flex-col gap-4 border-b border-[var(--desk-border)] px-4 py-4">
-          {!ticker ? (
+          {!symbol ? (
             <div className="rounded-sm border border-[var(--desk-border)] bg-[var(--desk-overlay-soft)] px-3 py-3">
               <p className="font-mono text-[0.65rem] tracking-[0.14em] text-[var(--desk-text-dim)] uppercase">
                 Filing context
               </p>
               <p className="mt-1.5 text-sm leading-snug text-[var(--desk-text-secondary)]">
-                No tradable ticker resolved for this row — chart and quote are
+                No tradable symbol resolved for this row — chart and quote are
                 skipped. Review the filing summary below.
               </p>
               <p className="mt-2 font-mono text-[0.7rem] tracking-wide text-[var(--desk-text-dim)]">

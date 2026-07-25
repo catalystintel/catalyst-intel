@@ -53,34 +53,34 @@ describe("feed-filter-persist", () => {
     expect(isPanelFiltersDefault(DEFAULT_FEED_FILTERS)).toBe(true);
   });
 
-  it("tickerOnly alone does not count as panel filters", () => {
+  it("symbolOnly alone does not count as panel filters", () => {
     expect(
-      isPanelFiltersDefault({ ...DEFAULT_FEED_FILTERS, tickerOnly: false }),
+      isPanelFiltersDefault({ ...DEFAULT_FEED_FILTERS, symbolOnly: false }),
     ).toBe(true);
     expect(
-      isFiltersDefault({ ...DEFAULT_FEED_FILTERS, tickerOnly: false }),
+      isFiltersDefault({ ...DEFAULT_FEED_FILTERS, symbolOnly: false }),
     ).toBe(false);
   });
 
   it("round-trips multi filters", () => {
     writePersistedFeedFilters({
-      tickerQuery: "TSLA",
+      symbolQuery: "TSLA",
       categoryFilters: ["news", "earnings"],
       sectorFilters: ["information_technology"],
       formFilters: ["8-K"],
       sourceFilters: ["sec-edgar"],
       timeWindow: "4h",
-      tickerOnly: false,
+      symbolOnly: false,
     });
     expect(readPersistedFeedFilters()).toEqual({
-      tickerQuery: "TSLA",
+      symbolQuery: "TSLA",
       categoryFilters: ["news", "earnings"],
       sectorFilters: ["information_technology"],
       formFilters: ["8-K"],
       sourceFilters: ["sec-edgar"],
       timeWindow: "4h",
       // Always coerced on read — desk rule is not optional.
-      tickerOnly: true,
+      symbolOnly: true,
     });
   });
 
@@ -88,7 +88,7 @@ describe("feed-filter-persist", () => {
     localStorage.setItem(
       "ci.feed-filters.v1",
       JSON.stringify({
-        tickerQuery: "NVDA",
+        symbolQuery: "NVDA",
         categoryFilter: "earnings",
         timeWindow: "all",
         lastActiveAt: Date.now(),
@@ -105,7 +105,7 @@ describe("feed-filter-persist", () => {
   it("expires after idle", () => {
     writePersistedFeedFilters({
       ...DEFAULT_FEED_FILTERS,
-      tickerQuery: "AMZN",
+      symbolQuery: "AMZN",
     });
     vi.setSystemTime(Date.now() + FEED_FILTER_IDLE_MS + 1);
     expect(readPersistedFeedFilters()).toBeNull();
@@ -114,7 +114,7 @@ describe("feed-filter-persist", () => {
   it("clearPersistedFeedFilters removes the key", () => {
     writePersistedFeedFilters({
       ...DEFAULT_FEED_FILTERS,
-      tickerQuery: "X",
+      symbolQuery: "X",
     });
     clearPersistedFeedFilters();
     expect(localStorage.getItem(FEED_FILTER_STORAGE_KEY)).toBeNull();
@@ -122,13 +122,13 @@ describe("feed-filter-persist", () => {
 
   it("feedApiQuery encodes filters", () => {
     const qs = feedApiQuery({
-      tickerQuery: "AAPL",
+      symbolQuery: "AAPL",
       categoryFilters: ["earnings"],
       sectorFilters: ["financials"],
       formFilters: ["8-K"],
       sourceFilters: ["sec-edgar"],
       timeWindow: "24h",
-      tickerOnly: false,
+      symbolOnly: false,
     });
     const params = new URLSearchParams(qs);
     expect(params.get("q")).toBe("AAPL");
@@ -137,7 +137,7 @@ describe("feed-filter-persist", () => {
     expect(params.get("forms")).toBe("8-K");
     expect(params.get("window")).toBe("24h");
     // Always sent — tape gate is not optional.
-    expect(params.get("tickerOnly")).toBe("1");
+    expect(params.get("symbolOnly")).toBe("1");
     // Source facet is local-dev only; vitest runs with NODE_ENV=test.
     expect(params.get("sources")).toBeNull();
   });
@@ -152,11 +152,11 @@ describe("feed-filter-persist", () => {
     vi.unstubAllEnvs();
   });
 
-  it("defaults missing tickerOnly to true on read", () => {
+  it("defaults missing symbolOnly to true on read", () => {
     localStorage.setItem(
       FEED_FILTER_STORAGE_KEY,
       JSON.stringify({
-        tickerQuery: "X",
+        symbolQuery: "X",
         categoryFilters: [],
         sectorFilters: [],
         formFilters: [],
@@ -165,6 +165,6 @@ describe("feed-filter-persist", () => {
         lastActiveAt: Date.now(),
       }),
     );
-    expect(readPersistedFeedFilters()?.tickerOnly).toBe(true);
+    expect(readPersistedFeedFilters()?.symbolOnly).toBe(true);
   });
 });

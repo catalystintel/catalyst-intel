@@ -14,7 +14,7 @@ import {
   resolveArticleDetailCards,
 } from "@/lib/catalysts/article-detail";
 import {
-  fetchLatestEarningsForTicker,
+  fetchLatestEarningsForSymbol,
   needsEarningsEnrichment,
 } from "@/lib/catalysts/enrich-earnings";
 import { fetchArticleEnrichment } from "@/lib/catalysts/enrich-article";
@@ -68,7 +68,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
   const row = await db
     .select({
       id: catalysts.id,
-      ticker: catalysts.ticker,
+      symbol: catalysts.symbol,
       companyName: catalysts.companyName,
       type: catalysts.type,
       title: catalysts.title,
@@ -115,7 +115,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
     title: row.title,
     headline: row.headline,
     body,
-    ticker: row.ticker,
+    symbol: row.symbol,
     companyName: row.companyName,
     eventCategory: row.eventCategory,
     subcategory: row.subcategory,
@@ -143,7 +143,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
     type: row.type,
     headline: row.headline,
     title: row.title,
-    ticker: row.ticker,
+    symbol: row.symbol,
     companyName: row.companyName,
     provider: row.sourceProvider,
     tags,
@@ -154,10 +154,10 @@ export async function GET(request: NextRequest, context: RouteContext) {
   let enrichedEarnings = null;
   if (
     isEarningsCatalyst(detailInput) &&
-    row.ticker &&
+    row.symbol &&
     needsEarningsEnrichment(row.rawContent)
   ) {
-    enrichedEarnings = await fetchLatestEarningsForTicker(row.ticker);
+    enrichedEarnings = await fetchLatestEarningsForSymbol(row.symbol);
   }
 
   const detailCards = resolveArticleDetailCards({
@@ -166,13 +166,13 @@ export async function GET(request: NextRequest, context: RouteContext) {
   });
 
   const enrichment = await fetchArticleEnrichment({
-    ticker: row.ticker,
+    symbol: row.symbol,
     excludeCatalystId: row.id,
   });
 
   const catalyst = {
     id: row.id,
-    ticker: row.ticker,
+    symbol: row.symbol,
     companyName: row.companyName,
     type: row.type,
     title: row.title,

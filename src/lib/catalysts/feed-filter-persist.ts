@@ -19,21 +19,21 @@ import type { EventCategoryKey } from "@/lib/jobs/parse-8k-items";
  * {@link FEED_FILTER_IDLE_MS} of idle time, then falls back to product
  * defaults so a forgotten session doesn't haunt the next day.
  */
-export const FEED_FILTER_STORAGE_KEY = "ci.feed-filters.v2";
+export const FEED_FILTER_STORAGE_KEY = "ci.feed-filters.v3";
 export const FEED_FILTER_IDLE_MS = 60 * 60 * 1000; // 1 hour
 
 export interface PersistedFeedFilters {
-  tickerQuery: string;
+  symbolQuery: string;
   categoryFilters: EventCategoryKey[];
   sectorFilters: GicsSectorKey[];
   formFilters: FeedFormFilter[];
   sourceFilters: string[];
   timeWindow: FeedTimeWindow;
   /**
-   * Always true for the desk tape (ticker required; CPI / Jobs NFP excepted).
+   * Always true for the desk tape (symbol required; CPI / Jobs NFP excepted).
    * Kept on the persisted shape for API query compat / legacy readers.
    */
-  tickerOnly: boolean;
+  symbolOnly: boolean;
   /** Epoch ms of last activity while these filters were in use. */
   lastActiveAt: number;
 }
@@ -42,23 +42,23 @@ export type FeedFilterState = Omit<PersistedFeedFilters, "lastActiveAt">;
 
 /** Product defaults after idle expiry / Clear filters. */
 export const DEFAULT_FEED_FILTERS: FeedFilterState = {
-  tickerQuery: "",
+  symbolQuery: "",
   categoryFilters: [],
   sectorFilters: [],
   formFilters: [],
   sourceFilters: [],
   timeWindow: "all",
   /** Always on: tradable names only (CPI / Jobs NFP still allowed). */
-  tickerOnly: true,
+  symbolOnly: true,
 };
 
 /**
  * True when search / time / facet gates match product defaults.
- * Ignores `tickerOnly` — that gate is always enforced server-side.
+ * Ignores `symbolOnly` — that gate is always enforced server-side.
  */
 export function isPanelFiltersDefault(filters: FeedFilterState): boolean {
   return (
-    !filters.tickerQuery.trim() &&
+    !filters.symbolQuery.trim() &&
     filters.categoryFilters.length === 0 &&
     filters.sectorFilters.length === 0 &&
     filters.formFilters.length === 0 &&
@@ -67,9 +67,9 @@ export function isPanelFiltersDefault(filters: FeedFilterState): boolean {
   );
 }
 
-/** Full product default (panel filters + ticker-only desk default). */
+/** Full product default (panel filters + symbol-only desk default). */
 export function isFiltersDefault(filters: FeedFilterState): boolean {
-  return isPanelFiltersDefault(filters) && filters.tickerOnly === true;
+  return isPanelFiltersDefault(filters) && filters.symbolOnly === true;
 }
 
 function parseStringArray(value: unknown): string[] {
@@ -84,9 +84,10 @@ export function readPersistedFeedFilters(
 ): FeedFilterState | null {
   if (typeof window === "undefined") return null;
   try {
-    // Prefer v2; fall back to legacy v1 key once.
+    // Prefer v3; fall back to prior keys once.
     const raw =
       window.localStorage.getItem(FEED_FILTER_STORAGE_KEY) ??
+      window.localStorage.getItem("ci.feed-filters.v2") ??
       window.localStorage.getItem("ci.feed-filters.v1");
     if (!raw) return null;
     const parsed = JSON.parse(raw) as Partial<PersistedFeedFilters> & {
@@ -97,12 +98,13 @@ export function readPersistedFeedFilters(
       typeof parsed.lastActiveAt === "number" ? parsed.lastActiveAt : 0;
     if (!lastActiveAt || now - lastActiveAt > FEED_FILTER_IDLE_MS) {
       window.localStorage.removeItem(FEED_FILTER_STORAGE_KEY);
+      window.localStorage.removeItem("ci.feed-filters.v2");
       window.localStorage.removeItem("ci.feed-filters.v1");
       return null;
     }
 
-    const tickerQuery =
-      typeof parsed.tickerQuery === "string" ? parsed.tickerQuery : "";
+    const symbolQuery =
+      typeof parsed.symbolQuery === "string" ? parsed.symbolQuery : "";
     let categoryFilters = parseStringArray(parsed.categoryFilters).filter(
       isEventCategoryKey,
     );
@@ -129,14 +131,14 @@ export function readPersistedFeedFilters(
         ? parsed.timeWindow
         : "all";
     return {
-      tickerQuery,
+      symbolQuery,
       categoryFilters,
       sectorFilters,
       formFilters,
       sourceFilters,
       timeWindow,
-      // Always enforce ticker gate (ignore legacy persisted false).
-      tickerOnly: true,
+      // Always enforce symbol gate (ignore legacy persisted false).
+      symbolOnly: true,
     };
   } catch {
     return null;
@@ -150,26 +152,29 @@ export function writePersistedFeedFilters(
   if (typeof window === "undefined") return;
   if (isFiltersDefault(filters)) {
     window.localStorage.removeItem(FEED_FILTER_STORAGE_KEY);
+    window.localStorage.removeItem("ci.feed-filters.v2");
     window.localStorage.removeItem("ci.feed-filters.v1");
     return;
   }
   const payload: PersistedFeedFilters = {
-    tickerQuery: filters.tickerQuery,
+    symbolQuery: filters.symbolQuery,
     categoryFilters: filters.categoryFilters,
     sectorFilters: filters.sectorFilters,
     formFilters: filters.formFilters,
     sourceFilters: filters.sourceFilters,
     timeWindow: filters.timeWindow,
-    tickerOnly: filters.tickerOnly,
+    symbolOnly: filters.symbolOnly,
     lastActiveAt: now,
   };
   window.localStorage.setItem(FEED_FILTER_STORAGE_KEY, JSON.stringify(payload));
+  window.localStorage.removeItem("ci.feed-filters.v2");
   window.localStorage.removeItem("ci.feed-filters.v1");
 }
 
 export function clearPersistedFeedFilters(): void {
   if (typeof window === "undefined") return;
   window.localStorage.removeItem(FEED_FILTER_STORAGE_KEY);
+  window.localStorage.removeItem("ci.feed-filters.v2");
   window.localStorage.removeItem("ci.feed-filters.v1");
 }
 
@@ -187,7 +192,7 @@ export function feedApiQuery(
 ): string {
   const params = new URLSearchParams();
   params.set("window", filters.timeWindow);
-  if (filters.tickerQuery.trim()) params.set("q", filters.tickerQuery.trim());
+  if (filters.symbolQuery.trim()) params.set("q", filters.symbolQuery.trim());
   if (filters.categoryFilters.length > 0) {
     params.set("categories", filters.categoryFilters.join(","));
   }
@@ -201,8 +206,8 @@ export function feedApiQuery(
   if (isLocalDevUi() && filters.sourceFilters.length > 0) {
     params.set("sources", filters.sourceFilters.join(","));
   }
-  // Always request the ticker gate (server also enforces unconditionally).
-  params.set("tickerOnly", "1");
+  // Always request the symbol gate (server also enforces unconditionally).
+  params.set("symbolOnly", "1");
   if (options?.cursor) params.set("cursor", options.cursor);
   if (typeof options?.limit === "number") {
     params.set("limit", String(options.limit));

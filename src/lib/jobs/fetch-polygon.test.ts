@@ -38,7 +38,7 @@ describe("extractSentiment", () => {
     expect(extractSentiment([], "ACME")).toBeNull();
   });
 
-  it("prefers the insight matching the resolved ticker", () => {
+  it("prefers the insight matching the resolved symbol", () => {
     const result = extractSentiment(
       [
         { ticker: "OTHR", sentiment: "negative", sentiment_reasoning: "bad" },
@@ -49,7 +49,7 @@ describe("extractSentiment", () => {
     expect(result).toEqual({ sentiment: "bullish", reasoning: "good" });
   });
 
-  it("falls back to the first insight when no ticker match", () => {
+  it("falls back to the first insight when no symbol match", () => {
     const result = extractSentiment(
       [{ ticker: "OTHR", sentiment: "neutral" }],
       "ACME",

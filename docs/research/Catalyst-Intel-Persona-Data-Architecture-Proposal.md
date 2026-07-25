@@ -19,7 +19,7 @@
 | **Cadence** | GitHub Actions `*/5` (best-effort; observed gaps often ~hourly); local cron default 2 min; feed GET backstop if stale >10 min               |
 | **Parse**   | Atom summary → Item codes → category + headline; no full filing body / EX-99 text                                                           |
 | **Store**   | `raw_sources` → `catalysts` (+ `companies` upsert); 30-day retention                                                                        |
-| **Feed UI** | Columns **Source \| Sector \| Title \| Time·date**; client filters (ticker, category, 1h/4h/24h/All); poll 20s focused                      |
+| **Feed UI** | Columns **Source \| Sector \| Title \| Time·date**; client filters (symbol, category, 1h/4h/24h/All); poll 20s focused                      |
 | **Gaps**    | `impact_score` / `summary` unused; watchlists/alerts nav-only; `companies.sector` never populated; “Sector” column shows **event category** |
 
 **Known item catalog:** 1.01–1.04, 2.01–2.06, 3.01–3.03, 4.01–4.02, 5.01–5.05, 5.07–5.08, 7.01, 8.01, 9.01.  
@@ -57,7 +57,7 @@ Rev 1 sketches read as generic SaaS. Rev 2 targets **desk density**: function ov
 | `--amber`              | `#C9A227` / `#F0C14B`                    | **LIVE**, halt urgency, active filter, desk “attention” |
 | `--up` / resume        | `#3DDC97` (muted)                        | Resume / positive **state only** — never brand fill     |
 | `--down` / halt-severe | `#E85D5D` (muted)                        | Severe halt / loss **state only** — never brand fill    |
-| `--mono`               | IBM Plex Mono / JetBrains Mono           | Tickers, times, codes                                   |
+| `--mono`               | IBM Plex Mono / JetBrains Mono           | Symbols, times, codes                                   |
 
 **Rules:** Green/red are **semantic only** (P&L / halt-resume / flash). Amber = attention. Steel blue = structure. No purple gradients, no neon glow, no rainbow chip walls.
 
@@ -82,7 +82,7 @@ Follow C4 container-level habits: titled diagram, nested boxes, directed labeled
 | Priority | Persona                    | Job to be done                                                  | Latency SLA                              | Must-have data                                                                    | Nice-to-have                                                           | Product surface                                 |
 | -------- | -------------------------- | --------------------------------------------------------------- | ---------------------------------------- | --------------------------------------------------------------------------------- | ---------------------------------------------------------------------- | ----------------------------------------------- |
 | **P1**   | Catalyst day trader        | Long/short/skip before crowd on gaps, halt resumes, AH bombs    | **Seconds–~1 min** during 06:00–16:00 ET | Faster reliable 8-K; **halt/resume**; material item filter; AH/pre-market density | EX-99 headline extract; Form 6-K (ADRs); offering docs when they print | Live blotter + flash; halt badges / sound later |
-| **P2**   | Event-driven / news trader | Offerings, M&A, guidance, investigations; charts + L2 elsewhere | **1–5 min**                              | Event-type + ticker playbook filters; capital/M&A/guidance tags; less noise       | Press wires; Form 4; earnings calendar                                 | Filters by event type; Source multi-provider    |
+| **P2**   | Event-driven / news trader | Offerings, M&A, guidance, investigations; charts + L2 elsewhere | **1–5 min**                              | Event-type + symbol playbook filters; capital/M&A/guidance tags; less noise       | Press wires; Form 4; earnings calendar                                 | Filters by event type; Source multi-provider    |
 | **P3**   | Catalyst swing             | Days–weeks around filings / PDUFA                               | **Hours–daily**                          | Forward calendar + scored past events                                             | ClinicalTrials.gov; openFDA actions                                    | Calendar view + scored history                  |
 | **P4**   | Solo analyst / small prop  | Watchlists, audit, history; API later                           | **Reliable > sub-second**                | Stable ingest, search, retention beyond 30d optional                              | Public API, export                                                     | Watchlists, audit trail, history                |
 
@@ -94,26 +94,26 @@ Keep the Live feed v3 column model (**Source \| Sector \| Title \| Time·date**)
 
 ### 4.1 Concrete display rules
 
-1. **Column scan order (L→R):** Source (provider·ticker) → Sector (industry) → Title (headline + inline badge) → Time·date (mono, ET). Match Axiom-style table density; do not demote Time into relative “2m ago” as primary.
+1. **Column scan order (L→R):** Source (provider·symbol) → Sector (industry) → Title (headline + inline badge) → Time·date (mono, ET). Match Axiom-style table density; do not demote Time into relative “2m ago” as primary.
 2. **Session clock always visible (ET):** `HH:MM:SS ET · PRE|RTH|AH` in the top bar so traders never leave context for “what session is this?”
 3. **Urgency chrome is amber, not red walls:** `HALT` rows get amber Source pill + inline `[HALT]` badge; `RESUME` gets muted green label only. Reserve saturated red for rare severe codes if needed — never paint the whole chrome red/green.
 4. **Playbook filters as a single chip row:** Halt · Capital · Deals · Earnings · Distress · Cyber (+ All). Active chip = amber underline/text (Bloomberg-like attention), not a rainbow of filled pills.
 5. **Sort & sticky headers:** Default newest-first; click Time·date / Source; sticky header on scroll. New rows flash once so multi-monitor peripheral vision catches inserts (Bootcamp trader-layout pattern).
-6. **Source string format:** `HALT · NVDA`, `8-K · TSLA`, `424B · SOFI`, `PR · MRK` — monospace ticker, steel/amber by severity. Sector = **industry** (or `—` until populated); event category lives as badge under/ beside Title, never masquerading as Sector.
+6. **Source string format:** `HALT · NVDA`, `8-K · TSLA`, `424B · SOFI`, `PR · MRK` — monospace symbol, steel/amber by severity. Sector = **industry** (or `—` until populated); event category lives as badge under/ beside Title, never masquerading as Sector.
 7. **Title line carries the decision text:** Halt reason + code (`T3 News pending`); Item headline (`Item 1.05 — …`); offering/PR as printed. Truncate with ellipsis; full text on hover/detail — keep row height stable.
 
 ### 4.2 Column contract
 
 | Column        | Current                      | Proposed                                                                                |
 | ------------- | ---------------------------- | --------------------------------------------------------------------------------------- |
-| **Source**    | `SEC EDGAR` + `8-K · TICKER` | Provider brand + type (`HALT · NVDA`, `8-K · NVDA`, `PR · …`); severity color sparingly |
+| **Source**    | `SEC EDGAR` + `8-K · SYMBOL` | Provider brand + type (`HALT · NVDA`, `8-K · NVDA`, `PR · …`); severity color sparingly |
 | **Sector**    | Event category (misnamed)    | **Industry** from `companies.sector`; fallback `—`; category → badge on Title           |
 | **Title**     | Headline / filing title      | Halt / Item / wire decision text + inline urgency badge                                 |
 | **Time·date** | `10:23 AM · Jul 20, 2026`    | Same pattern; **always ET**; optional `AH`/`PRE` meta chip later                        |
 
 ### 4.3 Filters (evolve, still client-first)
 
-- Keep: ticker, time window (1h / 4h / 24h / All), category
+- Keep: symbol, time window (1h / 4h / 24h / All), category
 - Add: Source provider multi-select; **Halt / Resume**; Capital / Deals / Earnings / Distress / Cyber
 - Later: watchlist-only; min `impact_score`
 
@@ -184,7 +184,7 @@ Score/filter hooks → Live Blotter / Calendar / (Alerts later)
 | `type`                   | `8-K`, `HALT`, `RESUME`, `PR`, `PDUFA`, …                                                                               |
 | `event_category`         | Playbook bucket (`halt`, `regulatory`, `insider`, …)                                                                    |
 | `headline` / `title`     | Trader-facing title                                                                                                     |
-| `ticker`, `company_name` | Identity                                                                                                                |
+| `symbol`, `company_name` | Identity                                                                                                                |
 | `item_codes`             | SEC items or halt reason codes JSON                                                                                     |
 | `timestamp`              | Event time (accept / halt / publish) — display as ET                                                                    |
 | `impact_score`           | 0–100 hook (rules first)                                                                                                |

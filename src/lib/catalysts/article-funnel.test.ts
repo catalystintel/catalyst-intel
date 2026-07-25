@@ -4,7 +4,7 @@ import {
   deriveTakeaways,
   deriveWhyMoving,
   extractArticleThumbUrl,
-  extractRelatedTickers,
+  extractRelatedSymbols,
   parseDeltaSincePublish,
   segmentBeatMissWords,
   segmentCatalystHighlights,
@@ -58,10 +58,10 @@ describe("deriveTakeaways", () => {
   });
 });
 
-describe("extractRelatedTickers", () => {
-  it("reads polygon tickers excluding primary", () => {
+describe("extractRelatedSymbols", () => {
+  it("reads polygon symbols excluding primary", () => {
     expect(
-      extractRelatedTickers({ tickers: ["NVDA", "AVGO", "TSM"] }, "NVDA", [
+      extractRelatedSymbols({ symbols: ["NVDA", "AVGO", "TSM"] }, "NVDA", [
         "amd",
         "news",
       ]),

@@ -32,7 +32,7 @@ export function normalizeAlertConditions(value: unknown): AlertRuleConditions {
   };
 }
 
-export function normalizeTicker(raw: string): string | null {
+export function normalizeSymbol(raw: string): string | null {
   const t = raw
     .trim()
     .toUpperCase()

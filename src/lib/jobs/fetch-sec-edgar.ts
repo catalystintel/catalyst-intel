@@ -36,7 +36,7 @@ import {
   fetchSecUrl,
   getSecUserAgent,
 } from "./sec-edgar-http";
-import { getTickerByCik } from "./ticker-lookup";
+import { getSymbolByCik } from "./symbol-lookup";
 
 /**
  * Current filing Atom feeds live on www.sec.gov (Akamai CDN), not data.sec.gov.
@@ -89,7 +89,7 @@ export function stripHtml(html: string): string {
  * Parses titles like "8-K - PEDEVCO CORP (0001141197) (Filer)".
  * Form 3/4/5 Atom entries use "(Reporting)" instead of "(Filer)" for the
  * insider's own role — without it here, the regex silently fails and the
- * entry falls back to the raw, unparsed title with no CIK/ticker.
+ * entry falls back to the raw, unparsed title with no CIK/symbol.
  */
 export function parseFilingTitle(title: string) {
   const match = title.match(
@@ -127,7 +127,7 @@ function parseFeedXml(feedXml: string): AtomEntry[] {
 
 function entryToNormalized(
   entry: AtomEntry,
-  tickerByCik: Map<number, string>,
+  symbolByCik: Map<number, string>,
 ): NormalizedCatalyst | null {
   const idText = String(entry.id ?? "");
   const accessionNumber = idText.match(/accession-number=([\w-]+)/)?.[1];
@@ -152,11 +152,11 @@ function entryToNormalized(
   const formType = parsedTitle?.formType ?? entry.category?.["@_term"] ?? "8-K";
   const companyName = parsedTitle?.companyName ?? rawTitle;
   const cik = parsedTitle?.cik ?? null;
-  const ticker = parsedTitle
-    ? (tickerByCik.get(parsedTitle.cik) ?? null)
+  const symbol = parsedTitle
+    ? (symbolByCik.get(parsedTitle.cik) ?? null)
     : null;
-  const tickerSource = parsedTitle
-    ? ticker
+  const symbolSource = parsedTitle
+    ? symbol
       ? "sec-cik-map"
       : "unresolved"
     : null;
@@ -234,8 +234,8 @@ function entryToNormalized(
       accessionNumber,
       cik,
     },
-    ticker,
-    tickerSource,
+    symbol,
+    symbolSource,
     companyName,
     type: formType,
     title,
@@ -353,7 +353,7 @@ export async function fetchSecEdgar(
       : true,
   );
 
-  const tickerByCik = await getTickerByCik(userAgent, { mode });
+  const symbolByCik = await getSymbolByCik(userAgent, { mode });
 
   const feedStats: { type: string; fetched: number; errors: number }[] = [];
   const normalized: NormalizedCatalyst[] = [];
@@ -372,7 +372,7 @@ export async function fetchSecEdgar(
 
       for (const entry of entries) {
         try {
-          const item = entryToNormalized(entry, tickerByCik);
+          const item = entryToNormalized(entry, symbolByCik);
           if (!item) {
             errors++;
             continue;

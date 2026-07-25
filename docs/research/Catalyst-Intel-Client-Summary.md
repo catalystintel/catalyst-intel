@@ -125,7 +125,7 @@ Browser poll → GET /api/catalysts (self-heal if stale)
 ### Target logical flow
 
 `Sources (EDGAR first → FDA/CT later → optional PR)`  
-→ ingest (fetch · normalize · dedupe · ticker resolve)  
+→ ingest (fetch · normalize · dedupe · symbol resolve)  
 → catalyst store  
 → scoring (rules now → LLM-assist later) + alert rules  
 → API (feed · detail · watchlists · alerts · admin)  
@@ -154,7 +154,7 @@ New catalyst → evaluate user rules → dedupe / rate-limit → email | webhook
 5. Category filters (aligned to taxonomy families below; beachhead = SEC/Earnings/M&A/Capital/Mgmt/Halts first)
 6. Watchlist sync + highlight
 7. Quiet playbook that actually reduces noise
-8. Reliable ticker / company identity
+8. Reliable symbol / company identity
 9. Latency honesty (event time; no fake realtime)
 10. Mobile-usable alert path (desktop primary)
 
@@ -195,7 +195,7 @@ Full charting · broker/OMS · options-flow terminal · macro magazine · commun
 | Activation | Time-to-first Act/Dismiss &lt; 2 min; watchlist or playbook set; ≥1 source proof open                                        |
 | Engagement | DAU/WAU beachhead; quiet-mode usage; healthy dismiss %; higher Act rate on High vs Low                                       |
 | Trust      | Source-open on Acts; false-positive / mute rates; AI “show source” clicks if AI ships                                        |
-| Pipeline   | Ingest lag p50/p95; accession dedupe 100%; ticker resolve &gt;95% on 8-K                                                     |
+| Pipeline   | Ingest lag p50/p95; accession dedupe 100%; symbol resolve &gt;95% on 8-K                                                     |
 | Business   | D7 retention among active traders; WTP mid-band ~$40–$200/mo seat (Benzinga reference); prop seats only after FP rate is low |
 
 **North star:** High-materiality catalysts seen and decided on before secondary headline echo — with proof, not speed-theater.
@@ -242,7 +242,7 @@ Secondary headlines, social buzz, and unpaid “wires” may _confirm_ or _conte
 
 **Beachhead truth:** Most day-trader edge still starts at **SEC EDGAR** (esp. Form 8-K). The taxonomy below is the **full product language** for filters, alerts, and education — not a promise that every subcategory is live on free APIs today.
 
-**Canonical row fields (target):** Category · Subcategory · Company · Ticker · Timestamp · Source · AI Summary (grounded) · Impact Score · Confidence · Historical Impact · Sector · Tags — aligned with Sources & Schema recommendation.
+**Canonical row fields (target):** Category · Subcategory · Company · Symbol · Timestamp · Source · AI Summary (grounded) · Impact Score · Confidence · Historical Impact · Sector · Tags — aligned with Sources & Schema recommendation.
 
 ---
 
@@ -722,12 +722,12 @@ Secondary/sentiment overlays — useful context; not beachhead primary tape.
 | ------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
 | **SEC EDGAR** (Atom `getcurrent` + submissions; expand 8-K, Form 4, 13D/G, S-3/424B) | Free; ≤10 rps; proper User-Agent                                                      | Earnings (2.02), M&A, Capital Markets, Management (5.02), Partnerships/Contracts (1.01), Legal/Disclosure, Product (7.01/8.01), Insider & Ownership (Form 4 / 13D/G), Cyber (1.05), Exchange-adjacent disclosures | **Core beachhead.** Map item codes → category/subcategory. Already in product path. |
 | **Nasdaq Trader Halt RSS**                                                           | Free; poll ≤1/min                                                                     | Exchange — Trading Halt, Halt Resumed (LULD / news-pending)                                                                                                                                                       | Must for day-trader tape; pair with resume events.                                  |
-| **openFDA**                                                                          | Free key; rate limits                                                                 | FDA & Healthcare — Approval, Recall, Safety Warning, Label changes; some Product Recall                                                                                                                           | Near-RT–batch; entity→ticker map is the hard part.                                  |
+| **openFDA**                                                                          | Free key; rate limits                                                                 | FDA & Healthcare — Approval, Recall, Safety Warning, Label changes; some Product Recall                                                                                                                           | Near-RT–batch; entity→symbol map is the hard part.                                  |
 | **ClinicalTrials.gov API v2**                                                        | Free; fair-use ~2 rps                                                                 | FDA & Healthcare — Clinical Trials phase/status changes, results posted                                                                                                                                           | Registry lag ≠ same-day PDUFA buzz; great for swing/event-driven.                   |
 | **Finnhub free tier**                                                                | Free = **personal use**, ~60/min; **commercial redistribution needs paid/enterprise** | Earnings calendars; FDA AdCom calendar; company news; insider helpers; econ calendar                                                                                                                              | Excellent for **local/POC**. Do **not** ship commercial product on free ToS alone.  |
 | **FRED API**                                                                         | Free key                                                                              | Macroeconomic — CPI, rates, employment, GDP, etc. as scheduled releases                                                                                                                                           | Event timestamps on release calendar; not continuous news.                          |
 | **EIA Open Data** (optional Later)                                                   | Free key                                                                              | Energy & Commodities — inventory/supply prints                                                                                                                                                                    | Scheduled; complement to equity tape.                                               |
-| **CISA KEV / agency RSS** (optional Later)                                           | Free                                                                                  | Cybersecurity hints; Regulatory (DOJ/FTC RSS)                                                                                                                                                                     | Need NLP + ticker resolution; sparse precision.                                     |
+| **CISA KEV / agency RSS** (optional Later)                                           | Free                                                                                  | Cybersecurity hints; Regulatory (DOJ/FTC RSS)                                                                                                                                                                     | Need NLP + symbol resolution; sparse precision.                                     |
 | **CourtListener / RECAP** (optional Later)                                           | Free/cheap                                                                            | Legal — docket milestones                                                                                                                                                                                         | Not a trading wire; event-driven research.                                          |
 
 ### What cannot be free / real-time (expect paid)
@@ -747,7 +747,7 @@ Secondary/sentiment overlays — useful context; not beachhead primary tape.
 Multi-source ingest
   → normalize (provider, externalId, url, event time, raw payload)
   → map to Category / Subcategory (+ 8-K itemCodes when EDGAR)
-  → resolve ticker / company
+  → resolve symbol / company
   → dedupe (accession / content hash / time window)
   → score materiality (rules first; explainable)
   → playbook filter (watchlist · category · quiet mode · liquidity guards)

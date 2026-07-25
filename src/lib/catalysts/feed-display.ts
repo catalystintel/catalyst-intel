@@ -79,7 +79,7 @@ export function sourceDisplay(c: FeedCatalyst): SourceDisplay {
 
   if (isWire) {
     const meta =
-      [c.type?.trim() || "Wire", c.ticker?.trim()]
+      [c.type?.trim() || "Wire", c.symbol?.trim()]
         .filter(Boolean)
         .join(" · ") || "Wire";
     return { name: "Benzinga Wire", meta, initial: "B", tone: "wire" };
@@ -92,7 +92,7 @@ export function sourceDisplay(c: FeedCatalyst): SourceDisplay {
   const initial = known?.initial ?? (name.charAt(0).toUpperCase() || "?");
   const panel = benzingaPanelForCategory(c.eventCategory);
   const meta =
-    [c.type?.trim(), c.ticker?.trim(), panel && !c.ticker ? panel : null]
+    [c.type?.trim(), c.symbol?.trim(), panel && !c.symbol ? panel : null]
       .filter(Boolean)
       .join(" · ") || "Source";
   return {
@@ -255,7 +255,7 @@ function isGenericEventHeadline(text: string): boolean {
   return isSecCatalogHeadline(t);
 }
 
-/** Company / ticker subject for composing richer tape titles. */
+/** Company / symbol subject for composing richer tape titles. */
 function tapeSubject(c: FeedCatalyst): string | null {
   const company = normalizeDisplayText(c.companyName ?? "");
   if (company) {
@@ -269,8 +269,8 @@ function tapeSubject(c: FeedCatalyst): string | null {
     if (stripped.length >= 2) return stripped;
     return company;
   }
-  const ticker = c.ticker?.trim().toUpperCase();
-  return ticker || null;
+  const symbol = c.symbol?.trim().toUpperCase();
+  return symbol || null;
 }
 
 export type TitleLineOptions = {
@@ -342,7 +342,7 @@ function prefersStoredGroundRuleTitle(c: FeedCatalyst, title: string): boolean {
 
 /** Normalize legacy stored ground-rule titles to the current format. */
 function canonicalizeGroundRuleTitle(c: FeedCatalyst, title: string): string {
-  const subject = tapeSubject(c) ?? c.companyName ?? c.ticker;
+  const subject = tapeSubject(c) ?? c.companyName ?? c.symbol;
 
   // Legacy macro wording.
   const nfpMonth = title.match(
@@ -451,7 +451,7 @@ function earningsReportDisplayTitle(c: FeedCatalyst): string | null {
   );
   return formatEarningsReportTitle(
     quarter,
-    tapeSubject(c) ?? c.companyName ?? c.ticker,
+    tapeSubject(c) ?? c.companyName ?? c.symbol,
   );
 }
 
@@ -486,7 +486,7 @@ function form4DisplayTitle(c: FeedCatalyst): string | null {
 
   return formatForm4InsiderTitle(
     kind,
-    tapeSubject(c) ?? c.companyName ?? c.ticker,
+    tapeSubject(c) ?? c.companyName ?? c.symbol,
   );
 }
 
@@ -502,7 +502,7 @@ function sec8kDisplayTitle(c: FeedCatalyst): string | null {
   if (c.items.some((i) => i.code === "2.02")) return null;
   if (c.eventCategory === "earnings") return null;
 
-  const subject = tapeSubject(c) ?? c.companyName ?? c.ticker;
+  const subject = tapeSubject(c) ?? c.companyName ?? c.symbol;
   const primary =
     c.items.find((i) => {
       const h = normalizeDisplayText(c.headline ?? "").toLowerCase();
@@ -527,7 +527,7 @@ function sec8kDisplayTitle(c: FeedCatalyst): string | null {
 
 /** S-3 / 424B / 425 / 13D / 13G → ground-rule offering / ownership titles. */
 function secOfferingOwnershipDisplayTitle(c: FeedCatalyst): string | null {
-  const subject = tapeSubject(c) ?? c.companyName ?? c.ticker;
+  const subject = tapeSubject(c) ?? c.companyName ?? c.symbol;
   const sub = c.subcategory?.trim().toLowerCase() ?? "";
   const form = (c.type ?? "").trim().toUpperCase();
   const title = normalizeDisplayText(c.title ?? "");
@@ -605,7 +605,7 @@ function clinicalDisplayTitle(c: FeedCatalyst): string | null {
     return stripSourceNames(title) || title;
   }
 
-  return formatClinicalTrialTitle(tapeSubject(c) ?? c.companyName ?? c.ticker);
+  return formatClinicalTrialTitle(tapeSubject(c) ?? c.companyName ?? c.symbol);
 }
 
 /** Macro calendar → CPI / Jobs Report (NFP) / FOMC Rate Decision. */
@@ -649,7 +649,7 @@ function analystDisplayTitle(c: FeedCatalyst): string | null {
     /^analyst/i.test(c.type ?? "");
   if (!isAnalyst) return null;
 
-  const subject = tapeSubject(c) ?? c.companyName ?? c.ticker;
+  const subject = tapeSubject(c) ?? c.companyName ?? c.symbol;
   const title = normalizeDisplayText(c.title ?? "");
   const headline = normalizeDisplayText(c.headline ?? "");
   const headlineLower = headline.toLowerCase();
@@ -848,7 +848,7 @@ export function titleTooltipLine(c: FeedCatalyst): string {
 }
 
 /**
- * Live-tape search: match ticker, company name, filing title, and the
+ * Live-tape search: match symbol, company name, filing title, and the
  * displayed title line (headline-first) case-insensitively.
  */
 export function matchesFeedSearchQuery(
@@ -858,7 +858,7 @@ export function matchesFeedSearchQuery(
   const q = query.trim().toLowerCase();
   if (!q) return true;
 
-  const fields = [c.ticker, c.companyName, c.title, c.headline, titleLine(c)];
+  const fields = [c.symbol, c.companyName, c.title, c.headline, titleLine(c)];
   return fields.some((field) => (field ?? "").toLowerCase().includes(q));
 }
 

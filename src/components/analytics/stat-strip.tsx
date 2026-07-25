@@ -13,18 +13,18 @@ interface Stat {
 
 /**
  * Compact glance stats for the analytics window (catalyst count + active
- * tickers).
+ * symbols).
  */
 export function StatStrip({
   totalCount,
-  activeTickerCount,
+  activeSymbolCount,
 }: {
   totalCount: number;
-  activeTickerCount: number;
+  activeSymbolCount: number;
 }) {
   const stats: Stat[] = [
     { label: "Catalysts", value: totalCount },
-    { label: "Active tickers", value: activeTickerCount },
+    { label: "Active symbols", value: activeSymbolCount },
   ];
 
   return (

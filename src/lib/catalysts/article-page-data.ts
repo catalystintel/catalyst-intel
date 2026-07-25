@@ -20,7 +20,7 @@ export async function getCatalystArticleMeta(id: number) {
         db
           .select({
             id: catalysts.id,
-            ticker: catalysts.ticker,
+            symbol: catalysts.symbol,
             companyName: catalysts.companyName,
             type: catalysts.type,
             title: catalysts.title,

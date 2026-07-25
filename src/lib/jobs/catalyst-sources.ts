@@ -82,7 +82,7 @@ export const CATALYST_SOURCE_CATALOG: readonly CatalystSourceMeta[] = [
     priority: "must",
     phase: "A",
     contributes:
-      "Recent FDA original (AP) approvals with sponsor→ticker resolution (keyless; unresolved dropped)",
+      "Recent FDA original (AP) approvals with sponsor→symbol resolution (keyless; unresolved dropped)",
   },
   {
     id: "clinicaltrials",
@@ -91,7 +91,7 @@ export const CATALYST_SOURCE_CATALOG: readonly CatalystSourceMeta[] = [
     priority: "must",
     phase: "A",
     contributes:
-      "Material trial status changes (completed/terminated/suspended/withdrawn) with ticker (keyless; recruiting noise dropped)",
+      "Material trial status changes (completed/terminated/suspended/withdrawn) with symbol (keyless; recruiting noise dropped)",
   },
   {
     id: "polygon-news",

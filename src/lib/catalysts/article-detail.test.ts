@@ -114,7 +114,7 @@ describe("finnhubStockEarningsToFigures", () => {
     expect(figures.epsBeatMiss).toBe("beat");
     expect(figures.period).toBe("Q1 2026");
 
-    const card = earningsFiguresToCard(figures, { ticker: "AAPL" });
+    const card = earningsFiguresToCard(figures, { symbol: "AAPL" });
     expect(card.title).toBe("Earnings results");
     expect(card.fields.some((f) => f.label === "EPS actual")).toBe(true);
     expect(card.fields.some((f) => f.label === "EPS estimate")).toBe(true);
@@ -159,7 +159,7 @@ describe("buildEarningsIntro", () => {
         period: "Q2 2026",
         source: "raw",
       },
-      { ticker: "NVDA", companyName: "NVIDIA Corp" },
+      { symbol: "NVDA", companyName: "NVIDIA Corp" },
     );
     expect(intro).toMatch(/NVIDIA Corp \(NVDA\)/);
     expect(intro).toMatch(/Q2 2026/);
@@ -175,7 +175,7 @@ describe("buildEarningsIntro", () => {
         hour: "amc",
         source: "raw",
       },
-      { ticker: "MSFT" },
+      { symbol: "MSFT" },
     );
     expect(intro).toMatch(/scheduled/i);
     expect(intro).toMatch(/2\.1/);
@@ -188,7 +188,7 @@ describe("resolveArticleDetailCards", () => {
     const cards = resolveArticleDetailCards({
       eventCategory: "earnings",
       provider: "finnhub",
-      ticker: "NVDA",
+      symbol: "NVDA",
       companyName: "NVIDIA Corp",
       type: "Earnings",
       rawContent: {
@@ -219,7 +219,7 @@ describe("resolveArticleDetailCards", () => {
     const cards = resolveArticleDetailCards({
       eventCategory: "earnings",
       provider: "sec-edgar",
-      ticker: "AAPL",
+      symbol: "AAPL",
       type: "8-K",
       itemCodes: [{ code: "2.02", label: "Earnings / results" }],
       rawContent: { summary: "Item 2.02 Results of Operations." },
@@ -232,7 +232,7 @@ describe("resolveArticleDetailCards", () => {
     const cards = resolveArticleDetailCards({
       eventCategory: "trading_halt",
       provider: "nasdaq-halts",
-      ticker: "XYZ",
+      symbol: "XYZ",
       rawContent: {
         reasonCode: "LULD",
         description: "Limit Up-Limit Down trading pause",

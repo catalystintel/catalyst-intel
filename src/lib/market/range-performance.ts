@@ -146,11 +146,11 @@ async function polygonCandles(
  * Prefer Finnhub candles; fall back to Polygon aggregates.
  */
 export async function fetchRangePerformance(options: {
-  ticker: string;
+  symbol: string;
   range: ChartRangeKey;
   now?: Date;
 }): Promise<RangePerformance> {
-  const symbol = options.ticker.trim().toUpperCase();
+  const symbol = options.symbol.trim().toUpperCase();
   const range = options.range;
   const now = options.now ?? new Date();
   const empty: RangePerformance = {

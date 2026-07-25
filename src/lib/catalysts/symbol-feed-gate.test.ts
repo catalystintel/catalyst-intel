@@ -1,15 +1,15 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  isTickerlessMacroException,
-  passesTickerFeedGate,
-} from "./ticker-feed-gate";
+  isSymbollessMacroException,
+  passesSymbolFeedGate,
+} from "./symbol-feed-gate";
 
-describe("isTickerlessMacroException", () => {
+describe("isSymbollessMacroException", () => {
   it("allows macro-calendar CPI and NFP by subcategory", () => {
     expect(
-      isTickerlessMacroException({
-        ticker: null,
+      isSymbollessMacroException({
+        symbol: null,
         eventCategory: "macro",
         subcategory: "cpi",
         title: "CPI — July 2026",
@@ -17,8 +17,8 @@ describe("isTickerlessMacroException", () => {
       }),
     ).toBe(true);
     expect(
-      isTickerlessMacroException({
-        ticker: null,
+      isSymbollessMacroException({
+        symbol: null,
         eventCategory: "macro",
         subcategory: "nfp",
         title: "NFP / Employment Situation — July 2026",
@@ -27,10 +27,10 @@ describe("isTickerlessMacroException", () => {
     ).toBe(true);
   });
 
-  it("rejects FOMC and other tickerless rows", () => {
+  it("rejects FOMC and other symbolless rows", () => {
     expect(
-      isTickerlessMacroException({
-        ticker: null,
+      isSymbollessMacroException({
+        symbol: null,
         eventCategory: "macro",
         subcategory: "fomc",
         title: "FOMC rate decision",
@@ -38,8 +38,8 @@ describe("isTickerlessMacroException", () => {
       }),
     ).toBe(false);
     expect(
-      isTickerlessMacroException({
-        ticker: null,
+      isSymbollessMacroException({
+        symbol: null,
         eventCategory: "news",
         subcategory: null,
         title: "Market wrap",
@@ -50,22 +50,22 @@ describe("isTickerlessMacroException", () => {
 
   it("allows CPI / Jobs phrasing via title or tags", () => {
     expect(
-      isTickerlessMacroException({
-        ticker: null,
+      isSymbollessMacroException({
+        symbol: null,
         title: "US CPI hotter than expected",
         tags: ["macro"],
       }),
     ).toBe(true);
     expect(
-      isTickerlessMacroException({
-        ticker: null,
+      isSymbollessMacroException({
+        symbol: null,
         title: "Jobs report misses estimates",
         tags: [],
       }),
     ).toBe(true);
     expect(
-      isTickerlessMacroException({
-        ticker: null,
+      isSymbollessMacroException({
+        symbol: null,
         title: "Labor update",
         tags: ["nfp"],
       }),
@@ -73,26 +73,26 @@ describe("isTickerlessMacroException", () => {
   });
 });
 
-describe("passesTickerFeedGate", () => {
-  it("keeps tickers for earnings / FDA / halts", () => {
+describe("passesSymbolFeedGate", () => {
+  it("keeps symbols for earnings / FDA / halts", () => {
     expect(
-      passesTickerFeedGate({
-        ticker: "NVDA",
+      passesSymbolFeedGate({
+        symbol: "NVDA",
         eventCategory: "earnings",
         title: "Item 2.02",
       }),
     ).toBe(true);
     expect(
-      passesTickerFeedGate({
-        ticker: "MRK",
+      passesSymbolFeedGate({
+        symbol: "MRK",
         eventCategory: "regulatory",
         subcategory: "fda",
         title: "FDA decision",
       }),
     ).toBe(true);
     expect(
-      passesTickerFeedGate({
-        ticker: "GME",
+      passesSymbolFeedGate({
+        symbol: "GME",
         eventCategory: "trading_halt",
         subcategory: "halt",
         title: "Trading halt",
@@ -100,16 +100,16 @@ describe("passesTickerFeedGate", () => {
     ).toBe(true);
   });
 
-  it("drops blank ticker unless CPI/Jobs exception", () => {
+  it("drops blank symbol unless CPI/Jobs exception", () => {
     expect(
-      passesTickerFeedGate({
-        ticker: "  ",
+      passesSymbolFeedGate({
+        symbol: "  ",
         title: "Untitled",
       }),
     ).toBe(false);
     expect(
-      passesTickerFeedGate({
-        ticker: null,
+      passesSymbolFeedGate({
+        symbol: null,
         subcategory: "cpi",
         title: "CPI — July 2026",
       }),

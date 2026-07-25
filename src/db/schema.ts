@@ -22,7 +22,7 @@ export const users = sqliteTable("users", {
 export const companies = sqliteTable("companies", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   name: text("name").notNull(),
-  ticker: text("ticker").unique(),
+  symbol: text("symbol").unique(),
   sector: text("sector"),
   // Millions of USD; from vendor profile enrichment (e.g. Finnhub profile2).
   marketCap: integer("market_cap"),
@@ -51,7 +51,7 @@ export const rawSources = sqliteTable("raw_sources", {
 
 export type AlertSession = "AH" | "PM" | "RTH" | "any";
 
-export const TICKER_SOURCE_VALUES = [
+export const SYMBOL_SOURCE_VALUES = [
   "vendor",
   "sec-cik-map",
   "sec-name-exact",
@@ -59,7 +59,7 @@ export const TICKER_SOURCE_VALUES = [
   "finnhub-search",
   "unresolved",
 ] as const;
-export type TickerSource = (typeof TICKER_SOURCE_VALUES)[number];
+export type SymbolSource = (typeof SYMBOL_SOURCE_VALUES)[number];
 
 export const SENTIMENT_VALUES = ["bullish", "bearish", "neutral"] as const;
 export type SentimentLean = (typeof SENTIMENT_VALUES)[number];
@@ -85,8 +85,8 @@ export interface SessionContext {
 export const catalysts = sqliteTable("catalysts", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   companyId: integer("company_id").references(() => companies.id),
-  ticker: text("ticker"),
-  // Denormalized issuer name so rows without a ticker match still read clearly.
+  symbol: text("symbol"),
+  // Denormalized issuer name so rows without a symbol match still read clearly.
   companyName: text("company_name"),
   type: text("type").notNull(),
   title: text("title").notNull(),
@@ -112,8 +112,8 @@ export const catalysts = sqliteTable("catalysts", {
   tags: text("tags", { mode: "json" }),
   // Optional price-move enrichment from Polygon (or notes as JSON/text).
   historicalImpact: text("historical_impact", { mode: "json" }),
-  // How `ticker` was resolved — explainability for entity resolution (see ticker-resolver.ts).
-  tickerSource: text("ticker_source", { enum: TICKER_SOURCE_VALUES }),
+  // How `symbol` was resolved — explainability for entity resolution (see symbol-resolver.ts).
+  symbolSource: text("symbol_source", { enum: SYMBOL_SOURCE_VALUES }),
   // Directional lean from vendor-provided sentiment (e.g. Polygon news insights).
   sentiment: text("sentiment", { enum: SENTIMENT_VALUES }),
   sentimentReasoning: text("sentiment_reasoning"),
@@ -125,7 +125,7 @@ export const catalysts = sqliteTable("catalysts", {
   aiBullets: text("ai_bullets", { mode: "json" }),
   aiLean: text("ai_lean", { enum: AI_LEAN_VALUES }),
   aiUncertain: integer("ai_uncertain", { mode: "boolean" }),
-  // Cross-source event merge (same ticker, near-simultaneous) — see cluster-events.ts.
+  // Cross-source event merge (same symbol, near-simultaneous) — see cluster-events.ts.
   clusterId: integer("cluster_id").references(() => eventClusters.id),
   createdAt: text("created_at")
     .notNull()
@@ -133,13 +133,13 @@ export const catalysts = sqliteTable("catalysts", {
 });
 
 /**
- * Groups catalysts from different sources/tickers that fire within a short
+ * Groups catalysts from different sources/symbols that fire within a short
  * window (e.g. halt + 8-K + wire on the same name) into one decision object.
  * Only materialized when 2+ catalysts actually merge — see cluster-events.ts.
  */
 export const eventClusters = sqliteTable("event_clusters", {
   id: integer("id").primaryKey({ autoIncrement: true }),
-  ticker: text("ticker").notNull(),
+  symbol: text("symbol").notNull(),
   category: text("category"),
   windowStart: text("window_start").notNull(),
   windowEnd: text("window_end").notNull(),
@@ -151,13 +151,13 @@ export const eventClusters = sqliteTable("event_clusters", {
     .default(sql`(current_timestamp)`),
 });
 
-/** Per-user tickers the desk cares about (JTBD quiet-mode filter). */
+/** Per-user symbols the desk cares about (JTBD quiet-mode filter). */
 export const watchlistEntries = sqliteTable("watchlist_entries", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   userId: integer("user_id")
     .notNull()
     .references(() => users.id),
-  ticker: text("ticker").notNull(),
+  symbol: text("symbol").notNull(),
   createdAt: text("created_at")
     .notNull()
     .default(sql`(current_timestamp)`),
@@ -192,7 +192,7 @@ export interface AlertRuleConditions {
   minImpact?: number;
   /** Session filter for AH/PM bombs; default any. */
   sessions?: AlertSession[];
-  /** When true, only fire for catalysts whose ticker is on the user's watchlist. */
+  /** When true, only fire for catalysts whose symbol is on the user's watchlist. */
   watchlistOnly?: boolean;
 }
 

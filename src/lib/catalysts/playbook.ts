@@ -32,7 +32,7 @@ export function normalizePlaybookCategories(
 }
 
 export interface QuietFilterInput {
-  ticker: string | null;
+  symbol: string | null;
   eventCategory: EventCategoryKey | null;
 }
 
@@ -44,16 +44,16 @@ export function matchesQuietPlaybook(
   row: QuietFilterInput,
   options: {
     quietMode: boolean;
-    watchlistTickers: string[];
+    watchlistSymbols: string[];
     playbookCategories: EventCategoryKey[];
   },
 ): boolean {
   if (!options.quietMode) return true;
 
-  const watch = options.watchlistTickers.map((t) => t.toUpperCase());
+  const watch = options.watchlistSymbols.map((t) => t.toUpperCase());
   if (watch.length > 0) {
-    const ticker = (row.ticker ?? "").toUpperCase();
-    if (!ticker || !watch.includes(ticker)) return false;
+    const symbol = (row.symbol ?? "").toUpperCase();
+    if (!symbol || !watch.includes(symbol)) return false;
   }
 
   if (options.playbookCategories.length > 0) {
