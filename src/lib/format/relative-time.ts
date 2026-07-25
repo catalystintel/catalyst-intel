@@ -6,14 +6,34 @@
  * those are DB ingest metadata and must not be shown to traders as the
  * event clock.
  *
- * Wall-clock formatting uses America/New_York (ET) — the US equity desk
- * convention — so the same filing reads identically for every user.
+ * Wall-clock formatting uses the viewer's local timezone (omit `timeZone`
+ * in Intl, or pass an explicit IANA zone for tests / SSR).
  */
 
-const ET = "America/New_York";
+export type FormatTimeOptions = {
+  /** IANA zone; omit to use the runtime local timezone. */
+  timeZone?: string;
+};
+
+function zoneOpts(timeZone?: string): { timeZone?: string } {
+  return timeZone ? { timeZone } : {};
+}
+
+/** Short local zone label, e.g. `EDT`, `IDT`, `GMT+3`. */
+function shortTimeZoneName(date: Date, timeZone?: string): string {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZoneName: "short",
+    ...zoneOpts(timeZone),
+  }).formatToParts(date);
+  return parts.find((p) => p.type === "timeZoneName")?.value ?? "";
+}
 
 /** Intraday-friendly relative age since the event occurred. */
-export function formatRelativeAge(iso: string, now = Date.now()): string {
+export function formatRelativeAge(
+  iso: string,
+  now = Date.now(),
+  options?: FormatTimeOptions,
+): string {
   const then = new Date(iso).getTime();
   if (Number.isNaN(then)) return "—";
 
@@ -23,50 +43,60 @@ export function formatRelativeAge(iso: string, now = Date.now()): string {
   if (diffSec < 86_400) return `${Math.floor(diffSec / 3600)}h`;
   if (diffSec < 86_400 * 7) return `${Math.floor(diffSec / 86_400)}d`;
   return new Date(iso).toLocaleDateString("en-US", {
-    timeZone: ET,
+    ...zoneOpts(options?.timeZone),
     month: "short",
     day: "numeric",
   });
 }
 
-/** Compact ET clock for the feed's mobile Time cell. */
-export function formatClockTime(iso: string): string {
+/** Compact local clock for the feed's mobile Time cell. */
+export function formatClockTime(
+  iso: string,
+  options?: FormatTimeOptions,
+): string {
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return "—";
   return date.toLocaleTimeString("en-US", {
-    timeZone: ET,
+    ...zoneOpts(options?.timeZone),
     hour: "numeric",
     minute: "2-digit",
   });
 }
 
 /**
- * Trading-desk event time: `10:23 AM ET · Jul 20, 2026`.
+ * Event time in the viewer's local zone: `10:23 AM IDT · Jul 20, 2026`.
  * Alias of the Live feed TIME column — always event occurrence, never ingest.
  */
-export function formatTimeDate(iso: string): string {
-  return formatEventTime(iso);
+export function formatTimeDate(
+  iso: string,
+  options?: FormatTimeOptions,
+): string {
+  return formatEventTime(iso, options);
 }
 
 /**
  * Canonical display of when the catalyst event occurred (filed / published /
  * scheduled). Prefer this over ad-hoc `new Date(...).toLocaleString()`.
  */
-export function formatEventTime(iso: string): string {
+export function formatEventTime(
+  iso: string,
+  options?: FormatTimeOptions,
+): string {
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return "—";
   const time = date.toLocaleTimeString("en-US", {
-    timeZone: ET,
+    ...zoneOpts(options?.timeZone),
     hour: "numeric",
     minute: "2-digit",
   });
+  const zone = shortTimeZoneName(date, options?.timeZone);
   const day = date.toLocaleDateString("en-US", {
-    timeZone: ET,
+    ...zoneOpts(options?.timeZone),
     month: "short",
     day: "numeric",
     year: "numeric",
   });
-  return `${time} ET · ${day}`;
+  return zone ? `${time} ${zone} · ${day}` : `${time} · ${day}`;
 }
 
 /**
