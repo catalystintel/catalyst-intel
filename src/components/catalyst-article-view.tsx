@@ -5,6 +5,7 @@ import { ArrowLeft, BookOpen, ExternalLink } from "lucide-react";
 
 import { AiAnalysisPanel } from "@/components/ai-analysis-panel";
 import { CategoryBadge } from "@/components/category-badge";
+import { EdgarProofLink } from "@/components/edgar-proof-link";
 import type { FeedCatalyst } from "@/lib/catalysts/feed-catalyst";
 import { benzingaPanelForCategory } from "@/lib/catalysts/benzinga-analogs";
 import { sectorLabel, titleLine } from "@/lib/catalysts/feed-display";
@@ -45,11 +46,14 @@ export interface CatalystArticleViewProps {
   enrichment?: ArticleEnrichment | null;
   /** `dialog` hides the feed back-link (modal chrome owns dismiss). */
   variant?: "page" | "dialog";
+  /** Admins get an outbound original-source proof link. */
+  isAdmin?: boolean;
 }
 
 /**
  * Full in-app article reader for a single catalyst.
- * Product is the source of truth for the reader — no vendor provenance CTAs.
+ * Product is the source of truth for most readers; admins still get a proof
+ * link out to the original filing / vendor URL.
  */
 export function CatalystArticleView({
   catalyst,
@@ -65,6 +69,7 @@ export function CatalystArticleView({
   deltaSincePublish = null,
   enrichment = null,
   variant = "page",
+  isAdmin = false,
 }: CatalystArticleViewProps) {
   const categoryLabel = catalyst.eventCategory
     ? CATEGORY_LABELS[catalyst.eventCategory]
@@ -90,10 +95,18 @@ export function CatalystArticleView({
             <ArrowLeft className="size-3.5" />
             Catalyst Feed
           </Link>
-          <span className="inline-flex items-center gap-1.5 font-mono text-[0.65rem] tracking-[0.14em] text-[var(--desk-live)] uppercase">
-            <BookOpen className="size-3.5" />
-            Article
-          </span>
+          <div className="flex flex-wrap items-center gap-2">
+            {isAdmin ? (
+              <EdgarProofLink
+                url={catalyst.sourceUrl}
+                provider={catalyst.sourceProvider}
+              />
+            ) : null}
+            <span className="inline-flex items-center gap-1.5 font-mono text-[0.65rem] tracking-[0.14em] text-[var(--desk-live)] uppercase">
+              <BookOpen className="size-3.5" />
+              Article
+            </span>
+          </div>
         </div>
       ) : null}
 
@@ -126,6 +139,12 @@ export function CatalystArticleView({
           ) : null}
           {catalyst.eventCategory ? (
             <CategoryBadge category={catalyst.eventCategory} />
+          ) : null}
+          {isAdmin && variant === "dialog" ? (
+            <EdgarProofLink
+              url={catalyst.sourceUrl}
+              provider={catalyst.sourceProvider}
+            />
           ) : null}
         </div>
 

@@ -52,10 +52,13 @@ export function CatalystArticleDialog({
   catalystId,
   open,
   onOpenChange,
+  isAdmin = false,
 }: {
   catalystId: number | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** Admins get an outbound original-source proof link in the reader. */
+  isAdmin?: boolean;
 }) {
   const [load, setLoad] = useState<LoadState>({ status: "idle" });
 
@@ -176,6 +179,7 @@ export function CatalystArticleDialog({
             <CatalystArticleView
               variant="dialog"
               catalyst={ready.catalyst}
+              isAdmin={isAdmin}
               summary={ready.article.summary}
               summaryGenerated={ready.article.summaryGenerated}
               body={ready.article.body}

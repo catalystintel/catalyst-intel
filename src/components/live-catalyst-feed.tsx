@@ -793,6 +793,7 @@ export function LiveCatalystFeed({
             <TapeSplitPanel
               key={selected.id}
               catalyst={selected}
+              isAdmin={isAdmin}
               onClose={() => setSelectedId(null)}
               onRead={() => openArticle(selected.id)}
               onDismiss={() => {
@@ -817,6 +818,7 @@ export function LiveCatalystFeed({
 
       <CatalystArticleDialog
         catalystId={articleId}
+        isAdmin={isAdmin}
         open={articleId != null}
         onOpenChange={(next) => {
           if (!next) setArticleId(null);
