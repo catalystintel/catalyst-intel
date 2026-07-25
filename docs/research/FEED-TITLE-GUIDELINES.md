@@ -11,7 +11,8 @@
 Tape titles should answer **what happened** and **to whom** in one glance:
 
 `{Company Name}: {Event phrase}`  
-or for halts: `Halts ({Company Name}): {reason}`
+or for halts: `Halts ({Company Name}): {reason}`  
+or for FDA approvals: `{Company Name} Receives FDA Approval!`
 
 Prefer stored ground-rule titles from ingest (`title` / mirrored `headline`) over taxonomy chips (“8-K filing”, “Price target (Street)”).
 
@@ -29,7 +30,7 @@ Macro titles with no issuer keep an em dash for the period only: `CPI — {Month
 | Subject                                              | Title format                                                                                            |
 | ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
 | Earnings                                             | `{Company Name}: Earnings Report Qn` (Finnhub calendar + SEC Item 2.02; tape recomputes legacy rows)    |
-| FDA Approval                                         | `{Company Name}: FDA Approval`                                                                          |
+| FDA Approval                                         | `{Company Name} Receives FDA Approval!`                                                                 |
 | Halts                                                | `Halts ({Company Name}): {reason}`                                                                      |
 | Form 4 Buy                                           | `{Company Name}: Form 4 Insider Buy` (mixed → `{Company}: Form 4 Insider Buy & Sell`)                   |
 | Form 4 Sell                                          | `{Company Name}: Form 4 Insider Sell`                                                                   |
@@ -67,7 +68,7 @@ Implemented in `src/lib/catalysts/catalyst-titles.ts`:
 | Pattern                                   | Formatter                          |
 | ----------------------------------------- | ---------------------------------- |
 | `Halts ({Company}): {reason}`             | `formatHaltTitle`                  |
-| `{Company}: FDA Approval`                 | `formatFdaApprovalTitle`           |
+| `{Company} Receives FDA Approval!`        | `formatFdaApprovalTitle`           |
 | `{Company}: Earnings Report Qn`           | `formatEarningsReportTitle`        |
 | Narrative 8-K (1.01 / 1.03 / 3.01 / 5.02) | `formatSec8kItemTitle` (+ helpers) |
 | Other `{Company}: {8-K item label}`       | `formatSec8kItemTitle`             |
@@ -83,7 +84,7 @@ Implemented in `src/lib/catalysts/catalyst-titles.ts`:
 | `{Company}: Price Target`                 | `formatPriceTargetTitle`           |
 | `{Company}: Analyst Rating`               | `formatAnalystRatingTitle`         |
 
-Display preference / legacy rewrite: `titleLine` in `src/lib/catalysts/feed-display.ts` (rewrites double-dash / `{Event} - {Company}` legacy rows to the colon form).
+Display preference / legacy rewrite: `titleLine` in `src/lib/catalysts/feed-display.ts` (rewrites double-dash / `{Event} - {Company}` legacy rows to the current ground-rule form, including `FDA Approval - {Company}` / `{Company}: FDA Approval` → `{Company} Receives FDA Approval!`).
 
 ---
 
