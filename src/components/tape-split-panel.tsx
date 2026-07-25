@@ -271,7 +271,7 @@ export function TapeSplitPanel({
       aria-modal={mobileOverlay}
       aria-labelledby={`tape-split-${catalyst.id}`}
       className={cn(
-        "flex min-h-0 flex-col border-[var(--desk-border)] bg-[var(--desk-panel)]",
+        "desk-arial flex min-h-0 flex-col border-[var(--desk-border)] bg-[var(--desk-panel)]",
         mobileOverlay &&
           "shadow-[-12px_0_40px_rgba(0,0,0,0.55)] lg:shadow-none",
         className,
