@@ -19,7 +19,7 @@ import {
 /**
  * Triggers the SEC EDGAR ingestion job. Accepts either:
  *  - an authenticated allowlisted admin session (used by the "/admin" page), or
- *  - a shared secret header (used by the production GitHub Actions cron -
+ *  - a shared secret header (used by the production cron-job.org pinger -
  *    see DEPLOYMENT.md), since that caller has no browser session/cookie.
  *
  * Valid cron secret callers bypass per-IP rate limits. Session-based admin
