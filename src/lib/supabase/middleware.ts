@@ -7,12 +7,22 @@ import { isSupabaseConfigured } from "@/lib/supabase/env";
 
 const PROTECTED_PREFIXES = [
   "/catalyst-feed",
+  "/news-feed",
+  "/reports",
   "/admin",
   "/profile",
   "/watchlist",
   "/alerts",
   "/analytics",
 ];
+
+/** Shared report links at `/reports/s/[token]` stay public. */
+function isProtectedPath(pathname: string): boolean {
+  if (pathname === "/reports/s" || pathname.startsWith("/reports/s/")) {
+    return false;
+  }
+  return PROTECTED_PREFIXES.some((prefix) => pathname.startsWith(prefix));
+}
 
 export async function updateSession(request: NextRequest) {
   // Local bypass: treat every request as authenticated so protected routes
@@ -23,9 +33,7 @@ export async function updateSession(request: NextRequest) {
 
   let supabaseResponse = NextResponse.next({ request });
 
-  const isProtected = PROTECTED_PREFIXES.some((prefix) =>
-    request.nextUrl.pathname.startsWith(prefix),
-  );
+  const isProtected = isProtectedPath(request.nextUrl.pathname);
 
   // Without real Supabase env vars (e.g. fresh Vercel deploy), skip the
   // client entirely so public pages don't 500. Protected routes still go

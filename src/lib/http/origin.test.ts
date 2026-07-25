@@ -37,4 +37,11 @@ describe("safeNextPath", () => {
     expect(safeNextPath("https://evil.example")).toBe("/catalyst-feed");
     expect(safeNextPath("//evil.example")).toBe("/catalyst-feed");
   });
+
+  it("rewrites legacy /dashboard next paths to /catalyst-feed", () => {
+    expect(safeNextPath("/dashboard")).toBe("/catalyst-feed");
+    expect(safeNextPath("/dashboard/catalyst/12")).toBe(
+      "/catalyst-feed/catalyst/12",
+    );
+  });
 });

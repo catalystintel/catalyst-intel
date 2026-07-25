@@ -597,7 +597,7 @@ export function LiveCatalystFeed({
 
   return (
     <section
-      className="news-panel feed-helvetica flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-[var(--desk-border)] bg-[var(--desk-panel)]"
+      className="news-panel desk-arial flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-[var(--desk-border)] bg-[var(--desk-panel)]"
       aria-label="Catalyst Feed"
     >
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--desk-border)] bg-[var(--desk-header)] px-4 py-3.5 sm:px-5">
@@ -1444,7 +1444,7 @@ function FeedTitleWithTooltip({
                 maxWidth: coords.maxWidth,
               }}
               className={cn(
-                "feed-helvetica pointer-events-none fixed z-[80] w-max",
+                "desk-arial pointer-events-none fixed z-[80] w-max",
                 "rounded-md border border-[var(--desk-border-strong)] bg-[var(--desk-panel)] px-2.5 py-2",
                 "shadow-[0_12px_32px_rgba(0,0,0,0.5)]",
               )}
