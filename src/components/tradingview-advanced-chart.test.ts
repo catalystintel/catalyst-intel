@@ -11,10 +11,23 @@ describe("buildTradingViewEmbedUrl", () => {
     const parsed = new URL(url);
     expect(parsed.searchParams.get("symbol")).toBe("NASDAQ:AAPL");
     expect(parsed.searchParams.get("theme")).toBe("dark");
-    expect(parsed.searchParams.get("interval")).toBe("D");
+    expect(parsed.searchParams.get("interval")).toBe("5");
+    expect(parsed.searchParams.get("withdateranges")).toBe("0");
     expect(parsed.searchParams.get("timezone")).toBe("America/New_York");
-    // Line (price) view — not candles (style "1").
     expect(parsed.searchParams.get("style")).toBe("2");
+  });
+
+  it("maps desk ranges to TradingView intervals", () => {
+    expect(
+      new URL(
+        buildTradingViewEmbedUrl("AAPL", { range: "1M" }),
+      ).searchParams.get("interval"),
+    ).toBe("D");
+    expect(
+      new URL(
+        buildTradingViewEmbedUrl("AAPL", { range: "5Y" }),
+      ).searchParams.get("interval"),
+    ).toBe("W");
   });
 
   it("trims bare tickers", () => {
