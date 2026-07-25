@@ -79,14 +79,14 @@ type Presence = "active" | "blurred" | "hidden";
 /**
  * Blotter: Symbol · Title · Time (+ Action toolbar).
  * Symbol leads as the row index. No Event / Source primary columns.
- * Time = event occurrence ET.
+ * Time = event occurrence in the viewer's local timezone.
  *
- * Time/Action use fixed tracks so `5:31 PM ET · Jul 24, 2026` (Plex Mono)
+ * Time/Action use fixed tracks so `5:31 PM GMT+3 · Jul 24, 2026` (Plex Mono)
  * fits under Time. Desktop Action buttons stay hover/focus/selected-only so
  * the tape stays quiet until the row is engaged.
  */
 const FEED_GRID =
-  "grid-cols-[4.5rem_minmax(0,1fr)] sm:grid-cols-[5rem_minmax(0,1fr)_14rem] lg:grid-cols-[5rem_minmax(0,1fr)_14rem_16rem]";
+  "grid-cols-[4.5rem_minmax(0,1fr)] sm:grid-cols-[5rem_minmax(0,1fr)_15.5rem] lg:grid-cols-[5rem_minmax(0,1fr)_15.5rem_16rem]";
 
 function readPresence(): Presence {
   if (typeof document === "undefined") return "active";
@@ -587,7 +587,7 @@ export function LiveCatalystFeed({
     timeWindow: filterState.timeWindow,
   });
 
-  const lastUpdatedLabel = lastFetchedAt
+  const refreshedLabel = lastFetchedAt
     ? new Date(lastFetchedAt).toLocaleTimeString("en-US", {
         hour: "numeric",
         minute: "2-digit",
@@ -655,9 +655,12 @@ export function LiveCatalystFeed({
               Clear filters
             </button>
           ) : null}
-          {lastUpdatedLabel ? (
-            <span className="hidden font-mono text-[0.78rem] text-[var(--desk-text-muted)] tabular-nums sm:inline">
-              Last updated: {lastUpdatedLabel}
+          {refreshedLabel ? (
+            <span
+              className="hidden font-mono text-[0.78rem] text-[var(--desk-text-muted)] tabular-nums sm:inline"
+              title="When this browser last refreshed the feed — not when filings occurred"
+            >
+              Refreshed: {refreshedLabel}
             </span>
           ) : null}
           <button
@@ -1134,7 +1137,7 @@ function CatalystFeedList({
         <div
           role="columnheader"
           className="hidden min-w-0 sm:block"
-          title="When the event occurred (ET) — not DB insert time"
+          title="When the event occurred (your local time) — not when we fetched it"
         >
           Time
         </div>
