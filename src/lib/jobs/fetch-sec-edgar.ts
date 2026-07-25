@@ -203,7 +203,9 @@ function entryToNormalized(
   } else if (is8k && itemCodes?.length) {
     const primary = selectPrimaryItem(itemCodes);
     if (primary) {
-      title = formatSec8kItemTitle(primary.label, companyName);
+      title = formatSec8kItemTitle(primary.label, companyName, {
+        content: summaryText,
+      });
     }
   } else if (isForm4) {
     title = formatForm4InsiderTitle("transaction", companyName);

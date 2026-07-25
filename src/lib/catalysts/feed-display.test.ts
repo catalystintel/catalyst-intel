@@ -147,6 +147,73 @@ describe("titleLine", () => {
     );
   });
 
+  it("formats Item 5.02 officer changes from summary clues", () => {
+    expect(
+      titleLine(
+        base({
+          companyName: "Acme Corp",
+          ticker: "ACME",
+          headline: "Officer / Director Change",
+          eventCategory: "management",
+          items: [
+            {
+              code: "5.02",
+              label: "Officer / Director Change",
+              category: "management",
+            },
+          ],
+          title: "Acme Corp — 8-K filing",
+          summary:
+            "Item 5.02: Departure of Directors or Certain Officers; Election of Directors; Appointment of Certain Officers. On July 20, 2026, Jane Smith resigned as Chief Executive Officer of the Company.",
+        }),
+      ),
+    ).toBe("Acme Corp - CEO Change - Departure");
+
+    expect(
+      titleLine(
+        base({
+          companyName: "Acme Corp",
+          ticker: "ACME",
+          headline: "Officer / Director Change",
+          eventCategory: "management",
+          items: [
+            {
+              code: "5.02",
+              label: "Officer / Director Change",
+              category: "management",
+            },
+          ],
+          title:
+            "Acme Corp — Executive Change — CEO/CFO Departure or Appointment",
+          summary:
+            "Item 5.02: Departure of Directors or Certain Officers. The Board appointed Robert Lee as Chief Financial Officer.",
+        }),
+      ),
+    ).toBe("Acme Corp - CFO Change - Appointment");
+
+    expect(
+      titleLine(
+        base({
+          companyName: "Acme Corp",
+          ticker: "ACME",
+          headline: "Officer / Director Change",
+          eventCategory: "management",
+          items: [
+            {
+              code: "5.02",
+              label: "Officer / Director Change",
+              category: "management",
+            },
+          ],
+          title:
+            "Acme Corp — Executive Change — CEO/CFO Departure or Appointment",
+          summary:
+            "Item 5.02: Departure of Directors or Certain Officers; Election of Directors; Appointment of Certain Officers; Compensatory Arrangements of Certain Officers",
+        }),
+      ),
+    ).toBe("Acme Corp - Executive Change");
+  });
+
   it("keeps specific news headlines without forcing company prefix", () => {
     expect(
       titleLine(
