@@ -70,10 +70,16 @@ export async function GET(request: NextRequest) {
   const includeFacets =
     request.nextUrl.searchParams.get("facets") !== "0" && cursor == null;
 
-  const [rows, total, facets] = await Promise.all([
+  const [rows, total, facets, latestSource] = await Promise.all([
     queryFeedPage(filters, { cursor, limit }),
     cursor ? Promise.resolve(null) : queryFeedTotal(filters),
     includeFacets ? queryFeedFacets(filters) : Promise.resolve(null),
+    db
+      .select({ fetchedAt: rawSources.fetchedAt })
+      .from(rawSources)
+      .orderBy(desc(rawSources.fetchedAt))
+      .limit(1)
+      .get(),
   ]);
 
   const last = rows[rows.length - 1];
@@ -82,12 +88,19 @@ export async function GET(request: NextRequest) {
       ? encodeFeedCursor({ timestamp: last.timestamp, id: last.id })
       : null;
 
-  await triggerBackgroundRefetchIfStale();
+  const lastIngestedAt = latestSource?.fetchedAt
+    ? new Date(latestSource.fetchedAt).toISOString()
+    : null;
+
+  triggerBackgroundRefetchIfStale(
+    lastIngestedAt ? new Date(lastIngestedAt) : null,
+  );
 
   return withRateLimitHeaders(
     NextResponse.json({
       catalysts: rows,
       fetchedAt: new Date().toISOString(),
+      lastIngestedAt,
       window: filters.timeWindow,
       since: filters.since,
       total: total ?? undefined,
@@ -98,15 +111,7 @@ export async function GET(request: NextRequest) {
   );
 }
 
-async function triggerBackgroundRefetchIfStale(): Promise<void> {
-  const latestSource = await db
-    .select({ fetchedAt: rawSources.fetchedAt })
-    .from(rawSources)
-    .orderBy(desc(rawSources.fetchedAt))
-    .limit(1)
-    .get();
-
-  const lastFetchedAt = latestSource ? new Date(latestSource.fetchedAt) : null;
+function triggerBackgroundRefetchIfStale(lastFetchedAt: Date | null): void {
   if (!shouldTriggerBackgroundRefetch({ lastFetchedAt })) return;
 
   markRefetchTriggered();
@@ -119,7 +124,7 @@ async function triggerBackgroundRefetchIfStale(): Promise<void> {
     .catch((error: unknown) => {
       markRefetchFailed();
       console.warn(
-        "Background multi-source refetch failed (best-effort; GHA cron is primary):",
+        "Background multi-source refetch failed (best-effort; cron-job.org is primary):",
         error instanceof Error ? error.message : error,
       );
     });

@@ -15,7 +15,6 @@ There is no separate backend — ingestion, API, and UI live in one app.
 flowchart LR
     subgraph Scheduler["Scheduler"]
         CronJobOrg["cron-job.org\n(every 1 min, prod)"]
-        GHA["GitHub Actions cron\n(optional backup)"]
         LocalCron["npm run cron\n(local; default 1 min)"]
     end
 
@@ -33,7 +32,6 @@ flowchart LR
     Browser["Browser"]
 
     CronJobOrg -- "POST + x-cron-secret" --> AdminAPI
-    GHA -- "POST + x-cron-secret" --> AdminAPI
     LocalCron -- "direct call" --> Job
     AdminAPI --> Job
     Job -- "fetch / enrich" --> Vendors
@@ -54,8 +52,8 @@ flowchart LR
 | --------------------------- | ------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------- |
 | **Next.js app**             | One app: pages, API routes, ingestion job                                | No separate backend to deploy/monitor — Vercel hosts everything.                                                                        |
 | **Keyless vendors**         | SEC EDGAR (8-K + Form 4…), Nasdaq halts RSS, openFDA, ClinicalTrials.gov | Only `SEC_EDGAR_USER_AGENT` required; others need no keys. Soft-fail keyed vendors (Finnhub/Polygon).                                   |
-| `fetchAllCatalystSources()` | Multi-source orchestrator (phased parallel A→B→C; see FETCH-ORDER.md)    | Admin `/api/admin/fetch/all`, **cron-job.org**, optional GHA, local `npm run cron`.                                                     |
-| **Scheduler (prod)**        | **cron-job.org** → `POST /api/admin/fetch/all` every **1 minute**        | Reliable 1-min cadence on Vercel Hobby (GHA alone drifted far past `*/5`). Job title example: `catalyst-intel prod ETL`.                |
+| `fetchAllCatalystSources()` | Multi-source orchestrator (phased parallel A→B→C; see FETCH-ORDER.md)    | Admin `/api/admin/fetch/all`, **cron-job.org** (prod), local `npm run cron`.                                                            |
+| **Scheduler (prod)**        | **cron-job.org** → `POST /api/admin/fetch/all` every **1 minute**        | Sole production ETL scheduler on Vercel Hobby. Job title example: `catalyst-intel prod ETL`.                                            |
 | **Scheduler (local)**       | `npm run cron` (`CRON_INTERVAL_MINUTES`, default **1**)                  | Same orchestrator as prod while developing.                                                                                             |
 | **Per-vendor watermark**    | `vendor_fetch_state.last_fetched_at`                                     | Advances only on success. After Polygon **429**, cursor is held so the next tick widens `published_utc.gte` / enrich batch (no misses). |
 | **Self-healing backstop**   | `GET /api/catalysts` triggers a refetch if data is stale                 | Covers scheduler gaps whenever there's real traffic.                                                                                    |

@@ -28,7 +28,10 @@ export interface LiveFeedQueryState {
   nextCursor: string | null;
   loading: boolean;
   loadingMore: boolean;
+  /** Client poll clock (when this browser last got a successful response). */
   lastFetchedAt: string | null;
+  /** Most recent `raw_sources.fetched_at` from the server (ingest lag). */
+  lastIngestedAt: string | null;
   pollError: string | null;
   filterState: FeedFilterState;
   setFilterState: Dispatch<SetStateAction<FeedFilterState>>;
@@ -59,6 +62,7 @@ export function useLiveFeedQuery(
   const [loading, setLoading] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
   const [lastFetchedAt, setLastFetchedAt] = useState<string | null>(null);
+  const [lastIngestedAt, setLastIngestedAt] = useState<string | null>(null);
   const [pollError, setPollError] = useState<string | null>(null);
 
   const abortRef = useRef<AbortController | null>(null);
@@ -112,6 +116,9 @@ export function useLiveFeedQuery(
         typeof data.fetchedAt === "string"
           ? data.fetchedAt
           : new Date().toISOString(),
+      );
+      setLastIngestedAt(
+        typeof data.lastIngestedAt === "string" ? data.lastIngestedAt : null,
       );
       setPollError(null);
     },
@@ -205,6 +212,7 @@ export function useLiveFeedQuery(
     loading,
     loadingMore,
     lastFetchedAt,
+    lastIngestedAt,
     pollError,
     filterState,
     setFilterState,

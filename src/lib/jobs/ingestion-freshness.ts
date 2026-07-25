@@ -1,20 +1,18 @@
 /**
- * Backstop for unreliable external schedulers (see DEPLOYMENT.md - GitHub
- * Actions cron is best-effort and can drift far past its configured
- * interval). When a read request notices ingested data is older than
- * `STALE_AFTER_MS`, it can trigger a background refetch itself. A cooldown
- * guard prevents concurrent page loads from all firing at once.
+ * Backstop when the primary prod scheduler (cron-job.org →
+ * `/api/admin/fetch/all`) gaps or fails. When a read notices ingested data
+ * is older than `STALE_AFTER_MS`, it can trigger a background refetch itself.
+ * A cooldown guard prevents concurrent page loads from all firing at once.
  *
  * Note: this store is per Vercel isolate — multi-instance spam is reduced by
  * short SEC timeouts + failure cooldown, not eliminated globally.
  */
 
-// Tightened from 10 min after confirming (via `gh run list`) that GHA cron
-// gaps of 45 min to 3.5+ hours are common - see "Why GitHub Actions cron
-// every 5 minutes" in DEPLOYMENT.md. This backstop is the main thing keeping
-// the tape near-live in between those gaps, so it should kick in well before
-// data is user-visibly stale rather than only as a last resort.
+/** Kick in before the tape is user-visibly stale between cron ticks. */
 const STALE_AFTER_MS = 4 * 60_000;
+
+/** Same threshold the Live feed uses for the “stale tape” banner. */
+export const INGESTION_STALE_AFTER_MS = STALE_AFTER_MS;
 /** Minimum gap between successful trigger attempts in the same isolate. */
 const RETRIGGER_COOLDOWN_MS = 3 * 60_000;
 /**
