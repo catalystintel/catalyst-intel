@@ -112,19 +112,19 @@ export function areNearDuplicateTitles(
   return titleSimilarity(a, b) >= threshold;
 }
 
-/** Stable fingerprint for ticker + normalized title (ingest skip key). */
+/** Stable fingerprint for symbol + normalized title (ingest skip key). */
 export function contentFingerprint(
-  ticker: string | null | undefined,
+  symbol: string | null | undefined,
   ...titleParts: Array<string | null | undefined>
 ): string | null {
-  const t = ticker?.trim().toUpperCase();
+  const t = symbol?.trim().toUpperCase();
   const title = normalizeDedupeTitle(...titleParts);
   if (!t || !title) return null;
   return `${t}|${title}`;
 }
 
 export interface DedupeCandidate {
-  ticker?: string | null;
+  symbol?: string | null;
   title: string;
   headline?: string | null;
   provider: string;
@@ -144,7 +144,7 @@ export interface DedupeExisting {
 
 /**
  * True when `candidate` is a worse (or equal) retelling of an existing row
- * for the same ticker inside the dedupe window — skip ingest.
+ * for the same symbol inside the dedupe window — skip ingest.
  * Better-source arrivals (e.g. SEC after a wire) are allowed through so
  * clustering can promote them.
  */
@@ -153,9 +153,9 @@ export function shouldSkipAsDuplicate(
   existing: DedupeExisting[],
   options?: { windowMinutes?: number; nowMs?: number },
 ): { skip: boolean; reason: string; matchedId?: number } {
-  const ticker = candidate.ticker?.trim().toUpperCase();
-  if (!ticker || existing.length === 0) {
-    return { skip: false, reason: "no ticker or no peers" };
+  const symbol = candidate.symbol?.trim().toUpperCase();
+  if (!symbol || existing.length === 0) {
+    return { skip: false, reason: "no symbol or no peers" };
   }
 
   const windowMs =

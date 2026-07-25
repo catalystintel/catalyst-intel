@@ -41,7 +41,7 @@ import {
   sinceIsoForFeedTimeWindow,
   type FeedTimeWindow,
 } from "@/lib/catalysts/feed-time-window";
-import { tickerFeedGateSql } from "@/lib/catalysts/ticker-feed-gate";
+import { symbolFeedGateSql } from "@/lib/catalysts/symbol-feed-gate";
 import {
   isEventCategoryKey,
   type EventCategoryKey,
@@ -68,10 +68,10 @@ export interface FeedQueryFilters {
   sources: string[];
   timeWindow: FeedTimeWindow;
   /**
-   * Legacy client flag (always treated as on for the tape). The ticker /
+   * Legacy client flag (always treated as on for the tape). The symbol /
    * CPI·Jobs gate is applied unconditionally in `buildFeedWhere`.
    */
-  tickerOnly: boolean;
+  symbolOnly: boolean;
   /** ISO lower bound; overrides window when set. */
   since: string | null;
   /** Upper bound (now) — excludes future-dated calendar rows. */
@@ -229,14 +229,14 @@ export function parseFeedQueryFromSearchParams(
     s.toLowerCase(),
   );
 
-  // Product rule: ticker required (CPI/Jobs excepted). Default on; only an
+  // Product rule: symbol required (CPI/Jobs excepted). Default on; only an
   // explicit opt-out param is parsed for backward compat — `buildFeedWhere`
   // still always applies the gate.
-  const tickerOnlyRaw = (params.get("tickerOnly") ?? "1").trim().toLowerCase();
-  const tickerOnly =
-    tickerOnlyRaw !== "0" &&
-    tickerOnlyRaw !== "false" &&
-    tickerOnlyRaw !== "no";
+  const symbolOnlyRaw = (params.get("symbolOnly") ?? "1").trim().toLowerCase();
+  const symbolOnly =
+    symbolOnlyRaw !== "0" &&
+    symbolOnlyRaw !== "false" &&
+    symbolOnlyRaw !== "no";
 
   return {
     q: (params.get("q") ?? "").trim(),
@@ -245,7 +245,7 @@ export function parseFeedQueryFromSearchParams(
     forms,
     sources,
     timeWindow,
-    tickerOnly,
+    symbolOnly,
     since,
     until: options?.nowIso ?? new Date().toISOString(),
   };
@@ -296,7 +296,7 @@ export function buildFeedWhere(
     const pattern = `%${q.replace(/[%_]/g, "")}%`;
     parts.push(
       or(
-        like(catalysts.ticker, pattern),
+        like(catalysts.symbol, pattern),
         like(catalysts.companyName, pattern),
         like(catalysts.title, pattern),
         like(catalysts.headline, pattern),
@@ -324,8 +324,8 @@ export function buildFeedWhere(
     parts.push(inArray(rawSources.provider, filters.sources));
   }
 
-  // Always-on desk rule: no tickerless rows except CPI / Jobs (NFP).
-  parts.push(tickerFeedGateSql());
+  // Always-on desk rule: no symbolless rows except CPI / Jobs (NFP).
+  parts.push(symbolFeedGateSql());
 
   // Cluster collapse: one row per story — primary only (or unclustered).
   parts.push(
@@ -340,7 +340,7 @@ export function buildFeedWhere(
 
 export const feedSelectFields = {
   id: catalysts.id,
-  ticker: catalysts.ticker,
+  symbol: catalysts.symbol,
   companyName: catalysts.companyName,
   type: catalysts.type,
   title: catalysts.title,

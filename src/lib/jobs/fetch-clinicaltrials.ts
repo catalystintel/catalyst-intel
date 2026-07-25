@@ -1,5 +1,5 @@
 import { formatClinicalTrialTitle } from "@/lib/catalysts/catalyst-titles";
-import { resolveTickerFromName } from "@/lib/catalysts/ticker-resolver";
+import { resolveSymbolFromName } from "@/lib/catalysts/symbol-resolver";
 import {
   ingestNormalizedCatalysts,
   toSourceResult,
@@ -31,7 +31,7 @@ interface CtStudy {
  *
  * Quality-first: only material status changes (completed / terminated /
  * suspended / withdrawn). "Recruiting" updates are high-volume noise for
- * day traders. Rows still need ticker resolution at ingest (quality gate).
+ * day traders. Rows still need symbol resolution at ingest (quality gate).
  */
 export async function fetchClinicalTrials(): Promise<SourceFetchResult> {
   const url = new URL("https://clinicaltrials.gov/api/v2/studies");
@@ -76,7 +76,7 @@ export async function fetchClinicalTrials(): Promise<SourceFetchResult> {
       study.protocolSection?.conditionsModule?.conditions?.slice(0, 3) ?? [];
     const status = statusMod?.overallStatus?.trim() || "Clinical trial update";
 
-    const resolved = await resolveTickerFromName(sponsor, {
+    const resolved = await resolveSymbolFromName(sponsor, {
       userAgent: process.env.SEC_EDGAR_USER_AGENT?.trim() || "",
     });
 
@@ -85,8 +85,8 @@ export async function fetchClinicalTrials(): Promise<SourceFetchResult> {
       externalId: `clinicaltrials:${nctId}:${date}`,
       url: `https://clinicaltrials.gov/study/${nctId}`,
       rawContent: study,
-      ticker: resolved?.ticker ?? null,
-      tickerSource: resolved?.source ?? "unresolved",
+      symbol: resolved?.symbol ?? null,
+      symbolSource: resolved?.source ?? "unresolved",
       companyName: sponsor,
       type: "Clinical Trial",
       title: formatClinicalTrialTitle(sponsor),

@@ -13,7 +13,7 @@
 | **Must (core)**            | **SEC EDGAR** (8-K + expand forms)                                                    | Primary structured corporate catalysts                               | Free; fair-use ≤10 req/s; UA required                                        |
 | **Must (calendar)**        | **Finnhub** (earnings, FDA calendar, company news, insider)                           | Calendars + broad news on existing key                               | Free = personal use, 60/min; commercial redistribution needs paid/enterprise |
 | **Must (day-trader tape)** | **Nasdaq Trader Halt RSS**                                                            | Halt/resume (news-pending, LULD, etc.)                               | Free; poll ≤1/min                                                            |
-| **Should (wire speed)**    | **Benzinga via Polygon/Massive** (or Benzinga direct)                                 | Ticker-tagged editorial wire: analyst, M&A rumors, earnings reaction | Paid / enterprise quote; closest thing to “real-time catalyst news”          |
+| **Should (wire speed)**    | **Benzinga via Polygon/Massive** (or Benzinga direct)                                 | Symbol-tagged editorial wire: analyst, M&A rumors, earnings reaction | Paid / enterprise quote; closest thing to “real-time catalyst news”          |
 | **Should (market data)**   | **Polygon.io / Massive**                                                              | Quotes + (optional) news WS for impact scoring                       | Free tier thin; Starter ~$99/mo for useful access                            |
 | **Should (biotech)**       | **openFDA** + **ClinicalTrials.gov v2** + Finnhub FDA calendar                        | Approvals, labels, trials, AdCom                                     | Free government APIs                                                         |
 | **Should (insider)**       | **SEC Form 4** (own parse) **or Form4API**                                            | Insider buys/sells                                                   | Free EDGAR parse (work) / Form4API free 15k req/mo                           |
@@ -37,9 +37,9 @@
 
 ### Schema tables (relevant)
 
-- `companies` — name, ticker, sector, marketCap
+- `companies` — name, symbol, sector, marketCap
 - `raw_sources` — provider, externalId (unique), url, rawContent JSON, fetchedAt
-- `catalysts` — companyId, ticker, companyName, type, title, headline, eventCategory, itemCodes JSON, timestamp, rawSourceId, summary, impactScore
+- `catalysts` — companyId, symbol, companyName, type, title, headline, eventCategory, itemCodes JSON, timestamp, rawSourceId, summary, impactScore
 
 ### User-facing fields vs DB (gap preview)
 
@@ -48,7 +48,7 @@
 | Category          | Partial       | `eventCategory` — 8-K taxonomy only; too narrow for FDA/Macro/Crypto… |
 | Subcategory       | Partial       | `headline` / `itemCodes` / `type` — no first-class subcategory        |
 | Company           | Yes           | `companyName` + `companies.name`                                      |
-| Ticker            | Yes           | `ticker` (+ `companies.ticker`)                                       |
+| Symbol            | Yes           | `symbol` (+ `companies.symbol`)                                       |
 | Timestamp         | Yes           | `timestamp`                                                           |
 | Source            | Partial       | via `rawSourceId` → `provider` / `url` (joined in feed)               |
 | AI Summary        | Column exists | `summary` nullable; not filled yet                                    |
@@ -101,7 +101,7 @@ Latency bands used below: **RT** = seconds–low minutes; **Near-RT** = minutes�
 | **Benzinga** (direct or via Massive)             | Paid                                | RT               | Analyst upgrades, M&A, “why halted”               |
 | **Polygon News API**                             | Paid for meaningful use             | RT               | Secondary if already on Polygon for quotes        |
 | **Alpha Vantage** `NEWS_SENTIMENT`               | Free ~25 req/day; paid higher       | Near-RT          | Research/sentiment, not day-trader primary        |
-| **NewsAPI.org**                                  | Free delayed/dev; Business ~$449/mo | Not trader-grade | No reliable ticker taxonomy — **skip as primary** |
+| **NewsAPI.org**                                  | Free delayed/dev; Business ~$449/mo | Not trader-grade | No reliable symbol taxonomy — **skip as primary** |
 
 ### 3.5 Exchange / ops / halts
 
@@ -125,7 +125,7 @@ Latency bands used below: **RT** = seconds–low minutes; **Near-RT** = minutes�
 | Domain         | Practical source                                                           | Reality                                              |
 | -------------- | -------------------------------------------------------------------------- | ---------------------------------------------------- |
 | **Crypto**     | CoinGecko / CryptoCompare (market); Finnhub crypto news; paid crypto desks | Price RT free-ish; **catalyst news** still editorial |
-| **Cyber**      | CISA KEV JSON (free); company 8-K; paid breach wires                       | KEV ≠ ticker-mapped; need entity resolution          |
+| **Cyber**      | CISA KEV JSON (free); company 8-K; paid breach wires                       | KEV ≠ symbol-mapped; need entity resolution          |
 | **AI product** | Press releases (8-K 7.01/8.01), Finnhub/Benzinga news + classifier         | No dedicated free “AI catalyst” API                  |
 | **ESG**        | LSEG / MSCI / Arabesque-class                                              | **Almost never free**; treat as Later / partner data |
 
@@ -161,7 +161,7 @@ User taxonomy is **wider** than current `EventCategoryKey`. Recommendation: keep
 | **Geopolitical**         | War, sanctions, election                  | Paid wires + curated RSS                        | —                             | Expect imperfect                  |
 | **Energy**               | Inventory, OPEC, outages                  | EIA + news                                      | Futures via Polygon later     |                                   |
 | **Crypto**               | ETF flows, exchange hack, regulation      | Crypto news APIs + SEC for issuers              | CoinGecko prices              | Dual asset class                  |
-| **Cyber**                | Breach, ransomware                        | CISA KEV + 8-K + news                           | —                             | Map vendor→ticker hard            |
+| **Cyber**                | Breach, ransomware                        | CISA KEV + 8-K + news                           | —                             | Map vendor→symbol hard            |
 | **AI**                   | Model launch, chip export                 | News classifier + 8-K                           | —                             | Tag, don’t new API                |
 | **ESG**                  | Rating change, divest                     | Paid ESG vendors                                | News                          | Later                             |
 | **Ops**                  | Guidance cut, plant, supply               | 8-K + earnings calls                            | News                          |                                   |
@@ -178,7 +178,7 @@ Personas: **Day trader** → **Event-driven** → **Swing** → **Analyst**.
 
 ### Must (ship for day trader + event-driven)
 
-1. **SEC EDGAR 8-K** (deepen: more reliable item parse, CIK→ticker, AH/PM session tags) — _exists_
+1. **SEC EDGAR 8-K** (deepen: more reliable item parse, CIK→symbol, AH/PM session tags) — _exists_
 2. **Expand EDGAR forms:** Form 4, 6-K (ADRs), selected S-3/424B (dilution), 13D/G
 3. **Finnhub earnings calendar** + company news (watchlist-scoped to respect rate limits)
 4. **Nasdaq Trader Halt RSS**
@@ -219,7 +219,7 @@ User’s field list is directionally right; **Confidence, Tags, Subcategory, His
 | -------------------- | ------------------------------------------------ | --------------------- | ------------------------------------ |
 | `category`           | Rename/alias of `eventCategory`; **expand enum** | `event_category` text | Exists; **widen values**             |
 | `subcategory`        | New first-class field                            | `subcategory` text    | Gap (today: headline/items)          |
-| `company` / `ticker` | Keep denormalized + FK                           | existing              | OK                                   |
+| `company` / `symbol` | Keep denormalized + FK                           | existing              | OK                                   |
 | `timestamp`          | Event time (exchange TZ metadata separate)       | existing              | Add `timezone` or store UTC ISO only |
 | `source`             | Join `raw_sources.provider` + `url`              | existing pattern      | OK; expose in API always             |
 | `ai_summary`         | Keep as `summary`                                | existing              | Wire AI phase                        |
@@ -263,7 +263,7 @@ catalyst_outcomes (
 | ----------------------------------- | ----------------------- |
 | SEC primary filing                  | 90–98                   |
 | Exchange halt RSS                   | 95                      |
-| Finnhub/Benzinga ticker-tagged news | 70–85                   |
+| Finnhub/Benzinga symbol-tagged news | 70–85                   |
 | openFDA / ClinicalTrials structured | 80–90 (entity map risk) |
 | NLP-classified general news         | 40–65                   |
 | Social sentiment                    | 20–40                   |
@@ -274,7 +274,7 @@ catalyst_outcomes (
 
 ### Phase 0 — Harden what you have (days)
 
-- Keep **SEC 8-K** as golden path; improve CIK/ticker/sector fill via Finnhub company profile.
+- Keep **SEC 8-K** as golden path; improve CIK/symbol/sector fill via Finnhub company profile.
 - Document Finnhub **personal-use** limit; plan commercial license before public SaaS.
 
 ### Phase 1 — Must calendars & tape (1–2 weeks)
@@ -282,7 +282,7 @@ catalyst_outcomes (
 1. Finnhub **earnings calendar** → catalysts (`category=earnings`, subcategory=`calendar` / `reported`)
 2. Finnhub **FDA calendar** → `fda` / `adcom`
 3. **Nasdaq Halt RSS** → `exchange` / `halt_*`
-4. Finnhub **company news** for watchlist tickers only (rate-limit safe)
+4. Finnhub **company news** for watchlist symbols only (rate-limit safe)
 
 ### Phase 2 — Must filings breadth (2–4 weeks)
 
@@ -311,8 +311,8 @@ catalyst_outcomes (
 | Commercial redistribution of Finnhub data           | **Paid / enterprise license**                           |
 | Same-day FDA “desk” chatter / vote leaks            | **Paid editorial**, not openFDA                         |
 | Clean ESG ratings as catalysts                      | **Paid** vendors                                        |
-| Perfect geopolitical → ticker mapping               | **Never fully automated**; human/AI assist              |
-| Free NewsAPI-style aggregators                      | Delayed and weak ticker tagging — unsuitable as primary |
+| Perfect geopolitical → symbol mapping               | **Never fully automated**; human/AI assist              |
+| Free NewsAPI-style aggregators                      | Delayed and weak symbol tagging — unsuitable as primary |
 
 ---
 

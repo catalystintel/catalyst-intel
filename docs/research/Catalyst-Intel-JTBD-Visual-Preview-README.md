@@ -23,7 +23,7 @@ Open the HTML in any browser (double-click or drag into Chrome/Edge). Use the to
 ### Live tape (`#tape`) — JTBD 1 + JTBD 3
 
 - **JTBD 1 — Filing hits → Act / Dismiss**  
-  Blotter rows show **Ticker | Event | Impact | Title | Proof | Time** with amber/steel materiality badges and **Act** / **Dismiss** actions so a trader can triage in seconds.
+  Blotter rows show **Symbol | Event | Impact | Title | Proof | Time** with amber/steel materiality badges and **Act** / **Dismiss** actions so a trader can triage in seconds.
 - **JTBD 3 — Headline → one-click EDGAR proof**  
   Each row’s **EDGAR ↗** proof link simulates opening the filing accession (toast + drawer snippet). Click a row (or Act) to open the detail drawer with the proof excerpt.
 

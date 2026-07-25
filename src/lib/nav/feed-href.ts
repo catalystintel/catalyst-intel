@@ -4,11 +4,11 @@
  */
 export function feedHref(opts?: {
   catalystId?: number | null;
-  ticker?: string | null;
+  symbol?: string | null;
 }): string {
   const params = new URLSearchParams();
-  const ticker = opts?.ticker?.trim().toUpperCase();
-  if (ticker) params.set("ticker", ticker);
+  const symbol = opts?.symbol?.trim().toUpperCase();
+  if (symbol) params.set("symbol", symbol);
   if (typeof opts?.catalystId === "number" && opts.catalystId > 0) {
     params.set("c", String(opts.catalystId));
   }

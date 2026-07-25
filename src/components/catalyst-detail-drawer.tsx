@@ -75,7 +75,7 @@ export function CatalystDetailDrawer({
                   id={`catalyst-drawer-${catalyst.id}`}
                   className="mt-1 truncate font-mono text-2xl font-semibold tracking-tight text-[var(--desk-text)]"
                 >
-                  {catalyst.ticker ?? "—"}
+                  {catalyst.symbol ?? "—"}
                 </h2>
                 {catalyst.companyName ? (
                   <p className="mt-0.5 truncate text-sm text-[var(--desk-text-muted)]">

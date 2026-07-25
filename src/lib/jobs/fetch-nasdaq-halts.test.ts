@@ -10,7 +10,7 @@ import {
 describe("parseHaltTitle", () => {
   it("detects a trading halt", () => {
     expect(parseHaltTitle("XYZ Trading Halt")).toEqual({
-      ticker: "XYZ",
+      symbol: "XYZ",
       headline: "Trading halt",
       subcategory: "halt",
     });
@@ -18,7 +18,7 @@ describe("parseHaltTitle", () => {
 
   it("detects halt resumed", () => {
     expect(parseHaltTitle("ABCD Halt Resumed")).toEqual({
-      ticker: "ABCD",
+      symbol: "ABCD",
       headline: "Halt resumed",
       subcategory: "halt_resumed",
     });
@@ -38,7 +38,7 @@ describe("parseHaltRssItem", () => {
     });
 
     expect(parsed).toMatchObject({
-      ticker: "STKH",
+      symbol: "STKH",
       issueName: "Steakholder Foods Ltd. ADS",
       reasonCode: "T1",
       reasonLabel: "News pending",
@@ -49,7 +49,7 @@ describe("parseHaltRssItem", () => {
     });
   });
 
-  it("falls back to ticker when IssueName is missing", () => {
+  it("falls back to symbol when IssueName is missing", () => {
     const parsed = parseHaltRssItem({
       title: "PMI",
       "ndaq:IssueSymbol": "PMI",

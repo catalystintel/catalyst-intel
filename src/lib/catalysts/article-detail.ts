@@ -438,14 +438,14 @@ export function mergeEarningsFigures(
 
 export function buildEarningsIntro(
   figures: EarningsFigures,
-  input?: { ticker?: string | null; companyName?: string | null },
+  input?: { symbol?: string | null; companyName?: string | null },
 ): string {
-  const ticker = input?.ticker?.trim().toUpperCase() || null;
+  const symbol = input?.symbol?.trim().toUpperCase() || null;
   const company = input?.companyName?.trim() || null;
   const subject =
-    ticker && company && company.toUpperCase() !== ticker
-      ? `${company} (${ticker})`
-      : ticker || company || "This issuer";
+    symbol && company && company.toUpperCase() !== symbol
+      ? `${company} (${symbol})`
+      : symbol || company || "This issuer";
 
   const period = periodLabel(figures);
   const periodBit = period ? ` for ${period}` : "";
@@ -478,7 +478,7 @@ export function buildEarningsIntro(
 
 export function earningsFiguresToCard(
   figures: EarningsFigures,
-  input?: { ticker?: string | null; companyName?: string | null },
+  input?: { symbol?: string | null; companyName?: string | null },
 ): ArticleDetailCard {
   const fields: DetailField[] = [];
   const period = periodLabel(figures);
@@ -652,7 +652,7 @@ export interface ResolveArticleDetailsInput {
   type?: string | null;
   headline?: string | null;
   title?: string | null;
-  ticker?: string | null;
+  symbol?: string | null;
   companyName?: string | null;
   provider?: string | null;
   tags?: string[] | null;
@@ -689,7 +689,7 @@ export function resolveArticleDetailCards(
     ) {
       cards.push(
         earningsFiguresToCard(merged, {
-          ticker: input.ticker,
+          symbol: input.symbol,
           companyName: input.companyName,
         }),
       );
@@ -701,7 +701,7 @@ export function resolveArticleDetailCards(
         kind: "earnings",
         title: "Earnings results",
         intro: `${
-          input.ticker?.trim().toUpperCase() ||
+          input.symbol?.trim().toUpperCase() ||
           input.companyName?.trim() ||
           "This issuer"
         } has an earnings-related catalyst. Detailed EPS and revenue figures were not stored on this row — open the original filing or source for the full results release.`,

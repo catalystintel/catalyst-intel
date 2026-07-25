@@ -60,7 +60,7 @@
 | 14  | Geopolitical                             | OpenSanctions; Federal Register sanctions; GDELT (now productized/paid cloud); news APIs (Finlight/MarketAux/GNews); RiskSentinel                                   | Partial                         | Free structured geo events thin; news + sanctions lists best free combo           |
 | 15  | Energy & Commodities                     | **EIA** Open Data (free key; later stub); Goldprice.dev (no auth); FRED commodities                                                                                 | Strong for EIA                  | Spot commodity RT = often paid; EIA is official but not tick RT                   |
 | 16  | Cryptocurrency                           | CoinGecko (no auth / soft limits); CoinCap; CryptoCompare (key); exchange public websockets                                                                         | Strong for prices               | **Catalyst** events (hacks, ETF, delist) need news/CISA/exchange notices          |
-| 17  | Cybersecurity                            | **NVD** ([Security](https://publicapis.dev/category/security)); **CISA KEV JSON** (primary feed, no auth); MSRC; GreyNoise (limited free)                           | Strong if stub filled           | Map vendor→ticker is the hard part                                                |
+| 17  | Cybersecurity                            | **NVD** ([Security](https://publicapis.dev/category/security)); **CISA KEV JSON** (primary feed, no auth); MSRC; GreyNoise (limited free)                           | Strong if stub filled           | Map vendor→symbol is the hard part                                                |
 | 18  | AI & Technology                          | arXiv; PatentsView; news APIs; Hugging Face Hub (not classic catalyst)                                                                                              | Partial                         | Product/AI catalysts mostly news + 8-K                                            |
 | 19  | ESG                                      | SustainMetrics (GHG factors); EPA; OpenSanctions (governance/PEP); ESG ratings vendors are paid                                                                     | **Gap** for ratings             | Free = emissions factors / EPA / controversies via news, not MSCI-style scores    |
 | 20  | Company Operations                       | EDGAR 8-K Item 2.05/2.06/7.01; FastDOL (labor/OSHA); CMS quality (healthcare ops)                                                                                   | Partial                         | Plant closures etc. often 8-K or local news                                       |
@@ -145,7 +145,7 @@ Auth / HTTPS / CORS columns cite **public-apis** table values where listed; othe
 - **Subjects:** Geopolitical, ESG/governance, Regulatory (sanctions)
 - **Latency:** Near-RT relative to list updates (hours–days depending on source)
 - **Free:** Yes with limits
-- **POC:** **Add** for sanctioned entity ↔ ticker/company matching
+- **POC:** **Add** for sanctioned entity ↔ symbol/company matching
 
 #### USPTO / PatentsView
 
@@ -172,7 +172,7 @@ Auth / HTTPS / CORS columns cite **public-apis** table values where listed; othe
 - **Subjects:** Cybersecurity (highest free signal)
 - **Latency:** Near-RT when CISA updates catalog (business hours)
 - **Free:** Yes
-- **POC:** **Add** — matches later stub `cisa`; map `vendorProject` → public tickers carefully
+- **POC:** **Add** — matches later stub `cisa`; map `vendorProject` → public symbols carefully
 
 #### EIA Open Data (primary; later stub)
 
@@ -306,7 +306,7 @@ Auth / HTTPS / CORS columns cite **public-apis** table values where listed; othe
 
 - **Catalog:** publicapis.dev News
 - **Auth:** API key | HTTPS Yes
-- **Subjects:** Broad news → weak ticker tagging vs MarketAux
+- **Subjects:** Broad news → weak symbol tagging vs MarketAux
 - **POC:** Secondary; prefer finance-tagged news APIs
 
 #### WallstreetBets / FinSignals
@@ -424,7 +424,7 @@ Broad taxonomy fill → MarketAux/Finlight → classify into subject families
 Macro context       → FRED / FiscalData (not alert spam)
 ```
 
-Classification tip: treat news aggregators as **candidates** that must pass ticker + taxonomy filters; prefer primary-source confirmation when available (e.g., news “FDA approval” → verify openFDA/EDGAR).
+Classification tip: treat news aggregators as **candidates** that must pass symbol + taxonomy filters; prefer primary-source confirmation when available (e.g., news “FDA approval” → verify openFDA/EDGAR).
 
 ---
 

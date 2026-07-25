@@ -22,9 +22,9 @@ Components: `src/components/app-shell.tsx`, `src/components/app-sidebar.tsx`, `s
 
 ---
 
-## JTBD 1 — Filing hits → ticker + event + materiality (Act / Dismiss)
+## JTBD 1 — Filing hits → symbol + event + materiality (Act / Dismiss)
 
-**Job:** When a filing hits, see ticker, event, and materiality quickly; Act to inspect or Dismiss noise.
+**Job:** When a filing hits, see symbol, event, and materiality quickly; Act to inspect or Dismiss noise.
 
 ### Screen: Latest News (`/dashboard`)
 
@@ -34,18 +34,18 @@ Panel title **Latest News**. Soft-polls `/api/catalysts` (~20s focused, ~90s blu
 
 | Column header      | Content                                                              |
 | ------------------ | -------------------------------------------------------------------- |
-| **Ticker / Event** | Mono ticker + event line (headline or category / type)               |
+| **Symbol / Event** | Mono symbol + event line (headline or category / type)               |
 | **Sector**         | `SectorPill` (company sector → category label → “SEC Filings”)       |
 | **Impact**         | `MaterialityBadge` — numeric score + High / Medium / Low             |
 | **Title**          | Headline preferred, else filing title; source name under Act/Dismiss |
 | **Proof**          | Compact EDGAR control (see JTBD 3)                                   |
 | **Time**           | Clock + date (`formatTimeDate`)                                      |
 
-> Note: Older copy sometimes said Source \| Sector \| Title \| Time. The live grid is **Ticker/Event · Sector · Impact · Title · Proof · Time**. Source (“SEC EDGAR”) appears under the title actions on desktop and in the drawer.
+> Note: Older copy sometimes said Source \| Sector \| Title \| Time. The live grid is **Symbol/Event · Sector · Impact · Title · Proof · Time**. Source (“SEC EDGAR”) appears under the title actions on desktop and in the drawer.
 
 ### Mobile
 
-Title + stacked ticker, impact badge, compact Proof, clock time; Act / Dismiss below.
+Title + stacked symbol, impact badge, compact Proof, clock time; Act / Dismiss below.
 
 ### Interactions
 
@@ -54,13 +54,13 @@ Title + stacked ticker, impact badge, compact Proof, clock time; Act / Dismiss b
 | Row click / Enter / Space | Opens detail drawer for that catalyst                                                                                   |
 | **Act**                   | Opens / focuses the same drawer (does not mutate DB)                                                                    |
 | **Dismiss**               | Hides row in this browser via `localStorage` key `ci.dismissed-catalyst-ids` (last 200 ids); does **not** delete DB row |
-| Filters                   | Ticker search, time window (1h / 4h / 24h / All), category chips (“All sectors” + counts)                               |
+| Filters                   | Symbol search, time window (1h / 4h / 24h / All), category chips (“All sectors” + counts)                               |
 
 Empty states: no catalysts yet (admin prompted to fetch); or no filter matches.
 
 ### Drawer (same JTBD)
 
-Repeats ticker, company name, category badge, materiality, Act / Dismiss, Source / Sector / Form / Age / Filed, filing items or summary.
+Repeats symbol, company name, category badge, materiality, Act / Dismiss, Source / Sector / Form / Age / Filed, filing items or summary.
 
 **Components:** `live-catalyst-feed.tsx`, `materiality-badge.tsx`, `sector-pill.tsx`, `category-badge.tsx`, `catalyst-detail-drawer.tsx`.
 
@@ -74,18 +74,18 @@ Repeats ticker, company name, category badge, materiality, Act / Dismiss, Source
 
 Eyebrow **Quiet tape**. Two panels:
 
-1. **Watchlist tickers** — add (mono input + Add), remove (trash). Empty → quiet mode filters by categories only.
+1. **Watchlist symbols** — add (mono input + Add), remove (trash). Empty → quiet mode filters by categories only.
 2. **Playbook categories** — toggle chips for all event categories; **Quiet mode on/off** persists via `PUT /api/playbook`.
 
 ### Screen B: Live feed Quiet toggle
 
-Header button **Quiet playbook** (live accent + dot when on). Persists same playbook API. Filters panel shows: watchlist ticker count · playbook category count · link to edit under Watchlists.
+Header button **Quiet playbook** (live accent + dot when on). Persists same playbook API. Filters panel shows: watchlist symbol count · playbook category count · link to edit under Watchlists.
 
 ### Filter logic (when Quiet on)
 
 | Watchlist | Result                                                      |
 | --------- | ----------------------------------------------------------- |
-| Non-empty | Only watchlist tickers whose `eventCategory` is in playbook |
+| Non-empty | Only watchlist symbols whose `eventCategory` is in playbook |
 | Empty     | Only playbook categories (noise filtered by category alone) |
 | Quiet off | Full tape + normal Filters only                             |
 
@@ -180,7 +180,7 @@ Sign in → Dashboard (Latest News)
   ├─ Row → Drawer (Act) · Dismiss (local)
   ├─ Proof → EDGAR new tab
   └─ Drawer → Historical reaction placeholder
-Watchlists → tickers + playbook categories + Quiet mode
+Watchlists → symbols + playbook categories + Quiet mode
 Alerts → webhook / email rules · Test · Push stub
 Admin → Fetch SEC EDGAR (allowlist)
 ```
@@ -202,7 +202,7 @@ Admin → Fetch SEC EDGAR (allowlist)
 - `src/components/live-catalyst-feed.tsx` — Tape, columns, Quiet, Act/Dismiss, filters, poll
 - `src/components/catalyst-detail-drawer.tsx` — Detail, Proof, historical stub
 - `src/components/edgar-proof-link.tsx` — One-click EDGAR proof
-- `src/components/watchlist-playbook-panel.tsx` — Tickers + playbook
+- `src/components/watchlist-playbook-panel.tsx` — Symbols + playbook
 - `src/components/alert-rules-panel.tsx` — Away-desk rules
 - `src/components/materiality-badge.tsx` — Impact High/Med/Low + score
 - `src/components/sector-pill.tsx` — Sector column

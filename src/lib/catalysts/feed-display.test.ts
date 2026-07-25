@@ -16,7 +16,7 @@ import {
 function base(overrides: Partial<FeedCatalyst> = {}): FeedCatalyst {
   return {
     id: 1,
-    ticker: "NVDA",
+    symbol: "NVDA",
     companyName: "NVIDIA Corp",
     type: "8-K",
     title: "NVIDIA Corp — 8-K filing",
@@ -42,7 +42,7 @@ function base(overrides: Partial<FeedCatalyst> = {}): FeedCatalyst {
 }
 
 describe("sourceDisplay", () => {
-  it("maps sec-edgar to SEC EDGAR with type · ticker meta", () => {
+  it("maps sec-edgar to SEC EDGAR with type · symbol meta", () => {
     expect(sourceDisplay(base())).toMatchObject({
       name: "SEC EDGAR",
       meta: "8-K · NVDA",
@@ -110,7 +110,7 @@ describe("titleLine", () => {
       titleLine(
         base({
           companyName: "Liberty Global Ltd",
-          ticker: "LBTYK",
+          symbol: "LBTYK",
           headline: "Earnings / results",
           items: [
             {
@@ -133,7 +133,7 @@ describe("titleLine", () => {
       "Notice of Delisting or Failure to Satisfy a Continued Listing Rule or Standard; Transfer of Listing. This is a longer continuation of the official Item text for traders.";
     const row = base({
       companyName: "Quantum-Si Inc",
-      ticker: "QSI",
+      symbol: "QSI",
       headline: "Delisting risk",
       eventCategory: "distress",
       items: [{ code: "3.01", label: "Delisting risk", category: "distress" }],
@@ -152,7 +152,7 @@ describe("titleLine", () => {
       titleLine(
         base({
           companyName: "Acme Corp",
-          ticker: "ACME",
+          symbol: "ACME",
           headline: "Officer / Director Change",
           eventCategory: "management",
           items: [
@@ -173,7 +173,7 @@ describe("titleLine", () => {
       titleLine(
         base({
           companyName: "Acme Corp",
-          ticker: "ACME",
+          symbol: "ACME",
           headline: "Officer / Director Change",
           eventCategory: "management",
           items: [
@@ -195,7 +195,7 @@ describe("titleLine", () => {
       titleLine(
         base({
           companyName: "Acme Corp",
-          ticker: "ACME",
+          symbol: "ACME",
           headline: "Officer / Director Change",
           eventCategory: "management",
           items: [
@@ -371,7 +371,7 @@ describe("titleLine", () => {
           headline: "Macro calendar",
           title: "NFP / Employment Situation — July 2026",
           companyName: "US Macro",
-          ticker: null,
+          symbol: null,
         }),
       ),
     ).toBe("Jobs Report (NFP) — July 2026");
@@ -386,7 +386,7 @@ describe("titleLine", () => {
           headline: "Price target (Street)",
           title: "AAPL — Price target",
           companyName: "Apple Inc.",
-          ticker: "AAPL",
+          symbol: "AAPL",
         }),
       ),
     ).toBe("Price Target - Apple Inc.");
@@ -402,7 +402,7 @@ describe("titleLine", () => {
           headline: "Trading halt",
           title: "Halts (Steakholder Foods Ltd. ADS) — News pending",
           companyName: "Steakholder Foods Ltd. ADS",
-          ticker: "STKH",
+          symbol: "STKH",
         }),
       ),
     ).toBe("Halts (Steakholder Foods Ltd. ADS) — News pending");
@@ -430,7 +430,7 @@ describe("titleLine", () => {
           headline: "Earnings calendar",
           title: "Earnings Report Q1 - Apple Inc.",
           companyName: "Apple Inc.",
-          ticker: "AAPL",
+          symbol: "AAPL",
         }),
       ),
     ).toBe("Earnings Report Q1 - Apple Inc.");
@@ -475,9 +475,9 @@ describe("eventLabel", () => {
 });
 
 describe("matchesFeedSearchQuery", () => {
-  it("matches ticker, company name, and title case-insensitively", () => {
+  it("matches symbol, company name, and title case-insensitively", () => {
     const row = base({
-      ticker: "TSLA",
+      symbol: "TSLA",
       companyName: "Tesla, Inc.",
       title: "Form 4 insider transaction",
       headline: "CEO sells shares",

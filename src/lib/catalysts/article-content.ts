@@ -3,7 +3,7 @@
  * Prefers stored vendor text (summary / description / Atom abstract) over
  * scraping arbitrary URLs. Heuristic extractive + metadata synthesis until
  * Groq is wired — never leave the reader with a blank or jargon-only blurb
- * when ticker / category / item codes exist.
+ * when symbol / category / item codes exist.
  */
 
 import {
@@ -243,7 +243,7 @@ export interface ArticleSummaryInput {
   title?: string | null;
   headline?: string | null;
   body?: string | null;
-  ticker?: string | null;
+  symbol?: string | null;
   companyName?: string | null;
   eventCategory?: string | null;
   subcategory?: string | null;
@@ -286,7 +286,7 @@ export function isWeakSummary(text: string | null | undefined): boolean {
     wordCount < 16;
   if (looksLikeItemDump) return true;
 
-  // Pure ticker / form labels.
+  // Pure symbol / form labels.
   if (/^[A-Z]{1,5}\s*[—-]\s*(8-?K|Form\s*4|10-?[KQ]).*$/i.test(cleaned)) {
     return true;
   }
@@ -302,12 +302,12 @@ export function isWeakSummary(text: string | null | undefined): boolean {
 }
 
 function subjectPhrase(input: ArticleSummaryInput): string {
-  const ticker = input.ticker?.trim().toUpperCase() || null;
+  const symbol = input.symbol?.trim().toUpperCase() || null;
   const company = input.companyName?.trim() || null;
-  if (ticker && company && company.toUpperCase() !== ticker) {
-    return `${company} (${ticker})`;
+  if (symbol && company && company.toUpperCase() !== symbol) {
+    return `${company} (${symbol})`;
   }
-  if (ticker) return ticker;
+  if (symbol) return symbol;
   if (company) return company;
   return "This issuer";
 }
@@ -472,7 +472,7 @@ export function synthesizeReadableSummary(input: ArticleSummaryInput): string {
     if (figures) {
       sentences.push(
         buildEarningsIntro(figures, {
-          ticker: input.ticker,
+          symbol: input.symbol,
           companyName: input.companyName,
         }),
       );
@@ -540,7 +540,7 @@ export function synthesizeReadableSummary(input: ArticleSummaryInput): string {
 
 /**
  * Prefer a substantial stored catalyst.summary; otherwise extract from body
- * or synthesize plain-language text from ticker / category / items / raw.
+ * or synthesize plain-language text from symbol / category / items / raw.
  */
 export function resolveArticleSummary(
   input: ArticleSummaryInput,
@@ -611,7 +611,7 @@ export function ensureIngestSummary(input: {
   headline?: string | null;
   provider?: string | null;
   rawContent?: unknown;
-  ticker?: string | null;
+  symbol?: string | null;
   companyName?: string | null;
   eventCategory?: string | null;
   subcategory?: string | null;
@@ -630,7 +630,7 @@ export function ensureIngestSummary(input: {
     title: input.title,
     headline: input.headline,
     body,
-    ticker: input.ticker,
+    symbol: input.symbol,
     companyName: input.companyName,
     eventCategory: input.eventCategory,
     subcategory: input.subcategory,

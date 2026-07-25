@@ -16,11 +16,11 @@ const POLYGON_BASE = "https://api.polygon.io";
 const CACHE_TTL_MS = 5 * 60 * 1000;
 const CACHE_MAX = 150;
 const RELATED_LIMIT = 5;
-const TICKER_RE = /^[A-Z][A-Z0-9.]{0,11}$/;
+const SYMBOL_RE = /^[A-Z][A-Z0-9.]{0,11}$/;
 
 export interface ArticleCompanyProfile {
   name: string | null;
-  ticker: string;
+  symbol: string;
   industry: string | null;
   marketCapMillions: number | null;
   webUrl: string | null;
@@ -89,10 +89,10 @@ function emptyEnrichment(): ArticleEnrichment {
   return { profile: null, relatedHeadlines: [], quote: null };
 }
 
-function normalizeTicker(ticker: string | null | undefined): string | null {
-  if (!ticker) return null;
-  const symbol = ticker.trim().toUpperCase();
-  return TICKER_RE.test(symbol) ? symbol : null;
+function normalizeSymbol(raw: string | null | undefined): string | null {
+  if (!raw) return null;
+  const symbol = raw.trim().toUpperCase();
+  return SYMBOL_RE.test(symbol) ? symbol : null;
 }
 
 function isoDaysAgo(days: number): string {
@@ -155,7 +155,7 @@ async function polygonGet<T>(
 }
 
 interface FinnhubProfileRow {
-  ticker?: string;
+  symbol?: string;
   name?: string;
   finnhubIndustry?: string;
   marketCapitalization?: number;
@@ -208,10 +208,10 @@ async function fetchProfile(
   const row = await finnhubGet<FinnhubProfileRow>("/stock/profile2", apiKey, {
     symbol,
   });
-  if (!row?.name && !row?.ticker) return null;
+  if (!row?.name && !row?.symbol) return null;
   return {
     name: row.name?.trim() || null,
-    ticker: (row.ticker ?? symbol).toUpperCase(),
+    symbol: (row.symbol ?? symbol).toUpperCase(),
     industry: row.finnhubIndustry?.trim() || null,
     marketCapMillions: finiteOrNull(row.marketCapitalization),
     webUrl: row.weburl?.trim() || null,
@@ -296,8 +296,8 @@ async function fetchRelatedFromDb(
       .leftJoin(rawSources, eq(catalysts.rawSourceId, rawSources.id))
       .where(
         excludeId != null
-          ? and(eq(catalysts.ticker, symbol), ne(catalysts.id, excludeId))
-          : eq(catalysts.ticker, symbol),
+          ? and(eq(catalysts.symbol, symbol), ne(catalysts.id, excludeId))
+          : eq(catalysts.symbol, symbol),
       )
       .orderBy(desc(catalysts.timestamp))
       .limit(RELATED_LIMIT)
@@ -351,7 +351,7 @@ async function fetchFinnhubCompanyNews(
   return out;
 }
 
-async function fetchPolygonTickerNews(
+async function fetchPolygonSymbolNews(
   symbol: string,
   apiKey: string,
 ): Promise<ArticleRelatedHeadline[]> {
@@ -359,7 +359,7 @@ async function fetchPolygonTickerNews(
     "/v2/reference/news",
     apiKey,
     {
-      ticker: symbol,
+      symbol: symbol,
       limit: String(RELATED_LIMIT),
       order: "desc",
       sort: "published_utc",
@@ -408,11 +408,11 @@ function mergeRelatedHeadlines(
 }
 
 /**
- * Fetch supporting data for an article keyed by ticker (+ optional exclude id).
+ * Fetch supporting data for an article keyed by symbol (+ optional exclude id).
  * Always soft-fails to an empty enrichment object.
  */
 export async function fetchArticleEnrichment(options: {
-  ticker: string | null | undefined;
+  symbol: string | null | undefined;
   excludeCatalystId?: number | null;
 }): Promise<ArticleEnrichment> {
   try {
@@ -423,10 +423,10 @@ export async function fetchArticleEnrichment(options: {
 }
 
 async function fetchArticleEnrichmentInner(options: {
-  ticker: string | null | undefined;
+  symbol: string | null | undefined;
   excludeCatalystId?: number | null;
 }): Promise<ArticleEnrichment> {
-  const symbol = normalizeTicker(options.ticker);
+  const symbol = normalizeSymbol(options.symbol);
   if (!symbol) return emptyEnrichment();
 
   const cacheKey = `${symbol}:${options.excludeCatalystId ?? 0}`;
@@ -451,7 +451,7 @@ async function fetchArticleEnrichmentInner(options: {
       : Promise.resolve([] as ArticleRelatedHeadline[]),
     // Prefer Finnhub news when available; only hit Polygon news if Finnhub key missing.
     !finnhubKey && polygonKey
-      ? fetchPolygonTickerNews(symbol, polygonKey)
+      ? fetchPolygonSymbolNews(symbol, polygonKey)
       : Promise.resolve([] as ArticleRelatedHeadline[]),
     finnhubKey ? fetchFinnhubQuote(symbol, finnhubKey) : Promise.resolve(null),
     // Polygon prev-day as soft-fail quote fallback / when Finnhub unavailable.
@@ -468,7 +468,7 @@ async function fetchArticleEnrichmentInner(options: {
     finnhubNews.length === 0 &&
     dbRelated.length < RELATED_LIMIT
   ) {
-    polygonNewsFill = await fetchPolygonTickerNews(symbol, polygonKey);
+    polygonNewsFill = await fetchPolygonSymbolNews(symbol, polygonKey);
   }
 
   // Quote: Finnhub first; if missing, try Polygon prev (soft-fail free tier).
@@ -496,13 +496,13 @@ async function fetchArticleEnrichmentInner(options: {
  * Skips related-headline fan-out used by the full article enrichment path.
  */
 export async function fetchMarketQuoteBundle(options: {
-  ticker: string | null | undefined;
+  symbol: string | null | undefined;
 }): Promise<{
   quote: ArticleMarketQuote | null;
   profile: ArticleCompanyProfile | null;
 }> {
   try {
-    const symbol = normalizeTicker(options.ticker);
+    const symbol = normalizeSymbol(options.symbol);
     if (!symbol) return { quote: null, profile: null };
 
     const cacheKey = `quote:${symbol}`;

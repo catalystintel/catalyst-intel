@@ -9,24 +9,24 @@ Sign in with Google before checking authenticated surfaces.
 
 ---
 
-## JTBD 1 — Filing hits → ticker + event + materiality (act / dismiss)
+## JTBD 1 — Filing hits → symbol + event + materiality (act / dismiss)
 
-- [ ] Live feed (`/catalyst-feed`) shows **ticker** and **event type** (headline / category) within one soft-poll cycle (~20s when tab focused) after a new SEC ingest.
+- [ ] Live feed (`/catalyst-feed`) shows **symbol** and **event type** (headline / category) within one soft-poll cycle (~20s when tab focused) after a new SEC ingest.
 - [ ] Each row shows a **materiality / impact** badge (High / Medium / Low + numeric score). Scores are rule-based from event category when AI scoring is absent.
 - [ ] **Read** (amber) opens the **in-app article** at `/catalyst-feed/catalyst/[id]` (not an external tab).
 - [ ] Clicking the row **Title** also navigates to the in-app article.
 - [ ] **Dismiss** removes the row from the feed for this browser (local dismiss list); it does not delete the DB row.
-- [ ] Article page shows ticker, category, summary, and best-available stored body; secondary CTA opens the original source.
+- [ ] Article page shows symbol, category, summary, and best-available stored body; secondary CTA opens the original source.
 
 ---
 
 ## JTBD 2 — Quiet tape → only playbook-matching catalysts
 
-- [ ] `/watchlist` lets you add/remove tickers and toggle playbook categories; Quiet mode can be enabled there.
+- [ ] `/watchlist` lets you add/remove symbols and toggle playbook categories; Quiet mode can be enabled there.
 - [ ] Live feed **Quiet playbook** toggle persists via `/api/playbook` and filters the tape.
-- [ ] With Quiet on + non-empty watchlist: only watchlist tickers whose `eventCategory` is in the playbook appear.
+- [ ] With Quiet on + non-empty watchlist: only watchlist symbols whose `eventCategory` is in the playbook appear.
 - [ ] With Quiet on + empty watchlist: only playbook categories appear (noise filtered by category alone).
-- [ ] With Quiet off: full tape respects only the normal Filters panel (ticker / category / time).
+- [ ] With Quiet off: full tape respects only the normal Filters panel (symbol / category / time).
 
 ---
 

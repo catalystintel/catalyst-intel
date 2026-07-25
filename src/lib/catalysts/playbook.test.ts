@@ -19,30 +19,30 @@ describe("normalizePlaybookCategories", () => {
 });
 
 describe("matchesQuietPlaybook", () => {
-  const row = { ticker: "NVDA", eventCategory: "earnings" as const };
+  const row = { symbol: "NVDA", eventCategory: "earnings" as const };
 
   it("passes everything when quiet mode is off", () => {
     expect(
       matchesQuietPlaybook(row, {
         quietMode: false,
-        watchlistTickers: ["AAPL"],
+        watchlistSymbols: ["AAPL"],
         playbookCategories: ["distress"],
       }),
     ).toBe(true);
   });
 
-  it("requires watchlist ticker when watchlist is non-empty", () => {
+  it("requires watchlist symbol when watchlist is non-empty", () => {
     expect(
       matchesQuietPlaybook(row, {
         quietMode: true,
-        watchlistTickers: ["AAPL"],
+        watchlistSymbols: ["AAPL"],
         playbookCategories: DEFAULT_PLAYBOOK_CATEGORIES,
       }),
     ).toBe(false);
     expect(
       matchesQuietPlaybook(row, {
         quietMode: true,
-        watchlistTickers: ["nvda"],
+        watchlistSymbols: ["nvda"],
         playbookCategories: DEFAULT_PLAYBOOK_CATEGORIES,
       }),
     ).toBe(true);
@@ -52,14 +52,14 @@ describe("matchesQuietPlaybook", () => {
     expect(
       matchesQuietPlaybook(row, {
         quietMode: true,
-        watchlistTickers: [],
+        watchlistSymbols: [],
         playbookCategories: ["distress"],
       }),
     ).toBe(false);
     expect(
       matchesQuietPlaybook(row, {
         quietMode: true,
-        watchlistTickers: [],
+        watchlistSymbols: [],
         playbookCategories: ["earnings"],
       }),
     ).toBe(true);

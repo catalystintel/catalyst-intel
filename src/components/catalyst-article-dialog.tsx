@@ -199,7 +199,7 @@ export function CatalystArticleDialog({
                 ready.article.summary,
                 ready.article.body,
               )}
-              relatedTickers={[]}
+              relatedSymbols={[]}
               thumbUrl={null}
               deltaSincePublish={parseDeltaSincePublish(
                 ready.catalyst.historicalImpact,

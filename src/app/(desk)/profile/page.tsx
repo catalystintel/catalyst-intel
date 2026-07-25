@@ -91,7 +91,7 @@ export default async function ProfilePage() {
           <ComingSoonRow
             icon={<Bell className="size-4" />}
             title="Alert preferences"
-            description="Email or push when a watched ticker files a material 8-K."
+            description="Email or push when a watched symbol files a material 8-K."
           />
           <ComingSoonRow
             icon={<CreditCard className="size-4" />}

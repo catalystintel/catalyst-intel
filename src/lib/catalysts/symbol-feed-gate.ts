@@ -1,21 +1,21 @@
 /**
  * Desk tape rule: prefer rows tied to a tradable symbol.
  * CPI and Jobs/NFP macro calendar (and matching headlines) stay visible
- * even when ticker is null — see `fetch-macro-calendar`.
+ * even when symbol is null — see `fetch-macro-calendar`.
  */
 
 import { or, sql, type SQL } from "drizzle-orm";
 
 import { catalysts } from "@/db/schema";
 
-/** Macro-calendar subcategories allowed without a ticker. */
-export const TICKERLESS_MACRO_SUBCATEGORIES = ["cpi", "nfp"] as const;
+/** Macro-calendar subcategories allowed without a symbol. */
+export const SYMBOLLESS_MACRO_SUBCATEGORIES = ["cpi", "nfp"] as const;
 
-export type TickerlessMacroSubcategory =
-  (typeof TICKERLESS_MACRO_SUBCATEGORIES)[number];
+export type SymbollessMacroSubcategory =
+  (typeof SYMBOLLESS_MACRO_SUBCATEGORIES)[number];
 
-export interface TickerFeedGateInput {
-  ticker?: string | null;
+export interface SymbolFeedGateInput {
+  symbol?: string | null;
   eventCategory?: string | null;
   subcategory?: string | null;
   title?: string | null;
@@ -25,10 +25,10 @@ export interface TickerFeedGateInput {
 
 /**
  * True for CPI index / Jobs report (NFP) rows that may appear without a
- * ticker. Matches macro-calendar storage (`subcategory` + tags) and common
+ * symbol. Matches macro-calendar storage (`subcategory` + tags) and common
  * title/headline phrasing; FOMC is intentionally excluded.
  */
-export function isTickerlessMacroException(item: TickerFeedGateInput): boolean {
+export function isSymbollessMacroException(item: SymbolFeedGateInput): boolean {
   const sub = (item.subcategory ?? "").trim().toLowerCase();
   if (sub === "cpi" || sub === "nfp") return true;
 
@@ -44,26 +44,26 @@ export function isTickerlessMacroException(item: TickerFeedGateInput): boolean {
   return false;
 }
 
-/** True when the row has a symbol, or is an allowed tickerless macro. */
-export function passesTickerFeedGate(item: TickerFeedGateInput): boolean {
-  if ((item.ticker ?? "").trim()) return true;
-  return isTickerlessMacroException(item);
+/** True when the row has a symbol, or is an allowed symbolless macro. */
+export function passesSymbolFeedGate(item: SymbolFeedGateInput): boolean {
+  if ((item.symbol ?? "").trim()) return true;
+  return isSymbollessMacroException(item);
 }
 
 /**
- * SQL predicate for “has ticker OR CPI/Jobs exception”.
+ * SQL predicate for “has symbol OR CPI/Jobs exception”.
  * Always applied by `buildFeedWhere` for the dashboard / `/api/catalysts` tape.
  *
  * Primary match = macro-calendar fields (`subcategory` / tags). Title/headline
  * LIKE patterns cover the same CPI / NFP wording used at ingest.
  */
-export function tickerFeedGateSql(): SQL {
+export function symbolFeedGateSql(): SQL {
   const haystack = sql`lower(coalesce(${catalysts.title}, '') || ' ' || coalesce(${catalysts.headline}, ''))`;
 
   return or(
     sql`(
-      ${catalysts.ticker} IS NOT NULL
-      AND trim(${catalysts.ticker}) != ''
+      ${catalysts.symbol} IS NOT NULL
+      AND trim(${catalysts.symbol}) != ''
     )`,
     sql`lower(coalesce(${catalysts.subcategory}, '')) IN ('cpi', 'nfp')`,
     sql`lower(coalesce(${catalysts.tags}, '')) LIKE '%"cpi"%'`,

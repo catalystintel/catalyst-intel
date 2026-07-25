@@ -212,7 +212,7 @@ Be the product that starts at **primary source → taxonomy → materiality → 
 5. **Category filters** (Earnings, FDA, M&A, SEC/8-K, Analyst, Contracts, Partnerships, Halts, Other…)
 6. **Watchlist** sync + highlight
 7. **Quiet playbook** toggle that actually reduces noise
-8. **Ticker + company identity** reliable enough to trade against
+8. **Symbol + company identity** reliable enough to trade against
 9. **Latency honesty**: show event time; never fake “instant” if poll/cron based
 10. **Mobile-usable alert path** (even if desktop is primary)—missed push = missed user
 
@@ -268,7 +268,7 @@ Be the product that starts at **primary source → taxonomy → materiality → 
 ### 9.1 Activation (first session)
 
 - Time-to-first **Act** or meaningful **Dismiss** < 2 minutes after signup
-- User enables watchlist (≥3 tickers) or playbook categories in first session
+- User enables watchlist (≥3 symbols) or playbook categories in first session
 - User opens ≥1 primary source proof (trust behavior)
 
 ### 9.2 Engagement (habitual use)

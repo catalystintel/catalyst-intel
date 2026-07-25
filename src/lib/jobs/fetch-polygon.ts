@@ -24,6 +24,7 @@ const BASE = "https://api.polygon.io";
 /** Free-tier Massive/Polygon REST budget is ~5 req/min; leave headroom for news. */
 const DEFAULT_PRICE_ENRICH_LIMIT = 4;
 
+/** Wire shape from Polygon news API — vendor uses `ticker` / `tickers`. */
 interface PolygonNewsInsight {
   ticker?: string;
   sentiment?: string;
@@ -151,17 +152,17 @@ const SENTIMENT_MAP: Record<string, SentimentLean> = {
 /**
  * Polygon news `insights[]` is per-ticker sentiment the vendor already
  * computed but this app previously stored in rawContent and never surfaced.
- * Prefers the insight matching our resolved ticker; falls back to the first.
+ * Prefers the insight matching our resolved symbol; falls back to the first.
  */
 export function extractSentiment(
   insights: PolygonNewsInsight[] | undefined,
-  ticker: string | null,
+  symbol: string | null,
 ): { sentiment: SentimentLean; reasoning: string | null } | null {
   if (!insights?.length) return null;
 
   const match =
-    (ticker &&
-      insights.find((i) => i.ticker?.trim().toUpperCase() === ticker)) ||
+    (symbol &&
+      insights.find((i) => i.ticker?.trim().toUpperCase() === symbol)) ||
     insights[0];
   if (!match?.sentiment) return null;
 
@@ -178,17 +179,18 @@ function newsToNormalized(
   const title = article.title?.trim();
   if (!id || !title) return null;
 
-  const tickers = (article.tickers ?? [])
+  // Map vendor `tickers` → our `symbol` terminology at the boundary.
+  const symbols = (article.tickers ?? [])
     .map((t) => t.trim().toUpperCase())
     .filter(Boolean);
-  const ticker = tickers[0] ?? null;
+  const symbol = symbols[0] ?? null;
   const publisher = article.publisher?.name?.trim() || "Polygon";
   const wire = isBenzingaPublisher(publisher);
   const timestamp = article.published_utc
     ? new Date(article.published_utc).toISOString()
     : new Date().toISOString();
   const classified = categorizeNewsHeadline(title);
-  const sentiment = extractSentiment(article.insights, ticker);
+  const sentiment = extractSentiment(article.insights, symbol);
 
   return {
     provider: "polygon",
@@ -199,8 +201,8 @@ function newsToNormalized(
       wireSource: wire ? "benzinga" : "other",
       publisherName: publisher,
     },
-    ticker,
-    companyName: ticker,
+    symbol,
+    companyName: symbol,
     type: wire ? "Wire" : "Market News",
     title,
     headline: wire ? "Benzinga Wire" : publisher,
@@ -215,7 +217,7 @@ function newsToNormalized(
       "polygon",
       ...(wire ? (["benzinga", "wire"] as const) : (["news"] as const)),
       ...classified.tags,
-      ...tickers.slice(0, 3),
+      ...symbols.slice(0, 3),
     ],
   };
 }
@@ -332,7 +334,7 @@ async function markImpact(
 }
 
 /**
- * Enriches recent catalysts that have a ticker with a simple session
+ * Enriches recent catalysts that have a symbol with a simple session
  * price move from Polygon aggregates. Soft-fails without POLYGON_API_KEY.
  *
  * Free-tier notes (Massive/Polygon Starter):
@@ -366,7 +368,7 @@ export async function enrichHistoricalImpact(options?: {
   const candidates = await db
     .select({
       id: catalysts.id,
-      ticker: catalysts.ticker,
+      symbol: catalysts.symbol,
       timestamp: catalysts.timestamp,
       historicalImpact: catalysts.historicalImpact,
       impactScore: catalysts.impactScore,
@@ -375,7 +377,7 @@ export async function enrichHistoricalImpact(options?: {
     .from(catalysts)
     .where(
       and(
-        isNotNull(catalysts.ticker),
+        isNotNull(catalysts.symbol),
         isNull(catalysts.historicalImpact),
         lt(catalysts.timestamp, todayStart),
       ),
@@ -396,11 +398,11 @@ export async function enrichHistoricalImpact(options?: {
 
   for (let i = 0; i < candidates.length; i++) {
     const row = candidates[i];
-    const ticker = row.ticker!.toUpperCase();
+    const symbol = row.symbol!.toUpperCase();
     const day = polygonEnrichmentSessionDate(row.timestamp, now);
     try {
       const payload = await polygonGet<{ results?: AggBar[] }>(
-        `/v2/aggs/ticker/${encodeURIComponent(ticker)}/range/1/day/${day}/${day}`,
+        `/v2/aggs/ticker/${encodeURIComponent(symbol)}/range/1/day/${day}/${day}`,
         apiKey,
         { adjusted: "true", limit: "1" },
       );
@@ -484,7 +486,7 @@ export async function enrichHistoricalImpact(options?: {
         skipped++;
         if (notes.length < 3) {
           notes.push(
-            `Plan timeframe blocked ${ticker} @ ${day} (403 NOT_AUTHORIZED).`,
+            `Plan timeframe blocked ${symbol} @ ${day} (403 NOT_AUTHORIZED).`,
           );
         }
         continue;

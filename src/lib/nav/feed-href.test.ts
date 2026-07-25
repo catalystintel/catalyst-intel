@@ -12,9 +12,9 @@ describe("feedHref", () => {
     expect(feedHref({ catalystId: 42 })).toBe("/catalyst-feed?c=42");
   });
 
-  it("encodes ticker and catalyst together", () => {
-    expect(feedHref({ ticker: "fhb", catalystId: 7 })).toBe(
-      "/catalyst-feed?ticker=FHB&c=7",
+  it("encodes symbol and catalyst together", () => {
+    expect(feedHref({ symbol: "fhb", catalystId: 7 })).toBe(
+      "/catalyst-feed?symbol=FHB&c=7",
     );
   });
 

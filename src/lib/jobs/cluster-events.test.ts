@@ -3,19 +3,19 @@ import { describe, expect, it } from "vitest";
 import { groupIntoWindows } from "./cluster-events";
 
 describe("groupIntoWindows", () => {
-  it("merges same-ticker events within the window", () => {
+  it("merges same-symbol events within the window", () => {
     const groups = groupIntoWindows(
       [
         {
           id: 1,
-          ticker: "ACME",
+          symbol: "ACME",
           timestamp: "2026-07-20T13:00:00.000Z",
           impactScore: 60,
           eventCategory: "trading_halt",
         },
         {
           id: 2,
-          ticker: "ACME",
+          symbol: "ACME",
           timestamp: "2026-07-20T13:10:00.000Z",
           impactScore: 90,
           eventCategory: "disclosure",
@@ -26,7 +26,7 @@ describe("groupIntoWindows", () => {
 
     expect(groups).toHaveLength(1);
     expect(groups[0]).toMatchObject({
-      ticker: "ACME",
+      symbol: "ACME",
       memberIds: [1, 2],
       primaryId: 2,
       category: "disclosure",
@@ -38,14 +38,14 @@ describe("groupIntoWindows", () => {
       [
         {
           id: 1,
-          ticker: "ACME",
+          symbol: "ACME",
           timestamp: "2026-07-20T13:00:00.000Z",
           impactScore: 60,
           eventCategory: "trading_halt",
         },
         {
           id: 2,
-          ticker: "ACME",
+          symbol: "ACME",
           timestamp: "2026-07-20T14:00:00.000Z",
           impactScore: 90,
           eventCategory: "disclosure",
@@ -57,19 +57,19 @@ describe("groupIntoWindows", () => {
     expect(groups).toHaveLength(0);
   });
 
-  it("does not merge across different tickers", () => {
+  it("does not merge across different symbols", () => {
     const groups = groupIntoWindows(
       [
         {
           id: 1,
-          ticker: "ACME",
+          symbol: "ACME",
           timestamp: "2026-07-20T13:00:00.000Z",
           impactScore: 60,
           eventCategory: "trading_halt",
         },
         {
           id: 2,
-          ticker: "OTHR",
+          symbol: "OTHR",
           timestamp: "2026-07-20T13:05:00.000Z",
           impactScore: 90,
           eventCategory: "disclosure",
@@ -88,21 +88,21 @@ describe("groupIntoWindows", () => {
       [
         {
           id: 1,
-          ticker: "ACME",
+          symbol: "ACME",
           timestamp: "2026-07-20T13:00:00.000Z",
           impactScore: 50,
           eventCategory: "news",
         },
         {
           id: 2,
-          ticker: "ACME",
+          symbol: "ACME",
           timestamp: "2026-07-20T13:40:00.000Z",
           impactScore: 50,
           eventCategory: "news",
         },
         {
           id: 3,
-          ticker: "ACME",
+          symbol: "ACME",
           timestamp: "2026-07-20T14:20:00.000Z",
           impactScore: 95,
           eventCategory: "distress",
@@ -122,14 +122,14 @@ describe("groupIntoWindows", () => {
       [
         {
           id: 1,
-          ticker: "ACME",
+          symbol: "ACME",
           timestamp: "2026-07-20T13:00:00.000Z",
           impactScore: 70,
           eventCategory: "news",
         },
         {
           id: 2,
-          ticker: "ACME",
+          symbol: "ACME",
           timestamp: "2026-07-20T13:05:00.000Z",
           impactScore: 70,
           eventCategory: "news",
@@ -146,7 +146,7 @@ describe("groupIntoWindows", () => {
       [
         {
           id: 1,
-          ticker: "ACME",
+          symbol: "ACME",
           timestamp: "2026-07-20T13:00:00.000Z",
           impactScore: 70,
           eventCategory: "deals",
@@ -155,7 +155,7 @@ describe("groupIntoWindows", () => {
         },
         {
           id: 2,
-          ticker: "ACME",
+          symbol: "ACME",
           timestamp: "2026-07-20T13:05:00.000Z",
           impactScore: 70,
           eventCategory: "deals",
@@ -169,12 +169,12 @@ describe("groupIntoWindows", () => {
     expect(groups[0].primaryId).toBe(2);
   });
 
-  it("does not merge unrelated Form 4 and earnings on the same ticker", () => {
+  it("does not merge unrelated Form 4 and earnings on the same symbol", () => {
     const groups = groupIntoWindows(
       [
         {
           id: 1,
-          ticker: "ACME",
+          symbol: "ACME",
           timestamp: "2026-07-20T13:00:00.000Z",
           impactScore: 70,
           eventCategory: "earnings",
@@ -182,7 +182,7 @@ describe("groupIntoWindows", () => {
         },
         {
           id: 2,
-          ticker: "ACME",
+          symbol: "ACME",
           timestamp: "2026-07-20T13:10:00.000Z",
           impactScore: 55,
           eventCategory: "insider",

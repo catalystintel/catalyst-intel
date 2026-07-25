@@ -26,7 +26,7 @@ export interface QualityVerdict {
 /** Minimal shape needed to score quality — avoids circular import with ingest. */
 export interface QualityGateInput {
   provider: string;
-  ticker?: string | null;
+  symbol?: string | null;
   headline?: string | null;
   summary?: string | null;
   eventCategory: EventCategoryKey;
@@ -95,7 +95,7 @@ export function evaluateCatalystQuality(
   const category = item.eventCategory;
   const subcategory = item.subcategory?.toLowerCase() ?? "";
   const provider = item.provider.toLowerCase();
-  const ticker = item.ticker?.trim() || null;
+  const symbol = item.symbol?.trim() || null;
 
   // Generic firehose news with no catalyst classification.
   if (category === "news") {
@@ -192,12 +192,12 @@ export function evaluateCatalystQuality(
     }
   }
 
-  // openFDA / ClinicalTrials without a tradable ticker can't match watchlist
+  // openFDA / ClinicalTrials without a tradable symbol can't match watchlist
   // or drive alerts — they pollute the tape as orphan rows.
-  if ((provider === "openfda" || provider === "clinicaltrials") && !ticker) {
+  if ((provider === "openfda" || provider === "clinicaltrials") && !symbol) {
     return {
       decision: "drop",
-      reason: "Sponsor unresolved to ticker — unusable for desk filters/alerts",
+      reason: "Sponsor unresolved to symbol — unusable for desk filters/alerts",
     };
   }
 
@@ -240,24 +240,24 @@ export function evaluateCatalystQuality(
     };
   }
 
-  // Governance / management without ticker is hard to act on (non-SEC).
+  // Governance / management without symbol is hard to act on (non-SEC).
   if (
     (category === "governance" || category === "management") &&
-    !ticker &&
+    !symbol &&
     provider !== "sec-edgar"
   ) {
     return {
       decision: "drop",
-      reason: "Governance/management row without ticker",
+      reason: "Governance/management row without symbol",
     };
   }
 
-  // Very low category priority + no ticker = almost always noise.
+  // Very low category priority + no symbol = almost always noise.
   const priority = CATEGORY_PRIORITY[category] ?? 0;
-  if (priority < 40 && !ticker) {
+  if (priority < 40 && !symbol) {
     return {
       decision: "drop",
-      reason: "Low-priority category without ticker",
+      reason: "Low-priority category without symbol",
     };
   }
 

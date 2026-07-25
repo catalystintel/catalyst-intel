@@ -11,7 +11,7 @@ Previously, Live tape Proof (and similar) opened the vendor URL in a new browser
 Now:
 
 1. Clicking a feed Title row or Read opens an internal article page inside Catalyst (/dashboard/catalyst/{id}).
-2. That page shows title, ticker, category/subcategory, source, time·date, a Summary, and best-available article body from stored ingest payload (raw_sources.raw_content + catalysts.summary).
+2. That page shows title, symbol, category/subcategory, source, time·date, a Summary, and best-available article body from stored ingest payload (raw_sources.raw_content + catalysts.summary).
 3. Original on SEC/source remains a secondary external link (proof / full vendor page).
 4. We do not iframe arbitrary news sites. If only a URL exists with no stored text, the page shows title/summary fallback and points you to the original.
 

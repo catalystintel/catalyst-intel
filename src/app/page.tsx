@@ -14,37 +14,37 @@ const PREVIEW_GRID =
   "grid-cols-[4.5rem_minmax(0,1fr)] sm:grid-cols-[5rem_minmax(0,1fr)_156px] lg:grid-cols-[5rem_minmax(0,1fr)_160px_minmax(200px,max-content)]";
 
 const DEMO_ROWS: {
-  ticker: string;
+  symbol: string;
   title: string;
   time: string;
   timeShort: string;
 }[] = [
   {
-    ticker: "NVDA",
+    symbol: "NVDA",
     title: "Earnings Report Q3 - NVIDIA Corp",
     time: "10:23 AM · Jul 25, 2026",
     timeShort: "10:23 AM",
   },
   {
-    ticker: "TSLA",
+    symbol: "TSLA",
     title: "Item 8.01 — Other Events · guidance update",
     time: "10:18 AM · Jul 25, 2026",
     timeShort: "10:18 AM",
   },
   {
-    ticker: "AMD",
+    symbol: "AMD",
     title: "Item 1.01 — Material definitive agreement",
     time: "10:15 AM · Jul 25, 2026",
     timeShort: "10:15 AM",
   },
   {
-    ticker: "JPM",
+    symbol: "JPM",
     title: "Item 5.02 — Departure of directors or certain officers",
     time: "10:12 AM · Jul 25, 2026",
     timeShort: "10:12 AM",
   },
   {
-    ticker: "MRK",
+    symbol: "MRK",
     title: "Item 8.01 — Other Events · FDA decision referenced",
     time: "10:08 AM · Jul 25, 2026",
     timeShort: "10:08 AM",
@@ -185,7 +185,7 @@ export default async function Home() {
 
             {DEMO_ROWS.map((row, index) => (
               <article
-                key={`${row.ticker}-${row.timeShort}`}
+                key={`${row.symbol}-${row.timeShort}`}
                 role="row"
                 className={cn(
                   "feed-row grid min-h-[56px] items-center gap-2 border-b border-[var(--desk-border)] px-4 py-3 sm:gap-3 sm:px-5 sm:py-0",
@@ -197,7 +197,7 @@ export default async function Home() {
               >
                 <div role="cell" className="min-w-0">
                   <span className="truncate font-mono text-[0.88rem] font-semibold tracking-tight text-[var(--desk-text)]">
-                    {row.ticker}
+                    {row.symbol}
                   </span>
                 </div>
 

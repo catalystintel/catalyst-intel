@@ -115,11 +115,11 @@ Archive / Search is still a gap vs research IA → Phase 2.
 
 | Prior grammar (shipped / older docs)       | **New grammar (decision)**                                                                   |
 | ------------------------------------------ | -------------------------------------------------------------------------------------------- |
-| **Title · Time · Event · Ticker · Action** | **Symbol · Title · Time** (+ keep **Action** toolbar: Read / Dismiss / Quiet) — Symbol first |
+| **Title · Time · Event · Symbol · Action** | **Symbol · Title · Time** (+ keep **Action** toolbar: Read / Dismiss / Quiet) — Symbol first |
 
 **Do this:**
 
-- Lead with **Symbol** as the row index (mono ticker / `—`), then **Title → Time**.
+- Lead with **Symbol** as the row index (mono symbol / `—`), then **Title → Time**.
 - Remove the primary Event column. Remove source details from dashboard rows: no Source column; do not append provider names under the title; strip provider prefixes from titles when present (`stripSourceNames` / equivalent).
 - Keep Event/category available as filter chips and inside Read / drawer meta — not as a primary blotter column.
 - Update `live-catalyst-feed.tsx`, feed-display helpers, and both engineer UX guides in the same PR as the UI change.
@@ -133,7 +133,7 @@ Archive / Search is still a gap vs research IA → Phase 2.
 - [x] Rows do not show source provider name, wire label strip, or Source column.
 - [x] Title prefers headline / filing title with source names stripped.
 - [x] Time remains event occurrence in **ET** (`catalysts.timestamp`); never DB insert time.
-- [x] Symbol is mono; empty ticker shows `—` and is not clickable.
+- [x] Symbol is mono; empty symbol shows `—` and is not clickable.
 
 ### B. Earnings filter — alternate column schema
 
@@ -143,7 +143,7 @@ When the **Earnings** filter chip is active, replace the default blotter columns
 | -------------- | ----------------------------------------------------------------------- |
 | **Date**       | Earnings / report date (calendar or filing date — be explicit in UI)    |
 | **Name**       | Company name                                                            |
-| **Symbol**     | Ticker                                                                  |
+| **Symbol**     | Symbol                                                                  |
 | **Period**     | Fiscal quarter label only: **Q1 / Q2 / Q3 / Q4** (no free-text seasons) |
 | **EPS**        | Reported EPS when known; otherwise `—`                                  |
 | **Estimation** | Consensus / estimated EPS when known; otherwise `—`                     |
@@ -161,7 +161,7 @@ When the **Earnings** filter chip is active, replace the default blotter columns
 - [ ] Open existing drawer **or** split panel (`catalyst-detail-drawer.tsx` / `tape-split-panel.tsx`) — tape remains primary.
 - [ ] Show a **price chart** for that symbol (reuse market quote / history paths; honest empty state if unkeyed).
 - [ ] Show **updated quote details**: last price + %/absolute change across available timeframes (e.g. session, 1D, 5D, 1M — only what the API returns).
-- [ ] Show **correlated news** for that symbol: catalysts/articles joined by ticker and/or keyword match on company/ticker; link into in-app Read.
+- [ ] Show **correlated news** for that symbol: catalysts/articles joined by symbol and/or keyword match on company/symbol; link into in-app Read.
 - [ ] Do not navigate away from `/dashboard` for this interaction.
 
 ### D. Dashboard filter chips — UX order (decision)
@@ -236,7 +236,7 @@ flowchart LR
 | --- | ----------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
 | D1  | Change default blotter to **Symbol · Title · Time**; strip source from rows                                                         | `live-catalyst-feed.tsx`, `feed-display.ts`                               |
 | D2  | When Earnings filter active, switch column schema to **Date · Name · Symbol · Period · EPS · Estimation**                           | feed + earnings metadata API                                              |
-| D3  | On Symbol click, open drawer/split with chart, multi-timeframe quote, correlated ticker news                                        | `tape-split-panel.tsx`, `catalyst-detail-drawer.tsx`, `/api/market/quote` |
+| D3  | On Symbol click, open drawer/split with chart, multi-timeframe quote, correlated symbol news                                        | `tape-split-panel.tsx`, `catalyst-detail-drawer.tsx`, `/api/market/quote` |
 | D4  | Reorder primary filter chips to All → Earnings → FDA Approvals → Clinical Trials → IPO → Gov Reports; wire each to taxonomy queries | feed filters + `taxonomy.ts`                                              |
 | D5  | Audit each chip against ingest; fill provider gaps or hide chip until data exists                                                   | jobs under `src/lib/jobs/`, Source Map                                    |
 | D6  | Rebuild pre-login page: no demo tape; hero value prop + CTA only                                                                    | `src/app/page.tsx`, `pre-login-chrome`                                    |
@@ -282,7 +282,7 @@ flowchart TB
   subgraph P2["Phase 2 — My desk"]
     direction LR
     P2a[Alert depth + push] --- P2b[Archive/Search] --- P2c[Presets + context]
-    P2d[Related tickers] --- P2e[Act/Dismiss stats] --- P2f[Billing shell]
+    P2d[Related symbols] --- P2e[Act/Dismiss stats] --- P2f[Billing shell]
   end
 
   subgraph P3["Phase 3 — Multi-catalyst"]
@@ -329,10 +329,10 @@ flowchart TB
 | --- | --------------------------------------------------- | -------------------------- |
 | 2.1 | Alert depth: watchlist + category + min materiality | Client Target §7.3; JTBD 4 |
 | 2.2 | Push channel (FCM) — stubbed today                  | JTBD 4                     |
-| 2.3 | Archive / Search (ticker, accession, date)          | Architecture §8            |
+| 2.3 | Archive / Search (symbol, accession, date)          | Architecture §8            |
 | 2.4 | Saved playbook presets                              | Architecture S3            |
 | 2.5 | Market context strip on Read/drawer                 | Client Target §7.2 #13     |
-| 2.6 | Related ticker chips + Beats/Misses                 | Benzinga-Like Article P1   |
+| 2.6 | Related symbol chips + Beats/Misses                 | Benzinga-Like Article P1   |
 | 2.7 | Personal Act/Dismiss stats                          | Client Target §7.3 #18     |
 | 2.8 | Billing-ready account shell                         | Client Summary Phase 2     |
 
@@ -379,7 +379,7 @@ flowchart TB
   subgraph Borrow["Borrow for UX — relevant IA"]
     B1["P0 WIIM one-liner"]
     B2["P0 Bullet summary"]
-    B3["P1 Related ticker chips"]
+    B3["P1 Related symbol chips"]
     B4["P1 Beats/Misses highlights"]
     B5["P2 Compact thumb + Δ"]
   end
@@ -412,7 +412,7 @@ flowchart TB
 | Macro schedule (CPI/NFP/FOMC)      | BZ-inspired         | **Applied**            | FRED live = later                    |
 | WIIM one-liner above summary       | BZ article IA       | **Borrow P0**          | Fastest triage upgrade               |
 | 3–6 bullet takeaways               | BZ article IA       | **Borrow P0**          | Scan behavior                        |
-| Related ticker chips               | BZ article IA       | **Borrow P1**          | Needs related-symbol data            |
+| Related symbol chips               | BZ article IA       | **Borrow P1**          | Needs related-symbol data            |
 | Beats/Misses semantic highlights   | BZ article IA       | **Borrow P1**          | Earnings Detail lean                 |
 | Compact thumb + Δ                  | BZ article IA       | **Borrow P2**          | No magazine hero                     |
 | Enterprise Wire redistribute       | BZ buy              | **Later**              | Paid contract                        |
@@ -425,7 +425,7 @@ flowchart TB
 | Explainable materiality            | **Catalyst-native** | Core                   | “Why this score?”                    |
 | Rule order: Source > story > score | **Catalyst-native** | Core                   | Desk principles                      |
 
-**Mirror:** ticker-first hierarchy, causality one-liner, density over imagery, quick open-source actions.  
+**Mirror:** symbol-first hierarchy, causality one-liner, density over imagery, quick open-source actions.  
 **Do not mirror:** loud chrome, Squawk v1, multi-panel workspace inside Read, magazine heroes.
 
 ---
@@ -453,7 +453,7 @@ quadrantChart
     Category filters: [0.70, 0.80]
     Watchlist sync: [0.72, 0.78]
     Quiet playbook: [0.75, 0.82]
-    Ticker identity: [0.82, 0.76]
+    Symbol identity: [0.82, 0.76]
     Latency honesty: [0.74, 0.74]
     Mobile alerts: [0.55, 0.70]
     WIIM bullets: [0.77, 0.85]
@@ -461,7 +461,7 @@ quadrantChart
     Liquidity guards: [0.68, 0.72]
     Alert depth: [0.65, 0.55]
     Archive search: [0.58, 0.48]
-    Related tickers: [0.52, 0.45]
+    Related symbols: [0.52, 0.45]
     Historical analogs: [0.70, 0.35]
     Enterprise Wire: [0.60, 0.20]
 ```
@@ -475,10 +475,10 @@ quadrantChart
 - [ ] Primary-source proof one click (`edgar-proof-link.tsx`)
 - [ ] Act / Dismiss (remember dismissals)
 - [ ] Materiality badge + plain-language reason
-- [ ] Category filters + ticker / time window
+- [ ] Category filters + symbol / time window
 - [ ] Watchlist sync + highlight
 - [ ] Quiet playbook (`matchesQuietPlaybook`)
-- [ ] Reliable ticker / company identity
+- [ ] Reliable symbol / company identity
 - [ ] Latency honesty (never fake “instant”)
 - [ ] Mobile-usable alert path (desktop primary; push stubbed)
 - [ ] Read: WIIM one-liner + bullet summary (Benzinga-Like P0)
@@ -493,7 +493,7 @@ quadrantChart
 - [ ] Pre-market emphasis + duplicate suppression
 - [ ] Alert prefs: category + min materiality + watchlist-only
 - [ ] Act/Dismiss stats
-- [ ] Related ticker chips + Beats/Misses
+- [ ] Related symbol chips + Beats/Misses
 - [ ] Archive / Search
 - [ ] Saved playbook presets
 - [ ] Graceful failure when source/AI down
@@ -610,7 +610,7 @@ flowchart TB
   subgraph Pipeline
     P1[Ingest lag p50/p95]
     P2[Accession dedupe 100%]
-    P3["Ticker resolve &gt;95% on 8-K"]
+    P3["Symbol resolve &gt;95% on 8-K"]
   end
   NS["North star: high-materiality seen + decided WITH PROOF<br/>before secondary headline echo"]
   Activation --> NS

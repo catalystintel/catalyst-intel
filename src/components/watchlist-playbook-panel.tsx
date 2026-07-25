@@ -17,7 +17,7 @@ import { cn } from "@/lib/utils";
 const ALL_CATEGORIES = Object.keys(CATEGORY_LABELS) as EventCategoryKey[];
 
 export function WatchlistPlaybookPanel() {
-  const [tickers, setTickers] = useState<{ id: number; ticker: string }[]>([]);
+  const [symbols, setSymbols] = useState<{ id: number; symbol: string }[]>([]);
   const [categories, setCategories] = useState<EventCategoryKey[]>(
     DEFAULT_PLAYBOOK_CATEGORIES,
   );
@@ -51,7 +51,7 @@ export function WatchlistPlaybookPanel() {
       }
       const wData = await wRes.json();
       const pData = await pRes.json();
-      setTickers(wData.tickers ?? []);
+      setSymbols(wData.symbols ?? []);
       setCategories(
         Array.isArray(pData.categories) && pData.categories.length > 0
           ? pData.categories
@@ -100,43 +100,43 @@ export function WatchlistPlaybookPanel() {
     return () => window.clearTimeout(id);
   }, [load]);
 
-  async function addTicker(e: React.FormEvent) {
+  async function addSymbol(e: React.FormEvent) {
     e.preventDefault();
     setSaving(true);
-    const ticker = draft.trim().toUpperCase();
+    const symbol = draft.trim().toUpperCase();
     try {
       const res = await fetch("/api/watchlist", {
         method: "POST",
         credentials: "same-origin",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ticker: draft }),
+        body: JSON.stringify({ symbol: draft }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Could not add ticker.");
+      if (!res.ok) throw new Error(data.error ?? "Could not add symbol.");
       setDraft("");
       await load();
-      toast.success(`${ticker} added to watchlist`);
+      toast.success(`${symbol} added to watchlist`);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Could not add ticker.");
+      toast.error(err instanceof Error ? err.message : "Could not add symbol.");
     } finally {
       setSaving(false);
     }
   }
 
-  async function removeTicker(ticker: string) {
+  async function removeSymbol(symbol: string) {
     setSaving(true);
     try {
       const res = await fetch(
-        `/api/watchlist?ticker=${encodeURIComponent(ticker)}`,
+        `/api/watchlist?symbol=${encodeURIComponent(symbol)}`,
         { method: "DELETE", credentials: "same-origin" },
       );
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Could not remove ticker.");
+      if (!res.ok) throw new Error(data.error ?? "Could not remove symbol.");
       await load();
-      toast.success(`${ticker} removed from watchlist`);
+      toast.success(`${symbol} removed from watchlist`);
     } catch (err) {
       toast.error(
-        err instanceof Error ? err.message : "Could not remove ticker.",
+        err instanceof Error ? err.message : "Could not remove symbol.",
       );
     } finally {
       setSaving(false);
@@ -199,7 +199,7 @@ export function WatchlistPlaybookPanel() {
       <section className="overflow-hidden rounded-xl border border-[var(--desk-border)] bg-[var(--desk-panel)]">
         <div className="border-b border-[var(--desk-border)] px-4 py-4 sm:px-5">
           <h2 className="text-sm font-semibold text-[var(--desk-text)]">
-            Watchlist tickers
+            Watchlist symbols
           </h2>
           <p className="mt-1 text-sm text-[var(--desk-text-muted)]">
             When Quiet playbook is on, the Live feed only shows these names
@@ -208,14 +208,14 @@ export function WatchlistPlaybookPanel() {
         </div>
         <div className="flex flex-col gap-4 px-4 py-4 sm:px-5">
           <form
-            onSubmit={addTicker}
+            onSubmit={addSymbol}
             className="flex flex-wrap items-center gap-2"
           >
             <Input
               value={draft}
               onChange={(e) => setDraft(e.target.value)}
-              placeholder="Add ticker…"
-              aria-label="Add ticker"
+              placeholder="Add symbol…"
+              aria-label="Add symbol"
               className="h-9 w-36 border-[var(--desk-border-strong)] bg-[var(--desk-overlay-soft)] font-mono text-xs uppercase"
             />
             <Button
@@ -232,22 +232,22 @@ export function WatchlistPlaybookPanel() {
               {nyseNote}
             </p>
           ) : null}
-          {tickers.length === 0 ? (
+          {symbols.length === 0 ? (
             <p className="font-mono text-xs text-[var(--desk-text-dim)]">
-              No tickers yet — quiet mode will filter by playbook categories
+              No symbols yet — quiet mode will filter by playbook categories
               only.
             </p>
           ) : (
             <ul className="flex flex-wrap gap-2">
-              {tickers.map((t) => {
-                const nyse = nyseBySymbol[t.ticker.toUpperCase()];
+              {symbols.map((t) => {
+                const nyse = nyseBySymbol[t.symbol.toUpperCase()];
                 return (
                   <li
                     key={t.id}
                     className="inline-flex items-center gap-1.5 rounded-md border border-[var(--desk-border-strong)] bg-[var(--desk-overlay-soft)] px-2.5 py-1 font-mono text-sm text-[var(--desk-text)]"
                     title={nyse?.description ?? undefined}
                   >
-                    {t.ticker}
+                    {t.symbol}
                     {nyse?.lastPrice ? (
                       <span className="text-[0.7rem] text-[var(--desk-text-dim)] tabular-nums">
                         ${nyse.lastPrice}
@@ -255,9 +255,9 @@ export function WatchlistPlaybookPanel() {
                     ) : null}
                     <button
                       type="button"
-                      aria-label={`Remove ${t.ticker}`}
+                      aria-label={`Remove ${t.symbol}`}
                       disabled={saving}
-                      onClick={() => void removeTicker(t.ticker)}
+                      onClick={() => void removeSymbol(t.symbol)}
                       className="text-[var(--desk-text-muted)] hover:text-[var(--desk-text)]"
                     >
                       <Trash2 className="size-3.5" />

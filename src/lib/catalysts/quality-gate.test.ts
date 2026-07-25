@@ -10,18 +10,18 @@ describe("evaluateCatalystQuality", () => {
       evaluateCatalystQuality({
         provider: "finnhub",
         eventCategory: "news",
-        ticker: "AAPL",
+        symbol: "AAPL",
       }).decision,
     ).toBe("drop");
   });
 
-  it("keeps near-term earnings with ticker", () => {
+  it("keeps near-term earnings with symbol", () => {
     expect(
       evaluateCatalystQuality({
         provider: "finnhub",
         eventCategory: "earnings",
         subcategory: "bmo",
-        ticker: "AAPL",
+        symbol: "AAPL",
       }).decision,
     ).toBe("keep");
   });
@@ -32,7 +32,7 @@ describe("evaluateCatalystQuality", () => {
         provider: "finnhub",
         eventCategory: "analyst",
         subcategory: "recommendation_trend",
-        ticker: "AAPL",
+        symbol: "AAPL",
       }).decision,
     ).toBe("drop");
   });
@@ -44,7 +44,7 @@ describe("evaluateCatalystQuality", () => {
         provider: "finnhub",
         eventCategory: "analyst",
         subcategory: "price_target",
-        ticker: "AAPL",
+        symbol: "AAPL",
         timestamp: recent,
       }).decision,
     ).toBe("keep");
@@ -59,7 +59,7 @@ describe("evaluateCatalystQuality", () => {
         provider: "finnhub",
         eventCategory: "analyst",
         subcategory: "price_target",
-        ticker: "AAPL",
+        symbol: "AAPL",
         timestamp: stale,
       }).decision,
     ).toBe("drop");
@@ -71,7 +71,7 @@ describe("evaluateCatalystQuality", () => {
         provider: "finnhub",
         eventCategory: "analyst",
         subcategory: "price_target",
-        ticker: "AAPL",
+        symbol: "AAPL",
       }).decision,
     ).toBe("drop");
   });
@@ -81,7 +81,7 @@ describe("evaluateCatalystQuality", () => {
       evaluateCatalystQuality({
         provider: "sec-edgar",
         eventCategory: "disclosure",
-        ticker: "ACME",
+        symbol: "ACME",
         itemCodes: [
           { code: "7.01", label: "Reg FD", category: "disclosure" },
           { code: "9.01", label: "Exhibits", category: "other" },
@@ -95,7 +95,7 @@ describe("evaluateCatalystQuality", () => {
       evaluateCatalystQuality({
         provider: "sec-edgar",
         eventCategory: "other",
-        ticker: "ACME",
+        symbol: "ACME",
         itemCodes: [
           { code: "1.04", label: "Mine safety", category: "other" },
           { code: "9.01", label: "Exhibits", category: "other" },
@@ -107,7 +107,7 @@ describe("evaluateCatalystQuality", () => {
       evaluateCatalystQuality({
         provider: "sec-edgar",
         eventCategory: "governance",
-        ticker: "ACME",
+        symbol: "ACME",
         itemCodes: [
           { code: "5.07", label: "Shareholder vote", category: "governance" },
         ],
@@ -120,7 +120,7 @@ describe("evaluateCatalystQuality", () => {
       evaluateCatalystQuality({
         provider: "sec-edgar",
         eventCategory: "earnings",
-        ticker: "ACME",
+        symbol: "ACME",
         itemCodes: [
           { code: "2.02", label: "Earnings", category: "earnings" },
           { code: "9.01", label: "Exhibits", category: "other" },
@@ -135,7 +135,7 @@ describe("evaluateCatalystQuality", () => {
         provider: "sec-edgar",
         eventCategory: "insider",
         subcategory: "form4_routine",
-        ticker: "AAPL",
+        symbol: "AAPL",
       }).decision,
     ).toBe("drop");
   });
@@ -146,31 +146,31 @@ describe("evaluateCatalystQuality", () => {
         provider: "sec-edgar",
         eventCategory: "insider",
         subcategory: "insider_buy",
-        ticker: "AAPL",
+        symbol: "AAPL",
       }).decision,
     ).toBe("keep");
   });
 
-  it("drops openFDA / ClinicalTrials without ticker", () => {
+  it("drops openFDA / ClinicalTrials without symbol", () => {
     expect(
       evaluateCatalystQuality({
         provider: "openfda",
         eventCategory: "regulatory",
         subcategory: "openfda_approval",
-        ticker: null,
+        symbol: null,
         headline: "FDA original approval",
         summary: "ORIG · AP",
       }).decision,
     ).toBe("drop");
   });
 
-  it("keeps openFDA ORIG with ticker", () => {
+  it("keeps openFDA ORIG with symbol", () => {
     expect(
       evaluateCatalystQuality({
         provider: "openfda",
         eventCategory: "regulatory",
         subcategory: "openfda_approval",
-        ticker: "MRK",
+        symbol: "MRK",
         headline: "FDA original approval",
         summary: "ORIG · AP · Drug",
       }).decision,
@@ -183,7 +183,7 @@ describe("evaluateCatalystQuality", () => {
         provider: "openfda",
         eventCategory: "regulatory",
         subcategory: "openfda_approval",
-        ticker: "MRK",
+        symbol: "MRK",
         headline: "FDA approval update",
         summary: "SUPPL · AP · LABELING",
       }).decision,
@@ -195,18 +195,18 @@ describe("evaluateCatalystQuality", () => {
       evaluateCatalystQuality({
         provider: "clinicaltrials",
         eventCategory: "clinical",
-        ticker: "MRK",
+        symbol: "MRK",
         headline: "Recruiting",
       }).decision,
     ).toBe("drop");
   });
 
-  it("keeps ClinicalTrials completed with ticker", () => {
+  it("keeps ClinicalTrials completed with symbol", () => {
     expect(
       evaluateCatalystQuality({
         provider: "clinicaltrials",
         eventCategory: "clinical",
-        ticker: "MRK",
+        symbol: "MRK",
         headline: "Completed",
       }).decision,
     ).toBe("keep");
@@ -217,7 +217,7 @@ describe("evaluateCatalystQuality", () => {
       evaluateCatalystQuality({
         provider: "form4api",
         eventCategory: "insider",
-        ticker: "AAPL",
+        symbol: "AAPL",
       }).decision,
     ).toBe("drop");
   });
@@ -228,7 +228,7 @@ describe("evaluateCatalystQuality", () => {
         provider: "nasdaq-halts",
         eventCategory: "trading_halt",
         subcategory: "halt",
-        ticker: "GME",
+        symbol: "GME",
       }).decision,
     ).toBe("keep");
   });
@@ -239,7 +239,7 @@ describe("evaluateCatalystQuality", () => {
         provider: "macro-calendar",
         eventCategory: "macro",
         subcategory: "cpi",
-        ticker: null,
+        symbol: null,
       }).decision,
     ).toBe("keep");
   });
@@ -250,7 +250,7 @@ describe("evaluateCatalystQuality", () => {
         provider: "polygon",
         eventCategory: "governance",
         subcategory: "company_news",
-        ticker: "AAPL",
+        symbol: "AAPL",
       }).decision,
     ).toBe("drop");
   });
@@ -261,7 +261,7 @@ describe("evaluateCatalystQuality", () => {
         provider: "polygon",
         eventCategory: "analyst",
         subcategory: "benzinga_wire",
-        ticker: "AAPL",
+        symbol: "AAPL",
       }).decision,
     ).toBe("keep");
   });

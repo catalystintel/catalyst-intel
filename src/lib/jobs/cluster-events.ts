@@ -1,7 +1,7 @@
 /**
  * Cross-source event clustering — merges catalysts from different sources
  * (halt + 8-K + wire, or SEC + Finnhub + Polygon) that fire for the same
- * ticker within a short window into one decision object, so the Live feed
+ * symbol within a short window into one decision object, so the Live feed
  * doesn't show three thin rows for what a trader experiences as one event.
  *
  * Only materializes a cluster when 2+ catalysts actually merge — a lone
@@ -24,7 +24,7 @@ const DEFAULT_LOOKBACK_MINUTES = 180;
 
 export interface ClusterableRow {
   id: number;
-  ticker: string;
+  symbol: string;
   timestamp: string;
   impactScore: number | null;
   eventCategory: string | null;
@@ -34,7 +34,7 @@ export interface ClusterableRow {
 }
 
 export interface ClusterGroup {
-  ticker: string;
+  symbol: string;
   category: string | null;
   windowStart: string;
   windowEnd: string;
@@ -43,7 +43,7 @@ export interface ClusterGroup {
 }
 
 /**
- * Whether two same-ticker rows in a time window should share a cluster.
+ * Whether two same-symbol rows in a time window should share a cluster.
  * Related cascade (halt + filing / wire retelling) merges; unrelated
  * Form 4 vs earnings on a busy name does not.
  */
@@ -67,7 +67,7 @@ export function shouldClusterTogether(
 }
 
 /**
- * Pure grouping logic (no DB) — groups same-ticker rows into windows where
+ * Pure grouping logic (no DB) — groups same-symbol rows into windows where
  * consecutive related events are within `windowMinutes` of the window's
  * start, then keeps only groups with 2+ members. Exported for unit testing.
  */
@@ -75,18 +75,18 @@ export function groupIntoWindows(
   rows: ClusterableRow[],
   windowMinutes: number = CLUSTER_WINDOW_MINUTES,
 ): ClusterGroup[] {
-  const byTicker = new Map<string, ClusterableRow[]>();
+  const bySymbol = new Map<string, ClusterableRow[]>();
   for (const row of rows) {
-    const list = byTicker.get(row.ticker) ?? [];
+    const list = bySymbol.get(row.symbol) ?? [];
     list.push(row);
-    byTicker.set(row.ticker, list);
+    bySymbol.set(row.symbol, list);
   }
 
   const groups: ClusterGroup[] = [];
   const windowMs = windowMinutes * 60 * 1000;
 
-  for (const [ticker, tickerRows] of byTicker) {
-    const sorted = [...tickerRows].sort(
+  for (const [symbol, symbolRows] of bySymbol) {
+    const sorted = [...symbolRows].sort(
       (a, b) => Date.parse(a.timestamp) - Date.parse(b.timestamp),
     );
 
@@ -100,7 +100,7 @@ export function groupIntoWindows(
       }
       const primary = pickClusterPrimary(current);
       groups.push({
-        ticker,
+        symbol,
         category: primary.eventCategory,
         windowStart: current[0].timestamp,
         windowEnd: current[current.length - 1].timestamp,
@@ -139,7 +139,7 @@ export function groupIntoWindows(
 }
 
 /**
- * DB wrapper: pulls recent, still-unclustered, ticker-bearing catalysts,
+ * DB wrapper: pulls recent, still-unclustered, symbol-bearing catalysts,
  * groups them, and materializes any 2+ member clusters. Safe to re-run —
  * already-clustered rows (`clusterId IS NOT NULL`) are excluded.
  */
@@ -156,7 +156,7 @@ export async function clusterRecentCatalysts(options?: {
   const rows = await db
     .select({
       id: catalysts.id,
-      ticker: catalysts.ticker,
+      symbol: catalysts.symbol,
       timestamp: catalysts.timestamp,
       impactScore: catalysts.impactScore,
       eventCategory: catalysts.eventCategory,
@@ -168,7 +168,7 @@ export async function clusterRecentCatalysts(options?: {
     .leftJoin(rawSources, eq(catalysts.rawSourceId, rawSources.id))
     .where(
       and(
-        isNotNull(catalysts.ticker),
+        isNotNull(catalysts.symbol),
         isNull(catalysts.clusterId),
         gte(catalysts.timestamp, since),
       ),
@@ -176,12 +176,12 @@ export async function clusterRecentCatalysts(options?: {
     .all();
 
   const clusterable: ClusterableRow[] = rows
-    .filter((r): r is (typeof rows)[number] & { ticker: string } =>
-      Boolean(r.ticker),
+    .filter((r): r is (typeof rows)[number] & { symbol: string } =>
+      Boolean(r.symbol),
     )
     .map((r) => ({
       id: r.id,
-      ticker: r.ticker,
+      symbol: r.symbol,
       timestamp: r.timestamp,
       impactScore: r.impactScore,
       eventCategory: r.eventCategory,
@@ -199,7 +199,7 @@ export async function clusterRecentCatalysts(options?: {
     const inserted = await db
       .insert(eventClusters)
       .values({
-        ticker: group.ticker,
+        symbol: group.symbol,
         category: group.category,
         windowStart: group.windowStart,
         windowEnd: group.windowEnd,
