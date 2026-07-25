@@ -104,7 +104,7 @@ export function CatalystArticleView({
               {ticker}
             </span>
           ) : (
-            <span className="rounded-sm border border-amber-500/35 bg-amber-500/10 px-2 py-1 font-mono text-[0.7rem] tracking-wide text-amber-200 uppercase">
+            <span className="rounded-sm border border-[var(--desk-warn-border)] bg-[var(--desk-warn-bg)] px-2 py-1 font-mono text-[0.7rem] tracking-wide text-[var(--desk-warn-text)] uppercase">
               Ticker unresolved
             </span>
           )}

@@ -96,12 +96,16 @@
   --desk-border: #e6e6e3;
   --desk-border-strong: #d3d3cf;
   --desk-text: #17181a;
-  --desk-text-secondary: #47484a;
-  --desk-text-muted: #74757a;
-  --desk-text-dim: #a3a4a8;
+  /* Muted steps stay readable on paper-white (aim ~4.5:1+ for body/meta). */
+  --desk-text-secondary: #3a3b3e;
+  --desk-text-muted: #56575c;
+  --desk-text-dim: #6a6b70;
   --desk-accent: #3a3a3a;
   --desk-accent-fg: #17181a;
   --desk-live: #9a6b00;
+  --desk-warn-bg: rgba(154, 107, 0, 0.14);
+  --desk-warn-border: rgba(154, 107, 0, 0.4);
+  --desk-warn-text: #5c4000;
   --desk-nav-active: rgba(0, 0, 0, 0.05);
   --desk-overlay-soft: rgba(0, 0, 0, 0.035);
   --desk-overlay-strong: rgba(0, 0, 0, 0.07);
@@ -154,12 +158,15 @@
   --desk-border: #222222;
   --desk-border-strong: #2e2e2e;
   --desk-text: #f2f2f2;
-  --desk-text-secondary: #b8b8b8;
-  --desk-text-muted: #888888;
-  --desk-text-dim: #5c5c5c;
+  --desk-text-secondary: #c4c4c4;
+  --desk-text-muted: #9a9a9a;
+  --desk-text-dim: #858585;
   --desk-accent: #cfcfcf;
   --desk-accent-fg: #e8e8e8;
   --desk-live: #f0c14b;
+  --desk-warn-bg: rgba(240, 193, 75, 0.14);
+  --desk-warn-border: rgba(240, 193, 75, 0.4);
+  --desk-warn-text: #f5d78a;
   --desk-nav-active: rgba(255, 255, 255, 0.07);
   --desk-overlay-soft: rgba(255, 255, 255, 0.05);
   --desk-overlay-strong: rgba(255, 255, 255, 0.1);

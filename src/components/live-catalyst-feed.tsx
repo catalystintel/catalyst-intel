@@ -661,7 +661,7 @@ export function LiveCatalystFeed({
             </button>
           ) : null}
           {lastUpdatedLabel ? (
-            <span className="hidden font-mono text-[0.78rem] text-[var(--desk-text-dim)] tabular-nums sm:inline">
+            <span className="hidden font-mono text-[0.78rem] text-[var(--desk-text-muted)] tabular-nums sm:inline">
               Last updated: {lastUpdatedLabel}
             </span>
           ) : null}
@@ -704,7 +704,7 @@ export function LiveCatalystFeed({
       ) : null}
 
       {ingestStale && !pollError ? (
-        <p className="border-b border-amber-500/35 bg-amber-500/10 px-4 py-2 font-mono text-xs text-amber-200 sm:px-5">
+        <p className="border-b border-[var(--desk-warn-border)] bg-[var(--desk-warn-bg)] px-4 py-2 font-mono text-xs font-medium text-[var(--desk-warn-text)] sm:px-5">
           Tape ingest looks stale
           {lastIngestedAt
             ? ` (last source fetch ${new Date(
@@ -1132,7 +1132,7 @@ function CatalystFeedList({
       <div
         role="row"
         className={cn(
-          "sticky top-0 z-[2] grid h-10 items-center gap-2 border-b border-[var(--desk-border-strong)] bg-[var(--desk-header)] px-4 font-mono text-[0.62rem] font-medium tracking-[0.12em] text-[var(--desk-text-dim)] uppercase shadow-[0_1px_0_rgba(0,0,0,0.35)] sm:gap-3 sm:px-5",
+          "sticky top-0 z-[2] grid h-10 items-center gap-2 border-b border-[var(--desk-border-strong)] bg-[var(--desk-header)] px-4 font-mono text-[0.62rem] font-medium tracking-[0.12em] text-[var(--desk-text-muted)] uppercase shadow-[0_1px_0_rgba(0,0,0,0.35)] sm:gap-3 sm:px-5",
           FEED_GRID,
         )}
       >
@@ -1292,7 +1292,7 @@ function CatalystFeedList({
               >
                 <time
                   dateTime={catalyst.timestamp}
-                  className="inline-block max-w-full font-mono text-[0.72rem] font-medium tracking-tight whitespace-nowrap text-[var(--desk-text-dim)] tabular-nums"
+                  className="inline-block max-w-full font-mono text-[0.72rem] font-medium tracking-tight whitespace-nowrap text-[var(--desk-text-muted)] tabular-nums"
                   title={formatTimeDate(catalyst.timestamp)}
                 >
                   {formatTimeDate(catalyst.timestamp)}
@@ -1450,7 +1450,7 @@ function FeedTitleWithTooltip({
                 {tip}
               </span>
               {meta ? (
-                <span className="mt-1 block font-mono text-[0.65rem] leading-snug tracking-wide text-[var(--desk-text-dim)]">
+                <span className="mt-1 block font-mono text-[0.65rem] leading-snug tracking-wide text-[var(--desk-text-muted)]">
                   {meta}
                 </span>
               ) : null}
