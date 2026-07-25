@@ -2,9 +2,16 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { ChevronDown, LogOut, ShieldCheck, UserRound } from "lucide-react";
+import {
+  ChevronDown,
+  LogOut,
+  MessageSquareText,
+  ShieldCheck,
+  UserRound,
+} from "lucide-react";
 
 import { logout, signOutEverywhere } from "@/app/login/actions";
+import { FeedbackDialog } from "@/components/feedback-dialog";
 import { cn } from "@/lib/utils";
 
 interface AccountMenuProps {
@@ -15,16 +22,7 @@ interface AccountMenuProps {
 }
 
 /**
- * Avatar-triggered account menu with profile, admin, and sign-out actions.
- *
- * Replaces the bare email chip in the header; sign-out uses the Supabase
- * server actions so it works without client-side auth state.
- *
- * @param email - Verified session email (fallback label + avatar initial).
- * @param displayName - Preferred display name when set.
- * @param avatarUrl - Google avatar URL from OAuth metadata, if any.
- * @param isAdmin - Whether to surface the admin shortcut.
- * @returns The account menu trigger and popover.
+ * Avatar-triggered account menu with profile, admin, feedback, and sign-out.
  */
 export function AccountMenu({
   email,
@@ -33,6 +31,7 @@ export function AccountMenu({
   isAdmin,
 }: AccountMenuProps) {
   const [open, setOpen] = useState(false);
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const label = displayName?.trim() || email;
   const initial = (displayName?.trim()?.[0] || email[0] || "?").toUpperCase();
@@ -99,6 +98,18 @@ export function AccountMenu({
             <UserRound className="size-4" />
             Profile &amp; settings
           </MenuLink>
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => {
+              setOpen(false);
+              setFeedbackOpen(true);
+            }}
+            className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm text-foreground/90 transition-colors hover:bg-muted/50"
+          >
+            <MessageSquareText className="size-4" />
+            Send feedback
+          </button>
           {isAdmin ? (
             <MenuLink href="/admin" onNavigate={() => setOpen(false)}>
               <ShieldCheck className="size-4" />
@@ -130,6 +141,12 @@ export function AccountMenu({
           </form>
         </div>
       ) : null}
+
+      <FeedbackDialog
+        open={feedbackOpen}
+        onOpenChange={setFeedbackOpen}
+        defaultEmail={email}
+      />
     </div>
   );
 }

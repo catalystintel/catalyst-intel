@@ -123,8 +123,9 @@ env vars are required today.
 | `FINNHUB_API_KEY`               | No          | Enables Finnhub catalysts + NYSE listings (Admin / cron)    |
 | `POLYGON_API_KEY`               | No          | Enables Polygon/Benzinga news + price enrichment            |
 | `FORM4_API_KEY`                 | No          | Optional Form4API enrichment                                |
-| `RESEND_API_KEY`                | No          | Enables email alert delivery (webhook works without it)     |
+| `RESEND_API_KEY`                | No          | Enables email alert delivery + feedback emails              |
 | `RESEND_FROM_EMAIL`             | No          | Optional From for Resend (defaults to onboarding sender)    |
+| `FEEDBACK_TO_EMAIL`             | No*         | Inbox for `/api/feedback` (*required for the feedback box)  |
 | `OPENROUTER_API_KEY`            | No          | On-demand AI analysis (or `OPENROUTER_API_KEYS` comma pool) |
 
 ### Production (Vercel → Environment: **Production**, used by `main`)
@@ -143,8 +144,9 @@ env vars are required today.
 | `FINNHUB_API_KEY`               | No          | Enables Finnhub catalysts + NYSE listings (Admin / cron)    |
 | `POLYGON_API_KEY`               | No          | Enables Polygon/Benzinga news + price enrichment            |
 | `FORM4_API_KEY`                 | No          | Optional Form4API enrichment                                |
-| `RESEND_API_KEY`                | No          | Enables email alert delivery (webhook works without it)     |
+| `RESEND_API_KEY`                | No          | Enables email alert delivery + feedback emails              |
 | `RESEND_FROM_EMAIL`             | No          | Optional From for Resend                                    |
+| `FEEDBACK_TO_EMAIL`             | No*         | Inbox for `/api/feedback` (*required for the feedback box)  |
 | `OPENROUTER_API_KEY`            | No          | On-demand AI analysis (or `OPENROUTER_API_KEYS` comma pool) |
 
 ### GitHub repo secrets (for the deploy migration workflow)

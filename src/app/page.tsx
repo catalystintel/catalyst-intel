@@ -87,19 +87,28 @@ export default async function Home() {
     <PreLoginChrome glowClassName="h-[55vh]">
       <main className="page-enter relative z-10 mx-auto flex w-full max-w-5xl flex-1 flex-col justify-start gap-8 px-4 pt-2 pb-[calc(5.5rem+env(safe-area-inset-bottom))] sm:justify-center sm:gap-10 sm:px-8 sm:pt-4 sm:pb-16">
         <div className="max-w-2xl">
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-[rgba(240,193,75,0.35)] bg-[rgba(240,193,75,0.12)] px-2.5 py-1 text-[0.68rem] font-bold tracking-[0.08em] text-[var(--desk-live)]">
-            <span
-              aria-hidden
-              className="live-pulse size-1.5 rounded-full bg-[var(--desk-live)]"
-            />
-            LIVE
-          </span>
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-[rgba(240,193,75,0.35)] bg-[rgba(240,193,75,0.12)] px-2.5 py-1 text-[0.68rem] font-bold tracking-[0.08em] text-[var(--desk-live)]">
+              <span
+                aria-hidden
+                className="live-pulse size-1.5 rounded-full bg-[var(--desk-live)]"
+              />
+              LIVE
+            </span>
+            <span className="inline-flex items-center rounded-full border border-[var(--desk-border-strong)] bg-[var(--desk-overlay-soft)] px-2.5 py-1 font-mono text-[0.68rem] font-semibold tracking-[0.08em] text-[var(--desk-text-secondary)] uppercase">
+              Open Early Access · Free
+            </span>
+          </div>
           <h1 className="mt-4 text-4xl font-bold tracking-tight text-balance text-[var(--desk-text)] sm:text-5xl">
             Catalyst Intel
           </h1>
           <p className="mt-4 max-w-lg text-base text-pretty text-[var(--desk-text-secondary)] sm:text-lg">
             Material catalysts on a trading blotter — Symbol, Title, Time. Open
             Read for a plain-language summary.
+          </p>
+          <p className="mt-3 max-w-lg text-sm text-pretty text-[var(--desk-text-muted)] sm:text-base">
+            During Open Early Access, every feature is free — feed, alerts,
+            watchlists, playbook, and AI. No card required.
           </p>
           <div className="mt-8 flex flex-col items-start gap-3 sm:flex-row sm:flex-wrap sm:items-center">
             <Link
@@ -109,10 +118,10 @@ export default async function Home() {
                 "btn-press min-h-11 w-full justify-center bg-[var(--desk-live)] text-[#121212] hover:brightness-110 sm:w-auto",
               )}
             >
-              Continue with Google
+              Continue with Google — free
             </Link>
             <span className="font-mono text-xs text-[var(--desk-text-muted)]">
-              Sign in · no password
+              Sign in · no password · full access
             </span>
           </div>
         </div>

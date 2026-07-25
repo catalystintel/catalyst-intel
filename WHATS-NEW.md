@@ -6,6 +6,12 @@ The same content is shown on **Admin → What's new**
 (`src/lib/ops/whats-new.ts` is the source of truth — update both the TS list
 and keep this file in sync when you ship, or regenerate from that module).
 
+## 2026-07-25 — Open Early Access + feedback
+
+- Marketing and in-app banners announce Open Early Access — every feature is free while we grow traffic.
+- Feedback box (bugs / feature requests / improvements) emails `FEEDBACK_TO_EMAIL` via Resend; also in the account menu.
+- Profile notes full access during Early Access; Pro billing stays “coming soon” (not gated yet).
+
 ## 2026-07-25 — Catalyst Feed URL rename
 
 - `/dashboard` is now `/catalyst-feed` — matches the sidebar label; old links 308-redirect automatically.
