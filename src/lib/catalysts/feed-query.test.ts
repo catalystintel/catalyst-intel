@@ -62,14 +62,14 @@ describe("parseFeedQueryFromSearchParams", () => {
     expect(filters.since).toBeTruthy();
   });
 
-  it("defaults tickerOnly off when param absent", () => {
+  it("defaults tickerOnly on when param absent", () => {
     const filters = parseFeedQueryFromSearchParams(new URLSearchParams(), {
       nowIso: "2026-07-24T20:00:00.000Z",
     });
-    expect(filters.tickerOnly).toBe(false);
+    expect(filters.tickerOnly).toBe(true);
   });
 
-  it("accepts tickerOnly false via explicit param", () => {
+  it("still parses tickerOnly false (gate remains always-on in SQL)", () => {
     const filters = parseFeedQueryFromSearchParams(
       new URLSearchParams({ tickerOnly: "0" }),
       { nowIso: "2026-07-24T20:00:00.000Z" },

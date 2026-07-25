@@ -79,7 +79,8 @@ describe("feed-filter-persist", () => {
       formFilters: ["8-K"],
       sourceFilters: ["sec-edgar"],
       timeWindow: "4h",
-      tickerOnly: false,
+      // Always coerced on read — desk rule is not optional.
+      tickerOnly: true,
     });
   });
 
@@ -127,7 +128,7 @@ describe("feed-filter-persist", () => {
       formFilters: ["8-K"],
       sourceFilters: ["sec-edgar"],
       timeWindow: "24h",
-      tickerOnly: true,
+      tickerOnly: false,
     });
     const params = new URLSearchParams(qs);
     expect(params.get("q")).toBe("AAPL");
@@ -135,6 +136,7 @@ describe("feed-filter-persist", () => {
     expect(params.get("sectors")).toBe("financials");
     expect(params.get("forms")).toBe("8-K");
     expect(params.get("window")).toBe("24h");
+    // Always sent — tape gate is not optional.
     expect(params.get("tickerOnly")).toBe("1");
   });
 

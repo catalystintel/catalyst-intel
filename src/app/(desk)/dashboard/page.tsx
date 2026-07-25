@@ -14,8 +14,8 @@ import { withDbRetry } from "@/lib/db/with-db-retry";
 import { parseDashboardCatalystId } from "@/lib/nav/dashboard-href";
 
 function ssrFeedFilters(nowIso: string): FeedQueryFilters {
-  // Match `/api/catalysts` + Symbol-only default: ticker required except
-  // CPI / Jobs (NFP) macro rows (`tickerFeedGateSql`).
+  // Same shared query as `/api/catalysts` — ticker gate always applied
+  // (CPI / Jobs NFP excepted via `tickerFeedGateSql`).
   const defaults: FeedFilterState = DEFAULT_FEED_FILTERS;
   return {
     q: defaults.tickerQuery,
@@ -24,7 +24,7 @@ function ssrFeedFilters(nowIso: string): FeedQueryFilters {
     forms: defaults.formFilters,
     sources: defaults.sourceFilters,
     timeWindow: defaults.timeWindow,
-    tickerOnly: defaults.tickerOnly,
+    tickerOnly: true,
     since: null,
     until: nowIso,
   };

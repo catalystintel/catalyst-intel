@@ -52,7 +52,7 @@ export function passesTickerFeedGate(item: TickerFeedGateInput): boolean {
 
 /**
  * SQL predicate for “has ticker OR CPI/Jobs exception”.
- * Used by `buildFeedWhere` when Symbol-only / tickerOnly is on.
+ * Always applied by `buildFeedWhere` for the dashboard / `/api/catalysts` tape.
  *
  * Primary match = macro-calendar fields (`subcategory` / tags). Title/headline
  * LIKE patterns cover the same CPI / NFP wording used at ingest.
