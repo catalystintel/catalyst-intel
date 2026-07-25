@@ -18,6 +18,11 @@ import { sectorLabel, titleLine } from "@/lib/catalysts/feed-display";
 import { formatEventTime, formatRelativeAge } from "@/lib/format/relative-time";
 import { CATEGORY_LABELS } from "@/lib/jobs/parse-8k-items";
 import type { TriageResult } from "@/lib/jobs/llm-triage";
+import {
+  DEFAULT_CHART_RANGE,
+  chartRangeDef,
+  type ChartRangeKey,
+} from "@/lib/market/chart-range";
 import { cn } from "@/lib/utils";
 
 type QuotePayload = {
@@ -106,6 +111,14 @@ export function TapeSplitPanel({
   const ticker = catalyst.ticker?.trim().toUpperCase() || null;
   const [market, setMarket] = useState<QuotePayload | null>(null);
   const [quoteLoading, setQuoteLoading] = useState(Boolean(ticker));
+  const [chartRange, setChartRange] =
+    useState<ChartRangeKey>(DEFAULT_CHART_RANGE);
+  const [rangePerf, setRangePerf] = useState<{
+    change: number | null;
+    changePercent: number | null;
+    price: number | null;
+  } | null>(null);
+  const [rangePerfLoading, setRangePerfLoading] = useState(false);
 
   const eventTitle = titleLine(catalyst);
   const categoryLabel = catalyst.eventCategory
@@ -144,8 +157,13 @@ export function TapeSplitPanel({
 
     let cancelled = false;
     const id = window.setTimeout(() => {
+      if (cancelled) return;
+      // Reset lookback when the selected row changes (async to satisfy
+      // react-hooks/set-state-in-effect — sync setState in effects is banned).
+      setChartRange(DEFAULT_CHART_RANGE);
+      setRangePerf(null);
+      setQuoteLoading(true);
       void (async () => {
-        setQuoteLoading(true);
         try {
           const res = await fetch(
             `/api/market/quote?symbol=${encodeURIComponent(ticker)}`,
@@ -175,13 +193,60 @@ export function TapeSplitPanel({
     };
   }, [ticker]);
 
+  useEffect(() => {
+    // 1D uses the session quote — ignore cached multi-day performance.
+    if (!ticker || chartRange === "1D") return;
+
+    let cancelled = false;
+    const id = window.setTimeout(() => {
+      if (cancelled) return;
+      setRangePerfLoading(true);
+      void (async () => {
+        try {
+          const res = await fetch(
+            `/api/market/performance?symbol=${encodeURIComponent(ticker)}&range=${encodeURIComponent(chartRange)}`,
+            { credentials: "same-origin" },
+          );
+          if (!res.ok) throw new Error("performance failed");
+          const data = (await res.json()) as {
+            change: number | null;
+            changePercent: number | null;
+            price: number | null;
+          };
+          if (!cancelled) {
+            setRangePerf({
+              change: data.change,
+              changePercent: data.changePercent,
+              price: data.price,
+            });
+          }
+        } catch {
+          if (!cancelled) setRangePerf(null);
+        } finally {
+          if (!cancelled) setRangePerfLoading(false);
+        }
+      })();
+    }, 0);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(id);
+    };
+  }, [ticker, chartRange]);
+
   const tvSymbol =
     market?.tradingViewSymbol ??
     (ticker ? toTradingViewSymbol(ticker, null) : null);
+
+  const useRangeMove = chartRange !== "1D";
+  const displayPrice = useRangeMove
+    ? (rangePerf?.price ?? market?.quote?.price)
+    : market?.quote?.price;
   const change = formatChange(
-    market?.quote?.change,
-    market?.quote?.changePercent,
+    useRangeMove ? rangePerf?.change : market?.quote?.change,
+    useRangeMove ? rangePerf?.changePercent : market?.quote?.changePercent,
   );
+  const changeLabel = chartRangeDef(chartRange).label;
 
   return (
     <aside
@@ -233,7 +298,7 @@ export function TapeSplitPanel({
               ) : (
                 <>
                   <span className="text-lg font-semibold text-[var(--desk-text)]">
-                    {formatPrice(market?.quote?.price)}
+                    {formatPrice(displayPrice)}
                   </span>
                   <span
                     className={cn(
@@ -241,8 +306,22 @@ export function TapeSplitPanel({
                       change.up === false && "text-rose-400",
                       change.up == null && "text-[var(--desk-text-muted)]",
                     )}
+                    title={
+                      useRangeMove
+                        ? `Change over ${changeLabel} lookback`
+                        : "Session change"
+                    }
                   >
-                    {change.text}
+                    {rangePerfLoading && useRangeMove ? (
+                      <span className="text-[var(--desk-text-dim)]">…</span>
+                    ) : (
+                      <>
+                        {change.text}
+                        <span className="ml-1.5 text-[0.7rem] tracking-wide text-[var(--desk-text-dim)] uppercase">
+                          {changeLabel}
+                        </span>
+                      </>
+                    )}
                   </span>
                 </>
               )}
@@ -384,7 +463,9 @@ export function TapeSplitPanel({
             <TradingViewAdvancedChart
               key={tvSymbol}
               symbol={tvSymbol}
-              className="h-[280px] sm:h-[340px]"
+              range={chartRange}
+              onRangeChange={setChartRange}
+              className="h-[300px] sm:h-[360px]"
             />
           </div>
         ) : null}
