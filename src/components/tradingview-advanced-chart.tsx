@@ -6,6 +6,13 @@ import { Maximize2, Minimize2, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 /**
+ * TradingView widgetembed `style` codes:
+ * 0 bars · 1 candles · 2 line · 3 area · 8 hollow candles · 9 heikin ashi
+ * Default to line so the panel opens on a simple price view (not candles).
+ */
+const DEFAULT_CHART_STYLE = "2";
+
+/**
  * Build TradingView's free widgetembed iframe URL.
  *
  * The legacy `https://s.tradingview.com/tv.js` Advanced Chart loader now
@@ -21,7 +28,7 @@ export function buildTradingViewEmbedUrl(
     symbol: symbol.trim(),
     interval: "D",
     theme: "dark",
-    style: "1",
+    style: DEFAULT_CHART_STYLE,
     locale: "en",
     timezone: "America/New_York",
     withdateranges: "1",
