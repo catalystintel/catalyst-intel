@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-import { LIBSQL_SETUP_HINT, isLibsqlConfigured } from "@/db/env";
+import { databaseSetupHint, isLibsqlConfigured } from "@/db/env";
 import { getCurrentAppUser } from "@/lib/auth/current-user";
 import { getClientIp } from "@/lib/http/client-ip";
 import { RATE_LIMITS, checkRateLimit } from "@/lib/http/rate-limit";
@@ -20,7 +20,7 @@ interface RouteContext {
  */
 export async function POST(request: NextRequest, context: RouteContext) {
   if (!isLibsqlConfigured()) {
-    return NextResponse.json({ error: LIBSQL_SETUP_HINT }, { status: 503 });
+    return NextResponse.json({ error: databaseSetupHint() }, { status: 503 });
   }
 
   const ip = getClientIp(request);

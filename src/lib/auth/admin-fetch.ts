@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-import { LIBSQL_SETUP_HINT, isLibsqlConfigured } from "@/db/env";
+import { databaseSetupHint, isLibsqlConfigured } from "@/db/env";
 import { getCurrentAppUser } from "@/lib/auth/current-user";
 import { isValidCronSecret } from "@/lib/auth/cron-secret";
 import { getClientIp } from "@/lib/http/client-ip";
@@ -32,7 +32,7 @@ export async function authorizeAdminFetch(
     return {
       ok: false,
       response: NextResponse.json(
-        { error: LIBSQL_SETUP_HINT },
+        { error: databaseSetupHint() },
         { status: 503 },
       ),
     };

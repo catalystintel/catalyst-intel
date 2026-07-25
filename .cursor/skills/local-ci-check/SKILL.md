@@ -40,8 +40,17 @@ npm run build
   npm run build
   ```
 
-  Delete the throwaway `local.db` file afterward (`rm -f local.db`) so it
-  doesn't get committed or confused with a real local dev database.
+  If the build used a throwaway `DATABASE_URL=file:./local.db`, recreate a
+  real local DB afterward so the next `npm run dev` isn't stuck on a missing
+  or 0-byte file (`no such table: users`):
+
+  ```bash
+  rm -f local.db
+  npm run db:migrate
+  ```
+
+  Never leave a 0-byte `local.db` behind — libSQL will open it and every
+  desk query will fail until migrate runs.
 
 - `npm run format:check` and `npm run lint` don't touch the database and need
   no env vars.

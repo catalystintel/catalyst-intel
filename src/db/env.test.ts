@@ -1,6 +1,12 @@
+import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { isLibsqlConfigured } from "./env";
+import {
+  databaseSetupMode,
+  isLibsqlConfigured,
+  isSchemaMissingError,
+  localSqlitePath,
+} from "./env";
 
 const ORIGINAL = {
   LIBSQL_URL: process.env.LIBSQL_URL,
@@ -45,5 +51,57 @@ describe("isLibsqlConfigured", () => {
     delete process.env.LIBSQL_URL;
     process.env.DATABASE_URL = "file:./local.db";
     expect(isLibsqlConfigured()).toBe(true);
+  });
+});
+
+describe("localSqlitePath", () => {
+  it("returns the path segment from file URLs", () => {
+    expect(localSqlitePath("file:./local.db")).toBe("./local.db");
+    expect(localSqlitePath("file:local.db")).toBe("local.db");
+  });
+});
+
+describe("isSchemaMissingError", () => {
+  it("detects libSQL missing-table errors", () => {
+    expect(
+      isSchemaMissingError(new Error("SQLITE_ERROR: no such table: users")),
+    ).toBe(true);
+  });
+
+  it("walks Error.cause", () => {
+    expect(
+      isSchemaMissingError(
+        new Error("Local database schema is missing", {
+          cause: new Error("SQLITE_ERROR: no such table: users"),
+        }),
+      ),
+    ).toBe(true);
+  });
+
+  it("ignores unrelated errors", () => {
+    expect(isSchemaMissingError(new Error("ConnectionFailed"))).toBe(false);
+  });
+});
+
+describe("databaseSetupMode", () => {
+  it("is local for file databases", () => {
+    delete process.env.VERCEL;
+    delete process.env.LIBSQL_URL;
+    expect(databaseSetupMode()).toBe("local");
+  });
+
+  it("is remote on Vercel", () => {
+    process.env.VERCEL = "1";
+    expect(databaseSetupMode()).toBe("remote");
+  });
+});
+
+describe("localSqlitePath absolute resolve helper", () => {
+  it("keeps absolute paths absolute when joined by callers", () => {
+    const rel = localSqlitePath("file:./local.db");
+    expect(rel).toBeTruthy();
+    expect(path.join(process.cwd(), rel!)).toBe(
+      path.join(process.cwd(), "./local.db"),
+    );
   });
 });
