@@ -39,10 +39,15 @@ export function AppSidebar({
       )}
       aria-label="Primary navigation"
     >
-      <div
+      <Link
+        href="/dashboard"
+        onClick={onNavigate}
+        aria-label="Catalyst Intel home"
+        title="Back to dashboard"
         className={cn(
-          "mb-5 flex items-center gap-2.5",
-          collapsed ? "justify-center" : "px-2",
+          "mb-5 flex items-center gap-2.5 rounded-md transition-colors",
+          "hover:bg-[var(--desk-overlay-soft)] focus-visible:bg-[var(--desk-overlay-soft)] focus-visible:outline-none",
+          collapsed ? "justify-center p-1.5" : "px-2 py-1",
         )}
       >
         <span
@@ -59,7 +64,7 @@ export function AppSidebar({
             </p>
           </div>
         ) : null}
-      </div>
+      </Link>
 
       <div
         className={cn(
