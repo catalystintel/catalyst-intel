@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 
 import { db } from "@/db/client";
-import { isLibsqlConfigured } from "@/db/env";
+import { isLibsqlConfigured, isSchemaMissingError } from "@/db/env";
 import { users } from "@/db/schema";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
@@ -97,26 +97,36 @@ async function getDevBypassAppUser(): Promise<AppUser> {
   const supabaseUserId = `dev-bypass:${email}`;
   const role = adminRoleForEmail(email);
 
-  await db
-    .insert(users)
-    .values({ supabaseUserId, email, role })
-    .onConflictDoNothing()
-    .run();
+  try {
+    await db
+      .insert(users)
+      .values({ supabaseUserId, email, role })
+      .onConflictDoNothing()
+      .run();
 
-  const row = await db
-    .select()
-    .from(users)
-    .where(eq(users.supabaseUserId, supabaseUserId))
-    .get();
+    const row = await db
+      .select()
+      .from(users)
+      .where(eq(users.supabaseUserId, supabaseUserId))
+      .get();
 
-  if (!row) {
-    throw new Error("Failed to create the dev bypass user.");
+    if (!row) {
+      throw new Error("Failed to create the dev bypass user.");
+    }
+
+    return {
+      ...row,
+      isAdmin: isAdminEmail(email),
+      displayName: row.displayName ?? "Local Dev",
+      avatarUrl: null,
+    };
+  } catch (err) {
+    if (isSchemaMissingError(err)) {
+      throw new Error(
+        "Local database schema is missing (no users table). Run npm run db:migrate, then restart the dev server.",
+        { cause: err },
+      );
+    }
+    throw err;
   }
-
-  return {
-    ...row,
-    isAdmin: isAdminEmail(email),
-    displayName: row.displayName ?? "Local Dev",
-    avatarUrl: null,
-  };
 }

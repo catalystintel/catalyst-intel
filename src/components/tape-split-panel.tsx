@@ -206,7 +206,7 @@ export function TapeSplitPanel({
                 {ticker}
               </span>
             ) : (
-              <span className="rounded-sm border border-amber-500/35 bg-amber-500/10 px-1.5 py-0.5 font-mono text-[0.65rem] tracking-wide text-amber-200 uppercase">
+              <span className="rounded-sm border border-[var(--desk-warn-border)] bg-[var(--desk-warn-bg)] px-1.5 py-0.5 font-mono text-[0.65rem] tracking-wide text-[var(--desk-warn-text)] uppercase">
                 Ticker unresolved
               </span>
             )}

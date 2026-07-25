@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { and, desc, eq } from "drizzle-orm";
 
-import { LIBSQL_SETUP_HINT, isLibsqlConfigured } from "@/db/env";
+import { databaseSetupHint, isLibsqlConfigured } from "@/db/env";
 import { db } from "@/db/client";
 import { alertRules, type AlertChannel } from "@/db/schema";
 import { getCurrentAppUser } from "@/lib/auth/current-user";
@@ -20,7 +20,7 @@ const CHANNELS = new Set<AlertChannel>(["email", "webhook", "push"]);
 async function requireUser(request: NextRequest) {
   if (!isLibsqlConfigured()) {
     return {
-      error: NextResponse.json({ error: LIBSQL_SETUP_HINT }, { status: 503 }),
+      error: NextResponse.json({ error: databaseSetupHint() }, { status: 503 }),
     };
   }
 
