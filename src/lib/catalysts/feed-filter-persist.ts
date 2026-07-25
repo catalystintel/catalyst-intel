@@ -29,7 +29,10 @@ export interface PersistedFeedFilters {
   formFilters: FeedFormFilter[];
   sourceFilters: string[];
   timeWindow: FeedTimeWindow;
-  /** When true, hide catalysts with no resolved ticker. */
+  /**
+   * Always true for the desk tape (ticker required; CPI / Jobs NFP excepted).
+   * Kept on the persisted shape for API query compat / legacy readers.
+   */
   tickerOnly: boolean;
   /** Epoch ms of last activity while these filters were in use. */
   lastActiveAt: number;
@@ -45,13 +48,13 @@ export const DEFAULT_FEED_FILTERS: FeedFilterState = {
   formFilters: [],
   sourceFilters: [],
   timeWindow: "all",
-  /** Desk default: tradable names only (no empty chart rows). */
+  /** Always on: tradable names only (CPI / Jobs NFP still allowed). */
   tickerOnly: true,
 };
 
 /**
  * True when search / time / facet gates match product defaults.
- * Ignores `tickerOnly` — that is a separate header toggle, not a panel filter.
+ * Ignores `tickerOnly` — that gate is always enforced server-side.
  */
 export function isPanelFiltersDefault(filters: FeedFilterState): boolean {
   return (
@@ -125,12 +128,6 @@ export function readPersistedFeedFilters(
       isFeedTimeWindow(parsed.timeWindow)
         ? parsed.timeWindow
         : "all";
-    // Missing field (legacy v2) → product default (ticker only on).
-    const tickerOnly =
-      typeof parsed.tickerOnly === "boolean"
-        ? parsed.tickerOnly
-        : DEFAULT_FEED_FILTERS.tickerOnly;
-
     return {
       tickerQuery,
       categoryFilters,
@@ -138,7 +135,8 @@ export function readPersistedFeedFilters(
       formFilters,
       sourceFilters,
       timeWindow,
-      tickerOnly,
+      // Always enforce ticker gate (ignore legacy persisted false).
+      tickerOnly: true,
     };
   } catch {
     return null;
@@ -203,7 +201,8 @@ export function feedApiQuery(
   if (isLocalDevUi() && filters.sourceFilters.length > 0) {
     params.set("sources", filters.sourceFilters.join(","));
   }
-  if (filters.tickerOnly) params.set("tickerOnly", "1");
+  // Always request the ticker gate (server also enforces unconditionally).
+  params.set("tickerOnly", "1");
   if (options?.cursor) params.set("cursor", options.cursor);
   if (typeof options?.limit === "number") {
     params.set("limit", String(options.limit));

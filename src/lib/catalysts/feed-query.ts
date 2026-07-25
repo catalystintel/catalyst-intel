@@ -11,10 +11,8 @@ import {
   eq,
   gte,
   inArray,
-  isNotNull,
   like,
   lte,
-  ne,
   or,
   sql,
   type SQL,
@@ -42,6 +40,7 @@ import {
   sinceIsoForFeedTimeWindow,
   type FeedTimeWindow,
 } from "@/lib/catalysts/feed-time-window";
+import { tickerFeedGateSql } from "@/lib/catalysts/ticker-feed-gate";
 import {
   isEventCategoryKey,
   type EventCategoryKey,
@@ -67,7 +66,10 @@ export interface FeedQueryFilters {
   forms: FeedFormFilter[];
   sources: string[];
   timeWindow: FeedTimeWindow;
-  /** When true, exclude catalysts with null/blank ticker. */
+  /**
+   * Legacy client flag (always treated as on for the tape). The ticker /
+   * CPI·Jobs gate is applied unconditionally in `buildFeedWhere`.
+   */
   tickerOnly: boolean;
   /** ISO lower bound; overrides window when set. */
   since: string | null;
@@ -226,11 +228,14 @@ export function parseFeedQueryFromSearchParams(
     s.toLowerCase(),
   );
 
-  const tickerOnlyRaw = (params.get("tickerOnly") ?? "").trim().toLowerCase();
+  // Product rule: ticker required (CPI/Jobs excepted). Default on; only an
+  // explicit opt-out param is parsed for backward compat — `buildFeedWhere`
+  // still always applies the gate.
+  const tickerOnlyRaw = (params.get("tickerOnly") ?? "1").trim().toLowerCase();
   const tickerOnly =
-    tickerOnlyRaw === "1" ||
-    tickerOnlyRaw === "true" ||
-    tickerOnlyRaw === "yes";
+    tickerOnlyRaw !== "0" &&
+    tickerOnlyRaw !== "false" &&
+    tickerOnlyRaw !== "no";
 
   return {
     q: (params.get("q") ?? "").trim(),
@@ -318,9 +323,8 @@ export function buildFeedWhere(
     parts.push(inArray(rawSources.provider, filters.sources));
   }
 
-  if (filters.tickerOnly) {
-    parts.push(and(isNotNull(catalysts.ticker), ne(catalysts.ticker, ""))!);
-  }
+  // Always-on desk rule: no tickerless rows except CPI / Jobs (NFP).
+  parts.push(tickerFeedGateSql());
 
   return parts.length === 1 ? parts[0] : and(...parts);
 }
