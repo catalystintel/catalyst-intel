@@ -40,7 +40,7 @@ export interface NavItem {
 const PRIMARY_NAV: NavItem[] = [
   {
     key: "live",
-    label: "Dashboard",
+    label: "Catalyst Feed",
     icon: LayoutDashboard,
     href: "/dashboard",
   },
