@@ -26,7 +26,7 @@ describe("parseHaltTitle", () => {
 });
 
 describe("parseHaltRssItem", () => {
-  it("builds Halts (Company): reason from ndaq fields", () => {
+  it("builds Halts (Company) - reason from ndaq fields", () => {
     const parsed = parseHaltRssItem({
       title: "STKH",
       "ndaq:IssueSymbol": "STKH",
@@ -44,8 +44,8 @@ describe("parseHaltRssItem", () => {
       reasonLabel: "News pending",
       subcategory: "halt",
       companyName: "Steakholder Foods Ltd. ADS",
-      title: "Halts (Steakholder Foods Ltd. ADS): News pending",
-      headline: "Halts (Steakholder Foods Ltd. ADS): News pending",
+      title: "Halts (Steakholder Foods Ltd. ADS) - News pending",
+      headline: "Halts (Steakholder Foods Ltd. ADS) - News pending",
     });
   });
 
@@ -55,7 +55,7 @@ describe("parseHaltRssItem", () => {
       "ndaq:IssueSymbol": "PMI",
       "ndaq:ReasonCode": "H11",
     });
-    expect(parsed?.title).toBe("Halts (PMI): Regulatory concern");
+    expect(parsed?.title).toBe("Halts (PMI) - Regulatory concern");
     expect(parsed?.companyName).toBe("PMI");
   });
 
@@ -79,7 +79,7 @@ describe("parseHaltRssItem", () => {
       ReasonCode: "LUDP",
     });
     expect(parsed?.title).toBe(
-      "Halts (XYZ Holdings): Volatility trading pause (LULD)",
+      "Halts (XYZ Holdings) - Volatility trading pause (LULD)",
     );
   });
 });

@@ -29,8 +29,8 @@ describe("earningsToNormalized", () => {
       symbol: "AAPL",
       companyName: "Apple Inc.",
       type: "Earnings",
-      title: "Apple Inc.: Earnings Report Q1",
-      headline: "Apple Inc.: Earnings Report Q1",
+      title: "Apple Inc. - Earnings Report Q1",
+      headline: "Apple Inc. - Earnings Report Q1",
       eventCategory: "earnings",
       subcategory: "amc",
     });
@@ -42,7 +42,7 @@ describe("earningsToNormalized", () => {
       date: "2026-04-24",
       hour: "bmo",
     });
-    expect(item?.title).toBe("MSFT: Earnings Report Q2");
+    expect(item?.title).toBe("MSFT - Earnings Report Q2");
     expect(item?.companyName).toBe("MSFT");
   });
 });

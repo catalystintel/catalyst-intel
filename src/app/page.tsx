@@ -21,7 +21,7 @@ const DEMO_ROWS: {
 }[] = [
   {
     symbol: "NVDA",
-    title: "NVIDIA Corp: Earnings Report Q3",
+    title: "NVIDIA Corp - Earnings Report Q3",
     time: "10:23 AM · Jul 25, 2026",
     timeShort: "10:23 AM",
   },

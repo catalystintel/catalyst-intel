@@ -292,30 +292,33 @@ export type TitleLineOptions = {
 /**
  * Ground-rule API titles are stored on `title` (and usually mirrored on
  * `headline`). Prefer them over generic taxonomy chips so the tape shows
- * `Halts (…)` / `{Company} Receives FDA Approval!` / `{Company}: Earnings Report Qn`.
+ * `Halts (…)` / `{Company} Receives FDA Approval!` / `{Company} - Earnings Report Qn`.
  */
 function prefersStoredGroundRuleTitle(c: FeedCatalyst, title: string): boolean {
   if (!title || looksLikeSourceLabel(title)) return false;
   if (/^Halts\s*\(/i.test(title)) return true;
   if (
     /^FDA Approval\s*-/i.test(title) ||
-    /:\s*FDA Approval$/i.test(title) ||
+    /(?::|\s-)\s*FDA Approval$/i.test(title) ||
     /\bReceives FDA Approval!$/i.test(title)
   ) {
     return true;
   }
   if (
     /^Earnings Report\s+Q/i.test(title) ||
-    /:\s*Earnings Report\s+Q/i.test(title)
+    /(?::|\s-)\s*Earnings Report\s+Q/i.test(title)
   ) {
     return true;
   }
-  if (/^Form 4 Insider\b/i.test(title) || /:\s*Form 4 Insider\b/i.test(title)) {
+  if (
+    /^Form 4 Insider\b/i.test(title) ||
+    /(?::|\s-)\s*Form 4 Insider\b/i.test(title)
+  ) {
     return true;
   }
   if (
     /^Shelf Registration \(S-3\)\s*-/i.test(title) ||
-    /:\s*Shelf Registration \(S-3\)$/i.test(title)
+    /(?::|\s-)\s*Shelf Registration \(S-3\)$/i.test(title)
   ) {
     return true;
   }
@@ -330,7 +333,7 @@ function prefersStoredGroundRuleTitle(c: FeedCatalyst, title: string): boolean {
   }
   if (
     /^Schedule 13[DG]\s*-/i.test(title) ||
-    /:\s*Schedule 13[DG]$/i.test(title)
+    /(?::|\s-)\s*Schedule 13[DG]$/i.test(title)
   ) {
     return true;
   }
@@ -341,23 +344,26 @@ function prefersStoredGroundRuleTitle(c: FeedCatalyst, title: string): boolean {
   if (looksLikeOfficerDirectorChangeTitle(title)) return true;
   if (
     /^Clinical Trial\s*-/i.test(title) ||
-    /:\s*Clinical Trial$/i.test(title)
+    /(?::|\s-)\s*Clinical Trial$/i.test(title)
   ) {
     return true;
   }
-  if (/^Price Target\s*-/i.test(title) || /:\s*Price Target$/i.test(title)) {
+  if (
+    /^Price Target\s*-/i.test(title) ||
+    /(?::|\s-)\s*Price Target$/i.test(title)
+  ) {
     return true;
   }
   if (
     /^Analyst Rating\s*-/i.test(title) ||
-    /:\s*Analyst Rating$/i.test(title)
+    /(?::|\s-)\s*Analyst Rating$/i.test(title)
   ) {
     return true;
   }
   if (/^CPI\s*—/i.test(title)) return true;
   if (/^Jobs Report \(NFP\)\s*—/i.test(title)) return true;
   if (/^FOMC Rate Decision$/i.test(title)) return true;
-  // 8-K ground-rule: `{Company}: {Item}` or legacy `{Item} - {Company}`.
+  // 8-K ground-rule: `{Company} - {Item}` (also legacy colon / `{Item} - {Company}`).
   if (
     c.sourceProvider === "sec-edgar" &&
     /(?:8-?K|8k)/i.test(c.type) &&
@@ -397,7 +403,7 @@ function canonicalizeGroundRuleTitle(c: FeedCatalyst, title: string): string {
   const cpiMonth = title.match(/^CPI\s*[—–-]\s*(.+)$/i)?.[1];
   if (cpiMonth) return formatCpiTitle(cpiMonth);
 
-  // Halts: em dash → colon separator.
+  // Halts: em dash / colon → spaced hyphen separator.
   const halt = title.match(/^Halts\s*\((.+?)\)\s*[—–\-:]\s*(.+)$/i);
   if (halt) {
     return formatHaltTitle(halt[1], halt[2], { reasonIsLabel: true });
@@ -405,7 +411,7 @@ function canonicalizeGroundRuleTitle(c: FeedCatalyst, title: string): string {
 
   // Earnings / FDA / Form 4 / shelf / ownership / clinical / analyst.
   const earningsQ = title.match(
-    /(?:^Earnings Report\s+(Q\d|\?)\s*-\s*(.+)$)|(?:^(.+?):\s*Earnings Report\s+(Q\d|\?)$)/i,
+    /(?:^Earnings Report\s+(Q\d|\?)\s*-\s*(.+)$)|(?:^(.+?)(?::|\s-)\s*Earnings Report\s+(Q\d|\?)$)/i,
   );
   if (earningsQ) {
     const q = earningsQ[1] ?? earningsQ[4];
@@ -414,12 +420,12 @@ function canonicalizeGroundRuleTitle(c: FeedCatalyst, title: string): string {
   }
   if (
     /^FDA Approval\s*-/i.test(title) ||
-    /:\s*FDA Approval$/i.test(title) ||
+    /(?::|\s-)\s*FDA Approval$/i.test(title) ||
     /\bReceives FDA Approval!$/i.test(title)
   ) {
     const company =
       title.match(/^FDA Approval\s*-\s*(.+)$/i)?.[1] ??
-      title.match(/^(.+?):\s*FDA Approval$/i)?.[1] ??
+      title.match(/^(.+?)(?::|\s-)\s*FDA Approval$/i)?.[1] ??
       title.match(/^(.+?)\s+Receives FDA Approval!$/i)?.[1] ??
       subject;
     return formatFdaApprovalTitle(company);
@@ -438,28 +444,37 @@ function canonicalizeGroundRuleTitle(c: FeedCatalyst, title: string): string {
   }
   if (
     /^Shelf Registration \(S-3\)\s*-/i.test(title) ||
-    /:\s*Shelf Registration \(S-3\)$/i.test(title)
+    /(?::|\s-)\s*Shelf Registration \(S-3\)$/i.test(title)
   ) {
     return formatShelfRegistrationTitle(subject);
   }
-  if (/^Schedule 13D\s*-/i.test(title) || /:\s*Schedule 13D$/i.test(title)) {
+  if (
+    /^Schedule 13D\s*-/i.test(title) ||
+    /(?::|\s-)\s*Schedule 13D$/i.test(title)
+  ) {
     return formatSchedule13DTitle(subject);
   }
-  if (/^Schedule 13G\s*-/i.test(title) || /:\s*Schedule 13G$/i.test(title)) {
+  if (
+    /^Schedule 13G\s*-/i.test(title) ||
+    /(?::|\s-)\s*Schedule 13G$/i.test(title)
+  ) {
     return formatSchedule13GTitle(subject);
   }
   if (
     /^Clinical Trial\s*-/i.test(title) ||
-    /:\s*Clinical Trial$/i.test(title)
+    /(?::|\s-)\s*Clinical Trial$/i.test(title)
   ) {
     return formatClinicalTrialTitle(subject);
   }
-  if (/^Price Target\s*-/i.test(title) || /:\s*Price Target$/i.test(title)) {
+  if (
+    /^Price Target\s*-/i.test(title) ||
+    /(?::|\s-)\s*Price Target$/i.test(title)
+  ) {
     return formatPriceTargetTitle(subject);
   }
   if (
     /^Analyst Rating\s*-/i.test(title) ||
-    /:\s*Analyst Rating$/i.test(title)
+    /(?::|\s-)\s*Analyst Rating$/i.test(title)
   ) {
     return formatAnalystRatingTitle(subject);
   }
@@ -498,7 +513,7 @@ function canonicalizeGroundRuleTitle(c: FeedCatalyst, title: string): string {
     return formatOfficerChangeForCatalyst(c, subject);
   }
 
-  // 8-K `{Company}: {label}` or legacy `{label} - {company}`.
+  // 8-K `{Company} - {label}` (also legacy `{Company}: {label}` / `{label} - {company}`).
   if (
     c.sourceProvider === "sec-edgar" &&
     /(?:8-?K|8k)/i.test(c.type ?? "") &&
@@ -516,15 +531,30 @@ function canonicalizeGroundRuleTitle(c: FeedCatalyst, title: string): string {
       });
     }
     const hyphen = title.match(/^(.+?)\s-\s(.+)$/);
-    if (
-      hyphen &&
-      !looksLikeResultsOfOperationsTitle(hyphen[1]) &&
-      !/^Form 4 Insider\b/i.test(hyphen[1]) &&
-      !/^Earnings Report\s+Q/i.test(hyphen[1])
-    ) {
-      return formatSec8kItemTitle(hyphen[1], hyphen[2] || subject, {
-        content: officerChangeContent(c),
-      });
+    if (hyphen) {
+      const left = hyphen[1];
+      const right = hyphen[2];
+      // Legacy event-first: `{label} - {company}`.
+      if (
+        isSecCatalogHeadline(left) &&
+        !looksLikeResultsOfOperationsTitle(left) &&
+        !/^Form 4 Insider\b/i.test(left) &&
+        !/^Earnings Report\s+Q/i.test(left)
+      ) {
+        return formatSec8kItemTitle(left, right || subject, {
+          content: officerChangeContent(c),
+        });
+      }
+      // Current ground-rule: `{company} - {label}`.
+      if (
+        !looksLikeResultsOfOperationsTitle(right) &&
+        !/^Form 4 Insider\b/i.test(right) &&
+        !/^Earnings Report\s+Q/i.test(right)
+      ) {
+        return formatSec8kItemTitle(right, left || subject, {
+          content: officerChangeContent(c),
+        });
+      }
     }
   }
 
@@ -533,7 +563,7 @@ function canonicalizeGroundRuleTitle(c: FeedCatalyst, title: string): string {
 
 /**
  * SEC Item 2.02 / Results of Operations rows (and matching legacy titles)
- * recompute to `{Company}: Earnings Report Qn` so the tape matches Finnhub
+ * recompute to `{Company} - Earnings Report Qn` so the tape matches Finnhub
  * ground-rule titles even when the DB still has the old SEC wording.
  */
 function earningsReportDisplayTitle(c: FeedCatalyst): string | null {
@@ -559,20 +589,20 @@ function earningsReportDisplayTitle(c: FeedCatalyst): string | null {
     !isGenericEventHeadline(headline) &&
     !looksLikeResultsOfOperationsTitle(headline) &&
     !/^Earnings Report\s+Q/i.test(headline) &&
-    !/:\s*Earnings Report\s+Q/i.test(headline)
+    !/(?::|\s-)\s*Earnings Report\s+Q/i.test(headline)
   ) {
     return null;
   }
 
   if (
     /^Earnings Report\s+Q/i.test(title) ||
-    /:\s*Earnings Report\s+Q/i.test(title)
+    /(?::|\s-)\s*Earnings Report\s+Q/i.test(title)
   ) {
     return canonicalizeGroundRuleTitle(c, title);
   }
   if (
     /^Earnings Report\s+Q/i.test(headline) ||
-    /:\s*Earnings Report\s+Q/i.test(headline)
+    /(?::|\s-)\s*Earnings Report\s+Q/i.test(headline)
   ) {
     return canonicalizeGroundRuleTitle(c, headline);
   }
@@ -591,7 +621,7 @@ function earningsReportDisplayTitle(c: FeedCatalyst): string | null {
 }
 
 /**
- * Legacy Form 4 rows → ground-rule `{Company}: Form 4 Insider Buy/Sell`.
+ * Legacy Form 4 rows → ground-rule `{Company} - Form 4 Insider Buy/Sell`.
  */
 function form4DisplayTitle(c: FeedCatalyst): string | null {
   const isForm4 =
@@ -626,7 +656,7 @@ function form4DisplayTitle(c: FeedCatalyst): string | null {
 }
 
 /**
- * 8-K item rows → `{Company}: {Event}` (legacy sentence-case /
+ * 8-K item rows → `{Company} - {Event}` (legacy sentence-case /
  * filing chrome / taxonomy chips).
  */
 function sec8kDisplayTitle(c: FeedCatalyst): string | null {
@@ -676,7 +706,7 @@ function secOfferingOwnershipDisplayTitle(c: FeedCatalyst): string | null {
   if (isS3) {
     if (
       /^Shelf Registration \(S-3\)\s*-/i.test(title) ||
-      /:\s*Shelf Registration \(S-3\)$/i.test(title)
+      /(?::|\s-)\s*Shelf Registration \(S-3\)$/i.test(title)
     ) {
       return formatShelfRegistrationTitle(subject);
     }
@@ -732,7 +762,7 @@ function secOfferingOwnershipDisplayTitle(c: FeedCatalyst): string | null {
   return null;
 }
 
-/** Clinical rows → `{Company}: Clinical Trial` (status stays in Event chip). */
+/** Clinical rows → `{Company} - Clinical Trial` (status stays in Event chip). */
 function clinicalDisplayTitle(c: FeedCatalyst): string | null {
   const isClinical =
     c.sourceProvider === "clinicaltrials" ||
@@ -866,7 +896,7 @@ export function titleLine(
     return stripSourceNames(headline) || headline;
   }
 
-  // Generic SEC / calendar event — prefer ground-rule `{Company}: {Event}`.
+  // Generic SEC / calendar event — prefer ground-rule `{Company} - {Event}`.
   if (headline && isGenericEventHeadline(headline)) {
     if (isSecCatalogHeadline(headline) && subject) {
       if (!/^earnings\s*\/\s*results$/i.test(headline)) {
