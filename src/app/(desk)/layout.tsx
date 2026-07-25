@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 
 import { AppShell } from "@/components/app-shell";
 import { DatabaseSetupNotice } from "@/components/database-setup-notice";
-import { isLibsqlConfigured, isSchemaMissingError } from "@/db/env";
+import { isLibsqlConfigured, isLocalSqliteSetupError } from "@/db/env";
 import { isLocalSqliteReady } from "@/db/local-sqlite-ready";
 import { getCurrentAppUser } from "@/lib/auth/current-user";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -38,9 +38,9 @@ export default async function DeskLayout({
   try {
     user = await getCurrentAppUser();
   } catch (err) {
-    // Empty/partial local.db used to throw through the whole desk (and Next
-    // then surfaces ThemeProvider / Performance.measure noise on top).
-    if (isSchemaMissingError(err)) {
+    // Empty/partial local.db, or SQLITE_READONLY after migrate while Next was
+    // still holding the old file — don't 500 the whole desk chrome.
+    if (isLocalSqliteSetupError(err)) {
       return <DatabaseSetupNotice />;
     }
     throw err;

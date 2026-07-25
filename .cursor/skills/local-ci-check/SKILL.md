@@ -45,12 +45,15 @@ npm run build
   or 0-byte file (`no such table: users`):
 
   ```bash
+  # Stop every `npm run dev` / Next process first. Migrating or `rm local.db`
+  # while Next still holds the old file often surfaces SQLITE_READONLY.
   rm -f local.db
   npm run db:migrate
   ```
 
   Never leave a 0-byte `local.db` behind — libSQL will open it and every
-  desk query will fail until migrate runs.
+  desk query will fail until migrate runs. After recreating the DB, start
+  only one `npm run dev`.
 
 - `npm run format:check` and `npm run lint` don't touch the database and need
   no env vars.

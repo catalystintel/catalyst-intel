@@ -23,6 +23,7 @@ import {
 } from "@/lib/catalysts/article-funnel";
 import type { ArticleEnrichment } from "@/lib/catalysts/enrich-article";
 import { formatMarketCapMillions } from "@/lib/catalysts/enrich-article-format";
+import { isLocalDevUi, LOCAL_DEV_ONLY_LABEL } from "@/lib/dev/local-dev-ui";
 import { formatRelativeAge, formatTimeDate } from "@/lib/format/relative-time";
 import { CATEGORY_LABELS } from "@/lib/jobs/parse-8k-items";
 import { dashboardHref } from "@/lib/nav/dashboard-href";
@@ -46,14 +47,17 @@ export interface CatalystArticleViewProps {
   enrichment?: ArticleEnrichment | null;
   /** `dialog` hides the feed back-link (modal chrome owns dismiss). */
   variant?: "page" | "dialog";
-  /** Admins get an outbound original-source proof link. */
+  /**
+   * Kept for call-site compatibility. Outbound vendor proof links are gated
+   * inside `EdgarProofLink` (local-dev only).
+   */
   isAdmin?: boolean;
 }
 
 /**
  * Full in-app article reader for a single catalyst.
- * Product is the source of truth for most readers; admins still get a proof
- * link out to the original filing / vendor URL.
+ * Catalyst Intel is the product source of truth; vendor URL proof links are
+ * local-dev only.
  */
 export function CatalystArticleView({
   catalyst,
@@ -69,7 +73,6 @@ export function CatalystArticleView({
   deltaSincePublish = null,
   enrichment = null,
   variant = "page",
-  isAdmin = false,
 }: CatalystArticleViewProps) {
   const categoryLabel = catalyst.eventCategory
     ? CATEGORY_LABELS[catalyst.eventCategory]
@@ -96,12 +99,10 @@ export function CatalystArticleView({
             Catalyst Feed
           </Link>
           <div className="flex flex-wrap items-center gap-2">
-            {isAdmin ? (
-              <EdgarProofLink
-                url={catalyst.sourceUrl}
-                provider={catalyst.sourceProvider}
-              />
-            ) : null}
+            <EdgarProofLink
+              url={catalyst.sourceUrl}
+              provider={catalyst.sourceProvider}
+            />
             <span className="inline-flex items-center gap-1.5 font-mono text-[0.65rem] tracking-[0.14em] text-[var(--desk-live)] uppercase">
               <BookOpen className="size-3.5" />
               Article
@@ -140,7 +141,7 @@ export function CatalystArticleView({
           {catalyst.eventCategory ? (
             <CategoryBadge category={catalyst.eventCategory} />
           ) : null}
-          {isAdmin && variant === "dialog" ? (
+          {variant === "dialog" ? (
             <EdgarProofLink
               url={catalyst.sourceUrl}
               provider={catalyst.sourceProvider}
@@ -160,8 +161,8 @@ export function CatalystArticleView({
 
         {!ticker ? (
           <p className="font-mono text-[0.72rem] leading-snug text-[var(--desk-text-dim)]">
-            No tradable ticker on this filing — use the summary and article body
-            below.
+            No tradable ticker on this catalyst — use the summary and article
+            body below.
           </p>
         ) : null}
 
@@ -477,9 +478,11 @@ export function CatalystArticleView({
           <h2 className="font-mono text-[0.65rem] tracking-[0.14em] text-[var(--desk-text-dim)] uppercase">
             Article body
           </h2>
-          <span className="font-mono text-[0.6rem] tracking-wide text-[var(--desk-text-dim)] uppercase">
-            {bodySourceLabel(bodySource)}
-          </span>
+          {isLocalDevUi() ? (
+            <span className="font-mono text-[0.6rem] tracking-wide text-[var(--desk-text-dim)] uppercase">
+              {bodySourceLabel(bodySource)} {LOCAL_DEV_ONLY_LABEL}
+            </span>
+          ) : null}
         </div>
         {body ? (
           <div
