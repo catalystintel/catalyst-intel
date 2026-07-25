@@ -1,6 +1,8 @@
 import Link from "next/link";
 
+import { EarlyAccessBanner } from "@/components/early-access-banner";
 import { buttonVariants } from "@/components/ui/button";
+import { Toaster } from "@/components/ui/toaster";
 import { cn } from "@/lib/utils";
 
 type PreLoginChromeProps = {
@@ -17,6 +19,7 @@ export function PreLoginChrome({
 }: PreLoginChromeProps) {
   return (
     <div className="relative flex min-h-dvh flex-1 flex-col overflow-x-hidden bg-[var(--desk-app)]">
+      <Toaster />
       <div
         aria-hidden
         className="desk-grid pointer-events-none absolute inset-0"
@@ -32,6 +35,8 @@ export function PreLoginChrome({
         aria-hidden
         className="pointer-events-none absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-[var(--desk-app)] to-transparent"
       />
+
+      <EarlyAccessBanner variant="marketing" />
 
       <header className="relative z-10 flex items-center justify-between gap-2 px-4 pt-[max(1rem,env(safe-area-inset-top))] pb-4 sm:gap-4 sm:px-8 sm:py-5">
         <Link
@@ -76,7 +81,7 @@ export function PreLoginChrome({
       <footer className="relative z-10 mt-auto border-t border-[var(--desk-border)] px-5 py-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:px-8">
         <div className="mx-auto flex w-full max-w-5xl flex-wrap items-center justify-between gap-3">
           <p className="font-mono text-[0.72rem] tracking-[0.06em] text-[var(--desk-text-dim)] uppercase">
-            Catalyst Intel
+            Catalyst Intel · Open Early Access
           </p>
           <nav aria-label="Footer" className="flex items-center gap-4">
             <Link

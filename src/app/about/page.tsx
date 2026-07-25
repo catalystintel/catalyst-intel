@@ -33,7 +33,7 @@ export default function AboutPage() {
       <main className="page-enter relative z-10 mx-auto flex w-full max-w-3xl flex-1 flex-col gap-14 px-5 pt-6 pb-16 sm:px-8 sm:pt-10">
         <section className="max-w-2xl">
           <span className="font-mono text-[0.72rem] font-medium tracking-[0.14em] text-[var(--desk-text-dim)] uppercase">
-            About
+            About · Open Early Access
           </span>
           <h1 className="mt-3 text-3xl font-bold tracking-tight text-balance text-[var(--desk-text)] sm:text-4xl">
             Catalyst Intel
@@ -41,6 +41,11 @@ export default function AboutPage() {
           <p className="mt-4 text-base text-pretty text-[var(--desk-text-secondary)] sm:text-lg">
             A real-time catalyst desk for traders who need the event story first
             — then the chart. For the desk, Catalyst Intel is the source.
+          </p>
+          <p className="mt-3 text-base text-pretty text-[var(--desk-text-muted)]">
+            We&apos;re in Open Early Access: every available feature is free
+            while we grow with early traders. Paid Pro plans come later — for
+            now, sign in and use the full desk.
           </p>
         </section>
 
@@ -113,8 +118,8 @@ export default function AboutPage() {
 
         <section className="border-t border-[var(--desk-border)] pt-10">
           <p className="max-w-xl text-pretty text-[var(--desk-text-secondary)]">
-            Sign in and open the live feed — scan catalysts as they land,
-            structured for the desk.
+            Sign in free during Open Early Access — full desk access, no card
+            required. Scan catalysts as they land, structured for the desk.
           </p>
           <div className="mt-6 flex flex-wrap items-center gap-3">
             <Link
@@ -124,7 +129,7 @@ export default function AboutPage() {
                 "btn-press min-h-11 w-full justify-center bg-[var(--desk-live)] text-[#1a1520] hover:bg-[#f5cc63] sm:w-auto",
               )}
             >
-              Continue with Google
+              Continue with Google — free
             </Link>
             <Link
               href="/"

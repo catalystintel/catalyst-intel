@@ -1,7 +1,9 @@
 import Link from "next/link";
 
+import { EarlyAccessBanner } from "@/components/early-access-banner";
 import { GoogleSignInButton } from "@/components/google-sign-in-button";
 import { buttonVariants } from "@/components/ui/button";
+import { Toaster } from "@/components/ui/toaster";
 import {
   getDevBypassEmail,
   isDevAuthBypassEnabled,
@@ -21,6 +23,7 @@ export default async function LoginPage({
 
   return (
     <div className="relative flex min-h-dvh flex-1 flex-col overflow-x-hidden bg-[var(--desk-app)]">
+      <Toaster />
       <div
         aria-hidden
         className="desk-grid pointer-events-none absolute inset-0"
@@ -29,6 +32,8 @@ export default async function LoginPage({
         aria-hidden
         className="pointer-events-none absolute inset-x-0 top-0 h-[40vh] bg-[radial-gradient(ellipse_at_top,var(--desk-glow),transparent_65%)]"
       />
+
+      <EarlyAccessBanner variant="marketing" />
 
       <header className="relative z-10 flex items-center justify-between px-4 pt-[max(1rem,env(safe-area-inset-top))] pb-4 sm:px-8 sm:py-5">
         <Link
@@ -50,13 +55,14 @@ export default async function LoginPage({
               aria-hidden
               className="live-pulse size-1.5 rounded-full bg-[var(--desk-live)]"
             />
-            LIVE
+            OPEN EARLY ACCESS
           </span>
           <h1 className="mt-3 text-xl font-semibold tracking-tight text-[var(--desk-text)]">
-            Sign in
+            Sign in free
           </h1>
           <p className="mt-1 text-sm text-[var(--desk-text-muted)]">
-            Continue with Google to open the Catalyst Feed.
+            Continue with Google for full desk access — every feature is free
+            during Open Early Access.
           </p>
 
           <div className="mt-6 flex flex-col gap-4">
