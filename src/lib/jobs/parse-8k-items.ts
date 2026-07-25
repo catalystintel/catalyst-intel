@@ -40,31 +40,31 @@ interface ItemMeta {
 }
 
 const ITEM_CATALOG: Record<string, ItemMeta> = {
-  "1.01": { label: "Material agreement", category: "deals" },
-  "1.02": { label: "Agreement terminated", category: "deals" },
-  "1.03": { label: "Bankruptcy / receivership", category: "distress" },
-  "1.04": { label: "Mine safety", category: "other" },
-  "1.05": { label: "Material cybersecurity incident", category: "cyber" },
-  "2.01": { label: "Acquisition / disposition closed", category: "deals" },
-  "2.02": { label: "Earnings / results", category: "earnings" },
-  "2.03": { label: "New financial obligation", category: "capital" },
-  "2.04": { label: "Debt acceleration", category: "distress" },
-  "2.05": { label: "Restructuring / exit costs", category: "restructuring" },
-  "2.06": { label: "Material impairment", category: "distress" },
-  "3.01": { label: "Delisting risk", category: "distress" },
-  "3.02": { label: "Unregistered equity sale", category: "capital" },
-  "3.03": { label: "Security holder rights change", category: "capital" },
-  "4.01": { label: "Auditor change", category: "governance" },
-  "4.02": { label: "Financials non-reliance", category: "distress" },
-  "5.01": { label: "Change of control", category: "deals" },
-  "5.02": { label: "Officer / director change", category: "management" },
-  "5.03": { label: "Charter / bylaw change", category: "governance" },
-  "5.04": { label: "Trading blackout", category: "governance" },
-  "5.05": { label: "Ethics code change", category: "governance" },
-  "5.07": { label: "Shareholder vote", category: "governance" },
-  "5.08": { label: "Director nominations", category: "governance" },
-  "7.01": { label: "Reg FD disclosure", category: "disclosure" },
-  "8.01": { label: "Other event", category: "disclosure" },
+  "1.01": { label: "Material Agreement", category: "deals" },
+  "1.02": { label: "Agreement Terminated", category: "deals" },
+  "1.03": { label: "Bankruptcy / Receivership", category: "distress" },
+  "1.04": { label: "Mine Safety", category: "other" },
+  "1.05": { label: "Material Cybersecurity Incident", category: "cyber" },
+  "2.01": { label: "Acquisition / Disposition Closed", category: "deals" },
+  "2.02": { label: "Earnings / Results", category: "earnings" },
+  "2.03": { label: "New Financial Obligation", category: "capital" },
+  "2.04": { label: "Debt Acceleration", category: "distress" },
+  "2.05": { label: "Restructuring / Exit Costs", category: "restructuring" },
+  "2.06": { label: "Material Impairment", category: "distress" },
+  "3.01": { label: "Delisting Risk", category: "distress" },
+  "3.02": { label: "Unregistered Equity Sale", category: "capital" },
+  "3.03": { label: "Security Holder Rights Change", category: "capital" },
+  "4.01": { label: "Auditor Change", category: "governance" },
+  "4.02": { label: "Financials Non-Reliance", category: "distress" },
+  "5.01": { label: "Change of Control", category: "deals" },
+  "5.02": { label: "Officer / Director Change", category: "management" },
+  "5.03": { label: "Charter / Bylaw Change", category: "governance" },
+  "5.04": { label: "Trading Blackout", category: "governance" },
+  "5.05": { label: "Ethics Code Change", category: "governance" },
+  "5.07": { label: "Shareholder Vote", category: "governance" },
+  "5.08": { label: "Director Nominations", category: "governance" },
+  "7.01": { label: "Reg FD Disclosure", category: "disclosure" },
+  "8.01": { label: "Other Event", category: "disclosure" },
   "9.01": { label: "Exhibits", category: "other" },
 };
 
@@ -238,8 +238,8 @@ export function classifySecFormType(formType: string): {
     return {
       category: "capital",
       headline: form.startsWith("424B")
-        ? "Prospectus / offering (424B)"
-        : "Shelf registration (S-3)",
+        ? "Prospectus / Offering (424B)"
+        : "Shelf Registration (S-3)",
       subcategory: form.startsWith("424B") ? "424b" : "s3",
       tags: ["offering", "capital", "bz:secondary_offerings"],
     };
@@ -247,7 +247,7 @@ export function classifySecFormType(formType: string): {
   if (form.includes("13D")) {
     return {
       category: "deals",
-      headline: "Beneficial ownership (13D)",
+      headline: "Schedule 13D",
       subcategory: "13d",
       tags: ["13d", "ownership", "bz:ma"],
     };
@@ -255,7 +255,7 @@ export function classifySecFormType(formType: string): {
   if (form.includes("13G")) {
     return {
       category: "governance",
-      headline: "Beneficial ownership (13G)",
+      headline: "Schedule 13G",
       subcategory: "13g",
       tags: ["13g", "ownership", "bz:sec_filings"],
     };

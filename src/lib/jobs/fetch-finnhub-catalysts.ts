@@ -1,7 +1,9 @@
 import {
   earningsQuarterLabel,
+  formatAnalystRatingTitle,
   formatEarningsReportTitle,
   formatFdaApprovalTitle,
+  formatPriceTargetTitle,
   resolveDisplayCompanyName,
 } from "@/lib/catalysts/catalyst-titles";
 import { categorizeNewsHeadline } from "@/lib/catalysts/news-category";
@@ -251,12 +253,12 @@ export function recommendationToNormalized(
     ticker: symbol,
     companyName: symbol,
     type: "Analyst Actions",
-    title: `${symbol} — Recommendation trend (${period})`,
+    title: formatAnalystRatingTitle(symbol),
     headline: "Analyst ratings (consensus)",
     eventCategory: "analyst",
     subcategory: "recommendation_trend",
     timestamp: new Date(`${period}T12:00:00.000Z`).toISOString(),
-    summary: `${stance} · SB ${strongBuy} / Buy ${buy} / Hold ${hold} / Sell ${sell} / SS ${strongSell}`,
+    summary: `${stance} · ${period} · SB ${strongBuy} / Buy ${buy} / Hold ${hold} / Sell ${sell} / SS ${strongSell}`,
     confidence: 60,
     tags: [
       "finnhub",
@@ -304,7 +306,7 @@ export function priceTargetToNormalized(
     ticker: symbol,
     companyName: symbol,
     type: "Analyst Actions",
-    title: `${symbol} — Price target`,
+    title: formatPriceTargetTitle(symbol),
     headline: "Price target (Street)",
     eventCategory: "analyst",
     subcategory: "price_target",

@@ -20,7 +20,7 @@ describe("extractItems", () => {
     expect(items).toEqual([
       {
         code: "5.02",
-        label: "Officer / director change",
+        label: "Officer / Director Change",
         category: "management",
       },
       { code: "9.01", label: "Exhibits", category: "other" },
@@ -66,7 +66,8 @@ describe("extractSecItemBlurb", () => {
 
 describe("isSecCatalogHeadline", () => {
   it("detects short catalog labels", () => {
-    expect(isSecCatalogHeadline("Earnings / results")).toBe(true);
+    expect(isSecCatalogHeadline("Earnings / Results")).toBe(true);
+    expect(isSecCatalogHeadline("Officer / Director Change")).toBe(true);
     expect(isSecCatalogHeadline("Officer / director change")).toBe(true);
     expect(isSecCatalogHeadline("Liberty Global reports Q2 results")).toBe(
       false,
@@ -100,7 +101,7 @@ describe("selectPrimaryItem", () => {
 describe("parseFilingSummary", () => {
   it("headlines the most material item of a real multi-item filing", () => {
     const parsed = parseFilingSummary(REAL_SUMMARY);
-    expect(parsed.headline).toBe("Officer / director change");
+    expect(parsed.headline).toBe("Officer / Director Change");
     expect(parsed.primaryCategory).toBe("management");
     expect(parsed.items).toHaveLength(2);
   });
