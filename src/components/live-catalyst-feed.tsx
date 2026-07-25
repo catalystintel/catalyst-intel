@@ -47,6 +47,7 @@ import {
 } from "@/lib/jobs/parse-8k-items";
 import { FEED_TIME_WINDOWS } from "@/lib/catalysts/feed-time-window";
 import { classifyFeedEmpty } from "@/lib/catalysts/feed-empty-state";
+import { passesTickerFeedGate } from "@/lib/catalysts/ticker-feed-gate";
 import { isLocalDevUi, LOCAL_DEV_ONLY_LABEL } from "@/lib/dev/local-dev-ui";
 import {
   isFiltersDefault,
@@ -250,10 +251,12 @@ export function LiveCatalystFeed({
                 tickerQuery: urlTicker,
               })
             : {}),
+          // Desk rule is always on (CPI / Jobs excepted).
+          tickerOnly: true,
         }));
         setFiltersOpen(true);
       } else if (saved) {
-        const restored = sanitize(saved);
+        const restored = { ...sanitize(saved), tickerOnly: true };
         setFilterState(restored);
         if (!isPanelFiltersDefault(restored)) setFiltersOpen(true);
       }
@@ -566,12 +569,10 @@ export function LiveCatalystFeed({
   const selectedRaw = selectedId
     ? (catalysts.find((c) => c.id === selectedId) ?? null)
     : null;
-  // Ticker-only mode: don't open the split panel for unresolved names.
+  // Desk rule: don't open the split panel for unresolved names
+  // (CPI / Jobs NFP macro exceptions may still open without a symbol).
   const selected =
-    selectedRaw &&
-    (!filterState.tickerOnly || Boolean(selectedRaw.ticker?.trim()))
-      ? selectedRaw
-      : null;
+    selectedRaw && passesTickerFeedGate(selectedRaw) ? selectedRaw : null;
 
   // Ticker-only is a header toggle — don't drive Clear / Filters badge from it.
   const panelFiltersActive = !isPanelFiltersDefault(filterState);
@@ -618,25 +619,6 @@ export function LiveCatalystFeed({
           >
             Quiet playbook
             {quietMode ? (
-              <span className="size-1.5 rounded-full bg-[var(--desk-live)]" />
-            ) : null}
-          </button>
-          <button
-            type="button"
-            onClick={() =>
-              patchFilters({ tickerOnly: !filterState.tickerOnly })
-            }
-            title="When on, hide catalysts with no resolved symbol (no chart / quote)"
-            aria-pressed={filterState.tickerOnly}
-            className={cn(
-              "inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-[0.82rem] font-medium transition-colors",
-              filterState.tickerOnly
-                ? "border-[var(--desk-live)]/45 bg-[var(--desk-live)]/10 text-[var(--desk-live)]"
-                : "border-[var(--desk-border-strong)] bg-[var(--desk-overlay-soft)] text-[var(--desk-text-secondary)] hover:bg-[var(--desk-overlay-strong)] hover:text-[var(--desk-text)]",
-            )}
-          >
-            Symbol only
-            {filterState.tickerOnly ? (
               <span className="size-1.5 rounded-full bg-[var(--desk-live)]" />
             ) : null}
           </button>
@@ -729,20 +711,29 @@ export function LiveCatalystFeed({
                 No catalysts yet
               </p>
               <p className="max-w-sm text-sm text-[var(--desk-text-muted)]">
-                {isAdmin
-                  ? "Open Admin and run “Fetch all sources now” to populate the Live feed."
-                  : "Catalysts appear here once the desk is populated."}
+                Catalysts appear here once the desk is populated.
               </p>
             </div>
           ) : emptyKind !== "none" ? (
             <div className="flex flex-1 flex-col items-center justify-center gap-3 px-6 py-12 text-center">
-              <p className="font-mono text-sm text-[var(--desk-text-muted)]">
-                {emptyKind === "quiet"
-                  ? "Quiet playbook: no watchlist/playbook matches right now."
-                  : emptyKind === "time_window"
-                    ? "No catalysts in this time window (filters by event time, not when Admin inserted the row)."
+              {emptyKind === "time_window" ? (
+                <>
+                  <p className="text-sm font-medium text-[var(--desk-text)]">
+                    Nothing in this time window
+                  </p>
+                  <p className="max-w-md text-sm text-pretty text-[var(--desk-text-muted)]">
+                    The tape lists events by when they happened — not when we
+                    last fetched. New ingest can still be older filings. Widen
+                    the window or show All.
+                  </p>
+                </>
+              ) : (
+                <p className="text-sm text-[var(--desk-text-muted)]">
+                  {emptyKind === "quiet"
+                    ? "Quiet playbook: no watchlist/playbook matches right now."
                     : "No rows match these filters."}
-              </p>
+                </p>
+              )}
               {emptyKind === "time_window" || emptyKind === "filters" ? (
                 <button
                   type="button"
@@ -750,7 +741,7 @@ export function LiveCatalystFeed({
                     clearFilters();
                     setFiltersOpen(true);
                   }}
-                  className="rounded-lg border border-[var(--desk-border-strong)] px-3 py-1.5 font-mono text-xs text-[var(--desk-text-secondary)] hover:bg-[var(--desk-overlay-strong)] hover:text-[var(--desk-text)]"
+                  className="rounded-lg border border-[var(--desk-border-strong)] px-3 py-1.5 text-xs font-medium text-[var(--desk-text-secondary)] hover:bg-[var(--desk-overlay-strong)] hover:text-[var(--desk-text)]"
                 >
                   Clear filters · show All
                 </button>

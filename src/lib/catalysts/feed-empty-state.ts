@@ -2,9 +2,9 @@ import type { FeedTimeWindow } from "@/lib/catalysts/feed-time-window";
 
 /**
  * Distinguishes “DB has no rows” from “filters/time window hid everything”.
- * Critical: a soft-refetch with `window=4h` can return `[]` even when Turso
- * has plenty of catalysts with older event timestamps (Admin still shows
- * inserts). Never treat that as “No catalysts yet.”
+ * Critical: a soft-refetch with `window=4h` can return `[]` even when the DB
+ * has plenty of catalysts whose event times fall outside that window (ingest
+ * can land older filings). Never treat that as “No catalysts yet.”
  */
 export type FeedEmptyKind = "none" | "db" | "filters" | "quiet" | "time_window";
 
