@@ -98,7 +98,7 @@ export function titleCaseEventLabel(label: string | null | undefined): string {
     .join(" ");
 }
 
-/** `Halts (Company Name) — {reason}` */
+/** `Halts ({Company Name}): {reason}` */
 export function formatHaltTitle(
   companyName: string | null | undefined,
   reasonCodeOrLabel: string | null | undefined,
@@ -108,14 +108,14 @@ export function formatHaltTitle(
   const reason = options?.reasonIsLabel
     ? resolveDisplayCompanyName(reasonCodeOrLabel, "Reason unavailable")
     : haltReasonLabel(reasonCodeOrLabel);
-  return `Halts (${company}) — ${reason}`;
+  return `Halts (${company}): ${reason}`;
 }
 
-/** `FDA Approval - {Company Name}` */
+/** `{Company Name}: FDA Approval` */
 export function formatFdaApprovalTitle(
   companyName: string | null | undefined,
 ): string {
-  return `FDA Approval - ${resolveDisplayCompanyName(companyName)}`;
+  return `${resolveDisplayCompanyName(companyName)}: FDA Approval`;
 }
 
 /**
@@ -213,7 +213,7 @@ export function earningsDateForQuarterInference(options: {
   return null;
 }
 
-/** `Earnings Report {Qn} - {Company Name}` */
+/** `{Company Name}: Earnings Report {Qn}` */
 export function formatEarningsReportTitle(
   quarterLabel: string,
   companyName: string | null | undefined,
@@ -221,7 +221,7 @@ export function formatEarningsReportTitle(
   const q = quarterLabel.trim().toUpperCase().startsWith("Q")
     ? quarterLabel.trim().toUpperCase()
     : `Q${quarterLabel.trim()}`;
-  return `Earnings Report ${q} - ${resolveDisplayCompanyName(companyName)}`;
+  return `${resolveDisplayCompanyName(companyName)}: Earnings Report ${q}`;
 }
 
 /** True for SEC Item 2.02 / “Results of Operations…” style earnings subjects. */
@@ -235,34 +235,34 @@ export function looksLikeResultsOfOperationsTitle(
   );
 }
 
-/** `{Company} New Deal Announced — Major Contract or Partnership` (Item 1.01) */
+/** `{Company}: New Deal Announced (Major Contract or Partnership)` (Item 1.01) */
 export function formatMaterialAgreementTitle(
   companyName: string | null | undefined,
 ): string {
-  return `${resolveDisplayCompanyName(companyName)} New Deal Announced — Major Contract or Partnership`;
+  return `${resolveDisplayCompanyName(companyName)}: New Deal Announced (Major Contract or Partnership)`;
 }
 
-/** `{Company} — Bankruptcy Filing — Equity at Risk` (Item 1.03) */
+/** `{Company}: Bankruptcy Filing (Equity at Risk)` (Item 1.03) */
 export function formatBankruptcyFilingTitle(
   companyName: string | null | undefined,
 ): string {
-  return `${resolveDisplayCompanyName(companyName)} — Bankruptcy Filing — Equity at Risk`;
+  return `${resolveDisplayCompanyName(companyName)}: Bankruptcy Filing (Equity at Risk)`;
 }
 
-/** `{Company} — Delisting Risk — Stock Could Lose Its Listing` (Item 3.01) */
+/** `{Company}: Delisting Risk (Stock Could Lose Its Listing)` (Item 3.01) */
 export function formatDelistingRiskTitle(
   companyName: string | null | undefined,
 ): string {
-  return `${resolveDisplayCompanyName(companyName)} — Delisting Risk — Stock Could Lose Its Listing`;
+  return `${resolveDisplayCompanyName(companyName)}: Delisting Risk (Stock Could Lose Its Listing)`;
 }
 
 /**
  * Item 5.02 ground-rule title from company + optional filing text.
  *
  * Examples:
- * - `Acme Corp - CEO Change - Departure`
- * - `Acme Corp - Executive Change - Appointment` (role unknown)
- * - `Acme Corp - Executive Change` (role and action unknown)
+ * - `Acme Corp: CEO Change (Departure)`
+ * - `Acme Corp: Executive Change (Appointment)` (role unknown)
+ * - `Acme Corp: Executive Change` (role and action unknown)
  */
 export function formatOfficerDirectorChangeTitle(
   companyName: string | null | undefined,
@@ -272,20 +272,20 @@ export function formatOfficerDirectorChangeTitle(
   const { position, action } = parseOfficerDirectorChange(options?.content);
 
   if (position && action) {
-    return `${company} - ${position} Change - ${action}`;
+    return `${company}: ${position} Change (${action})`;
   }
   if (!position && action) {
-    return `${company} - Executive Change - ${action}`;
+    return `${company}: Executive Change (${action})`;
   }
   if (position && !action) {
-    return `${company} - ${position} Change`;
+    return `${company}: ${position} Change`;
   }
-  return `${company} - Executive Change`;
+  return `${company}: Executive Change`;
 }
 
 /**
  * Narrative tape titles for high-signal 8-K items (company-first).
- * Other items keep `{Label} - {Company}`.
+ * Other items use `{Company}: {Label}`.
  */
 const NARRATIVE_8K_BY_LABEL: Record<
   string,
@@ -304,7 +304,7 @@ const NARRATIVE_8K_BY_LABEL: Record<
 /**
  * Ground-rule 8-K title from the primary item label.
  * Narrative items (1.01 / 1.03 / 3.01 / 5.02) use company-first copy; others
- * stay `{Label} - {Company}`. Earnings (Item 2.02) should use
+ * use `{Company}: {Label}`. Earnings (Item 2.02) should use
  * {@link formatEarningsReportTitle} instead.
  */
 export function formatSec8kItemTitle(
@@ -317,7 +317,7 @@ export function formatSec8kItemTitle(
   if (narrative) return narrative(companyName, options);
 
   const label = titleCaseEventLabel(itemLabel) || "8-K Event";
-  return `${label} - ${resolveDisplayCompanyName(companyName)}`;
+  return `${resolveDisplayCompanyName(companyName)}: ${label}`;
 }
 
 /** True for current or legacy Item 5.02 executive-change tape titles. */
@@ -327,10 +327,13 @@ export function looksLikeOfficerDirectorChangeTitle(
   const t = title?.replace(/\s+/g, " ").trim() ?? "";
   if (!t) return false;
   if (/—\s*Executive Change\s*—/i.test(t)) return true;
+  if (/:\s*Executive Change(?:\s*\((?:Departure|Appointment)\))?$/i.test(t)) {
+    return true;
+  }
   if (/\bExecutive Change\b/i.test(t)) return true;
   if (/\bOfficer Change\b/i.test(t)) return true;
   if (
-    /\b(?:CEO|CFO|COO|CTO|CMO|CRO|CISO|CHRO|CIO|CPO|CLO|CCO|President)\s+Change(?:\s*-\s*(?:Departure|Appointment))?$/i.test(
+    /\b(?:CEO|CFO|COO|CTO|CMO|CRO|CISO|CHRO|CIO|CPO|CLO|CCO|President)\s+Change(?:\s*(?:-|:)?\s*(?:Departure|Appointment)|\s*\((?:Departure|Appointment)\))?$/i.test(
       t,
     )
   ) {
@@ -343,7 +346,7 @@ export type Form4TitleKind = "buy" | "sell" | "mixed" | "transaction";
 
 /**
  * Ground-rule Form 4 titles.
- * Examples: `Form 4 Insider Buy - Acme Corp`, `Form 4 Insider Sell - Acme Corp`
+ * Examples: `Acme Corp: Form 4 Insider Buy`, `Acme Corp: Form 4 Insider Sell`
  */
 export function formatForm4InsiderTitle(
   kind: Form4TitleKind,
@@ -352,13 +355,13 @@ export function formatForm4InsiderTitle(
   const company = resolveDisplayCompanyName(companyName);
   switch (kind) {
     case "buy":
-      return `Form 4 Insider Buy - ${company}`;
+      return `${company}: Form 4 Insider Buy`;
     case "sell":
-      return `Form 4 Insider Sell - ${company}`;
+      return `${company}: Form 4 Insider Sell`;
     case "mixed":
-      return `Form 4 Insider Buy & Sell - ${company}`;
+      return `${company}: Form 4 Insider Buy & Sell`;
     default:
-      return `Form 4 Insider Transaction - ${company}`;
+      return `${company}: Form 4 Insider Transaction`;
   }
 }
 
@@ -378,46 +381,46 @@ export function form4TitleKindFromSubcategory(
   }
 }
 
-/** `Shelf Registration (S-3) - {Company Name}` */
+/** `{Company Name}: Shelf Registration (S-3)` */
 export function formatShelfRegistrationTitle(
   companyName: string | null | undefined,
 ): string {
-  return `Shelf Registration (S-3) - ${resolveDisplayCompanyName(companyName)}`;
+  return `${resolveDisplayCompanyName(companyName)}: Shelf Registration (S-3)`;
 }
 
-/** `{Company} New Stock Offering Filed — Potential Dilution Ahead` (424B) */
+/** `{Company}: New Stock Offering Filed (Potential Dilution Ahead)` (424B) */
 export function formatProspectusOfferingTitle(
   companyName: string | null | undefined,
 ): string {
-  return `${resolveDisplayCompanyName(companyName)} New Stock Offering Filed — Potential Dilution Ahead`;
+  return `${resolveDisplayCompanyName(companyName)}: New Stock Offering Filed (Potential Dilution Ahead)`;
 }
 
-/** `{Company} — Merger or Acquisition News: Deal in Play` (Form 425) */
+/** `{Company}: Merger or Acquisition News (Deal in Play)` (Form 425) */
 export function format425MergerTitle(
   companyName: string | null | undefined,
 ): string {
-  return `${resolveDisplayCompanyName(companyName)} — Merger or Acquisition News: Deal in Play`;
+  return `${resolveDisplayCompanyName(companyName)}: Merger or Acquisition News (Deal in Play)`;
 }
 
-/** `Schedule 13D - {Company Name}` */
+/** `{Company Name}: Schedule 13D` */
 export function formatSchedule13DTitle(
   companyName: string | null | undefined,
 ): string {
-  return `Schedule 13D - ${resolveDisplayCompanyName(companyName)}`;
+  return `${resolveDisplayCompanyName(companyName)}: Schedule 13D`;
 }
 
-/** `Schedule 13G - {Company Name}` */
+/** `{Company Name}: Schedule 13G` */
 export function formatSchedule13GTitle(
   companyName: string | null | undefined,
 ): string {
-  return `Schedule 13G - ${resolveDisplayCompanyName(companyName)}`;
+  return `${resolveDisplayCompanyName(companyName)}: Schedule 13G`;
 }
 
-/** `Clinical Trial - {Company Name}` */
+/** `{Company Name}: Clinical Trial` */
 export function formatClinicalTrialTitle(
   companyName: string | null | undefined,
 ): string {
-  return `Clinical Trial - ${resolveDisplayCompanyName(companyName)}`;
+  return `${resolveDisplayCompanyName(companyName)}: Clinical Trial`;
 }
 
 /** `CPI — {Month Year}` */
@@ -439,16 +442,16 @@ export function formatFomcRateDecisionTitle(): string {
   return "FOMC Rate Decision";
 }
 
-/** `Price Target - {Company Name}` */
+/** `{Company Name}: Price Target` */
 export function formatPriceTargetTitle(
   companyName: string | null | undefined,
 ): string {
-  return `Price Target - ${resolveDisplayCompanyName(companyName)}`;
+  return `${resolveDisplayCompanyName(companyName)}: Price Target`;
 }
 
-/** `Analyst Rating - {Company Name}` */
+/** `{Company Name}: Analyst Rating` */
 export function formatAnalystRatingTitle(
   companyName: string | null | undefined,
 ): string {
-  return `Analyst Rating - ${resolveDisplayCompanyName(companyName)}`;
+  return `${resolveDisplayCompanyName(companyName)}: Analyst Rating`;
 }

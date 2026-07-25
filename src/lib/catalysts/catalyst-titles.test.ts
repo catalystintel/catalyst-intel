@@ -45,26 +45,26 @@ describe("resolveDisplayCompanyName", () => {
 });
 
 describe("formatHaltTitle", () => {
-  it("builds Halts (Company) — reason from a reason code", () => {
+  it("builds Halts (Company): reason from a reason code", () => {
     expect(formatHaltTitle("Steakholder Foods Ltd. ADS", "T1")).toBe(
-      "Halts (Steakholder Foods Ltd. ADS) — News pending",
+      "Halts (Steakholder Foods Ltd. ADS): News pending",
     );
     expect(formatHaltTitle("Acme Corp", "LUDP")).toBe(
-      "Halts (Acme Corp) — Volatility trading pause (LULD)",
+      "Halts (Acme Corp): Volatility trading pause (LULD)",
     );
   });
 
   it("never leaves empty parentheses when the name is missing", () => {
     expect(formatHaltTitle(null, "T12")).toBe(
-      "Halts (Unknown company) — Additional information requested",
+      "Halts (Unknown company): Additional information requested",
     );
-    expect(formatHaltTitle("STKH", "T1")).toBe("Halts (STKH) — News pending");
+    expect(formatHaltTitle("STKH", "T1")).toBe("Halts (STKH): News pending");
   });
 
   it("accepts a pre-resolved reason label", () => {
     expect(
       formatHaltTitle("PMI", "Regulatory concern", { reasonIsLabel: true }),
-    ).toBe("Halts (PMI) — Regulatory concern");
+    ).toBe("Halts (PMI): Regulatory concern");
   });
 });
 
@@ -80,13 +80,13 @@ describe("haltReasonLabel", () => {
 describe("formatFdaApprovalTitle", () => {
   it("uses the sponsor / company name", () => {
     expect(formatFdaApprovalTitle("Pfizer Inc")).toBe(
-      "FDA Approval - Pfizer Inc",
+      "Pfizer Inc: FDA Approval",
     );
   });
 
   it("falls back when sponsor is missing", () => {
-    expect(formatFdaApprovalTitle(null)).toBe("FDA Approval - Unknown company");
-    expect(formatFdaApprovalTitle("PFE")).toBe("FDA Approval - PFE");
+    expect(formatFdaApprovalTitle(null)).toBe("Unknown company: FDA Approval");
+    expect(formatFdaApprovalTitle("PFE")).toBe("PFE: FDA Approval");
   });
 });
 
@@ -103,24 +103,24 @@ describe("earningsQuarterLabel + formatEarningsReportTitle", () => {
     expect(earningsQuarterLabel(null, "2026-11-20")).toBe("Q4");
   });
 
-  it("formats Earnings Report Qn - Company Name", () => {
+  it("formats Company: Earnings Report Qn", () => {
     expect(formatEarningsReportTitle("Q1", "Apple Inc.")).toBe(
-      "Earnings Report Q1 - Apple Inc.",
+      "Apple Inc.: Earnings Report Q1",
     );
     expect(
       formatEarningsReportTitle(
         earningsQuarterLabel(2, "2026-04-01"),
         "Microsoft Corporation",
       ),
-    ).toBe("Earnings Report Q2 - Microsoft Corporation");
+    ).toBe("Microsoft Corporation: Earnings Report Q2");
   });
 
   it("falls back to symbol / Unknown company, not a bare empty name", () => {
     expect(formatEarningsReportTitle("Q4", "AAPL")).toBe(
-      "Earnings Report Q4 - AAPL",
+      "AAPL: Earnings Report Q4",
     );
     expect(formatEarningsReportTitle("Q1", null)).toBe(
-      "Earnings Report Q1 - Unknown company",
+      "Unknown company: Earnings Report Q1",
     );
   });
 
@@ -168,62 +168,60 @@ describe("earningsQuarterLabel + formatEarningsReportTitle", () => {
 describe("formatSec8kItemTitle / formatForm4InsiderTitle", () => {
   it("builds narrative titles for high-signal 8-K items", () => {
     expect(formatSec8kItemTitle("Material agreement", "PEDEVCO CORP")).toBe(
-      "PEDEVCO CORP New Deal Announced — Major Contract or Partnership",
+      "PEDEVCO CORP: New Deal Announced (Major Contract or Partnership)",
     );
     expect(formatSec8kItemTitle("Officer / director change", "Acme Corp")).toBe(
-      "Acme Corp - Executive Change",
+      "Acme Corp: Executive Change",
     );
     expect(
       formatSec8kItemTitle("Officer / director change", "Acme Corp", {
         content:
           "On July 20, 2026, Jane Smith resigned as Chief Executive Officer.",
       }),
-    ).toBe("Acme Corp - CEO Change - Departure");
+    ).toBe("Acme Corp: CEO Change (Departure)");
     expect(formatSec8kItemTitle("Delisting risk", "Quantum-Si Inc")).toBe(
-      "Quantum-Si Inc — Delisting Risk — Stock Could Lose Its Listing",
+      "Quantum-Si Inc: Delisting Risk (Stock Could Lose Its Listing)",
     );
     expect(formatSec8kItemTitle("Bankruptcy / receivership", "Acme Corp")).toBe(
-      "Acme Corp — Bankruptcy Filing — Equity at Risk",
+      "Acme Corp: Bankruptcy Filing (Equity at Risk)",
     );
     expect(formatMaterialAgreementTitle("Acme Corp")).toBe(
-      "Acme Corp New Deal Announced — Major Contract or Partnership",
+      "Acme Corp: New Deal Announced (Major Contract or Partnership)",
     );
     expect(formatBankruptcyFilingTitle("Acme Corp")).toBe(
-      "Acme Corp — Bankruptcy Filing — Equity at Risk",
+      "Acme Corp: Bankruptcy Filing (Equity at Risk)",
     );
     expect(formatDelistingRiskTitle("Acme Corp")).toBe(
-      "Acme Corp — Delisting Risk — Stock Could Lose Its Listing",
+      "Acme Corp: Delisting Risk (Stock Could Lose Its Listing)",
     );
     expect(formatOfficerDirectorChangeTitle("Acme Corp")).toBe(
-      "Acme Corp - Executive Change",
+      "Acme Corp: Executive Change",
     );
     expect(
       formatOfficerDirectorChangeTitle("Acme Corp", {
         content: "The Board appointed Robert Lee as Chief Financial Officer.",
       }),
-    ).toBe("Acme Corp - CFO Change - Appointment");
+    ).toBe("Acme Corp: CFO Change (Appointment)");
     expect(
       formatOfficerDirectorChangeTitle("Acme Corp", {
         content: "A senior officer of the Company resigned effective today.",
       }),
-    ).toBe("Acme Corp - Executive Change - Departure");
+    ).toBe("Acme Corp: Executive Change (Departure)");
     expect(
       looksLikeOfficerDirectorChangeTitle(
         "Acme Corp — Executive Change — CEO/CFO Departure or Appointment",
       ),
     ).toBe(true);
     expect(
-      looksLikeOfficerDirectorChangeTitle("Acme Corp - CEO Change - Departure"),
+      looksLikeOfficerDirectorChangeTitle("Acme Corp: CEO Change (Departure)"),
     ).toBe(true);
   });
 
-  it("keeps Title Case `{Label} - {Company}` for other 8-K items", () => {
+  it("keeps `{Company}: {Label}` for other 8-K items", () => {
     expect(formatSec8kItemTitle("Change of control", "Acme Corp")).toBe(
-      "Change of Control - Acme Corp",
+      "Acme Corp: Change of Control",
     );
-    expect(formatSec8kItemTitle(null, null)).toBe(
-      "8-K Event - Unknown company",
-    );
+    expect(formatSec8kItemTitle(null, null)).toBe("Unknown company: 8-K Event");
   });
 
   it("title-cases event labels without ugly double dashes", () => {
@@ -238,13 +236,13 @@ describe("formatSec8kItemTitle / formatForm4InsiderTitle", () => {
 
   it("builds Form 4 buy/sell/mixed titles", () => {
     expect(formatForm4InsiderTitle("buy", "Tesla, Inc.")).toBe(
-      "Form 4 Insider Buy - Tesla, Inc.",
+      "Tesla, Inc.: Form 4 Insider Buy",
     );
     expect(formatForm4InsiderTitle("sell", "Nvidia Corporation")).toBe(
-      "Form 4 Insider Sell - Nvidia Corporation",
+      "Nvidia Corporation: Form 4 Insider Sell",
     );
     expect(formatForm4InsiderTitle("mixed", "Acme Corp")).toBe(
-      "Form 4 Insider Buy & Sell - Acme Corp",
+      "Acme Corp: Form 4 Insider Buy & Sell",
     );
     expect(form4TitleKindFromSubcategory("insider_buy")).toBe("buy");
     expect(form4TitleKindFromSubcategory("form4_mixed")).toBe("mixed");
@@ -254,25 +252,21 @@ describe("formatSec8kItemTitle / formatForm4InsiderTitle", () => {
 describe("offering / ownership / clinical / macro / analyst titles", () => {
   it("formats S-3 / 424B / 425 / 13D / 13G ground-rule titles", () => {
     expect(formatShelfRegistrationTitle("Acme Corp")).toBe(
-      "Shelf Registration (S-3) - Acme Corp",
+      "Acme Corp: Shelf Registration (S-3)",
     );
     expect(formatProspectusOfferingTitle("Acme Corp")).toBe(
-      "Acme Corp New Stock Offering Filed — Potential Dilution Ahead",
+      "Acme Corp: New Stock Offering Filed (Potential Dilution Ahead)",
     );
     expect(format425MergerTitle("Acme Corp")).toBe(
-      "Acme Corp — Merger or Acquisition News: Deal in Play",
+      "Acme Corp: Merger or Acquisition News (Deal in Play)",
     );
-    expect(formatSchedule13DTitle("Acme Corp")).toBe(
-      "Schedule 13D - Acme Corp",
-    );
-    expect(formatSchedule13GTitle("Acme Corp")).toBe(
-      "Schedule 13G - Acme Corp",
-    );
+    expect(formatSchedule13DTitle("Acme Corp")).toBe("Acme Corp: Schedule 13D");
+    expect(formatSchedule13GTitle("Acme Corp")).toBe("Acme Corp: Schedule 13G");
   });
 
   it("formats clinical / macro / analyst ground-rule titles", () => {
     expect(formatClinicalTrialTitle("Pfizer Inc")).toBe(
-      "Clinical Trial - Pfizer Inc",
+      "Pfizer Inc: Clinical Trial",
     );
     expect(formatCpiTitle("July 2026")).toBe("CPI — July 2026");
     expect(formatJobsReportTitle("July 2026")).toBe(
@@ -280,8 +274,8 @@ describe("offering / ownership / clinical / macro / analyst titles", () => {
     );
     expect(formatFomcRateDecisionTitle()).toBe("FOMC Rate Decision");
     expect(formatPriceTargetTitle("Apple Inc.")).toBe(
-      "Price Target - Apple Inc.",
+      "Apple Inc.: Price Target",
     );
-    expect(formatAnalystRatingTitle("NVDA")).toBe("Analyst Rating - NVDA");
+    expect(formatAnalystRatingTitle("NVDA")).toBe("NVDA: Analyst Rating");
   });
 });
