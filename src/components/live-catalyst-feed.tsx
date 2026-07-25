@@ -21,6 +21,7 @@ import {
 import { toast } from "sonner";
 
 import { CatalystArticleDialog } from "@/components/catalyst-article-dialog";
+import { DeskTip } from "@/components/desk-tip";
 import { FeedFilterMultiSelect } from "@/components/feed-filter-multi-select";
 import { TapeSplitPanel } from "@/components/tape-split-panel";
 import { TickerActionMenu } from "@/components/ticker-action-menu";
@@ -46,6 +47,7 @@ import {
 } from "@/lib/jobs/parse-8k-items";
 import { FEED_TIME_WINDOWS } from "@/lib/catalysts/feed-time-window";
 import { classifyFeedEmpty } from "@/lib/catalysts/feed-empty-state";
+import { isLocalDevUi, LOCAL_DEV_ONLY_LABEL } from "@/lib/dev/local-dev-ui";
 import {
   isFiltersDefault,
   isPanelFiltersDefault,
@@ -54,7 +56,6 @@ import {
   writePersistedFeedFilters,
   type FeedFilterState,
 } from "@/lib/catalysts/feed-filter-persist";
-import { INGESTION_STALE_AFTER_MS } from "@/lib/jobs/ingestion-freshness";
 import {
   FEED_FORM_LABELS,
   type FeedFormFilter,
@@ -66,7 +67,9 @@ import { cn } from "@/lib/utils";
 
 export type { FeedCatalyst };
 
+/** Soft-refetch while the tab is focused — keeps the tape current without a stale banner. */
 const ACTIVE_POLL_MS = 15_000;
+/** Slower poll when the window is blurred but still visible. */
 const BLURRED_POLL_MS = 90_000;
 const DISMISS_STORAGE_KEY = "ci.dismissed-catalyst-ids";
 
@@ -78,11 +81,11 @@ type Presence = "active" | "blurred" | "hidden";
  * Time = event occurrence ET.
  *
  * Time/Action use fixed tracks so `5:31 PM ET · Jul 24, 2026` (Plex Mono)
- * and the Read/Dismiss/Quiet cluster stay under their headers — not squeezed
- * into a 160px track that overflows into Action.
+ * fits under Time. Desktop Action buttons stay hover/focus/selected-only so
+ * the tape stays quiet until the row is engaged.
  */
 const FEED_GRID =
-  "grid-cols-[4.5rem_minmax(0,1fr)] sm:grid-cols-[5rem_minmax(0,1fr)_13.75rem] lg:grid-cols-[5rem_minmax(0,1fr)_13.75rem_14rem]";
+  "grid-cols-[4.5rem_minmax(0,1fr)] sm:grid-cols-[5rem_minmax(0,1fr)_14rem] lg:grid-cols-[5rem_minmax(0,1fr)_14rem_16rem]";
 
 function readPresence(): Presence {
   if (typeof document === "undefined") return "active";
@@ -140,7 +143,6 @@ export function LiveCatalystFeed({
     loading,
     loadingMore,
     lastFetchedAt,
-    lastIngestedAt,
     pollError,
     filterState,
     setFilterState,
@@ -228,25 +230,32 @@ export function LiveCatalystFeed({
     const restoreId = window.setTimeout(() => {
       const saved = readPersistedFeedFilters();
       const urlTicker = initialTickerFilter?.trim() ?? "";
+      // Source facet is local-dev only — never restore vendor filters in deploy.
+      const sanitize = (filters: FeedFilterState): FeedFilterState =>
+        isLocalDevUi() ? filters : { ...filters, sourceFilters: [] };
+
       if (urlTicker) {
         setFilterState((prev) => ({
           ...prev,
           tickerQuery: urlTicker,
           ...(saved
-            ? {
+            ? sanitize({
+                ...prev,
                 categoryFilters: saved.categoryFilters,
                 sectorFilters: saved.sectorFilters,
                 formFilters: saved.formFilters,
                 sourceFilters: saved.sourceFilters,
                 timeWindow: saved.timeWindow,
                 tickerOnly: saved.tickerOnly,
-              }
+                tickerQuery: urlTicker,
+              })
             : {}),
         }));
         setFiltersOpen(true);
       } else if (saved) {
-        setFilterState(saved);
-        if (!isPanelFiltersDefault(saved)) setFiltersOpen(true);
+        const restored = sanitize(saved);
+        setFilterState(restored);
+        if (!isPanelFiltersDefault(restored)) setFiltersOpen(true);
       }
       setFiltersHydrated(true);
     }, 0);
@@ -400,27 +409,52 @@ export function LiveCatalystFeed({
     }
   }, [quietMode, playbookCategories]);
 
-  const dismissCatalyst = useCallback((id: number) => {
-    // Two-phase removal: mark "dismissing" first so the row can play its
-    // exit animation (`.row-dismiss`, mirroring `.feed-row`'s entrance),
-    // then actually drop it from the list once that animation has had time
-    // to finish - otherwise it would just vanish instantly.
-    setDismissingIds((prev) => new Set(prev).add(id));
-    setSelectedId((cur) => (cur === id ? null : cur));
-    window.setTimeout(() => {
-      setDismissedIds((prev) => {
-        const next = new Set(prev);
-        next.add(id);
-        writeDismissedIds(next);
-        return next;
-      });
-      setDismissingIds((prev) => {
-        const next = new Set(prev);
-        next.delete(id);
-        return next;
-      });
-    }, 260);
+  const undismissCatalyst = useCallback((id: number) => {
+    setDismissedIds((prev) => {
+      if (!prev.has(id)) return prev;
+      const next = new Set(prev);
+      next.delete(id);
+      writeDismissedIds(next);
+      return next;
+    });
+    setDismissingIds((prev) => {
+      if (!prev.has(id)) return prev;
+      const next = new Set(prev);
+      next.delete(id);
+      return next;
+    });
   }, []);
+
+  const dismissCatalyst = useCallback(
+    (id: number) => {
+      // Two-phase removal: mark "dismissing" first so the row can play its
+      // exit animation (`.row-dismiss`, mirroring `.feed-row`'s entrance),
+      // then actually drop it from the list once that animation has had time
+      // to finish - otherwise it would just vanish instantly.
+      setDismissingIds((prev) => new Set(prev).add(id));
+      setSelectedId((cur) => (cur === id ? null : cur));
+      window.setTimeout(() => {
+        setDismissedIds((prev) => {
+          const next = new Set(prev);
+          next.add(id);
+          writeDismissedIds(next);
+          return next;
+        });
+        setDismissingIds((prev) => {
+          const next = new Set(prev);
+          next.delete(id);
+          return next;
+        });
+        toast.message("Hidden from results", {
+          action: {
+            label: "Undo",
+            onClick: () => undismissCatalyst(id),
+          },
+        });
+      }, 260);
+    },
+    [undismissCatalyst],
+  );
 
   const openSplit = useCallback((id: number) => {
     setSelectedId(id);
@@ -467,10 +501,10 @@ export function LiveCatalystFeed({
   );
 
   const quietAddTicker = useCallback(
-    async (ticker: string | null) => {
+    async (ticker: string | null): Promise<boolean> => {
       const t = ticker?.trim().toUpperCase();
-      if (!t) return;
-      if (watchlistTickers.includes(t)) return;
+      if (!t) return false;
+      if (watchlistTickers.includes(t)) return true;
       setWatchlistTickers((prev) =>
         prev.includes(t) ? prev : [...prev, t].sort(),
       );
@@ -483,9 +517,12 @@ export function LiveCatalystFeed({
         });
         if (!res.ok) {
           setWatchlistTickers((prev) => prev.filter((x) => x !== t));
+          return false;
         }
+        return true;
       } catch {
         setWatchlistTickers((prev) => prev.filter((x) => x !== t));
+        return false;
       }
     },
     [watchlistTickers],
@@ -495,36 +532,15 @@ export function LiveCatalystFeed({
     async (ticker: string | null) => {
       const t = ticker?.trim().toUpperCase();
       if (!t) return;
-      const wasOnWatchlist = watchlistTickers.includes(t);
-      if (!wasOnWatchlist) {
-        await quietAddTicker(t);
+      if (watchlistTickers.includes(t)) {
+        toast.message(`${t} is already on your watchlist`);
+        return;
       }
-      if (!quietMode) {
-        setQuietMode(true);
-        try {
-          await fetch("/api/playbook", {
-            method: "PUT",
-            credentials: "same-origin",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              categories: playbookCategories,
-              quietMode: true,
-            }),
-          });
-          toast.success(
-            wasOnWatchlist
-              ? "Quiet playbook enabled — watchlist + playbook categories only"
-              : "Added to watchlist · Quiet playbook enabled",
-          );
-        } catch {
-          setQuietMode(false);
-          toast.error("Could not enable quiet playbook");
-        }
-      } else if (!wasOnWatchlist) {
-        toast.success("Added to watchlist");
-      }
+      const ok = await quietAddTicker(t);
+      if (ok) toast.success(`${t} added to watchlist`);
+      else toast.error(`Could not add ${t} to watchlist`);
     },
-    [quietAddTicker, quietMode, watchlistTickers, playbookCategories],
+    [quietAddTicker, watchlistTickers],
   );
 
   const facetOptions = useMemo(() => buildFacetOptions(facets), [facets]);
@@ -569,13 +585,6 @@ export function LiveCatalystFeed({
     quietMode,
     timeWindow: filterState.timeWindow,
   });
-
-  // Compare ingest lag to the last successful poll clock (pure; no Date.now).
-  const ingestStale =
-    lastFetchedAt != null &&
-    lastIngestedAt != null &&
-    new Date(lastFetchedAt).getTime() - new Date(lastIngestedAt).getTime() >
-      INGESTION_STALE_AFTER_MS;
 
   const lastUpdatedLabel = lastFetchedAt
     ? new Date(lastFetchedAt).toLocaleTimeString("en-US", {
@@ -702,24 +711,8 @@ export function LiveCatalystFeed({
       ) : null}
 
       {pollError ? (
-        <p className="border-b border-[var(--desk-border)] px-4 py-2 font-mono text-xs text-[var(--desk-live)] sm:px-5">
+        <p className="border-b border-[var(--desk-border)] px-4 py-2 text-xs text-[var(--desk-live)] sm:px-5">
           {pollError}
-        </p>
-      ) : null}
-
-      {ingestStale && !pollError ? (
-        <p className="border-b border-[var(--desk-warn-border)] bg-[var(--desk-warn-bg)] px-4 py-2 font-mono text-xs font-medium text-[var(--desk-warn-text)] sm:px-5">
-          Tape ingest looks stale
-          {lastIngestedAt
-            ? ` (last source fetch ${new Date(
-                lastIngestedAt,
-              ).toLocaleTimeString("en-US", {
-                hour: "numeric",
-                minute: "2-digit",
-              })})`
-            : ""}
-          . Cron or Admin fetch may be behind — event times below are still
-          honest.
         </p>
       ) : null}
 
@@ -738,7 +731,7 @@ export function LiveCatalystFeed({
               <p className="max-w-sm text-sm text-[var(--desk-text-muted)]">
                 {isAdmin
                   ? "Open Admin and run “Fetch all sources now” to populate the Live feed."
-                  : "Filings appear here once an admin runs the first ingestion job."}
+                  : "Catalysts appear here once the desk is populated."}
               </p>
             </div>
           ) : emptyKind !== "none" ? (
@@ -777,7 +770,6 @@ export function LiveCatalystFeed({
               onDismiss={dismissCatalyst}
               onQuiet={handleQuiet}
               onFilterToTicker={filterToTicker}
-              quietMode={quietMode}
               restoreScrollToSelected={Boolean(initialSelectedId)}
               hasMore={Boolean(nextCursor)}
               loadingMore={loadingMore}
@@ -967,16 +959,18 @@ function FeedFilters({
           }
           emptyLabel="All forms"
         />
-        <FeedFilterMultiSelect
-          label="Source"
-          options={facetOptions.sources}
-          selected={filterState.sourceFilters}
-          onChange={(sourceFilters) => onPatchFilters({ sourceFilters })}
-          emptyLabel="All sources"
-        />
+        {isLocalDevUi() ? (
+          <FeedFilterMultiSelect
+            label={`Source ${LOCAL_DEV_ONLY_LABEL}`}
+            options={facetOptions.sources}
+            selected={filterState.sourceFilters}
+            onChange={(sourceFilters) => onPatchFilters({ sourceFilters })}
+            emptyLabel="All sources"
+          />
+        ) : null}
       </div>
       {total != null ? (
-        <p className="font-mono text-[0.68rem] text-[var(--desk-text-dim)] tabular-nums">
+        <p className="text-[0.75rem] text-[var(--desk-text-dim)] tabular-nums">
           Showing {visibleCount} of {total}
         </p>
       ) : null}
@@ -1022,7 +1016,6 @@ function CatalystFeedList({
   onDismiss,
   onQuiet,
   onFilterToTicker,
-  quietMode,
   restoreScrollToSelected = false,
   hasMore = false,
   loadingMore = false,
@@ -1040,7 +1033,6 @@ function CatalystFeedList({
   onDismiss: (id: number) => void;
   onQuiet: (ticker: string | null) => void;
   onFilterToTicker: (ticker: string) => void;
-  quietMode: boolean;
   /** One-shot scroll to the open row after returning from article. */
   restoreScrollToSelected?: boolean;
   hasMore?: boolean;
@@ -1138,7 +1130,7 @@ function CatalystFeedList({
       <div
         role="row"
         className={cn(
-          "sticky top-0 z-[2] grid h-10 items-center gap-2 border-b border-[var(--desk-border-strong)] bg-[var(--desk-header)] px-4 font-mono text-[0.62rem] font-medium tracking-[0.12em] text-[var(--desk-text-muted)] uppercase shadow-[0_1px_0_rgba(0,0,0,0.35)] sm:gap-3 sm:px-5",
+          "sticky top-0 z-[2] grid h-10 items-center gap-2 border-b border-[var(--desk-border-strong)] bg-[var(--desk-header)] px-4 font-mono text-[0.62rem] font-medium tracking-[0.12em] text-[var(--desk-text-muted)] uppercase shadow-[0_1px_0_rgba(0,0,0,0.35)] sm:gap-3 sm:px-5 lg:gap-5",
           FEED_GRID,
         )}
       >
@@ -1150,14 +1142,14 @@ function CatalystFeedList({
         </div>
         <div
           role="columnheader"
-          className="hidden justify-self-end text-right sm:block"
+          className="hidden justify-self-end pr-1 text-right sm:block"
           title="When the event occurred (ET) — not DB insert time"
         >
           Time
         </div>
         <div
           role="columnheader"
-          className="hidden justify-self-end text-right lg:block"
+          className="hidden justify-self-end pl-1 text-right lg:block"
         >
           Action
         </div>
@@ -1222,7 +1214,7 @@ function CatalystFeedList({
                 }
               }}
               className={cn(
-                "feed-row group relative grid min-h-[56px] cursor-pointer items-center gap-2 border-b border-[var(--desk-border)] px-4 py-3 transition-colors duration-150 outline-none sm:gap-3 sm:px-5 sm:py-0",
+                "feed-row group relative grid min-h-[56px] cursor-pointer items-center gap-2 border-b border-[var(--desk-border)] px-4 py-3 transition-colors duration-150 outline-none sm:gap-3 sm:px-5 sm:py-0 lg:gap-5",
                 FEED_GRID,
                 "hover:bg-[var(--desk-overlay-soft)] focus-visible:bg-[var(--desk-overlay-soft)] focus-visible:shadow-[inset_2px_0_0_var(--desk-live)]",
                 "hover:shadow-[inset_2px_0_0_rgba(240,193,75,0.35)]",
@@ -1270,14 +1262,14 @@ function CatalystFeedList({
                   <FeedActionButton
                     variant="primary"
                     onClick={() => onRead(catalyst.id)}
-                    title="Open full article"
+                    tip="Open the full article"
                   >
                     <BookOpen className="size-3" />
                     Read
                   </FeedActionButton>
                   <FeedActionButton
                     onClick={() => onDismiss(catalyst.id)}
-                    title="Hide from this tape (this browser). Not deleted."
+                    tip="Hide from results"
                   >
                     <X className="size-3" />
                     Dismiss
@@ -1285,11 +1277,15 @@ function CatalystFeedList({
                   {catalyst.ticker ? (
                     <FeedActionButton
                       onClick={() => onQuiet(catalyst.ticker)}
-                      title="Add to watchlist and enable Quiet playbook (watchlist + playbook categories only)"
-                      disabled={onWatchlist && quietMode}
+                      tip={
+                        onWatchlist
+                          ? "Already on your watchlist"
+                          : "Add to watchlist"
+                      }
+                      disabled={onWatchlist}
                     >
                       <Plus className="size-3" />
-                      Quiet
+                      Watch
                     </FeedActionButton>
                   ) : null}
                 </div>
@@ -1297,7 +1293,7 @@ function CatalystFeedList({
 
               <div
                 role="cell"
-                className="relative z-[1] hidden min-w-0 justify-self-end text-right sm:block"
+                className="relative z-[1] hidden min-w-0 justify-self-end pr-1 text-right sm:block"
               >
                 <time
                   dateTime={catalyst.timestamp}
@@ -1308,25 +1304,31 @@ function CatalystFeedList({
                 </time>
               </div>
 
-              {/* Desktop: action toolbar in a fixed-width column (always visible). */}
+              {/* Desktop: actions appear on row hover / focus / selection. */}
               <div
                 role="cell"
-                className="relative z-0 hidden min-w-0 justify-end justify-self-end overflow-hidden lg:flex"
+                className="relative z-0 hidden min-w-0 justify-end justify-self-end overflow-hidden pl-1 lg:flex"
                 onClick={(e) => e.stopPropagation()}
                 onKeyDown={(e) => e.stopPropagation()}
               >
-                <div className="flex w-full min-w-0 flex-nowrap items-center justify-end gap-1">
+                <div
+                  className={cn(
+                    "flex w-full min-w-0 flex-nowrap items-center justify-end gap-1.5 transition-opacity duration-100",
+                    "opacity-0 group-focus-within:opacity-100 group-hover:opacity-100",
+                    selected && "opacity-100",
+                  )}
+                >
                   <FeedActionButton
                     variant="primary"
                     onClick={() => onRead(catalyst.id)}
-                    title="Open full article"
+                    tip="Open the full article"
                   >
                     <BookOpen className="size-3" />
                     Read
                   </FeedActionButton>
                   <FeedActionButton
                     onClick={() => onDismiss(catalyst.id)}
-                    title="Hide from this tape (this browser). Not deleted."
+                    tip="Hide from results"
                   >
                     <X className="size-3" />
                     Dismiss
@@ -1334,11 +1336,15 @@ function CatalystFeedList({
                   {catalyst.ticker ? (
                     <FeedActionButton
                       onClick={() => onQuiet(catalyst.ticker)}
-                      title="Add to watchlist and enable Quiet playbook (watchlist + playbook categories only)"
-                      disabled={onWatchlist && quietMode}
+                      tip={
+                        onWatchlist
+                          ? "Already on your watchlist"
+                          : "Add to watchlist"
+                      }
+                      disabled={onWatchlist}
                     >
                       <Plus className="size-3" />
-                      Quiet
+                      Watch
                     </FeedActionButton>
                   ) : null}
                 </div>
@@ -1467,32 +1473,33 @@ function FeedTitleWithTooltip({
 function FeedActionButton({
   children,
   onClick,
-  title,
+  tip,
   variant = "ghost",
   disabled = false,
 }: {
   children: ReactNode;
   onClick: () => void;
-  title?: string;
+  tip: string;
   variant?: "primary" | "ghost";
   disabled?: boolean;
 }) {
   return (
-    <button
-      type="button"
-      title={title}
-      disabled={disabled}
-      onClick={onClick}
-      className={cn(
-        "inline-flex items-center gap-1 rounded-sm px-2 py-0.5 font-mono text-[0.65rem] font-semibold tracking-wide uppercase transition-[background-color,border-color,color,filter,opacity] duration-100",
-        variant === "primary"
-          ? "bg-[var(--desk-live)] text-[#121212] hover:brightness-110"
-          : "border border-[var(--desk-border-strong)] text-[var(--desk-text-muted)] hover:border-[var(--desk-text-dim)] hover:bg-[var(--desk-overlay-strong)] hover:text-[var(--desk-text)]",
-        disabled &&
-          "cursor-default opacity-45 hover:bg-transparent hover:brightness-100",
-      )}
-    >
-      {children}
-    </button>
+    <DeskTip side="top" content={tip}>
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={onClick}
+        className={cn(
+          "inline-flex items-center gap-1 rounded-sm px-2 py-0.5 font-mono text-[0.65rem] font-semibold tracking-wide uppercase transition-[background-color,border-color,color,filter,opacity] duration-100",
+          variant === "primary"
+            ? "bg-[var(--desk-live)] text-[#121212] hover:brightness-110"
+            : "border border-[var(--desk-border-strong)] text-[var(--desk-text-muted)] hover:border-[var(--desk-text-dim)] hover:bg-[var(--desk-overlay-strong)] hover:text-[var(--desk-text)]",
+          disabled &&
+            "cursor-default opacity-45 hover:bg-transparent hover:brightness-100",
+        )}
+      >
+        {children}
+      </button>
+    </DeskTip>
   );
 }

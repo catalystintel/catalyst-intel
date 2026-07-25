@@ -57,7 +57,10 @@ export function CatalystArticleDialog({
   catalystId: number | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  /** Admins get an outbound original-source proof link in the reader. */
+  /**
+   * Kept for call-site compatibility. Vendor proof links are local-dev only
+   * (`EdgarProofLink` / `isLocalDevUi`).
+   */
   isAdmin?: boolean;
 }) {
   const [load, setLoad] = useState<LoadState>({ status: "idle" });
