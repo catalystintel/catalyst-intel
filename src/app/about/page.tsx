@@ -3,22 +3,23 @@ import Link from "next/link";
 
 import { PreLoginChrome } from "@/components/pre-login-chrome";
 import { buttonVariants } from "@/components/ui/button";
+import { isLocalDevUi, LOCAL_DEV_ONLY_LABEL } from "@/lib/dev/local-dev-ui";
 import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = {
   title: "About · Catalyst Intel",
   description:
-    "Material SEC events on a trading blotter — Symbol, Title, Time. Scan the catalyst, open Read for the story, then act or dismiss.",
+    "Material market catalysts on a trading blotter — Symbol, Title, Time. Scan the event, open Read for the story, then act or dismiss.",
 };
 
 const BENEFITS = [
   {
     title: "Scan, don’t hunt",
-    body: "A dense blotter for multi-monitor desks. Material events land as rows you can read at a glance — not a headline firehose.",
+    body: "A dense blotter for multi-monitor desks. Material catalysts land as rows you can read at a glance — not a headline firehose.",
   },
   {
     title: "Story before the chart",
-    body: "Open any row for a plain-language summary and the path back to the filing. Understand the why before you size the trade.",
+    body: "Open any row for a plain-language summary and the in-desk article. Understand the why before you size the trade.",
   },
   {
     title: "Your book, not the whole tape",
@@ -39,7 +40,7 @@ export default function AboutPage() {
           </h1>
           <p className="mt-4 text-base text-pretty text-[var(--desk-text-secondary)] sm:text-lg">
             A real-time catalyst desk for traders who need the event story first
-            — then the chart.
+            — then the chart. For the desk, Catalyst Intel is the source.
           </p>
         </section>
 
@@ -48,8 +49,7 @@ export default function AboutPage() {
             The desk
           </h2>
           <p className="text-pretty text-[var(--desk-text-secondary)]">
-            Live material SEC events — especially 8-Ks — ingested as they hit
-            EDGAR and laid out for fast scanning. Each row carries{" "}
+            Live material catalysts laid out for fast scanning. Each row carries{" "}
             <span className="font-mono text-[0.9em] text-[var(--desk-text)]">
               Symbol · Title · Time
             </span>
@@ -57,8 +57,8 @@ export default function AboutPage() {
           </p>
           <p className="text-pretty text-[var(--desk-text-secondary)]">
             The feed surfaces the catalyst early. Open Read for a plain-language
-            summary and a path back to the filing so you can verify before you
-            trade.
+            summary and the full in-desk article — then act, dismiss, or quiet
+            the name into your playbook.
           </p>
         </section>
 
@@ -67,13 +67,12 @@ export default function AboutPage() {
             Where we focus
           </h2>
           <p className="text-pretty text-[var(--desk-text-secondary)]">
-            SEC filings first. That is the core of the desk today — material
-            events organized for traders who need the story before it becomes
-            consensus noise.
+            Material corporate and market events first — organized for traders
+            who need the story before it becomes consensus noise.
           </p>
           <p className="text-pretty text-[var(--desk-text-secondary)]">
-            FDA and clinical catalysts are next: same blotter, broader coverage
-            over time.
+            Coverage expands over time on the same blotter: more event types,
+            same Symbol · Title · Time scan.
           </p>
         </section>
 
@@ -94,6 +93,23 @@ export default function AboutPage() {
             ))}
           </ul>
         </section>
+
+        {isLocalDevUi() ? (
+          <section className="space-y-4 border-t border-[var(--desk-border)] pt-10">
+            <h2 className="text-lg font-semibold tracking-tight text-[var(--desk-text)]">
+              Local engineering notes{" "}
+              <span className="font-mono text-[0.72rem] font-medium tracking-normal text-[var(--desk-text-dim)]">
+                {LOCAL_DEV_ONLY_LABEL}
+              </span>
+            </h2>
+            <p className="text-pretty text-[var(--desk-text-secondary)]">
+              Vendor Source filters and outbound “original URL” proof links are
+              marked {LOCAL_DEV_ONLY_LABEL}. They exist here for ingest
+              debugging. Deployed desks hide them — traders treat Catalyst Intel
+              as the source.
+            </p>
+          </section>
+        ) : null}
 
         <section className="border-t border-[var(--desk-border)] pt-10">
           <p className="max-w-xl text-pretty text-[var(--desk-text-secondary)]">

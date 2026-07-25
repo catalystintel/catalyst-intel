@@ -4,6 +4,8 @@ import { afterEach, describe, expect, it } from "vitest";
 import {
   databaseSetupMode,
   isLibsqlConfigured,
+  isLocalSqliteSetupError,
+  isLocalSqliteWriteError,
   isSchemaMissingError,
   localSqlitePath,
 } from "./env";
@@ -80,6 +82,26 @@ describe("isSchemaMissingError", () => {
 
   it("ignores unrelated errors", () => {
     expect(isSchemaMissingError(new Error("ConnectionFailed"))).toBe(false);
+  });
+});
+
+describe("isLocalSqliteWriteError", () => {
+  it("detects SQLITE_READONLY", () => {
+    expect(
+      isLocalSqliteWriteError(
+        new Error("Failed query: insert into users", {
+          cause: new Error(
+            "LibsqlError: SQLITE_READONLY: attempt to write a readonly database",
+          ),
+        }),
+      ),
+    ).toBe(true);
+  });
+
+  it("is included in setup-error catch-all", () => {
+    expect(
+      isLocalSqliteSetupError(new Error("SQLITE_BUSY: database is locked")),
+    ).toBe(true);
   });
 });
 

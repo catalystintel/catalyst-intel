@@ -85,7 +85,6 @@ export function TapeSplitPanel({
   onRead,
   onDismiss,
   onAiAnalyzed,
-  isAdmin = false,
   className,
   mobileOverlay = false,
 }: {
@@ -95,7 +94,10 @@ export function TapeSplitPanel({
   onDismiss?: () => void;
   /** Persist AI triage into the Live tape row so reopen stays instant. */
   onAiAnalyzed?: (analysis: TriageResult) => void;
-  /** Admins get an outbound original-source proof link. */
+  /**
+   * Kept for call-site compatibility. Outbound vendor proof links are gated
+   * inside `EdgarProofLink` (local-dev only).
+   */
   isAdmin?: boolean;
   className?: string;
   /** Full-screen overlay on small viewports. */
@@ -317,13 +319,11 @@ export function TapeSplitPanel({
               <BookOpen className="size-3.5" />
               Full article
             </button>
-            {isAdmin ? (
-              <EdgarProofLink
-                url={catalyst.sourceUrl}
-                provider={catalyst.sourceProvider}
-                className="rounded-sm px-3 py-1.5 text-xs tracking-wide uppercase"
-              />
-            ) : null}
+            <EdgarProofLink
+              url={catalyst.sourceUrl}
+              provider={catalyst.sourceProvider}
+              className="rounded-sm px-3 py-1.5 text-xs tracking-wide uppercase"
+            />
             <button
               type="button"
               onClick={() => onDismiss?.()}

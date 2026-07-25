@@ -44,20 +44,43 @@ export function localSqlitePath(databaseUrl: string): string | null {
   return raw;
 }
 
+function errorMessageChain(err: unknown): string {
+  const parts: string[] = [];
+  let current: unknown = err;
+  for (let i = 0; i < 6 && current != null; i++) {
+    if (current instanceof Error) {
+      parts.push(`${current.name} ${current.message}`);
+      current = current.cause;
+      continue;
+    }
+    if (typeof current === "string") {
+      parts.push(current);
+      break;
+    }
+    parts.push(String(current));
+    break;
+  }
+  return parts.join(" | ");
+}
+
 /** True when a query failed because migrations were never applied. */
 export function isSchemaMissingError(err: unknown): boolean {
-  let current: unknown = err;
-  for (let i = 0; i < 5 && current != null; i++) {
-    const msg =
-      current instanceof Error
-        ? `${current.name} ${current.message}`
-        : typeof current === "string"
-          ? current
-          : String(current);
-    if (/no such table/i.test(msg)) return true;
-    current = current instanceof Error ? current.cause : undefined;
-  }
-  return false;
+  return /no such table/i.test(errorMessageChain(err));
+}
+
+/**
+ * True when local SQLite refused a write (stale Next handle after
+ * `rm local.db` / migrate, or a read-only / locked file).
+ */
+export function isLocalSqliteWriteError(err: unknown): boolean {
+  return /SQLITE_READONLY|attempt to write a readonly database|database is locked|SQLITE_BUSY/i.test(
+    errorMessageChain(err),
+  );
+}
+
+/** Desk-layout catch-all for local DB problems that should not 500 the shell. */
+export function isLocalSqliteSetupError(err: unknown): boolean {
+  return isSchemaMissingError(err) || isLocalSqliteWriteError(err);
 }
 
 /** Local file DB vs hosted Turso — drives setup-notice copy. */
@@ -72,7 +95,7 @@ export const LIBSQL_SETUP_HINT =
   "Database is not configured for this environment. On Vercel, set LIBSQL_URL and LIBSQL_AUTH_TOKEN to a Turso database (see DEPLOYMENT.md), run migrations, and redeploy.";
 
 export const LOCAL_DB_SETUP_HINT =
-  "Local SQLite is missing or empty. Run npm run db:migrate to create local.db and apply schema, then restart the dev server.";
+  "Local SQLite is missing, empty, or not writable. Run npm run db:migrate, then fully restart npm run dev (stop every Next process first — recreating local.db while Next is running often leaves SQLITE_READONLY).";
 
 /** Environment-aware message for API 503 bodies and setup UI. */
 export function databaseSetupHint(): string {
