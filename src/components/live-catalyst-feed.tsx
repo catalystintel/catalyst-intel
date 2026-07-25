@@ -76,9 +76,13 @@ type Presence = "active" | "blurred" | "hidden";
  * Blotter: Symbol · Title · Time (+ Action toolbar).
  * Symbol leads as the row index. No Event / Source primary columns.
  * Time = event occurrence ET.
+ *
+ * Time/Action use fixed tracks so `5:31 PM ET · Jul 24, 2026` (Plex Mono)
+ * and the Read/Dismiss/Quiet cluster stay under their headers — not squeezed
+ * into a 160px track that overflows into Action.
  */
 const FEED_GRID =
-  "grid-cols-[4.5rem_minmax(0,1fr)] sm:grid-cols-[5rem_minmax(0,1fr)_156px] lg:grid-cols-[5rem_minmax(0,1fr)_160px_minmax(200px,max-content)]";
+  "grid-cols-[4.5rem_minmax(0,1fr)] sm:grid-cols-[5rem_minmax(0,1fr)_13.75rem] lg:grid-cols-[5rem_minmax(0,1fr)_13.75rem_14rem]";
 
 function readPresence(): Presence {
   if (typeof document === "undefined") return "active";
@@ -1146,12 +1150,15 @@ function CatalystFeedList({
         </div>
         <div
           role="columnheader"
-          className="hidden text-right sm:block"
+          className="hidden justify-self-end text-right sm:block"
           title="When the event occurred (ET) — not DB insert time"
         >
           Time
         </div>
-        <div role="columnheader" className="hidden text-right lg:block">
+        <div
+          role="columnheader"
+          className="hidden justify-self-end text-right lg:block"
+        >
           Action
         </div>
       </div>
@@ -1290,32 +1297,25 @@ function CatalystFeedList({
 
               <div
                 role="cell"
-                className="relative z-[1] hidden min-w-0 text-right sm:block"
+                className="relative z-[1] hidden min-w-0 justify-self-end text-right sm:block"
               >
                 <time
                   dateTime={catalyst.timestamp}
-                  className="inline-block max-w-full font-mono text-[0.72rem] font-medium tracking-tight whitespace-nowrap text-[var(--desk-text-muted)] tabular-nums"
+                  className="block font-mono text-[0.72rem] font-medium tracking-tight whitespace-nowrap text-[var(--desk-text-muted)] tabular-nums"
                   title={formatTimeDate(catalyst.timestamp)}
                 >
                   {formatTimeDate(catalyst.timestamp)}
                 </time>
               </div>
 
-              {/* Desktop: hover / focus-within reveals action toolbar in its own column */}
+              {/* Desktop: action toolbar in a fixed-width column (always visible). */}
               <div
                 role="cell"
-                className="relative z-0 hidden min-w-0 justify-end overflow-hidden lg:flex"
+                className="relative z-0 hidden min-w-0 justify-end justify-self-end overflow-hidden lg:flex"
                 onClick={(e) => e.stopPropagation()}
                 onKeyDown={(e) => e.stopPropagation()}
               >
-                <div
-                  className={cn(
-                    "flex w-full min-w-0 flex-nowrap items-center justify-end gap-1 opacity-0 transition-opacity duration-150",
-                    "pointer-events-none group-hover:pointer-events-auto group-hover:opacity-100",
-                    "group-focus-within:pointer-events-auto group-focus-within:opacity-100",
-                    selected && "pointer-events-auto opacity-100",
-                  )}
-                >
+                <div className="flex w-full min-w-0 flex-nowrap items-center justify-end gap-1">
                   <FeedActionButton
                     variant="primary"
                     onClick={() => onRead(catalyst.id)}
