@@ -4,6 +4,14 @@
  */
 
 import { haltReasonLabel } from "@/lib/catalysts/halt-reason-codes";
+import { parseOfficerDirectorChange } from "@/lib/catalysts/officer-change";
+
+export type { OfficerChangeAction } from "@/lib/catalysts/officer-change";
+
+export type Sec8kTitleOptions = {
+  /** Summary / raw filing text used for Item 5.02 role + action inference. */
+  content?: string | null;
+};
 
 /** Prefer a real company/issue/sponsor name; never emit empty parentheses. */
 export function resolveDisplayCompanyName(
@@ -248,11 +256,31 @@ export function formatDelistingRiskTitle(
   return `${resolveDisplayCompanyName(companyName)} — Delisting Risk — Stock Could Lose Its Listing`;
 }
 
-/** `{Company} — Executive Change — CEO/CFO Departure or Appointment` (Item 5.02) */
+/**
+ * Item 5.02 ground-rule title from company + optional filing text.
+ *
+ * Examples:
+ * - `Acme Corp - CEO Change - Departure`
+ * - `Acme Corp - Executive Change - Appointment` (role unknown)
+ * - `Acme Corp - Executive Change` (role and action unknown)
+ */
 export function formatOfficerDirectorChangeTitle(
   companyName: string | null | undefined,
+  options?: Sec8kTitleOptions,
 ): string {
-  return `${resolveDisplayCompanyName(companyName)} — Executive Change — CEO/CFO Departure or Appointment`;
+  const company = resolveDisplayCompanyName(companyName);
+  const { position, action } = parseOfficerDirectorChange(options?.content);
+
+  if (position && action) {
+    return `${company} - ${position} Change - ${action}`;
+  }
+  if (!position && action) {
+    return `${company} - Executive Change - ${action}`;
+  }
+  if (position && !action) {
+    return `${company} - ${position} Change`;
+  }
+  return `${company} - Executive Change`;
 }
 
 /**
@@ -261,11 +289,15 @@ export function formatOfficerDirectorChangeTitle(
  */
 const NARRATIVE_8K_BY_LABEL: Record<
   string,
-  (companyName: string | null | undefined) => string
+  (
+    companyName: string | null | undefined,
+    options?: Sec8kTitleOptions,
+  ) => string
 > = {
-  "material agreement": formatMaterialAgreementTitle,
-  "bankruptcy / receivership": formatBankruptcyFilingTitle,
-  "delisting risk": formatDelistingRiskTitle,
+  "material agreement": (company) => formatMaterialAgreementTitle(company),
+  "bankruptcy / receivership": (company) =>
+    formatBankruptcyFilingTitle(company),
+  "delisting risk": (company) => formatDelistingRiskTitle(company),
   "officer / director change": formatOfficerDirectorChangeTitle,
 };
 
@@ -278,13 +310,33 @@ const NARRATIVE_8K_BY_LABEL: Record<
 export function formatSec8kItemTitle(
   itemLabel: string | null | undefined,
   companyName: string | null | undefined,
+  options?: Sec8kTitleOptions,
 ): string {
   const key = itemLabel?.replace(/\s+/g, " ").trim().toLowerCase() ?? "";
   const narrative = NARRATIVE_8K_BY_LABEL[key];
-  if (narrative) return narrative(companyName);
+  if (narrative) return narrative(companyName, options);
 
   const label = titleCaseEventLabel(itemLabel) || "8-K Event";
   return `${label} - ${resolveDisplayCompanyName(companyName)}`;
+}
+
+/** True for current or legacy Item 5.02 executive-change tape titles. */
+export function looksLikeOfficerDirectorChangeTitle(
+  title: string | null | undefined,
+): boolean {
+  const t = title?.replace(/\s+/g, " ").trim() ?? "";
+  if (!t) return false;
+  if (/—\s*Executive Change\s*—/i.test(t)) return true;
+  if (/\bExecutive Change\b/i.test(t)) return true;
+  if (/\bOfficer Change\b/i.test(t)) return true;
+  if (
+    /\b(?:CEO|CFO|COO|CTO|CMO|CRO|CISO|CHRO|CIO|CPO|CLO|CCO|President)\s+Change(?:\s*-\s*(?:Departure|Appointment))?$/i.test(
+      t,
+    )
+  ) {
+    return true;
+  }
+  return false;
 }
 
 export type Form4TitleKind = "buy" | "sell" | "mixed" | "transaction";

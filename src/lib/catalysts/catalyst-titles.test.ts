@@ -24,6 +24,7 @@ import {
   formatSec8kItemTitle,
   formatShelfRegistrationTitle,
   form4TitleKindFromSubcategory,
+  looksLikeOfficerDirectorChangeTitle,
   looksLikeResultsOfOperationsTitle,
   resolveDisplayCompanyName,
   titleCaseEventLabel,
@@ -170,8 +171,14 @@ describe("formatSec8kItemTitle / formatForm4InsiderTitle", () => {
       "PEDEVCO CORP New Deal Announced — Major Contract or Partnership",
     );
     expect(formatSec8kItemTitle("Officer / director change", "Acme Corp")).toBe(
-      "Acme Corp — Executive Change — CEO/CFO Departure or Appointment",
+      "Acme Corp - Executive Change",
     );
+    expect(
+      formatSec8kItemTitle("Officer / director change", "Acme Corp", {
+        content:
+          "On July 20, 2026, Jane Smith resigned as Chief Executive Officer.",
+      }),
+    ).toBe("Acme Corp - CEO Change - Departure");
     expect(formatSec8kItemTitle("Delisting risk", "Quantum-Si Inc")).toBe(
       "Quantum-Si Inc — Delisting Risk — Stock Could Lose Its Listing",
     );
@@ -188,8 +195,26 @@ describe("formatSec8kItemTitle / formatForm4InsiderTitle", () => {
       "Acme Corp — Delisting Risk — Stock Could Lose Its Listing",
     );
     expect(formatOfficerDirectorChangeTitle("Acme Corp")).toBe(
-      "Acme Corp — Executive Change — CEO/CFO Departure or Appointment",
+      "Acme Corp - Executive Change",
     );
+    expect(
+      formatOfficerDirectorChangeTitle("Acme Corp", {
+        content: "The Board appointed Robert Lee as Chief Financial Officer.",
+      }),
+    ).toBe("Acme Corp - CFO Change - Appointment");
+    expect(
+      formatOfficerDirectorChangeTitle("Acme Corp", {
+        content: "A senior officer of the Company resigned effective today.",
+      }),
+    ).toBe("Acme Corp - Executive Change - Departure");
+    expect(
+      looksLikeOfficerDirectorChangeTitle(
+        "Acme Corp — Executive Change — CEO/CFO Departure or Appointment",
+      ),
+    ).toBe(true);
+    expect(
+      looksLikeOfficerDirectorChangeTitle("Acme Corp - CEO Change - Departure"),
+    ).toBe(true);
   });
 
   it("keeps Title Case `{Label} - {Company}` for other 8-K items", () => {
