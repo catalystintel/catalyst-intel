@@ -1,13 +1,13 @@
 /**
  * Benzinga-like article funnel helpers (IA only — keep B&W desk chrome).
- * Feed triage → Read page depth: WIIM, takeaways, related tickers, Δ, thumb.
+ * Feed triage → Read page depth: WIIM, takeaways, related symbols, Δ, thumb.
  */
 
 import type { ArticleDetailCard } from "@/lib/catalysts/article-detail";
 import { stripHtml } from "@/lib/catalysts/article-content";
 
 const SENTENCE_SPLIT = /(?<=[.!?])\s+(?=[A-Z0-9"'(])/;
-const TICKER_RE = /^[A-Z][A-Z0-9.]{0,9}$/;
+const SYMBOL_RE = /^[A-Z][A-Z0-9.]{0,9}$/;
 
 /** Outcome / catalyst tokens to accent in body (word-level only). */
 export const CATALYST_HIGHLIGHT_RE =
@@ -23,9 +23,9 @@ function asRecord(value: unknown): Record<string, unknown> | null {
   return value as Record<string, unknown>;
 }
 
-function normalizeTicker(value: string): string | null {
+function normalizeSymbol(value: string): string | null {
   const t = value.trim().toUpperCase().replace(/^\$/, "");
-  if (!t || !TICKER_RE.test(t)) return null;
+  if (!t || !SYMBOL_RE.test(t)) return null;
   // Filter common false positives from tags.
   if (
     t.length <= 1 ||
@@ -179,19 +179,19 @@ export function deriveTakeaways(
 }
 
 /**
- * Related symbols from Polygon/Benzinga-style raw payloads + ticker-like tags.
+ * Related symbols from Polygon/Benzinga-style raw payloads + symbol-like tags.
  */
-export function extractRelatedTickers(
+export function extractRelatedSymbols(
   rawContent: unknown,
-  primaryTicker?: string | null,
+  primarySymbol?: string | null,
   tags?: string[] | null,
 ): string[] {
-  const primary = primaryTicker?.trim().toUpperCase() || null;
+  const primary = primarySymbol?.trim().toUpperCase() || null;
   const seen = new Set<string>();
   const out: string[] = [];
 
   const push = (raw: string) => {
-    const t = normalizeTicker(raw);
+    const t = normalizeSymbol(raw);
     if (!t || t === primary || seen.has(t)) return;
     seen.add(t);
     out.push(t);
@@ -200,10 +200,10 @@ export function extractRelatedTickers(
   const root = asRecord(rawContent);
   if (root) {
     const lists = [
-      root.tickers,
+      root.symbols,
       root.stocks,
       root.symbols,
-      root.relatedTickers,
+      root.relatedSymbols,
     ];
     for (const list of lists) {
       if (!Array.isArray(list)) continue;
@@ -215,7 +215,7 @@ export function extractRelatedTickers(
         const rec = asRecord(item);
         if (!rec) continue;
         const sym =
-          (typeof rec.ticker === "string" && rec.ticker) ||
+          (typeof rec.symbol === "string" && rec.symbol) ||
           (typeof rec.symbol === "string" && rec.symbol) ||
           (typeof rec.name === "string" && rec.name) ||
           null;

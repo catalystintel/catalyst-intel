@@ -197,7 +197,7 @@
   h6 {
     @apply font-heading;
   }
-  /* Desk times/prices/tickers: tabular figures for aligned columns. */
+  /* Desk times/prices/symbols: tabular figures for aligned columns. */
   .font-mono {
     font-variant-numeric: tabular-nums;
   }
@@ -255,7 +255,7 @@
 
   /* Catalyst Feed blotter + article reader: Helvetica for desk content
      without changing marketing-site / global DM Sans branding. Mono
-     labels (tickers, times, badges) keep --font-mono via .font-mono. */
+     labels (symbols, times, badges) keep --font-mono via .font-mono. */
   .feed-helvetica {
     --font-sans: Helvetica, "Helvetica Neue", Arial, sans-serif;
     --font-heading: Helvetica, "Helvetica Neue", Arial, sans-serif;

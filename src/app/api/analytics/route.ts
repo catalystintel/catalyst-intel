@@ -61,7 +61,7 @@ export async function GET(request: NextRequest) {
   const rows = await withDbRetry(() =>
     db
       .select({
-        ticker: catalysts.ticker,
+        symbol: catalysts.symbol,
         eventCategory: catalysts.eventCategory,
         impactScore: catalysts.impactScore,
         timestamp: catalysts.timestamp,

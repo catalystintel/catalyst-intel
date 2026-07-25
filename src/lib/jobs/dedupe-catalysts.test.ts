@@ -34,13 +34,13 @@ describe("normalizeDedupeTitle / titleSimilarity", () => {
 });
 
 describe("contentFingerprint", () => {
-  it("keys ticker + normalized title", () => {
+  it("keys symbol + normalized title", () => {
     expect(contentFingerprint("aapl", "Earnings Report Q2 - Apple Inc.")).toBe(
       "AAPL|earnings report q2 apple inc",
     );
   });
 
-  it("returns null without ticker or title", () => {
+  it("returns null without symbol or title", () => {
     expect(contentFingerprint(null, "hello")).toBeNull();
     expect(contentFingerprint("AAPL", "")).toBeNull();
   });
@@ -79,7 +79,7 @@ describe("shouldSkipAsDuplicate", () => {
   it("skips a weaker wire retelling", () => {
     const verdict = shouldSkipAsDuplicate(
       {
-        ticker: "ACME",
+        symbol: "ACME",
         title: "Acme Corp Announces Material Agreement — Benzinga",
         headline: "Acme Corp announces material agreement",
         provider: "polygon",
@@ -96,7 +96,7 @@ describe("shouldSkipAsDuplicate", () => {
   it("allows a better-source arrival after a wire", () => {
     const verdict = shouldSkipAsDuplicate(
       {
-        ticker: "ACME",
+        symbol: "ACME",
         title: "Material Agreement - Acme Corp",
         headline: "Material agreement",
         provider: "sec-edgar",
@@ -118,10 +118,10 @@ describe("shouldSkipAsDuplicate", () => {
     expect(verdict.skip).toBe(false);
   });
 
-  it("does not skip unrelated same-ticker events", () => {
+  it("does not skip unrelated same-symbol events", () => {
     const verdict = shouldSkipAsDuplicate(
       {
-        ticker: "ACME",
+        symbol: "ACME",
         title: "Form 4 Insider Buy - Acme Corp",
         headline: "Insider buy (Form 4)",
         provider: "sec-edgar",

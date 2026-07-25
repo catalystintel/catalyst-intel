@@ -14,13 +14,13 @@ describe("toTradingViewSymbol", () => {
     expect(toTradingViewSymbol("SPY", "NYSE ARCA")).toBe("AMEX:SPY");
   });
 
-  it("uppercases bare tickers when exchange is unknown", () => {
+  it("uppercases bare symbols when exchange is unknown", () => {
     expect(toTradingViewSymbol("xyz", null)).toBe("XYZ");
   });
 
-  it("resolves a dual-listed vendor-suffixed ticker via the exchange string", () => {
+  it("resolves a dual-listed vendor-suffixed symbol via the exchange string", () => {
     // Finnhub's /stock/profile2?symbol=BNS quirk: canonicalizes to the
-    // Toronto listing and returns ticker "BNS.TO" / exchange "TORONTO STOCK
+    // Toronto listing and returns symbol "BNS.TO" / exchange "TORONTO STOCK
     // EXCHANGE" even though BNS itself queried a clean symbol. TradingView
     // has no "BNS.TO" symbol — it needs "TSX:BNS".
     expect(toTradingViewSymbol("BNS.TO", "TORONTO STOCK EXCHANGE")).toBe(
@@ -33,8 +33,8 @@ describe("toTradingViewSymbol", () => {
     expect(toTradingViewSymbol("shel.pa", undefined)).toBe("EURONEXT:SHEL");
   });
 
-  it("never mangles a real single-letter share-class ticker", () => {
-    // "BRK.B" / "BF.A" are legitimate US tickers, not vendor suffixes —
+  it("never mangles a real single-letter share-class symbol", () => {
+    // "BRK.B" / "BF.A" are legitimate US symbols, not vendor suffixes —
     // the dot must survive untouched.
     expect(toTradingViewSymbol("BRK.B", "NEW YORK STOCK EXCHANGE, INC.")).toBe(
       "NYSE:BRK.B",

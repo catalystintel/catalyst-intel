@@ -35,7 +35,7 @@ flowchart LR
 
     subgraph VercelApp["Next.js app (Vercel)"]
         FetchAPI["POST /api/admin/fetch/sec-edgar<br/>cron secret OR admin session"]
-        Job["fetchSecEdgar()<br/>dedupe · ticker resolve · retention"]
+        Job["fetchSecEdgar()<br/>dedupe · symbol resolve · retention"]
         CatalystsAPI["GET /api/catalysts<br/>auth + rate limit<br/>+ stale self-heal"]
         LiveUI["/dashboard Live feed<br/>client soft-poll while visible"]
     end
@@ -119,7 +119,7 @@ Migrations run as part of `npm run build` (`drizzle-kit migrate && next build`),
 | -------------------- | -------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
 | **GHA cron**         | `.github/workflows/fetch-sec-edgar-cron.yml` | Scheduled POST to fetch API (staging + prod matrix); workflow_dispatch for manual runs                        |
 | **Admin fetch API**  | `POST /api/admin/fetch/sec-edgar`            | Runs `fetchSecEdgar()`; accepts cron secret **or** allowlisted admin session                                  |
-| **Fetch job**        | `src/lib/jobs/fetch-sec-edgar.ts`            | Pull SEC Atom feed → resolve tickers → dedupe by accession → write DB → 30-day retention purge                |
+| **Fetch job**        | `src/lib/jobs/fetch-sec-edgar.ts`            | Pull SEC Atom feed → resolve symbols → dedupe by accession → write DB → 30-day retention purge                |
 | **Catalysts API**    | `GET /api/catalysts`                         | Authenticated Live-feed list; rate-limited; may trigger background refetch if data stale                      |
 | **Rate limit**       | `src/lib/http/rate-limit.ts`                 | In-memory per-IP: **90/min** feed reads, **6/min** admin session writes; **cron secret bypasses** admin limit |
 | **Allowlist admins** | `src/lib/auth/admin.ts` + `ADMIN_EMAILS`     | Server-side gate for `/admin` and session-based fetch; JWT email is source of truth                           |
@@ -139,7 +139,7 @@ users
   id · supabase_user_id · email · display_name · role(cache) · subscription · created_at
 
 companies
-  id · name · ticker? · sector? · market_cap? · created_at
+  id · name · symbol? · sector? · market_cap? · created_at
   (reference data; not purged by retention)
 
 raw_sources
@@ -147,7 +147,7 @@ raw_sources
   (vendor payload as received; dedupe key e.g. SEC accession)
 
 catalysts
-  id · company_id? · ticker? · company_name? · type · title
+  id · company_id? · symbol? · company_name? · type · title
   · headline? · event_category? · item_codes(json)?
   · timestamp · raw_source_id → raw_sources
   · summary? · impact_score?   ← AI fields reserved, null for now
@@ -171,13 +171,13 @@ erDiagram
         json raw_content
     }
     catalysts {
-        text ticker
+        text symbol
         text title
         text timestamp
         int impact_score
     }
     companies {
-        text ticker
+        text symbol
         text sector
     }
 ```
@@ -205,7 +205,7 @@ End-to-end path for a signed-in trader on `/dashboard`:
    - Requires authenticated session
    - Returns catalyst JSON ordered by filing timestamp
    - If newest `raw_sources.fetched_at` is stale (> ~10 min, with cooldown), kicks off **non-blocking** `fetchSecEdgar()` in the background
-7. **UI** merges new rows (flash highlight), applies client filters (ticker, category, time window), opens detail drawer on row click.
+7. **UI** merges new rows (flash highlight), applies client filters (symbol, category, time window), opens detail drawer on row click.
 
 ```mermaid
 sequenceDiagram
@@ -239,9 +239,9 @@ sequenceDiagram
 
 ## 7. Live feed columns — presentation layer
 
-**Data layer** already exposes richer fields (`ticker`, `companyName`, `headline`/`title`, `eventCategory`, `timestamp`, `sourceUrl`, optional `companies.sector`, etc.).
+**Data layer** already exposes richer fields (`symbol`, `companyName`, `headline`/`title`, `eventCategory`, `timestamp`, `sourceUrl`, optional `companies.sector`, etc.).
 
-**UI today (shipped):** Age · Ticker · Company · Event · Time  
+**UI today (shipped):** Age · Symbol · Company · Event · Time  
 (relative age + clock time; category badge on the event line)
 
 **Planned UX columns (presentation only — no ingest/API contract change required):**

@@ -82,14 +82,14 @@ From `Catalyst-Intel-Client-Target-Guideline.md` §7.1 and `Catalyst-Intel-Clien
 | #   | Requirement                               | Current codebase reality (JTBD preview)                                                                                                                                               |
 | --- | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 1   | Live catalyst feed                        | `/dashboard` soft-polls `/api/catalysts` (`live-catalyst-feed.tsx`)                                                                                                                   |
-| 2   | Stable scannable row model                | Live grid: **Ticker/Event · Sector · Impact · Title · Proof · Time** (`Catalyst-Intel-JTBD-UX-UI.md`); older “Source \| Sector \| Title \| Time” copy is superseded for the live grid |
+| 2   | Stable scannable row model                | Live grid: **Symbol/Event · Sector · Impact · Title · Proof · Time** (`Catalyst-Intel-JTBD-UX-UI.md`); older “Source \| Sector \| Title \| Time” copy is superseded for the live grid |
 | 3   | Primary-source proof one click away       | `edgar-proof-link.tsx` + article secondary CTA (`ACCEPTANCE-JTBD.md` JTBD 3)                                                                                                          |
 | 4   | **Act / Dismiss** (remember dismissals)   | Act opens Read/drawer; Dismiss = localStorage last 200 ids (not DB delete)                                                                                                            |
 | 5   | Materiality badge + plain-language reason | `MaterialityBadge` rule-based High/Med/Low; deepen “why” copy                                                                                                                         |
-| 6   | Category filters                          | Category chips + ticker / time window on feed                                                                                                                                         |
+| 6   | Category filters                          | Category chips + symbol / time window on feed                                                                                                                                         |
 | 7   | Watchlist sync + highlight                | `/watchlist` + playbook API                                                                                                                                                           |
 | 8   | Quiet playbook that reduces noise         | Quiet toggle + `matchesQuietPlaybook`                                                                                                                                                 |
-| 9   | Reliable ticker / company identity        | Ongoing; ticker resolve quality is a trust metric                                                                                                                                     |
+| 9   | Reliable symbol / company identity        | Ongoing; symbol resolve quality is a trust metric                                                                                                                                     |
 | 10  | Latency honesty                           | Show event time / last updated; never fake “instant” on cron/poll                                                                                                                     |
 | 11  | Mobile-usable alert path                  | Desktop primary; alerts exist; push still stubbed                                                                                                                                     |
 
@@ -109,7 +109,7 @@ From `Catalyst-Intel-JTBD-UX-UI.md` + `ACCEPTANCE-JTBD.md`:
 
 | JTBD | Job                                                | Surface                                 |
 | ---- | -------------------------------------------------- | --------------------------------------- |
-| 1    | Filing → ticker + event + materiality; Act/Dismiss | `/dashboard` feed + Read                |
+| 1    | Filing → symbol + event + materiality; Act/Dismiss | `/dashboard` feed + Read                |
 | 2    | Quiet tape → playbook-only                         | `/watchlist` + Quiet toggle on feed     |
 | 3    | Headline → in-app article + original proof         | `/dashboard/catalyst/[id]` + Proof link |
 | 4    | Away → webhook / email (push stub)                 | `/alerts`                               |
@@ -152,11 +152,11 @@ From `Catalyst-Intel-Benzinga-Like-Article-Display.md`:
 | -------- | --------------------------------------------------------- | ------------------------------------------------------ |
 | **P0**   | WIIM-style one-liner above summary (“WHY IT'S MOVING”)    | Fastest triage upgrade; aligns with WIIM-lite pipeline |
 | **P0**   | Bullet summary (3 short takeaways), not essay prose       | Matches trader scan behavior                           |
-| **P1**   | Related ticker chips under primary ticker                 | Multi-symbol catalysts; needs related-symbol data      |
+| **P1**   | Related symbol chips under primary symbol                 | Multi-symbol catalysts; needs related-symbol data      |
 | **P1**   | Semantic Beats/Misses (and key catalyst verbs) highlights | Earnings Detail cards already lean this way            |
 | **P2**   | Compact thumb + Δ since publish (non-hero)                | Needs media + quote; keep B&W desk, no magazine hero   |
 
-**Mirror:** ticker-first hierarchy, causality one-liner, density over imagery, quick open-source actions.  
+**Mirror:** symbol-first hierarchy, causality one-liner, density over imagery, quick open-source actions.  
 **Do not mirror:** loud green/red chrome everywhere, Squawk as v1, multi-panel workspace inside Read, magazine hero overlays.
 
 In-app article behavior (proof stays secondary CTA): `Catalyst-Intel-Internal-Article-View.md`.
@@ -216,10 +216,10 @@ Phases merge Client Summary §10, Architecture §10, and current JTBD acceptance
 | ---- | --------------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
 | 2.1  | Alert depth: watchlist-only + category + min materiality; rate-limit; deep link to Read | Client Target §7.3; Architecture S2; `ACCEPTANCE-JTBD.md` JTBD 4 |
 | 2.2  | Push channel (FCM or equivalent) — today stubbed                                        | JTBD 4 acceptance                                                |
-| 2.3  | Archive / Search (ticker, accession, date) — IA gap                                     | Architecture §8; Client Summary IA                               |
+| 2.3  | Archive / Search (symbol, accession, date) — IA gap                                     | Architecture §8; Client Summary IA                               |
 | 2.4  | Saved playbook presets (“Offerings only”, “Biotech 8-K”, “Watchlist High”)              | Architecture S3                                                  |
 | 2.5  | Market context strip on Read/drawer (last, %, RVol when keyed)                          | Client Target §7.2 #13                                           |
-| 2.6  | Related ticker chips + Beats/Misses highlights                                          | Benzinga-Like Article Display P1                                 |
+| 2.6  | Related symbol chips + Beats/Misses highlights                                          | Benzinga-Like Article Display P1                                 |
 | 2.7  | Personal Act/Dismiss stats (discipline loop)                                            | Client Target §7.3 #18                                           |
 | 2.8  | Billing-ready account shell when signal quality is sticky                               | Client Summary Phase 2                                           |
 
@@ -299,7 +299,7 @@ From Client Target §9 / Client Summary §8 / Architecture §9:
 - Activation: time-to-first Act/Dismiss &lt; ~2 min; watchlist or playbook set; ≥1 proof open
 - Engagement: quiet-mode usage; healthy dismiss %; higher Act rate on High vs Low
 - Trust: source-open on Acts; mute/unsubscribe rate; no silent wrong AI
-- Pipeline: ingest lag p50/p95; accession dedupe 100%; ticker resolve &gt;95% on 8-K
+- Pipeline: ingest lag p50/p95; accession dedupe 100%; symbol resolve &gt;95% on 8-K
 - North star: high-materiality catalysts seen and decided **with proof** before secondary headline echo
 
 ---

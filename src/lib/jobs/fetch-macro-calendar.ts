@@ -138,7 +138,7 @@ function toNormalized(event: MacroEventDef): NormalizedCatalyst {
         ? "https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm"
         : "https://www.bls.gov/schedule/",
     rawContent: event,
-    ticker: null,
+    symbol: null,
     companyName: "US Macro",
     type: "Economics",
     title: event.title,

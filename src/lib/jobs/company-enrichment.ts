@@ -12,7 +12,7 @@ import { companies } from "@/db/schema";
 import { normalizeToGicsLabel } from "@/lib/companies/gics-sectors";
 
 export interface CompanyProfileInput {
-  ticker: string;
+  symbol: string;
   name?: string | null;
   industry?: string | null;
   /** Millions of USD, as returned by Finnhub `marketCapitalization`. */
@@ -21,8 +21,8 @@ export interface CompanyProfileInput {
   logoUrl?: string | null;
 }
 
-function normalizeTicker(ticker: string): string {
-  return ticker.trim().toUpperCase();
+function normalizeSymbol(symbol: string): string {
+  return symbol.trim().toUpperCase();
 }
 
 /**
@@ -33,8 +33,8 @@ function normalizeTicker(ticker: string): string {
 export async function upsertCompanyProfile(
   input: CompanyProfileInput,
 ): Promise<void> {
-  const ticker = normalizeTicker(input.ticker);
-  if (!ticker) return;
+  const symbol = normalizeSymbol(input.symbol);
+  if (!symbol) return;
 
   const marketCap =
     typeof input.marketCapMillions === "number" &&
@@ -45,7 +45,7 @@ export async function upsertCompanyProfile(
   const existing = await db
     .select({ id: companies.id })
     .from(companies)
-    .where(eq(companies.ticker, ticker))
+    .where(eq(companies.symbol, symbol))
     .get();
 
   const now = new Date().toISOString();
@@ -55,8 +55,8 @@ export async function upsertCompanyProfile(
     await db
       .insert(companies)
       .values({
-        name: input.name?.trim() || ticker,
-        ticker,
+        name: input.name?.trim() || symbol,
+        symbol,
         sector,
         marketCap,
         exchange: input.exchange?.trim() || null,
@@ -81,34 +81,34 @@ export async function upsertCompanyProfile(
     .run();
 }
 
-/** Looks up the current market cap (millions USD) for a ticker, if known. */
+/** Looks up the current market cap (millions USD) for a symbol, if known. */
 export async function getCompanyMarketCapMillions(
-  ticker: string | null | undefined,
+  symbol: string | null | undefined,
 ): Promise<number | null> {
-  const t = ticker?.trim().toUpperCase();
+  const t = symbol?.trim().toUpperCase();
   if (!t) return null;
   const row = await db
     .select({ marketCap: companies.marketCap })
     .from(companies)
-    .where(eq(companies.ticker, t))
+    .where(eq(companies.symbol, t))
     .get();
   return row?.marketCap ?? null;
 }
 
 /**
- * Looks up a stored company display name for a ticker.
- * Returns null when missing or when the stored name is just the ticker itself
+ * Looks up a stored company display name for a symbol.
+ * Returns null when missing or when the stored name is just the symbol itself
  * (so callers can try a richer vendor profile next).
  */
 export async function getCompanyName(
-  ticker: string | null | undefined,
+  symbol: string | null | undefined,
 ): Promise<string | null> {
-  const t = ticker?.trim().toUpperCase();
+  const t = symbol?.trim().toUpperCase();
   if (!t) return null;
   const row = await db
     .select({ name: companies.name })
     .from(companies)
-    .where(eq(companies.ticker, t))
+    .where(eq(companies.symbol, t))
     .get();
   const name = row?.name?.trim() || null;
   if (!name) return null;

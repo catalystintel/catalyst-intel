@@ -5,7 +5,7 @@ import { databaseSetupHint, isLibsqlConfigured } from "@/db/env";
 import { db } from "@/db/client";
 import { watchlistEntries } from "@/db/schema";
 import { getCurrentAppUser } from "@/lib/auth/current-user";
-import { normalizeTicker } from "@/lib/alerts/normalize";
+import { normalizeSymbol } from "@/lib/alerts/normalize";
 import { getClientIp } from "@/lib/http/client-ip";
 import { RATE_LIMITS, checkRateLimit } from "@/lib/http/rate-limit";
 import {
@@ -53,16 +53,16 @@ export async function GET(request: NextRequest) {
   const rows = await db
     .select({
       id: watchlistEntries.id,
-      ticker: watchlistEntries.ticker,
+      symbol: watchlistEntries.symbol,
       createdAt: watchlistEntries.createdAt,
     })
     .from(watchlistEntries)
     .where(eq(watchlistEntries.userId, user.id))
-    .orderBy(asc(watchlistEntries.ticker))
+    .orderBy(asc(watchlistEntries.symbol))
     .all();
 
   return withRateLimitHeaders(
-    NextResponse.json({ tickers: rows }),
+    NextResponse.json({ symbols: rows }),
     limitResult,
   );
 }
@@ -85,14 +85,14 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const tickerRaw =
-    typeof body === "object" && body !== null && "ticker" in body
-      ? String((body as { ticker: unknown }).ticker)
+  const symbolRaw =
+    typeof body === "object" && body !== null && "symbol" in body
+      ? String((body as { symbol: unknown }).symbol)
       : "";
-  const ticker = normalizeTicker(tickerRaw);
-  if (!ticker) {
+  const symbol = normalizeSymbol(symbolRaw);
+  if (!symbol) {
     return withRateLimitHeaders(
-      NextResponse.json({ error: "Invalid ticker." }, { status: 400 }),
+      NextResponse.json({ error: "Invalid symbol." }, { status: 400 }),
       limitResult,
     );
   }
@@ -103,22 +103,22 @@ export async function POST(request: NextRequest) {
     .where(
       and(
         eq(watchlistEntries.userId, user.id),
-        eq(watchlistEntries.ticker, ticker),
+        eq(watchlistEntries.symbol, symbol),
       ),
     )
     .get();
 
   if (existing) {
     return withRateLimitHeaders(
-      NextResponse.json({ id: existing.id, ticker }),
+      NextResponse.json({ id: existing.id, symbol }),
       limitResult,
     );
   }
 
   const row = await db
     .insert(watchlistEntries)
-    .values({ userId: user.id, ticker })
-    .returning({ id: watchlistEntries.id, ticker: watchlistEntries.ticker })
+    .values({ userId: user.id, symbol })
+    .returning({ id: watchlistEntries.id, symbol: watchlistEntries.symbol })
     .get();
 
   return withRateLimitHeaders(
@@ -135,11 +135,11 @@ export async function DELETE(request: NextRequest) {
     limitResult: NonNullable<(typeof auth)["limitResult"]>;
   };
 
-  const tickerParam = request.nextUrl.searchParams.get("ticker") ?? "";
-  const ticker = normalizeTicker(tickerParam);
-  if (!ticker) {
+  const symbolParam = request.nextUrl.searchParams.get("symbol") ?? "";
+  const symbol = normalizeSymbol(symbolParam);
+  if (!symbol) {
     return withRateLimitHeaders(
-      NextResponse.json({ error: "Invalid ticker." }, { status: 400 }),
+      NextResponse.json({ error: "Invalid symbol." }, { status: 400 }),
       limitResult,
     );
   }
@@ -149,13 +149,13 @@ export async function DELETE(request: NextRequest) {
     .where(
       and(
         eq(watchlistEntries.userId, user.id),
-        eq(watchlistEntries.ticker, ticker),
+        eq(watchlistEntries.symbol, symbol),
       ),
     )
     .run();
 
   return withRateLimitHeaders(
-    NextResponse.json({ ok: true, ticker }),
+    NextResponse.json({ ok: true, symbol }),
     limitResult,
   );
 }

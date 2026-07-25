@@ -24,7 +24,7 @@ import { CatalystArticleDialog } from "@/components/catalyst-article-dialog";
 import { DeskTip } from "@/components/desk-tip";
 import { FeedFilterMultiSelect } from "@/components/feed-filter-multi-select";
 import { TapeSplitPanel } from "@/components/tape-split-panel";
-import { TickerActionMenu } from "@/components/ticker-action-menu";
+import { SymbolActionMenu } from "@/components/symbol-action-menu";
 import { Input } from "@/components/ui/input";
 import { useAutoFocusScrollRegion } from "@/hooks/use-auto-focus-scroll-region";
 import { useLiveFeedQuery } from "@/hooks/use-live-feed-query";
@@ -47,7 +47,7 @@ import {
 } from "@/lib/jobs/parse-8k-items";
 import { FEED_TIME_WINDOWS } from "@/lib/catalysts/feed-time-window";
 import { classifyFeedEmpty } from "@/lib/catalysts/feed-empty-state";
-import { passesTickerFeedGate } from "@/lib/catalysts/ticker-feed-gate";
+import { passesSymbolFeedGate } from "@/lib/catalysts/symbol-feed-gate";
 import { isLocalDevUi, LOCAL_DEV_ONLY_LABEL } from "@/lib/dev/local-dev-ui";
 import {
   isFiltersDefault,
@@ -123,18 +123,18 @@ function writeDismissedIds(ids: Set<number>) {
 export function LiveCatalystFeed({
   initialCatalysts,
   isAdmin,
-  initialTickerFilter,
+  initialSymbolFilter,
   initialSelectedId,
 }: {
   initialCatalysts: FeedCatalyst[];
   isAdmin: boolean;
-  /** Pre-fills the ticker filter, e.g. arriving via `?ticker=` from Analytics. */
-  initialTickerFilter?: string;
+  /** Pre-fills the symbol filter, e.g. arriving via `?symbol=` from Analytics. */
+  initialSymbolFilter?: string;
   /** Re-opens the split panel, e.g. arriving via `?c=` after full article. */
   initialSelectedId?: number;
 }) {
   const query = useLiveFeedQuery(initialCatalysts, {
-    tickerQuery: initialTickerFilter?.trim() ?? "",
+    symbolQuery: initialSymbolFilter?.trim() ?? "",
   });
   const {
     catalysts,
@@ -159,7 +159,7 @@ export function LiveCatalystFeed({
   const [selectedId, setSelectedId] = useState<number | null>(
     initialSelectedId && initialSelectedId > 0 ? initialSelectedId : null,
   );
-  const [filtersOpen, setFiltersOpen] = useState(Boolean(initialTickerFilter));
+  const [filtersOpen, setFiltersOpen] = useState(Boolean(initialSymbolFilter));
   const [filtersHydrated, setFiltersHydrated] = useState(false);
   const [filterRecalc, setFilterRecalc] = useState(false);
   const [dismissedIds, setDismissedIds] = useState<Set<number>>(() =>
@@ -168,7 +168,7 @@ export function LiveCatalystFeed({
   const [dismissingIds, setDismissingIds] = useState<Set<number>>(
     () => new Set(),
   );
-  const [watchlistTickers, setWatchlistTickers] = useState<string[]>([]);
+  const [watchlistSymbols, setWatchlistSymbols] = useState<string[]>([]);
   const [playbookCategories, setPlaybookCategories] = useState<
     EventCategoryKey[]
   >(DEFAULT_PLAYBOOK_CATEGORIES);
@@ -198,10 +198,10 @@ export function LiveCatalystFeed({
         if (cancelled) return;
         if (wRes.ok) {
           const wData = await wRes.json();
-          const tickers = (wData.tickers ?? []).map(
-            (t: { ticker: string }) => t.ticker,
+          const symbols = (wData.symbols ?? []).map(
+            (t: { symbol: string }) => t.symbol,
           );
-          setWatchlistTickers(tickers);
+          setWatchlistSymbols(symbols);
         }
         if (pRes.ok) {
           const pData = await pRes.json();
@@ -225,20 +225,20 @@ export function LiveCatalystFeed({
   }, []);
 
   // Restore tape filters from localStorage after mount (avoids SSR/hydration
-  // mismatch). Deep-link `?ticker=` wins for the ticker field; other saved
+  // mismatch). Deep-link `?symbol=` wins for the symbol field; other saved
   // filters still apply when still within the idle window.
   useEffect(() => {
     const restoreId = window.setTimeout(() => {
       const saved = readPersistedFeedFilters();
-      const urlTicker = initialTickerFilter?.trim() ?? "";
+      const urlSymbol = initialSymbolFilter?.trim() ?? "";
       // Source facet is local-dev only — never restore vendor filters in deploy.
       const sanitize = (filters: FeedFilterState): FeedFilterState =>
         isLocalDevUi() ? filters : { ...filters, sourceFilters: [] };
 
-      if (urlTicker) {
+      if (urlSymbol) {
         setFilterState((prev) => ({
           ...prev,
-          tickerQuery: urlTicker,
+          symbolQuery: urlSymbol,
           ...(saved
             ? sanitize({
                 ...prev,
@@ -247,23 +247,23 @@ export function LiveCatalystFeed({
                 formFilters: saved.formFilters,
                 sourceFilters: saved.sourceFilters,
                 timeWindow: saved.timeWindow,
-                tickerOnly: saved.tickerOnly,
-                tickerQuery: urlTicker,
+                symbolOnly: saved.symbolOnly,
+                symbolQuery: urlSymbol,
               })
             : {}),
           // Desk rule is always on (CPI / Jobs excepted).
-          tickerOnly: true,
+          symbolOnly: true,
         }));
         setFiltersOpen(true);
       } else if (saved) {
-        const restored = { ...sanitize(saved), tickerOnly: true };
+        const restored = { ...sanitize(saved), symbolOnly: true };
         setFilterState(restored);
         if (!isPanelFiltersDefault(restored)) setFiltersOpen(true);
       }
       setFiltersHydrated(true);
     }, 0);
     return () => window.clearTimeout(restoreId);
-  }, [initialTickerFilter, setFilterState]);
+  }, [initialSymbolFilter, setFilterState]);
 
   // Persist filters while active; clear storage when back to product defaults.
   useEffect(() => {
@@ -467,9 +467,9 @@ export function LiveCatalystFeed({
     setArticleId(id);
   }, []);
 
-  const filterToTicker = useCallback(
-    (ticker: string) => {
-      patchFilters({ tickerQuery: ticker.trim().toUpperCase() });
+  const filterToSymbol = useCallback(
+    (symbol: string) => {
+      patchFilters({ symbolQuery: symbol.trim().toUpperCase() });
       setFiltersOpen(true);
     },
     [patchFilters],
@@ -494,21 +494,21 @@ export function LiveCatalystFeed({
   const prefetchQuote = useCallback(
     (id: number) => {
       const row = catalysts.find((c) => c.id === id);
-      const ticker = row?.ticker?.trim().toUpperCase();
-      if (!ticker) return;
-      void fetch(`/api/market/quote?symbol=${encodeURIComponent(ticker)}`, {
+      const symbol = row?.symbol?.trim().toUpperCase();
+      if (!symbol) return;
+      void fetch(`/api/market/quote?symbol=${encodeURIComponent(symbol)}`, {
         credentials: "same-origin",
       });
     },
     [catalysts],
   );
 
-  const quietAddTicker = useCallback(
-    async (ticker: string | null): Promise<boolean> => {
-      const t = ticker?.trim().toUpperCase();
+  const quietAddSymbol = useCallback(
+    async (symbol: string | null): Promise<boolean> => {
+      const t = symbol?.trim().toUpperCase();
       if (!t) return false;
-      if (watchlistTickers.includes(t)) return true;
-      setWatchlistTickers((prev) =>
+      if (watchlistSymbols.includes(t)) return true;
+      setWatchlistSymbols((prev) =>
         prev.includes(t) ? prev : [...prev, t].sort(),
       );
       try {
@@ -516,34 +516,34 @@ export function LiveCatalystFeed({
           method: "POST",
           credentials: "same-origin",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ ticker: t }),
+          body: JSON.stringify({ symbol: t }),
         });
         if (!res.ok) {
-          setWatchlistTickers((prev) => prev.filter((x) => x !== t));
+          setWatchlistSymbols((prev) => prev.filter((x) => x !== t));
           return false;
         }
         return true;
       } catch {
-        setWatchlistTickers((prev) => prev.filter((x) => x !== t));
+        setWatchlistSymbols((prev) => prev.filter((x) => x !== t));
         return false;
       }
     },
-    [watchlistTickers],
+    [watchlistSymbols],
   );
 
   const handleQuiet = useCallback(
-    async (ticker: string | null) => {
-      const t = ticker?.trim().toUpperCase();
+    async (symbol: string | null) => {
+      const t = symbol?.trim().toUpperCase();
       if (!t) return;
-      if (watchlistTickers.includes(t)) {
+      if (watchlistSymbols.includes(t)) {
         toast.message(`${t} is already on your watchlist`);
         return;
       }
-      const ok = await quietAddTicker(t);
+      const ok = await quietAddSymbol(t);
       if (ok) toast.success(`${t} added to watchlist`);
       else toast.error(`Could not add ${t} to watchlist`);
     },
-    [quietAddTicker, watchlistTickers],
+    [quietAddSymbol, watchlistSymbols],
   );
 
   const facetOptions = useMemo(() => buildFacetOptions(facets), [facets]);
@@ -552,8 +552,8 @@ export function LiveCatalystFeed({
     const filtered = catalysts.filter((c) => {
       if (dismissedIds.has(c.id)) return false;
       return matchesQuietPlaybook(
-        { ticker: c.ticker, eventCategory: c.eventCategory },
-        { quietMode, watchlistTickers, playbookCategories },
+        { symbol: c.symbol, eventCategory: c.eventCategory },
+        { quietMode, watchlistSymbols, playbookCategories },
       );
     });
     // Always newest → oldest (event time), even after client overlays.
@@ -562,7 +562,7 @@ export function LiveCatalystFeed({
     catalysts,
     dismissedIds,
     quietMode,
-    watchlistTickers,
+    watchlistSymbols,
     playbookCategories,
   ]);
 
@@ -572,9 +572,9 @@ export function LiveCatalystFeed({
   // Desk rule: don't open the split panel for unresolved names
   // (CPI / Jobs NFP macro exceptions may still open without a symbol).
   const selected =
-    selectedRaw && passesTickerFeedGate(selectedRaw) ? selectedRaw : null;
+    selectedRaw && passesSymbolFeedGate(selectedRaw) ? selectedRaw : null;
 
-  // Ticker-only is a header toggle — don't drive Clear / Filters badge from it.
+  // Symbol-only is a header toggle — don't drive Clear / Filters badge from it.
   const panelFiltersActive = !isPanelFiltersDefault(filterState);
   const filtersActive = panelFiltersActive || quietMode;
 
@@ -609,7 +609,7 @@ export function LiveCatalystFeed({
             type="button"
             onClick={() => void toggleQuietMode()}
             disabled={!prefsLoaded}
-            title="When on, only show catalysts for tickers on your watchlist that match your playbook event categories"
+            title="When on, only show catalysts for symbols on your watchlist that match your playbook event categories"
             className={cn(
               "inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-[0.82rem] font-medium transition-colors",
               quietMode
@@ -687,7 +687,7 @@ export function LiveCatalystFeed({
             total={total}
             visibleCount={visible.length}
             quietMode={quietMode}
-            watchlistCount={watchlistTickers.length}
+            watchlistCount={watchlistSymbols.length}
             playbookCount={playbookCategories.length}
             panelFiltersActive={panelFiltersActive}
             onClearFilters={clearFilters}
@@ -756,14 +756,14 @@ export function LiveCatalystFeed({
               flashIds={flashIds}
               dismissingIds={dismissingIds}
               selectedId={selectedId}
-              watchlistTickers={watchlistTickers}
+              watchlistSymbols={watchlistSymbols}
               onSelect={openSplit}
               onRead={openArticle}
               onPrefetch={prefetchQuote}
               onAct={openSplit}
               onDismiss={dismissCatalyst}
               onQuiet={handleQuiet}
-              onFilterToTicker={filterToTicker}
+              onFilterToSymbol={filterToSymbol}
               restoreScrollToSelected={Boolean(initialSelectedId)}
               hasMore={Boolean(nextCursor)}
               loadingMore={loadingMore}
@@ -879,17 +879,17 @@ function FeedFilters({
     <div className="flex flex-col gap-2.5">
       {quietMode ? (
         <p className="font-mono text-[0.72rem] text-[var(--desk-text-dim)]">
-          Quiet playbook on · {watchlistCount} watchlist ticker
+          Quiet playbook on · {watchlistCount} watchlist symbol
           {watchlistCount === 1 ? "" : "s"} · {playbookCount} categor
           {playbookCount === 1 ? "y" : "ies"} — edit under Watchlists.
         </p>
       ) : null}
       <div className="flex flex-wrap items-center gap-2">
         <Input
-          value={filterState.tickerQuery}
-          onChange={(e) => onPatchFilters({ tickerQuery: e.target.value })}
-          placeholder="Ticker, company, title…"
-          aria-label="Search by ticker, company, or title"
+          value={filterState.symbolQuery}
+          onChange={(e) => onPatchFilters({ symbolQuery: e.target.value })}
+          placeholder="Symbol, company, title…"
+          aria-label="Search by symbol, company, or title"
           className="h-8 w-52 border-[var(--desk-border-strong)] bg-[var(--desk-overlay-soft)] font-mono text-xs tracking-wide md:text-xs"
         />
         <div
@@ -1001,14 +1001,14 @@ function CatalystFeedList({
   flashIds,
   dismissingIds,
   selectedId,
-  watchlistTickers,
+  watchlistSymbols,
   onSelect,
   onRead,
   onPrefetch,
   onAct,
   onDismiss,
   onQuiet,
-  onFilterToTicker,
+  onFilterToSymbol,
   restoreScrollToSelected = false,
   hasMore = false,
   loadingMore = false,
@@ -1018,14 +1018,14 @@ function CatalystFeedList({
   flashIds: Set<number>;
   dismissingIds: Set<number>;
   selectedId: number | null;
-  watchlistTickers: string[];
+  watchlistSymbols: string[];
   onSelect: (id: number) => void;
   onRead: (id: number) => void;
   onPrefetch: (id: number) => void;
   onAct: (id: number) => void;
   onDismiss: (id: number) => void;
-  onQuiet: (ticker: string | null) => void;
-  onFilterToTicker: (ticker: string) => void;
+  onQuiet: (symbol: string | null) => void;
+  onFilterToSymbol: (symbol: string) => void;
   /** One-shot scroll to the open row after returning from article. */
   restoreScrollToSelected?: boolean;
   hasMore?: boolean;
@@ -1170,20 +1170,20 @@ function CatalystFeedList({
           const title = titleLine(catalyst);
           const tooltipTitle = titleTooltipLine(catalyst);
           const onWatchlist = Boolean(
-            catalyst.ticker &&
-            watchlistTickers.includes(catalyst.ticker.toUpperCase()),
+            catalyst.symbol &&
+            watchlistSymbols.includes(catalyst.symbol.toUpperCase()),
           );
           const renderSymbol = () =>
-            catalyst.ticker ? (
-              <TickerActionMenu
-                ticker={catalyst.ticker}
+            catalyst.symbol ? (
+              <SymbolActionMenu
+                symbol={catalyst.symbol}
                 companyName={catalyst.companyName}
                 catalystId={catalyst.id}
                 onWatchlist={onWatchlist}
-                onFilterToTicker={() => onFilterToTicker(catalyst.ticker!)}
+                onFilterToSymbol={() => onFilterToSymbol(catalyst.symbol!)}
                 onOpenPanel={() => onAct(catalyst.id)}
                 onOpenArticle={() => onRead(catalyst.id)}
-                onAddWatchlist={() => onQuiet(catalyst.ticker)}
+                onAddWatchlist={() => onQuiet(catalyst.symbol)}
                 onDismiss={() => onDismiss(catalyst.id)}
               />
             ) : (
@@ -1235,7 +1235,7 @@ function CatalystFeedList({
                   tooltipTitle={tooltipTitle}
                   companyName={catalyst.companyName}
                   eventLabel={eventLabel}
-                  ticker={catalyst.ticker}
+                  symbol={catalyst.symbol}
                 />
                 {/* Mobile: Time under Title (Symbol is the leading index col) */}
                 <div className="mt-1.5 flex flex-col gap-1 sm:hidden">
@@ -1267,9 +1267,9 @@ function CatalystFeedList({
                     <X className="size-3" />
                     Dismiss
                   </FeedActionButton>
-                  {catalyst.ticker ? (
+                  {catalyst.symbol ? (
                     <FeedActionButton
-                      onClick={() => onQuiet(catalyst.ticker)}
+                      onClick={() => onQuiet(catalyst.symbol)}
                       tip={
                         onWatchlist
                           ? "Already on your watchlist"
@@ -1326,9 +1326,9 @@ function CatalystFeedList({
                     <X className="size-3" />
                     Dismiss
                   </FeedActionButton>
-                  {catalyst.ticker ? (
+                  {catalyst.symbol ? (
                     <FeedActionButton
-                      onClick={() => onQuiet(catalyst.ticker)}
+                      onClick={() => onQuiet(catalyst.symbol)}
                       tip={
                         onWatchlist
                           ? "Already on your watchlist"
@@ -1366,14 +1366,14 @@ function FeedTitleWithTooltip({
   tooltipTitle,
   companyName,
   eventLabel,
-  ticker,
+  symbol,
 }: {
   title: string;
   /** Longer filing blurb for hover (not the truncated tape line). */
   tooltipTitle: string;
   companyName: string | null;
   eventLabel: string;
-  ticker: string | null;
+  symbol: string | null;
 }) {
   const anchorRef = useRef<HTMLSpanElement>(null);
   const [coords, setCoords] = useState<{
@@ -1383,8 +1383,10 @@ function FeedTitleWithTooltip({
   } | null>(null);
 
   const company = companyName?.trim() || null;
-  const symbol = ticker?.trim().toUpperCase() || null;
-  const meta = [symbol, company, eventLabel].filter(Boolean).join(" · ");
+  const normalizedSymbol = symbol?.trim().toUpperCase() || null;
+  const meta = [normalizedSymbol, company, eventLabel]
+    .filter(Boolean)
+    .join(" · ");
   const tip = tooltipTitle.trim() || title;
 
   const place = useCallback(() => {

@@ -51,13 +51,13 @@ interface FinnhubEarningsRow {
 }
 
 /**
- * Fetch the latest reported earnings for a ticker from Finnhub.
+ * Fetch the latest reported earnings for a symbol from Finnhub.
  * Returns null when unconfigured, empty, or on any network/API failure.
  */
-export async function fetchLatestEarningsForTicker(
-  ticker: string,
+export async function fetchLatestEarningsForSymbol(
+  raw: string,
 ): Promise<EarningsFigures | null> {
-  const symbol = ticker.trim().toUpperCase();
+  const symbol = raw.trim().toUpperCase();
   if (!/^[A-Z][A-Z0-9.]{0,11}$/.test(symbol)) return null;
 
   const cached = cacheGet(symbol);

@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import { buildMap } from "./ticker-lookup";
+import { buildMap } from "./symbol-lookup";
 
 describe("buildMap", () => {
-  it("maps CIK to ticker", () => {
+  it("maps CIK to symbol", () => {
     const map = buildMap({
       "0": { cik_str: 1141197, ticker: "PED", title: "PEDEVCO CORP" },
       "1": { cik_str: 1850079, ticker: "SOBR", title: "SOBR Safe, Inc." },
@@ -14,9 +14,9 @@ describe("buildMap", () => {
     expect(map.size).toBe(2);
   });
 
-  it("skips entries missing a cik or ticker", () => {
+  it("skips entries missing a cik or symbol", () => {
     const map = buildMap({
-      "0": { cik_str: 1141197, ticker: "", title: "No ticker" },
+      "0": { cik_str: 1141197, ticker: "", title: "No symbol" },
       // @ts-expect-error - intentionally malformed to test the guard
       "1": { ticker: "NOCIK", title: "No CIK" },
     });

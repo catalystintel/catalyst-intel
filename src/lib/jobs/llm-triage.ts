@@ -35,7 +35,7 @@ Rules (must follow exactly):
 4. Respond with ONLY valid JSON matching: {"bullets": string[], "lean": "bullish"|"bearish"|"neutral"|"uncertain", "uncertain": boolean}`;
 
 export interface TriageInput {
-  ticker?: string | null;
+  symbol?: string | null;
   companyName?: string | null;
   title: string;
   headline?: string | null;
@@ -60,7 +60,7 @@ export type AnalyzeCatalystResult =
 
 function buildUserPrompt(input: TriageInput): string {
   const lines = [
-    `Company: ${input.companyName ?? "unknown"} (${input.ticker ?? "no ticker"})`,
+    `Company: ${input.companyName ?? "unknown"} (${input.symbol ?? "no symbol"})`,
     `Form/type: ${input.type ?? "unknown"}`,
     `Category: ${input.eventCategory ?? "unknown"}`,
     `Title: ${input.title}`,
@@ -195,7 +195,7 @@ export async function analyzeCatalystOnDemand(
   const row = await db
     .select({
       id: catalysts.id,
-      ticker: catalysts.ticker,
+      symbol: catalysts.symbol,
       companyName: catalysts.companyName,
       type: catalysts.type,
       title: catalysts.title,
@@ -238,7 +238,7 @@ export async function analyzeCatalystOnDemand(
     { pctChange?: number } | null | undefined;
 
   const result = await triageCatalyst({
-    ticker: row.ticker,
+    symbol: row.symbol,
     companyName: row.companyName,
     type: row.type,
     title: row.title,

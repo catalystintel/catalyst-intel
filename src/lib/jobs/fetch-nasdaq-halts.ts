@@ -95,7 +95,7 @@ function ndaqField(item: RssItem, name: string): string | null {
 }
 
 export interface ParsedHaltFields {
-  ticker: string | null;
+  symbol: string | null;
   issueName: string | null;
   reasonCode: string | null;
   reasonLabel: string;
@@ -118,11 +118,11 @@ export interface ParsedHaltFields {
  */
 export function parseHaltRssItem(item: RssItem): ParsedHaltFields | null {
   const title = String(item.title ?? "").trim();
-  const ticker =
+  const symbol =
     ndaqField(item, "IssueSymbol")?.toUpperCase() ||
     title.match(/\b([A-Z]{1,5})\b/)?.[1] ||
     null;
-  if (!ticker && !title) return null;
+  if (!symbol && !title) return null;
 
   const issueName = ndaqField(item, "IssueName");
   const reasonCode = normalizeHaltReasonCode(ndaqField(item, "ReasonCode"));
@@ -147,11 +147,11 @@ export function parseHaltRssItem(item: RssItem): ParsedHaltFields | null {
     subcategory = "halt";
   }
 
-  const companyName = issueName?.trim() || ticker || "Unknown company";
+  const companyName = issueName?.trim() || symbol || "Unknown company";
   const displayTitle = formatHaltTitle(companyName, reasonCode);
 
   return {
-    ticker,
+    symbol,
     issueName,
     reasonCode,
     reasonLabel,
@@ -171,34 +171,34 @@ export function parseHaltRssItem(item: RssItem): ParsedHaltFields | null {
 
 /**
  * Legacy title parser kept for older tests / callers that only have the RSS
- * `<title>` (often ticker-only). Prefer {@link parseHaltRssItem}.
+ * `<title>` (often symbol-only). Prefer {@link parseHaltRssItem}.
  */
 export function parseHaltTitle(title: string): {
-  ticker: string | null;
+  symbol: string | null;
   headline: string;
   subcategory: "halt" | "halt_resumed" | "trading_halt";
 } {
   const cleaned = title.trim();
-  const tickerMatch = cleaned.match(/\b([A-Z]{1,5})\b/);
-  const ticker = tickerMatch?.[1] ?? null;
+  const symbolMatch = cleaned.match(/\b([A-Z]{1,5})\b/);
+  const symbol = symbolMatch?.[1] ?? null;
   const lower = cleaned.toLowerCase();
 
   if (/resum/.test(lower)) {
     return {
-      ticker,
+      symbol,
       headline: "Halt resumed",
       subcategory: "halt_resumed",
     };
   }
   if (/halt/.test(lower)) {
     return {
-      ticker,
+      symbol,
       headline: "Trading halt",
       subcategory: "halt",
     };
   }
   return {
-    ticker,
+    symbol,
     headline: cleaned.slice(0, 80) || "Exchange trading halt",
     subcategory: "trading_halt",
   };
@@ -211,7 +211,7 @@ function rssItemToNormalized(item: RssItem): NormalizedCatalyst | null {
   const link = item.link?.trim() || null;
   const description = stripHtml(String(item.description ?? ""));
   const structuredKey = [
-    parsed.ticker,
+    parsed.symbol,
     parsed.haltDate,
     parsed.haltTime,
     parsed.reasonCode,
@@ -244,8 +244,8 @@ function rssItemToNormalized(item: RssItem): NormalizedCatalyst | null {
 
   const summary =
     [
-      parsed.ticker,
-      parsed.companyName !== parsed.ticker ? parsed.companyName : null,
+      parsed.symbol,
+      parsed.companyName !== parsed.symbol ? parsed.companyName : null,
       parsed.reasonLabel,
       parsed.market ? `Market ${parsed.market}` : null,
       parsed.haltDate && parsed.haltTime
@@ -270,7 +270,7 @@ function rssItemToNormalized(item: RssItem): NormalizedCatalyst | null {
       pubDate: item.pubDate ?? null,
       link,
       guid,
-      issueSymbol: parsed.ticker,
+      issueSymbol: parsed.symbol,
       issueName: parsed.issueName,
       market: parsed.market,
       reasonCode: parsed.reasonCode,
@@ -286,7 +286,7 @@ function rssItemToNormalized(item: RssItem): NormalizedCatalyst | null {
         parsed.resumptionQuoteTime ||
         parsed.resumptionDate,
     },
-    ticker: parsed.ticker,
+    symbol: parsed.symbol,
     companyName: parsed.companyName,
     type: "Trading Halt",
     title: parsed.title,

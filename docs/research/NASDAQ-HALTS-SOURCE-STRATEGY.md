@@ -12,7 +12,7 @@
 
 **KEEP `nasdaq-halts` as the primary halt/resume/LULD signal. Do not replace it.**
 
-**SUPPLEMENT with parsing + static enrichment** (reason-code map, structured `rawContent`, synthetic `source_url`, better titles/summaries). Optionally join same-ticker news/filings for “why” context.
+**SUPPLEMENT with parsing + static enrichment** (reason-code map, structured `rawContent`, synthetic `source_url`, better titles/summaries). Optionally join same-symbol news/filings for “why” context.
 
 **Do not expect this feed to produce Bloomberg/Benzinga-style articles.** It is exchange operations data, not a news wire. Paid halt APIs (e.g. Benzinga HaltResume) package the same subjects with cleaner fields and human labels — buy them only if you already license that vendor for Wire, not to replace Nasdaq RSS for signal coverage.
 
@@ -24,7 +24,7 @@ Sample items (live feed, Jul 2026) look like:
 
 | Field                      | Present?                 | Example / notes                                              |
 | -------------------------- | ------------------------ | ------------------------------------------------------------ |
-| `<title>`                  | Yes                      | **Ticker only** (`STKH`, `PMI`) — not “Trading Halt”         |
+| `<title>`                  | Yes                      | **Symbol only** (`STKH`, `PMI`) — not “Trading Halt”         |
 | `<pubDate>`                | Yes                      | Often date-bucketed (midnight-ish), not always exact halt ms |
 | `<description>`            | Yes                      | HTML table (CDATA) duplicating structured fields             |
 | `<link>` / `<guid>`        | **No on items**          | Channel link is site root; items have no permalink           |
@@ -52,15 +52,15 @@ From `fetch-nasdaq-halts.ts` → `ingestNormalizedCatalysts`:
 | Stored                          | How                                           | Quality today                                                                                |
 | ------------------------------- | --------------------------------------------- | -------------------------------------------------------------------------------------------- |
 | `provider`                      | `"nasdaq-halts"`                              | OK                                                                                           |
-| `externalId`                    | `nasdaq-halts:${guid\|\|link\|\|title}`       | Falls back to **title = ticker** → weak uniqueness over time                                 |
+| `externalId`                    | `nasdaq-halts:${guid\|\|link\|\|title}`       | Falls back to **title = symbol** → weak uniqueness over time                                 |
 | `raw_sources.url` / `sourceUrl` | `item.link`                                   | **Always null** — RSS items have no `<link>`                                                 |
-| `title`                         | `` `${ticker} — ${headline}` ``               | Broken: title is ticker-only → headlines like **`STKH — STKH`** (confirmed in Turso samples) |
+| `title`                         | `` `${symbol} — ${headline}` ``               | Broken: title is symbol-only → headlines like **`STKH — STKH`** (confirmed in Turso samples) |
 | `headline` / `subcategory`      | `parseHaltTitle(title)`                       | Expects words like “halt”/“resumed” in title; **never present** → wrong subcategory          |
 | `summary`                       | HTML-stripped description                     | Ugly column-header soup, or thin                                                             |
 | `rawContent`                    | `{ title, description, pubDate, link, guid }` | **Drops all `ndaq:*` fields**                                                                |
 | `eventCategory`                 | `trading_halt`                                | OK                                                                                           |
 | `confidence`                    | 80                                            | Fine for ops signal                                                                          |
-| Company name                    | Set to ticker                                 | Ignores `ndaq:IssueName`                                                                     |
+| Company name                    | Set to symbol                                 | Ignores `ndaq:IssueName`                                                                     |
 
 UI already has hooks that assume structured halt fields (`haltDetailCard` looks for `reasonCode`, `haltTime`, `resumptionTime`, `market` in `rawContent`) — those fields are never written by the fetcher today. Reader falls back to generic synthesis (“was placed under a trading halt on Nasdaq”).
 
@@ -75,7 +75,7 @@ UI already has hooks that assume structured halt fields (`haltDetailCard` looks 
 | Subject coverage (halt / LULD / resume / regulatory) | Strong (primary exchange notice) | Strong (usually derived from exchange + desk) |
 | Latency                                              | ~1 min poll                      | Seconds on paid desk/API                      |
 | Structured facts                                     | Excellent if `ndaq:*` parsed     | Excellent + human `halt_type`                 |
-| Headline quality                                     | Ops codes / ticker               | “Trading halted — news pending”               |
+| Headline quality                                     | Ops codes / symbol               | “Trading halted — news pending”               |
 | Article body / narrative                             | None                             | Desk sentence + related news                  |
 | “Why is it moving?”                                  | Not in feed                      | Joined to Wire / filings                      |
 | Permalink                                            | None                             | Vendor deep link                              |
@@ -89,7 +89,7 @@ UI already has hooks that assume structured halt fields (`haltDetailCard` looks 
 | Source                                                   | Fit for halt subjects           | Cost / license                            | Notes                                                                                  |
 | -------------------------------------------------------- | ------------------------------- | ----------------------------------------- | -------------------------------------------------------------------------------------- |
 | **Nasdaq Trade Halt RSS (current)**                      | Best free primary               | Free; ≤1/min                              | Keep as spine                                                                          |
-| **Benzinga HaltResume** `GET /api/v1/signal/halt_resume` | Same subjects, cleaner JSON     | Paid (token); redistribute needs contract | Fields: `ticker`, `name`, `exchange`, `halt_type`, `description`, `time`, `importance` |
+| **Benzinga HaltResume** `GET /api/v1/signal/halt_resume` | Same subjects, cleaner JSON     | Paid (token); redistribute needs contract | Fields: `symbol`, `name`, `exchange`, `halt_type`, `description`, `time`, `importance` |
 | **Stock Titan / similar trackers**                       | UX wrappers on UTP/Nasdaq       | Product ToS; not a clean API for SaaS     | Scrape = fragile                                                                       |
 | **Finnhub**                                              | **No per-symbol halt endpoint** | —                                         | `/stock/market-status` = exchange open/closed only                                     |
 | **Polygon / Massive**                                    | News may _mention_ halts        | Existing key                              | Not a halt ops feed                                                                    |
@@ -115,7 +115,7 @@ UI already has hooks that assume structured halt fields (`haltDetailCard` looks 
    (or halt-search URL if you find a stable query). Fixes null Proof links without inventing a fake per-item permalink.
 5. **Stable `externalId`**: hash `symbol|haltDate|haltTime|reasonCode` (not title alone).
 6. **Subcategory**: map resume codes / non-empty resumption trade time → `halt_resumed`; LUDP/T5 → pause; T1/T2/T12/H* → `halt`.
-7. **Summary synthesis**: 2–3 sentences from ticker + company + reason label + times (UI already half-ready).
+7. **Summary synthesis**: 2–3 sentences from symbol + company + reason label + times (UI already half-ready).
 
 ### Optional scrape (low priority)
 
@@ -124,7 +124,7 @@ UI already has hooks that assume structured halt fields (`haltDetailCard` looks 
 | Trade Halt Codes page                            | Only if you refuse to hardcode the map                          | Easy HTML table; scrape monthly in a chore job |
 | Current Trade Halts HTML                         | **Low** — same fields as RSS; page is not a better article body | Fragile ASP.NET UI                             |
 | Company IR / PR after T1                         | High for “why”                                                  | Needs news join, not halt scrape               |
-| SEC EDGAR / Polygon news same ticker ± N minutes | Best free “article body” pairing                                | Already in stack; product join, not RSS scrape |
+| SEC EDGAR / Polygon news same symbol ± N minutes | Best free “article body” pairing                                | Already in stack; product join, not RSS scrape |
 
 ### Do not bother
 
@@ -144,11 +144,11 @@ UI already has hooks that assume structured halt fields (`haltDetailCard` looks 
 
 | Gap                                  | Severity    | Fix path                                                    |
 | ------------------------------------ | ----------- | ----------------------------------------------------------- |
-| Titles = `TICKER — TICKER`           | **P0**      | Parse `ndaq:*` + reason map                                 |
+| Titles = `SYMBOL — SYMBOL`           | **P0**      | Parse `ndaq:*` + reason map                                 |
 | `source_url` null                    | **P0**      | Synthetic TradeHalts URL                                    |
 | `ndaq:*` ignored; UI halt card empty | **P0**      | Persist structured raw                                      |
 | No human reason text                 | P1          | Static code → label map                                     |
-| No related news body                 | P2          | Join EDGAR / Polygon / Finnhub news on ticker               |
+| No related news body                 | P2          | Join EDGAR / Polygon / Finnhub news on symbol               |
 | ~1 min latency vs BZ RT              | P2          | Accept for free; paid only if product needs seconds         |
 | No Wire exclusives / scoops          | Product gap | Separate Benzinga News license — **not** a halt-API problem |
 
@@ -158,7 +158,7 @@ UI already has hooks that assume structured halt fields (`haltDetailCard` looks 
 
 1. **Fix fetcher** (keep source): parse `ndaq:*`, reason map, titles, `url`, `externalId`, subcategory.
 2. **Wire UI**: ensure `haltDetailCard` + article summary consume new `rawContent`.
-3. **Product join** (supplement): “Related catalysts” for same ticker in a time window after T1/T2.
+3. **Product join** (supplement): “Related catalysts” for same symbol in a time window after T1/T2.
 4. **Buy Benzinga HaltResume** only if already buying Benzinga calendar/Wire — never as a sole replacement for Nasdaq RSS.
 
 ---

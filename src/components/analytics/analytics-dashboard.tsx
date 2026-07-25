@@ -6,7 +6,7 @@ import { toast } from "sonner";
 
 import { CategoryBreakdownChart } from "@/components/analytics/category-breakdown-chart";
 import { StatStrip } from "@/components/analytics/stat-strip";
-import { TopTickersWidget } from "@/components/analytics/top-tickers-widget";
+import { TopSymbolsWidget } from "@/components/analytics/top-symbols-widget";
 import { VolumeTrendChart } from "@/components/analytics/volume-trend-chart";
 import { SkeletonCard } from "@/components/loading-skeleton";
 import type { AnalyticsSummary } from "@/lib/catalysts/analytics";
@@ -137,7 +137,7 @@ export function AnalyticsDashboard() {
         <>
           <StatStrip
             totalCount={summary.totalCount}
-            activeTickerCount={summary.activeTickerCount}
+            activeSymbolCount={summary.activeSymbolCount}
           />
 
           <Panel title="Catalysts by category">
@@ -148,8 +148,8 @@ export function AnalyticsDashboard() {
             <VolumeTrendChart data={summary.volumeSeries} window={window_} />
           </Panel>
 
-          <Panel title="Top tickers">
-            <TopTickersWidget tickers={summary.topTickers} />
+          <Panel title="Top symbols">
+            <TopSymbolsWidget symbols={summary.topSymbols} />
           </Panel>
         </>
       )}

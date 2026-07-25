@@ -138,7 +138,7 @@ Visit [http://localhost:3000](http://localhost:3000).
 ### 7. Populate real data
 
 Sign in as an allowlisted admin, go to `/admin`, and click **"Fetch SEC EDGAR now"**. This pulls
-the latest 8-K filings from SEC EDGAR's free feed, resolves tickers where possible, and stores
+the latest 8-K filings from SEC EDGAR's free feed, resolves symbols where possible, and stores
 them. Then check `/catalyst-feed` (Live) to see them listed.
 
 ### 8. (Optional) Keep data flowing continuously while developing

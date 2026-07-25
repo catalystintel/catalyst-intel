@@ -40,7 +40,7 @@ export interface CatalystArticleViewProps {
   whyMoving?: string | null;
   /** Up to three takeaway bullets. */
   takeaways?: string[];
-  relatedTickers?: string[];
+  relatedSymbols?: string[];
   thumbUrl?: string | null;
   deltaSincePublish?: DeltaSincePublish | null;
   /** Soft-fail vendor enrichment (profile / related / quote). */
@@ -68,7 +68,7 @@ export function CatalystArticleView({
   detailCards = [],
   whyMoving = null,
   takeaways = [],
-  relatedTickers = [],
+  relatedSymbols = [],
   thumbUrl = null,
   deltaSincePublish = null,
   enrichment = null,
@@ -79,7 +79,7 @@ export function CatalystArticleView({
     : null;
   const subcategory = catalyst.subcategory?.replace(/_/g, " ") || null;
   const panelAnalog = benzingaPanelForCategory(catalyst.eventCategory);
-  const ticker = catalyst.ticker?.trim().toUpperCase() || null;
+  const symbol = catalyst.symbol?.trim().toUpperCase() || null;
   const eventTitle = titleLine(catalyst);
 
   return (
@@ -113,21 +113,21 @@ export function CatalystArticleView({
 
       <header className="flex flex-col gap-3">
         <div className="flex flex-wrap items-center gap-2">
-          {ticker ? (
+          {symbol ? (
             <span className="font-mono text-2xl font-semibold tracking-tight text-[var(--desk-text)] sm:text-3xl">
-              {ticker}
+              {symbol}
             </span>
           ) : (
             <span className="rounded-sm border border-[var(--desk-warn-border)] bg-[var(--desk-warn-bg)] px-2 py-1 font-mono text-[0.7rem] tracking-wide text-[var(--desk-warn-text)] uppercase">
-              Ticker unresolved
+              Symbol unresolved
             </span>
           )}
-          {relatedTickers.length > 0 ? (
+          {relatedSymbols.length > 0 ? (
             <div
               className="flex flex-wrap items-center gap-1.5"
-              aria-label="Related tickers"
+              aria-label="Related symbols"
             >
-              {relatedTickers.map((t) => (
+              {relatedSymbols.map((t) => (
                 <span
                   key={t}
                   className="rounded-sm border border-[var(--desk-border-strong)] bg-[var(--desk-overlay-soft)] px-1.5 py-0.5 font-mono text-[0.7rem] tracking-wide text-[var(--desk-text-secondary)] transition-colors hover:border-[var(--desk-text-dim)] hover:text-[var(--desk-text)]"
@@ -159,9 +159,9 @@ export function CatalystArticleView({
           </p>
         ) : null}
 
-        {!ticker ? (
+        {!symbol ? (
           <p className="font-mono text-[0.72rem] leading-snug text-[var(--desk-text-dim)]">
-            No tradable ticker on this catalyst — use the summary and article
+            No tradable symbol on this catalyst — use the summary and article
             body below.
           </p>
         ) : null}

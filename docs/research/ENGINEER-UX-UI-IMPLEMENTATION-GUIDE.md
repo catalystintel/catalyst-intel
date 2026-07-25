@@ -90,7 +90,7 @@ From `Catalyst-Intel-Client-Architecture-and-Flow.md` §5 and Client Target Guid
 | -------------------------- | ----------------- | ------------------------------------------------ |
 | `/dashboard`               | Live triage       | Soft-poll tape (`live-catalyst-feed.tsx`)        |
 | `/dashboard/catalyst/[id]` | In-app Read       | Article view (`catalyst-article-view.tsx`)       |
-| `/watchlist`               | Quiet playbook    | Tickers + category chips                         |
+| `/watchlist`               | Quiet playbook    | Symbols + category chips                         |
 | `/alerts`                  | Away desk         | Webhook / email rules (push stub)                |
 | Archive / Search           | Post-hoc research | **Gap** — Phase 2 in roadmap                     |
 | `/admin`                   | Ops only          | Fetch SEC EDGAR, ingest health (allowlisted)     |
@@ -108,7 +108,7 @@ Sources: Architecture §8, `Catalyst-Intel-JTBD-UX-UI.md`, `ENGINEER-UX-FEATURE-
 5. Flash new rows briefly (`row-flash`). Offer a “N new” jump-to-top control when scrolled.
 6. Keep chrome thin: filters + Quiet toggle + freshness. No hero, no promo strip, no card grid of stats above the blotter.
 7. Optional split panel (chart/quote) must stay secondary to the tape — tape remains the decision surface.
-8. **Symbol click** opens drawer/split with chart, multi-timeframe quote, and correlated ticker news (Visual §1A-C).
+8. **Symbol click** opens drawer/split with chart, multi-timeframe quote, and correlated symbol news (Visual §1A-C).
 
 ### Pre-login / marketing (`/`)
 
@@ -128,14 +128,14 @@ Sources: Architecture §8, `Catalyst-Intel-JTBD-UX-UI.md`, `ENGINEER-UX-FEATURE-
 
 ### Product decision (Jul 2026 JTBD) — implement against this
 
-**Decision:** default blotter columns are **Symbol · Title · Time** (Symbol first as row index; not Title · Time · Event · Ticker).  
+**Decision:** default blotter columns are **Symbol · Title · Time** (Symbol first as row index; not Title · Time · Event · Symbol).  
 Keep the **Action** toolbar (Read · Dismiss · Quiet). Full acceptance + provider gaps: [`ENGINEER-UX-FEATURE-ROADMAP-VISUAL.md`](./ENGINEER-UX-FEATURE-ROADMAP-VISUAL.md) §1A.
 
 Live blotter columns on desktop (`live-catalyst-feed.tsx`):
 
 | Column     | Content                                            | Rules                                                                                                                              |
 | ---------- | -------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| **Symbol** | Ticker or `—`                                      | Leading index column. Mono, semibold. Clickable when present → drawer / split (§4C).                                               |
+| **Symbol** | Symbol or `—`                                      | Leading index column. Mono, semibold. Clickable when present → drawer / split (§4C).                                               |
 | **Title**  | Headline preferred, else filing title              | Truncate on desktop; 2-line clamp on mobile. **No** source/provider under the title; strip provider prefixes (`stripSourceNames`). |
 | **Time**   | Event occurrence in **ET** (`catalysts.timestamp`) | Use `formatTimeDate` / `formatClockTime`. **Never** show DB insert time as event time. `tabular-nums`.                             |
 | **Action** | Hover / focus toolbar                              | Read · Dismiss · Quiet. Own column so buttons never overlap Time.                                                                  |
@@ -161,9 +161,9 @@ When the **Earnings** filter is active, replace default columns with:
 
 Clicking **Symbol** opens `catalyst-detail-drawer.tsx` or `tape-split-panel.tsx` (tape stays primary) with:
 
-1. Price chart for that ticker
+1. Price chart for that symbol
 2. Quote + change across available timeframes
-3. Correlated news/catalysts for that ticker (keyword / ticker join) → in-app Read
+3. Correlated news/catalysts for that symbol (keyword / symbol join) → in-app Read
 
 Honest empty states when market APIs are unkeyed.
 
@@ -179,7 +179,7 @@ Honest empty states when market APIs are unkeyed.
 
 | Control                 | Behavior                                                                                          |
 | ----------------------- | ------------------------------------------------------------------------------------------------- |
-| Ticker / company search | Filter visible tape                                                                               |
+| Symbol / company search | Filter visible tape                                                                               |
 | Time window             | **1h / 4h / 24h / All**                                                                           |
 | Primary category chips  | **All → Earnings → FDA Approvals → Clinical Trials → IPO → Gov Reports** (UX order; Visual §1A-D) |
 | Quiet playbook toggle   | Persists via `/api/playbook`; filters by watchlist + playbook categories                          |
@@ -197,8 +197,8 @@ Wire each primary chip to real ingest (openFDA, ClinicalTrials.gov, Finnhub earn
 Research / older shipped grammar also mentioned:
 
 - Mental model: `Source \| Sector \| Title \| Time·date` (Client Target)
-- Earlier JTBD preview: `Ticker/Event · Sector · Impact · Title · Proof · Time`
-- Prior implementation guide: **Title · Time · Event · Ticker · Action**
+- Earlier JTBD preview: `Symbol/Event · Sector · Impact · Title · Proof · Time`
+- Prior implementation guide: **Title · Time · Event · Symbol · Action**
 
 Those are **historical**. **Current product grammar is Symbol · Title · Time (+ Action)**; Earnings filter uses the alternate schema above. If you change columns again, update this guide, the [simple guide](./ENGINEER-UX-UI-GUIDE-SIMPLE.md), Visual §1A, and `Catalyst-Intel-JTBD-UX-UI.md` in the same PR.
 
@@ -280,7 +280,7 @@ Sources: `taxonomy.ts`, Benzinga source map, Client Summary taxonomy notes, Clie
 | **Read**    | Hover toolbar (lg+) | Opens **in-app article** `/dashboard/catalyst/[id]`                              | Primary deep-read path. Amber / primary variant OK.             |
 | **Act**     | Hover toolbar       | Opens / focuses **detail drawer** for quick triage                               | Does **not** mutate DB. Keyboard: row Enter/Space also selects. |
 | **Dismiss** | Hover toolbar       | Hides row in this browser (`localStorage` `ci.dismissed-catalyst-ids`, last 200) | Does **not** delete the DB row. Animate out (`row-dismiss`).    |
-| **Quiet**   | Hover toolbar       | Adds ticker to quiet watchlist                                                   | Disabled if already on watchlist. No ticker → hide button.      |
+| **Quiet**   | Hover toolbar       | Adds symbol to quiet watchlist                                                   | Disabled if already on watchlist. No symbol → hide button.      |
 
 ### Interaction rules
 
@@ -293,7 +293,7 @@ Sources: `taxonomy.ts`, Benzinga source map, Client Summary taxonomy notes, Clie
 ### Quiet playbook (related)
 
 - Header toggle **Quiet playbook** persists via playbook API.
-- Quiet on + watchlist non-empty → only watchlist tickers whose category is in playbook.
+- Quiet on + watchlist non-empty → only watchlist symbols whose category is in playbook.
 - Quiet on + empty watchlist → playbook categories only.
 - Quiet off → normal filters only.
 - Empty quiet copy: _“Quiet playbook: no watchlist/playbook matches right now.”_
@@ -312,7 +312,7 @@ Sources: `Catalyst-Intel-Internal-Article-View.md`, `Catalyst-Intel-Benzinga-Lik
 ```
 ← Live tape                          In-app article
 ──────────────────────────────────────────────────
-TICKER   [related chips…]     Category · Materiality
+SYMBOL   [related chips…]     Category · Materiality
 Headline
 Company
 
@@ -337,7 +337,7 @@ Filing items · Tags
 ### Concrete rules
 
 1. **Back link** to Live tape at top.
-2. **Ticker-first** header (large mono). Related tickers as secondary chips when data exists.
+2. **Symbol-first** header (large mono). Related symbols as secondary chips when data exists.
 3. **WIIM strip** (`whyMoving`): one bordered line above summary — highest triage upgrade (P0).
 4. **Takeaways**: prefer 3 short bullets over essay prose (P0). Fallback to short paragraph if bullets empty.
 5. **Summary source**: prefer stored `catalysts.summary`; else extractive from body; never invent numbers.
@@ -347,14 +347,14 @@ Filing items · Tags
 9. **Semantic highlights** for Beats/Misses and key catalyst verbs — accent tokens only, not full-row green/red chrome.
 10. **Enrichment** (profile / related / quote) soft-fails; never block the page.
 11. **Historical reaction**: placeholder only until real analogs ship — **no fake numbers** (`ACCEPTANCE-JTBD.md` JTBD 5).
-12. Drawer (Act path) repeats ticker, category, materiality, proof, filing items, and score reasons — same trust rules as article.
+12. Drawer (Act path) repeats symbol, category, materiality, proof, filing items, and score reasons — same trust rules as article.
 
 ### Borrow vs do not borrow (Benzinga IA)
 
 | Mirror                                       | Do not mirror                     |
 | -------------------------------------------- | --------------------------------- |
-| Ticker-first, WIIM one-liner, bullet summary | Loud green/red chrome everywhere  |
-| Related ticker chips, density over imagery   | Squawk as v1 requirement          |
+| Symbol-first, WIIM one-liner, bullet summary | Loud green/red chrome everywhere  |
+| Related symbol chips, density over imagery   | Squawk as v1 requirement          |
 | Compact thumb + Δ (non-hero)                 | Magazine hero + overlay badges    |
 | Quick open-source actions                    | Multi-panel workspace inside Read |
 
@@ -367,7 +367,7 @@ Filing items · Tags
 
 - `--font-sans` → Inter (body / UI)
 - `--font-heading` → Roboto (`h1`–`h6`)
-- `--font-mono` → Inter with `font-variant-numeric: tabular-nums` for times, prices, tickers
+- `--font-mono` → Inter with `font-variant-numeric: tabular-nums` for times, prices, symbols
 
 If you are on an older deploy without this, note PR **#103** (Inter + Roboto desk fonts) and match that merge.
 
@@ -377,7 +377,7 @@ If you are on an older deploy without this, note PR **#103** (Inter + Roboto des
 | --------------------------------------------- | -------------------------------- | ---------------------------- |
 | Body, buttons, filters, article prose         | `font-sans` (Inter)              | Default on `<body>`          |
 | Page / section headings                       | `font-heading` (Roboto)          | Already applied to `h1`–`h6` |
-| Tickers, times, scores, column headers, chips | `font-mono` + tabular nums       | Align digits in columns      |
+| Symbols, times, scores, column headers, chips | `font-mono` + tabular nums       | Align digits in columns      |
 | Feed title line                               | Sans medium, tight tracking      | Scannable, not display-serif |
 | Do not                                        | System Inter/Roboto mix randomly | Keep tokens in `globals.css` |
 
@@ -530,7 +530,7 @@ Work top to bottom. Check off in the PR description when relevant.
 - [ ] Time = event ET timestamp with `tabular-nums`; never DB insert time
 - [ ] Event labels from `eventLabel` / `CATEGORY_LABELS` — no duplicate maps
 - [ ] Soft-poll + Last updated + stale honesty
-- [ ] Filters: ticker, time window (1h/4h/24h/All), category chips
+- [ ] Filters: symbol, time window (1h/4h/24h/All), category chips
 - [ ] Quiet playbook toggle wired to playbook API
 - [ ] Row flash for new items; dismiss animation without DB delete
 
@@ -539,13 +539,13 @@ Work top to bottom. Check off in the PR description when relevant.
 - [ ] **Read** → in-app article
 - [ ] **Act** → drawer (no DB mutate)
 - [ ] **Dismiss** → localStorage list (cap 200)
-- [ ] **Quiet** → add ticker to watchlist when present
+- [ ] **Quiet** → add symbol to watchlist when present
 - [ ] Desktop hover toolbar; mobile always-visible actions
 - [ ] Proof / original opens new tab; does not replace Read
 
 ### D. Article (`/dashboard/catalyst/[id]`)
 
-- [ ] Ticker-first header + category + materiality
+- [ ] Symbol-first header + category + materiality
 - [ ] WIIM one-liner above summary when available
 - [ ] Bullet takeaways (3) preferred over long prose
 - [ ] Summary grounded in stored text; secondary Original CTA

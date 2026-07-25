@@ -4,7 +4,7 @@ import { deliverAlertRules, type AlertCatalystPayload } from "./deliver";
 
 const catalyst: AlertCatalystPayload = {
   id: 1,
-  ticker: "NVDA",
+  symbol: "NVDA",
   headline: "Earnings / results",
   title: "NVIDIA — 8-K",
   eventCategory: "earnings",
@@ -36,10 +36,10 @@ describe("deliverAlertRules", () => {
     expect(results[0].detail.toLowerCase()).toContain("coming soon");
   });
 
-  it("skips when watchlistOnly and ticker not on watchlist", async () => {
+  it("skips when watchlistOnly and symbol not on watchlist", async () => {
     const results = await deliverAlertRules({
       catalyst,
-      watchlistTickers: ["AAPL"],
+      watchlistSymbols: ["AAPL"],
       rules: [
         {
           id: 3,

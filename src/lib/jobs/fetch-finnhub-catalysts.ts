@@ -45,6 +45,7 @@ interface FdaRow {
   date?: string;
 }
 
+/** Wire shape from Finnhub /stock/profile2 — vendor field is `ticker`. */
 interface ProfileRow {
   ticker?: string;
   name?: string;
@@ -160,7 +161,7 @@ export function earningsToNormalized(
     externalId,
     url: `https://finnhub.io/quote/${symbol}`,
     rawContent: row,
-    ticker: symbol,
+    symbol: symbol,
     companyName: displayName,
     type: "Earnings",
     title: displayTitle,
@@ -205,7 +206,7 @@ export function fdaToNormalized(row: FdaRow): NormalizedCatalyst | null {
     externalId,
     url: null,
     rawContent: row,
-    ticker: symbol,
+    symbol: symbol,
     companyName,
     type: isApproval ? "FDA Approval" : "FDA Calendar",
     title: isApproval
@@ -250,7 +251,7 @@ export function recommendationToNormalized(
     externalId: `finnhub:rec:${symbol}:${period}`,
     url: `https://finnhub.io/quote/${symbol}`,
     rawContent: { ...row, symbol },
-    ticker: symbol,
+    symbol: symbol,
     companyName: symbol,
     type: "Analyst Actions",
     title: formatAnalystRatingTitle(symbol),
@@ -303,7 +304,7 @@ export function priceTargetToNormalized(
     externalId: `finnhub:pt:${symbol}:${updated}`,
     url: `https://finnhub.io/quote/${symbol}`,
     rawContent: { ...row, symbol },
-    ticker: symbol,
+    symbol: symbol,
     companyName: symbol,
     type: "Analyst Actions",
     title: formatPriceTargetTitle(symbol),
@@ -351,7 +352,7 @@ export function companyNewsToNormalized(
     externalId: `finnhub:news:${id}`,
     url: row.url ?? null,
     rawContent: row,
-    ticker: symbol,
+    symbol: symbol,
     companyName: symbol,
     type: "Company News",
     title: headline,
@@ -390,7 +391,7 @@ export function ipoToNormalized(row: IpoRow): NormalizedCatalyst | null {
     externalId: `finnhub:ipo:${key}`,
     url: null,
     rawContent: row,
-    ticker: symbol,
+    symbol: symbol,
     companyName: name,
     type: "IPO Calendar",
     title: `${name}${symbol ? ` (${symbol})` : ""} — IPO ${date}`,
@@ -481,7 +482,7 @@ export async function fetchFinnhubCatalysts(options?: {
       }
       if (profile?.ticker || symbol) {
         await upsertCompanyProfile({
-          ticker: profile?.ticker || symbol,
+          symbol: profile?.ticker || symbol,
           name: profile?.name,
           industry: profile?.finnhubIndustry,
           marketCapMillions: profile?.marketCapitalization,
@@ -600,7 +601,7 @@ export async function fetchFinnhubCatalysts(options?: {
       });
       if (profile?.ticker) {
         await upsertCompanyProfile({
-          ticker: profile.ticker,
+          symbol: profile.ticker,
           name: profile.name,
           industry: profile.finnhubIndustry,
           marketCapMillions: profile.marketCapitalization,

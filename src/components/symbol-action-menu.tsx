@@ -13,26 +13,26 @@ import {
 import { cn } from "@/lib/utils";
 
 /**
- * Ticker cell menu: filter tape, open panel/article, watchlist, dismiss.
- * Dropdown opens with ticker + company identity above the actions.
+ * Symbol cell menu: filter tape, open panel/article, watchlist, dismiss.
+ * Dropdown opens with symbol + company identity above the actions.
  */
-export function TickerActionMenu({
-  ticker,
+export function SymbolActionMenu({
+  symbol,
   companyName = null,
   catalystId,
   onWatchlist,
-  onFilterToTicker,
+  onFilterToSymbol,
   onOpenPanel,
   onOpenArticle,
   onAddWatchlist,
   onDismiss,
 }: {
-  ticker: string;
+  symbol: string;
   /** Display name for hover + menu header (optional). */
   companyName?: string | null;
   catalystId: number;
   onWatchlist: boolean;
-  onFilterToTicker: () => void;
+  onFilterToSymbol: () => void;
   onOpenPanel: () => void;
   /** Prefer in-place article modal over navigating away. */
   onOpenArticle?: () => void;
@@ -41,13 +41,13 @@ export function TickerActionMenu({
 }) {
   const router = useRouter();
   const name = companyName?.trim() || null;
-  const hoverLabel = name ? `${ticker} · ${name}` : `${ticker} actions`;
+  const hoverLabel = name ? `${symbol} · ${name}` : `${symbol} actions`;
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
         className={cn(
-          "group/ticker relative truncate font-mono text-[0.88rem] font-semibold tracking-tight text-[var(--desk-text)] transition-colors",
+          "group/symbol relative truncate font-mono text-[0.88rem] font-semibold tracking-tight text-[var(--desk-text)] transition-colors",
           "hover:text-[var(--desk-live)] focus-visible:text-[var(--desk-live)] focus-visible:outline-none",
           "-mx-0.5 rounded-sm px-0.5",
         )}
@@ -56,7 +56,7 @@ export function TickerActionMenu({
         onClick={(e) => e.stopPropagation()}
         onKeyDown={(e) => e.stopPropagation()}
       >
-        {ticker}
+        {symbol}
         {name ? (
           <span
             role="tooltip"
@@ -65,7 +65,7 @@ export function TickerActionMenu({
               "rounded-sm border border-[var(--desk-border-strong)] bg-[var(--desk-panel)] px-2 py-1",
               "font-sans text-[0.68rem] leading-snug font-normal tracking-normal text-[var(--desk-text-secondary)] shadow-md",
               "opacity-0 transition-opacity duration-150",
-              "group-hover/ticker:opacity-100 group-focus-visible/ticker:opacity-100",
+              "group-hover/symbol:opacity-100 group-focus-visible/symbol:opacity-100",
             )}
           >
             {name}
@@ -79,7 +79,7 @@ export function TickerActionMenu({
       >
         <div className="px-2.5 py-2">
           <p className="font-mono text-sm font-semibold tracking-tight text-[var(--desk-live)]">
-            {ticker}
+            {symbol}
           </p>
           {name ? (
             <p className="mt-0.5 line-clamp-2 font-sans text-[0.78rem] leading-snug text-[var(--desk-text-secondary)]">
@@ -94,10 +94,10 @@ export function TickerActionMenu({
         <DropdownMenuSeparator className="bg-[var(--desk-border)]" />
         <DropdownMenuItem
           className="font-mono text-[0.72rem]"
-          onClick={onFilterToTicker}
+          onClick={onFilterToSymbol}
         >
           <Filter className="size-3.5" />
-          Filter tape to {ticker}
+          Filter tape to {symbol}
         </DropdownMenuItem>
         <DropdownMenuItem
           className="font-mono text-[0.72rem]"

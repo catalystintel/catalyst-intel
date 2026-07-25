@@ -97,7 +97,7 @@ Nav order:
 
 ### Watchlist — `/watchlist`
 
-- Tickers + playbook categories
+- Symbols + playbook categories
 - Powers Quiet mode on the feed
 
 ### Alerts — `/alerts`
@@ -124,10 +124,10 @@ Use this order:
 
 1. **Title** — headline
 2. **Time** — when the event happened (ET)
-3. **Symbol** — ticker
+3. **Symbol** — symbol
 4. **Action** — Read / Act / Dismiss / Quiet
 
-**Changed from** Title · Time · Event · Ticker. Event is **not** a primary column anymore (filters + Read/drawer only).  
+**Changed from** Title · Time · Event · Symbol. Event is **not** a primary column anymore (filters + Read/drawer only).  
 Full acceptance: [Visual roadmap §1A](./ENGINEER-UX-FEATURE-ROADMAP-VISUAL.md).
 
 ### Earnings filter columns
@@ -152,8 +152,8 @@ Period = Q1 / Q2 / Q3 / Q4 only.
 
 ### Symbol
 
-- Mono ticker or `—`
-- Click opens drawer / split: chart, quote changes, correlated news for that ticker
+- Mono symbol or `—`
+- Click opens drawer / split: chart, quote changes, correlated news for that symbol
 
 ### Event (not a blotter column)
 
@@ -169,7 +169,7 @@ Period = Q1 / Q2 / Q3 / Q4 only.
 5. IPO
 6. Gov Reports
 
-Also keep: ticker search, time window (1h / 4h / 24h / All), Quiet playbook toggle.
+Also keep: symbol search, time window (1h / 4h / 24h / All), Quiet playbook toggle.
 
 ### Sort
 
@@ -216,8 +216,8 @@ Each feed row needs these four actions.
 
 ### Quiet
 
-- Add the ticker to the quiet watchlist
-- Hide the button if there is no ticker
+- Add the symbol to the quiet watchlist
+- Hide the button if there is no symbol
 - Disable if already on the watchlist
 
 ### Proof / original source
@@ -228,7 +228,7 @@ Each feed row needs these four actions.
 
 ### Quiet playbook (header toggle)
 
-- On + watchlist set → only those tickers in playbook categories
+- On + watchlist set → only those symbols in playbook categories
 - On + empty watchlist → playbook categories only
 - Off → normal filters only
 
@@ -241,7 +241,7 @@ Each feed row needs these four actions.
 Build the page in this order:
 
 1. Back to Live tape
-2. Large **ticker**
+2. Large **symbol**
 3. Category + materiality
 4. Headline + company
 5. **WHY IT'S MOVING** (one line)
@@ -254,7 +254,7 @@ Build the page in this order:
 
 ### Must do
 
-- Ticker first
+- Symbol first
 - WIIM one-liner above the long summary
 - Bullets over essay prose
 - Ground text in stored source data
@@ -283,7 +283,7 @@ Build the page in this order:
 
 - **Inter** — body and UI
 - **Roboto** — headings
-- **Tabular numbers** — times, prices, tickers (`font-mono`)
+- **Tabular numbers** — times, prices, symbols (`font-mono`)
 
 Files: `src/app/layout.tsx`, `src/app/globals.css`
 
@@ -365,12 +365,12 @@ Do these in order when you change UX.
 8. Read → article
 9. Act → drawer (no DB write)
 10. Dismiss → local hide only
-11. Quiet → add ticker
+11. Quiet → add symbol
 12. Proof → new tab
 
 ### Article
 
-13. Ticker first
+13. Symbol first
 14. WIIM one-liner
 15. Three summary bullets
 16. Original source secondary

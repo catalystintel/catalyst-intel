@@ -26,7 +26,7 @@ describe("earningsToNormalized", () => {
     );
     expect(item).toMatchObject({
       provider: "finnhub",
-      ticker: "AAPL",
+      symbol: "AAPL",
       companyName: "Apple Inc.",
       type: "Earnings",
       title: "Earnings Report Q1 - Apple Inc.",
@@ -36,7 +36,7 @@ describe("earningsToNormalized", () => {
     });
   });
 
-  it("derives quarter from date and falls back to ticker for the name", () => {
+  it("derives quarter from date and falls back to symbol for the name", () => {
     const item = earningsToNormalized({
       symbol: "MSFT",
       date: "2026-04-24",
@@ -90,7 +90,7 @@ describe("recommendationToNormalized", () => {
     });
     expect(item).toMatchObject({
       provider: "finnhub",
-      ticker: "NVDA",
+      symbol: "NVDA",
       eventCategory: "analyst",
       subcategory: "recommendation_trend",
       type: "Analyst Actions",
@@ -161,7 +161,7 @@ describe("companyNewsToNormalized", () => {
     });
     expect(item).toMatchObject({
       provider: "finnhub",
-      ticker: "NVDA",
+      symbol: "NVDA",
       eventCategory: "analyst",
       subcategory: "upgrade",
     });
@@ -193,7 +193,7 @@ describe("ipoToNormalized", () => {
     ).toMatchObject({
       eventCategory: "capital",
       subcategory: "ipo_priced",
-      ticker: "ACME",
+      symbol: "ACME",
     });
   });
 

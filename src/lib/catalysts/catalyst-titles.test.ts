@@ -38,7 +38,7 @@ describe("resolveDisplayCompanyName", () => {
     );
   });
 
-  it("falls back through ticker then Unknown company", () => {
+  it("falls back through symbol then Unknown company", () => {
     expect(resolveDisplayCompanyName(undefined, "", "AAPL")).toBe("AAPL");
     expect(resolveDisplayCompanyName(null, "  ")).toBe("Unknown company");
   });
@@ -115,7 +115,7 @@ describe("earningsQuarterLabel + formatEarningsReportTitle", () => {
     ).toBe("Earnings Report Q2 - Microsoft Corporation");
   });
 
-  it("falls back to ticker / Unknown company, not a bare empty name", () => {
+  it("falls back to symbol / Unknown company, not a bare empty name", () => {
     expect(formatEarningsReportTitle("Q4", "AAPL")).toBe(
       "Earnings Report Q4 - AAPL",
     );

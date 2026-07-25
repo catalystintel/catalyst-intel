@@ -12,7 +12,7 @@ import {
 
 /** Minimal row shape the aggregation needs - a subset of the `catalysts` table. */
 export interface AnalyticsRow {
-  ticker: string | null;
+  symbol: string | null;
   eventCategory: string | null;
   impactScore: number | null;
   timestamp: string;
@@ -36,8 +36,8 @@ export interface SectorCount {
   count: number;
 }
 
-export interface TickerStat {
-  ticker: string;
+export interface SymbolStat {
+  symbol: string;
   count: number;
   avgImpact: number;
 }
@@ -50,19 +50,19 @@ export interface VolumePoint {
 export interface AnalyticsSummary {
   totalCount: number;
   highImpactCount: number;
-  activeTickerCount: number;
+  activeSymbolCount: number;
   avgImpactScore: number;
   categoryCounts: CategoryCount[];
   materialityCounts: MaterialityCounts;
   sectorCounts: SectorCount[];
-  topTickers: TickerStat[];
+  topSymbols: SymbolStat[];
   volumeSeries: VolumePoint[];
 }
 
 /**
  * Aggregates a window of catalyst rows into the shapes the Analytics
  * dashboard's widgets render directly - counts by category/materiality/
- * sector, top tickers, and a time-bucketed volume series. Kept separate
+ * sector, top symbols, and a time-bucketed volume series. Kept separate
  * from the route handler (src/app/api/analytics/route.ts) so it's plain,
  * synchronous, and easy to test without a database.
  */
@@ -74,7 +74,7 @@ export function buildAnalyticsSummary(
   const categoryCounts = new Map<EventCategoryKey, number>();
   const materialityCounts: MaterialityCounts = { high: 0, medium: 0, low: 0 };
   const sectorCounts = new Map<string, number>();
-  const tickerStats = new Map<string, { count: number; totalImpact: number }>();
+  const symbolStats = new Map<string, { count: number; totalImpact: number }>();
   let impactSum = 0;
   let impactCount = 0;
 
@@ -91,11 +91,11 @@ export function buildAnalyticsSummary(
       sectorCounts.set(row.sector, (sectorCounts.get(row.sector) ?? 0) + 1);
     }
 
-    if (row.ticker) {
-      const entry = tickerStats.get(row.ticker) ?? { count: 0, totalImpact: 0 };
+    if (row.symbol) {
+      const entry = symbolStats.get(row.symbol) ?? { count: 0, totalImpact: 0 };
       entry.count += 1;
       entry.totalImpact += row.impactScore ?? 0;
-      tickerStats.set(row.ticker, entry);
+      symbolStats.set(row.symbol, entry);
     }
 
     if (typeof row.impactScore === "number") {
@@ -107,7 +107,7 @@ export function buildAnalyticsSummary(
   return {
     totalCount: rows.length,
     highImpactCount: materialityCounts.high,
-    activeTickerCount: tickerStats.size,
+    activeSymbolCount: symbolStats.size,
     avgImpactScore: impactCount > 0 ? Math.round(impactSum / impactCount) : 0,
     categoryCounts: [...categoryCounts.entries()]
       .map(([category, count]) => ({
@@ -121,9 +121,9 @@ export function buildAnalyticsSummary(
       .map(([sector, count]) => ({ sector, count }))
       .sort((a, b) => b.count - a.count)
       .slice(0, 8),
-    topTickers: [...tickerStats.entries()]
-      .map(([ticker, { count, totalImpact }]) => ({
-        ticker,
+    topSymbols: [...symbolStats.entries()]
+      .map(([symbol, { count, totalImpact }]) => ({
+        symbol,
         count,
         avgImpact: Math.round(totalImpact / count),
       }))

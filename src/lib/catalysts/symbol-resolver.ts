@@ -1,8 +1,8 @@
 /**
  * Resolves a sponsor / issuer name string (openFDA `sponsor_name`,
- * ClinicalTrials.gov lead sponsor, etc.) into a tradable ticker.
+ * ClinicalTrials.gov lead sponsor, etc.) into a tradable symbol.
  *
- * Without this, FDA and clinical-trial rows are permanently `ticker: null` —
+ * Without this, FDA and clinical-trial rows are permanently `symbol: null` —
  * unusable for watchlist matching, quiet mode, or alerts. See
  * docs/research/Catalyst-Intel-Sources-and-Schema-Recommendation.md.
  *
@@ -15,13 +15,13 @@
  * be honest about how sure we are — never silently guess.
  */
 
-import { getTickerRecords } from "@/lib/jobs/ticker-lookup";
+import { getSymbolRecords } from "@/lib/jobs/symbol-lookup";
 import { getFinnhubApiKey } from "@/lib/jobs/vendor-env";
-import type { TickerSource } from "@/db/schema";
+import type { SymbolSource } from "@/db/schema";
 
-export interface ResolvedTicker {
-  ticker: string;
-  source: Exclude<TickerSource, "vendor" | "sec-cik-map" | "unresolved">;
+export interface ResolvedSymbol {
+  symbol: string;
+  source: Exclude<SymbolSource, "vendor" | "sec-cik-map" | "unresolved">;
   confidence: number;
 }
 
@@ -40,7 +40,7 @@ export function normalizeCompanyName(name: string): string {
 
 const MIN_FUZZY_LENGTH = 6;
 
-async function resolveViaFinnhub(name: string): Promise<ResolvedTicker | null> {
+async function resolveViaFinnhub(name: string): Promise<ResolvedSymbol | null> {
   const apiKey = getFinnhubApiKey();
   if (!apiKey) return null;
 
@@ -68,7 +68,7 @@ async function resolveViaFinnhub(name: string): Promise<ResolvedTicker | null> {
     if (!match?.symbol) return null;
 
     return {
-      ticker: match.symbol.trim().toUpperCase(),
+      symbol: match.symbol.trim().toUpperCase(),
       source: "finnhub-search",
       confidence: 65,
     };
@@ -78,14 +78,14 @@ async function resolveViaFinnhub(name: string): Promise<ResolvedTicker | null> {
 }
 
 /**
- * Attempts to resolve `sponsorOrBrandName` to a ticker. Soft-fails to `null`
+ * Attempts to resolve `sponsorOrBrandName` to a symbol. Soft-fails to `null`
  * on any error or when nothing sufficiently confident is found — callers
- * should leave `ticker: null` rather than guess.
+ * should leave `symbol: null` rather than guess.
  */
-export async function resolveTickerFromName(
+export async function resolveSymbolFromName(
   sponsorOrBrandName: string | null | undefined,
   options: { userAgent: string; allowFinnhubFallback?: boolean },
-): Promise<ResolvedTicker | null> {
+): Promise<ResolvedSymbol | null> {
   const raw = sponsorOrBrandName?.trim();
   if (!raw) return null;
 
@@ -93,16 +93,16 @@ export async function resolveTickerFromName(
   if (!target) return null;
 
   try {
-    const records = await getTickerRecords(options.userAgent);
+    const records = await getSymbolRecords(options.userAgent);
 
-    let bestFuzzy: { ticker: string; score: number } | null = null;
+    let bestFuzzy: { symbol: string; score: number } | null = null;
     for (const record of records) {
       const candidate = normalizeCompanyName(record.title);
       if (!candidate) continue;
 
       if (candidate === target) {
         return {
-          ticker: record.ticker,
+          symbol: record.symbol,
           source: "sec-name-exact",
           confidence: 90,
         };
@@ -118,7 +118,7 @@ export async function resolveTickerFromName(
           // Prefer the longer overlap (closer to a full match).
           const score = Math.min(candidate.length, target.length);
           if (!bestFuzzy || score > bestFuzzy.score) {
-            bestFuzzy = { ticker: record.ticker, score };
+            bestFuzzy = { symbol: record.symbol, score };
           }
         }
       }
@@ -126,7 +126,7 @@ export async function resolveTickerFromName(
 
     if (bestFuzzy) {
       return {
-        ticker: bestFuzzy.ticker,
+        symbol: bestFuzzy.symbol,
         source: "sec-name-fuzzy",
         confidence: 60,
       };

@@ -41,7 +41,7 @@ export async function runAlertAutoFire(options: {
   const catalystRows = await db
     .select({
       id: catalysts.id,
-      ticker: catalysts.ticker,
+      symbol: catalysts.symbol,
       headline: catalysts.headline,
       title: catalysts.title,
       eventCategory: catalysts.eventCategory,
@@ -86,7 +86,7 @@ export async function runAlertAutoFire(options: {
   const watchlistRows = await db
     .select({
       userId: watchlistEntries.userId,
-      ticker: watchlistEntries.ticker,
+      symbol: watchlistEntries.symbol,
     })
     .from(watchlistEntries)
     .where(inArray(watchlistEntries.userId, userIds))
@@ -94,7 +94,7 @@ export async function runAlertAutoFire(options: {
   const watchlistsByUser = new Map<number, string[]>();
   for (const row of watchlistRows) {
     const list = watchlistsByUser.get(row.userId) ?? [];
-    list.push(row.ticker);
+    list.push(row.symbol);
     watchlistsByUser.set(row.userId, list);
   }
 
@@ -119,7 +119,7 @@ export async function runAlertAutoFire(options: {
   for (const catalyst of catalystRows) {
     const payload: AlertCatalystPayload = {
       id: catalyst.id,
-      ticker: catalyst.ticker,
+      symbol: catalyst.symbol,
       headline: catalyst.headline,
       title: catalyst.title,
       eventCategory: catalyst.eventCategory,
@@ -137,7 +137,7 @@ export async function runAlertAutoFire(options: {
       const results = await deliverAlertRules({
         catalyst: payload,
         rules: candidateRules,
-        watchlistTickers: watchlistsByUser.get(userId) ?? [],
+        watchlistSymbols: watchlistsByUser.get(userId) ?? [],
       });
 
       for (const result of results) {

@@ -64,6 +64,13 @@
       "when": 1784896892184,
       "tag": "0008_eminent_stark_industries",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1785000000009,
+      "tag": "0009_rename_ticker_to_symbol",
+      "breakpoints": true
     }
   ]
 }

@@ -2,7 +2,7 @@ import {
   formatFdaApprovalTitle,
   resolveDisplayCompanyName,
 } from "@/lib/catalysts/catalyst-titles";
-import { resolveTickerFromName } from "@/lib/catalysts/ticker-resolver";
+import { resolveSymbolFromName } from "@/lib/catalysts/symbol-resolver";
 import { RETENTION_DAYS } from "@/lib/jobs/data-retention";
 import {
   ingestNormalizedCatalysts,
@@ -171,17 +171,17 @@ export async function fetchOpenFda(): Promise<SourceFetchResult> {
       submission.submission_class_code?.trim() ||
       null;
 
-    // Sponsor -> ticker resolution: without it these rows can never match a
-    // trader's watchlist / quiet mode / alerts (see ticker-resolver.ts).
-    const resolved = await resolveTickerFromName(sponsor, { userAgent });
+    // Sponsor -> symbol resolution: without it these rows can never match a
+    // trader's watchlist / quiet mode / alerts (see symbol-resolver.ts).
+    const resolved = await resolveSymbolFromName(sponsor, { userAgent });
 
     normalized.push({
       provider: "openfda",
       externalId: `openfda:${app}:${date}`,
       url: `https://api.fda.gov/drug/drugsfda.json?search=application_number:"${app}"`,
       rawContent: row,
-      ticker: resolved?.ticker ?? null,
-      tickerSource: resolved?.source ?? "unresolved",
+      symbol: resolved?.symbol ?? null,
+      symbolSource: resolved?.source ?? "unresolved",
       companyName,
       type: "FDA Approval",
       title: displayTitle,

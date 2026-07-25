@@ -30,7 +30,7 @@ describe("buildTradingViewEmbedUrl", () => {
     ).toBe("W");
   });
 
-  it("trims bare tickers", () => {
+  it("trims bare symbols", () => {
     const url = buildTradingViewEmbedUrl("  LBTYK  ");
     expect(new URL(url).searchParams.get("symbol")).toBe("LBTYK");
   });

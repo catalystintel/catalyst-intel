@@ -14,8 +14,8 @@ Benzinga Pro is a **dense terminal**, not a magazine. News is optimized for scan
 
 | Pattern               | How it shows up                                                                          |
 | --------------------- | ---------------------------------------------------------------------------------------- |
-| Ticker-first rows     | Symbol is the primary visual anchor; headline secondary                                  |
-| Red/green tickers     | Up/down vs prior close (and sentiment cues)                                              |
+| Symbol-first rows     | Symbol is the primary visual anchor; headline secondary                                  |
+| Red/green symbols     | Up/down vs prior close (and sentiment cues)                                              |
 | Source on the margin  | Source/category visible at a glance; color-codeable                                      |
 | Hover affordances     | Mini-chart (“change since publish”), copy / share / open                                 |
 | Category highlighting | Color-coded Hot / Earnings / Filings without filtering them out                          |
@@ -26,12 +26,12 @@ Benzinga Pro is a **dense terminal**, not a magazine. News is optimized for scan
 
 | Pattern                         | How it shows up                                                                                                      |
 | ------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
-| Enhanced article details        | When a post opens: **tickers + summary** enriched (v1.62+)                                                           |
+| Enhanced article details        | When a post opens: **symbols + summary** enriched (v1.62+)                                                           |
 | WIIM (“Why Is It Moving?”)      | One-sentence cause of the move; also in Details                                                                      |
-| Multi-ticker association        | Articles carry a list of related symbols                                                                             |
+| Multi-symbol association        | Articles carry a list of related symbols                                                                             |
 | Teaser → body                   | Short abstract/teaser, then full body                                                                                |
 | Featured images (content model) | `thumb` / `small` / `large` image variants in news payload — useful for public articles; Pro itself stays desk-dense |
-| Linked Details panel            | Click ticker → research panel (quote, chart, calendar, financials)                                                   |
+| Linked Details panel            | Click symbol → research panel (quote, chart, calendar, financials)                                                   |
 | Squawk / alerts                 | Audio + pop-up / sound / TTS for hands-free monitoring                                                               |
 
 **Bottom line:** Benzinga wins on _scannability and catalyst causality_, not on editorial layout.
@@ -43,7 +43,7 @@ Benzinga Pro is a **dense terminal**, not a magazine. News is optimized for scan
 Current Read view is already closer to a desk than a blog:
 
 1. Back to Live tape
-2. **Large ticker** + category + materiality badges
+2. **Large symbol** + category + materiality badges
 3. Headline + company
 4. Meta grid: Provider / Category / Type / Time
 5. CTAs: Open in Catalyst / original source
@@ -52,10 +52,10 @@ Current Read view is already closer to a desk than a blog:
 8. **Article body** (bordered text panel)
 9. Filing items + tags
 
-**Strengths:** B&W mono desk voice; ticker-first header; summary → detail → body stack; materiality badge.  
+**Strengths:** B&W mono desk voice; symbol-first header; summary → detail → body stack; materiality badge.  
 **Gaps vs Benzinga-style trade UX:**
 
-- No multi-ticker / related-symbol chips
+- No multi-symbol / related-symbol chips
 - No one-line “why it’s moving” (WIIM equivalent) above the long summary
 - No compact price-reaction / change-since-publish cue
 - No semantic Beats/Misses (or catalyst-keyphrase) highlighting in body
@@ -69,9 +69,9 @@ Current Read view is already closer to a desk than a blog:
 
 ### Mirror
 
-- Ticker-first hierarchy
+- Symbol-first hierarchy
 - One-sentence catalyst thesis (WIIM-like)
-- Related tickers as chips
+- Related symbols as chips
 - Summary as **bullets**, not only prose
 - Semantic highlights for earnings outcomes / key catalyst phrases
 - Optional compact media (thumb), never a full-bleed magazine hero
@@ -90,9 +90,9 @@ Current Read view is already closer to a desk than a blog:
 
 ## 4. Five concrete display ideas for Catalyst Read
 
-### 1) Related ticker chip row (Benzinga multi-ticker)
+### 1) Related symbol chip row (Benzinga multi-symbol)
 
-Under the primary ticker, show related symbols as outlined mono chips (`AVGO`, `TSM`, …). Primary ticker stays large; related chips are secondary and tappable to that company’s latest catalyst or quote stub.
+Under the primary symbol, show related symbols as outlined mono chips (`AVGO`, `TSM`, …). Primary symbol stays large; related chips are secondary and tappable to that company’s latest catalyst or quote stub.
 
 ### 2) WIIM-style one-liner above Summary
 
@@ -153,7 +153,7 @@ Sketch: `Catalyst-Intel-Article-Display-Sketch.png` (same Downloads folder).
 | -------- | ----------------------- | ------------------------------------------------------ |
 | P0       | WIIM one-liner          | Biggest triage upgrade; fits existing summary pipeline |
 | P0       | Bullet summary          | Matches trader scan behavior; low design risk          |
-| P1       | Related ticker chips    | Benzinga parity; needs related-symbol data             |
+| P1       | Related symbol chips    | Benzinga parity; needs related-symbol data             |
 | P1       | Beats/Misses highlights | Already aligned with earnings Detail cards             |
 | P2       | Thumb + Δ since publish | Needs media + quote data; keep non-hero                |
 
@@ -162,10 +162,10 @@ Sketch: `Catalyst-Intel-Article-Display-Sketch.png` (same Downloads folder).
 ## Sources (research)
 
 - [Benzinga Pro Newsfeed feature](https://www.benzinga.com/pro/feature/newsfeed) — WIIM, filters, notifications
-- [Getting Started: Newsfeed (Help)](https://help.benzinga.com/en/articles/1413278-getting-started-newsfeed) — ticker colors, hover actions, post appearance
+- [Getting Started: Newsfeed (Help)](https://help.benzinga.com/en/articles/1413278-getting-started-newsfeed) — symbol colors, hover actions, post appearance
 - [Beats/Misses Highlighting (Help)](https://help.benzinga.com/en/articles/6843200-beats-misses-highlighting)
-- [Benzinga Pro changelog v1.62](https://headwayapp.co/benzinga-pro-changes/version-1-62-0-has-been-deployed!-289809) — enhanced article details (tickers + summary)
-- [Liberated Stock Trader review](https://www.liberatedstocktrader.com/benzinga-pro-review-real-time-news/) — sentiment tickers, change-since-publish mini-chart, squawk
+- [Benzinga Pro changelog v1.62](https://headwayapp.co/benzinga-pro-changes/version-1-62-0-has-been-deployed!-289809) — enhanced article details (symbols + summary)
+- [Liberated Stock Trader review](https://www.liberatedstocktrader.com/benzinga-pro-review-real-time-news/) — sentiment symbols, change-since-publish mini-chart, squawk
 - [StockChartPro review](https://www.stockchartpro.com/benzinga-review/) — feed screenshots, category color-coding, alerts
 - [Benzinga News API model](https://www.benzinga.com/apis/blog/mastering-the-benzinga-newsfeed-api/) — teaser, body, image sizes, stocks[]
 - Catalyst code: `src/components/catalyst-article-view.tsx`, `src/app/dashboard/catalyst/[id]/page.tsx`
