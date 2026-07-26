@@ -66,7 +66,10 @@ async function main() {
   });
 
   try {
-    await Promise.race([migrate(db, { migrationsFolder: MIGRATIONS_FOLDER }), timeout]);
+    await Promise.race([
+      migrate(db, { migrationsFolder: MIGRATIONS_FOLDER }),
+      timeout,
+    ]);
     console.log("Migrations applied successfully.");
   } catch (err) {
     console.error("Migration failed:");
