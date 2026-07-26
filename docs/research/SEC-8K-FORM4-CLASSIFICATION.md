@@ -35,7 +35,7 @@ company-first narrative copy for a few high-signal SEC subjects (see
 | 1.04 | Mine safety                                    | —                                                          | **Non-catalyst** | Statutory; drop when only item          |
 | 1.05 | Material cybersecurity incident                | `{Co}: Material Cybersecurity Incident`                    | **Catalyst**     |                                         |
 | 2.01 | Completion of acquisition/disposition          | `{Co}: Acquisition / Disposition Closed`                   | **Catalyst**     |                                         |
-| 2.02 | Results of operations                          | `{Co}: Earnings Report Qn`                                 | **Catalyst**     | Quarter from Filed: / timestamp         |
+| 2.02 | Results of operations                          | `{Co} - Earnings Report Qn`                                | **Catalyst**     | Quarter from Filed: / timestamp         |
 | 2.03 | Creation of direct financial obligation        | `{Co}: New Financial Obligation`                           | **Catalyst**     |                                         |
 | 2.04 | Triggering events that accelerate obligation   | `{Co}: Debt Acceleration`                                  | **Catalyst**     |                                         |
 | 2.05 | Costs associated with exit/disposal            | `{Co}: Restructuring / Exit Costs`                         | **Catalyst**     |                                         |
@@ -67,17 +67,17 @@ Non-8-K offering / M&A forms: `formatProspectusOfferingTitle` (424B), `format425
 
 ## 3. Form 4 transaction codes → title
 
-| Code               | SEC meaning (typical)            | Desk class         | Title when dominant                                  |
-| ------------------ | -------------------------------- | ------------------ | ---------------------------------------------------- |
-| **P**              | Open-market purchase             | **Catalyst buy**   | `{Company}: Form 4 Insider Buy`                      |
-| **S**              | Open-market sale                 | **Catalyst sell**  | `{Company}: Form 4 Insider Sell`                     |
-| P+S                | Both in one filing               | **Catalyst mixed** | `{Company}: Form 4 Insider Buy & Sell`               |
-| A                  | Grant / award                    | Routine            | Drop (`form4_routine`)                               |
-| M                  | Option exercise                  | Routine            | Drop                                                 |
-| F                  | Tax withholding                  | Routine            | Drop                                                 |
-| G                  | Gift                             | Routine            | Drop                                                 |
-| D/C/U/H/…          | Other dispositions / conversions | Routine            | Drop                                                 |
-| Unknown / XML miss | Unenriched Atom row              | Soft-keep          | `{Company}: Form 4 Insider Transaction` until enrich |
+| Code               | SEC meaning (typical)            | Desk class         | Title when dominant                                   |
+| ------------------ | -------------------------------- | ------------------ | ----------------------------------------------------- |
+| **P**              | Open-market purchase             | **Catalyst buy**   | `{Company} - Form 4 Insider Buy`                      |
+| **S**              | Open-market sale                 | **Catalyst sell**  | `{Company} - Form 4 Insider Sell`                     |
+| P+S                | Both in one filing               | **Catalyst mixed** | `{Company} - Form 4 Insider Buy & Sell`               |
+| A                  | Grant / award                    | Routine            | Drop (`form4_routine`)                                |
+| M                  | Option exercise                  | Routine            | Drop                                                  |
+| F                  | Tax withholding                  | Routine            | Drop                                                  |
+| G                  | Gift                             | Routine            | Drop                                                  |
+| D/C/U/H/…          | Other dispositions / conversions | Routine            | Drop                                                  |
+| Unknown / XML miss | Unenriched Atom row              | Soft-keep          | `{Company} - Form 4 Insider Transaction` until enrich |
 
 Enrichment: EDGAR ownership XML → `insider_buy` / `insider_sell` / `form4_mixed` / `form4_routine` (`parse-form4.ts`).  
 Quality gate drops only `form4_routine` (confirmed paperwork), not unenriched `form4` rows (fetch-cap soft-fail).
@@ -88,15 +88,15 @@ Quality gate drops only `form4_routine` (confirmed paperwork), not unenriched `f
 
 | Situation               | Title                                                              |
 | ----------------------- | ------------------------------------------------------------------ |
-| Item 2.02 filed mid-May | `Apple Inc.: Earnings Report Q2`                                   |
+| Item 2.02 filed mid-May | `Apple Inc. - Earnings Report Q2`                                  |
 | Item 1.01 only (+ 9.01) | `PEDEVCO CORP: New Deal Announced (Major Contract or Partnership)` |
 | Item 1.03 bankruptcy    | `Acme Corp: Bankruptcy Filing (Equity at Risk)`                    |
 | Item 3.01 delisting     | `Quantum-Si Inc: Delisting Risk (Stock Could Lose Its Listing)`    |
-| Item 5.02 management    | `Acme Corp: CEO Change (Departure)`                                |
+| Item 5.02 management    | `Acme Corp - CEO Change (Departure)`                               |
 | 424B prospectus         | `Acme Corp: New Stock Offering Filed (Potential Dilution Ahead)`   |
 | Form 425                | `Acme Corp Announces Acquisition — Deal in Play`                   |
 | Item 1.05 cybersecurity | `CrowdStrike: Material Cybersecurity Incident`                     |
-| Form 4 code P           | `Tesla, Inc.: Form 4 Insider Buy`                                  |
+| Form 4 code P           | `Tesla, Inc. - Form 4 Insider Buy`                                 |
 | Form 4 code S           | `Form 4 Insider Sell - Nvidia Corporation`                         |
 | Form 4 codes P + S      | `Form 4 Insider Buy & Sell - Acme Corp`                            |
 | Form 4 code F only      | _(suppressed — routine)_                                           |
