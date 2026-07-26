@@ -3,6 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { BookOpen, X } from "lucide-react";
 
+import { FeedPreviewChartGlow } from "@/components/feed-preview-chart-glow";
 import { PreLoginChrome } from "@/components/pre-login-chrome";
 import { PreLoginLandingSections } from "@/components/pre-login-landing-sections";
 import { cn } from "@/lib/utils";
@@ -166,9 +167,11 @@ export default async function Home() {
 
         <section
           aria-label="Feed preview"
-          className="landing-feed landing-feed-dark overflow-hidden rounded-lg border border-[var(--desk-border)] bg-[var(--desk-panel)] shadow-[0_24px_80px_rgba(10,12,20,0.35)]"
+          className="landing-feed landing-feed-dark relative overflow-hidden rounded-lg border border-[var(--desk-border)] bg-[var(--desk-panel)] shadow-[0_24px_80px_rgba(10,12,20,0.35)]"
         >
-          <div className="flex items-center justify-between border-b border-[var(--desk-border)] bg-[var(--desk-header)] px-4 py-3 sm:px-5">
+          <FeedPreviewChartGlow />
+
+          <div className="relative z-[1] flex items-center justify-between border-b border-[var(--desk-border)] bg-[color:var(--desk-header)]/85 px-4 py-3 backdrop-blur-[1px] sm:px-5">
             <div className="flex min-w-0 items-center gap-3">
               <span className="inline-flex items-center gap-1.5 rounded-full border border-[rgba(240,193,75,0.35)] bg-[rgba(240,193,75,0.12)] px-2.5 py-1 text-[0.68rem] font-bold tracking-[0.08em] text-[var(--desk-live)]">
                 <span

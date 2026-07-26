@@ -316,6 +316,13 @@
     animation-delay: 120ms;
   }
 
+  /* Subtle "live-updating" breathing glow behind the market-chart backdrop
+     in the landing feed preview header — never distracting, just enough to
+     read as live rather than a static illustration. */
+  .feed-preview-chart-glow {
+    animation: feed-chart-glow-pulse 3.6s ease-in-out infinite;
+  }
+
   .landing-section {
     animation: page-enter 480ms cubic-bezier(0.22, 1, 0.36, 1) both;
     animation-delay: 180ms;
@@ -484,6 +491,16 @@
   }
 }
 
+@keyframes feed-chart-glow-pulse {
+  0%,
+  100% {
+    opacity: 0.14;
+  }
+  50% {
+    opacity: 0.3;
+  }
+}
+
 @keyframes landing-feed-in {
   from {
     opacity: 0;
@@ -574,6 +591,7 @@
   .feed-filter-recalc,
   .live-pulse,
   .landing-feed,
+  .feed-preview-chart-glow,
   .btn-press,
   .drawer-panel,
   .skeleton-shimmer,
