@@ -9,6 +9,10 @@ import {
 import { classifySession } from "@/lib/alerts/session";
 import { categorizeNewsHeadline } from "@/lib/catalysts/news-category";
 import {
+  formatSeekingAlphaTitle,
+  isSeekingAlphaSource,
+} from "@/lib/catalysts/seeking-alpha-titles";
+import {
   ingestNormalizedCatalysts,
   skippedSourceResult,
   toSourceResult,
@@ -191,6 +195,18 @@ function newsToNormalized(
     : new Date().toISOString();
   const classified = categorizeNewsHeadline(title);
   const sentiment = extractSentiment(article.insights, symbol);
+  const summary = article.description?.trim() || null;
+  const displayTitle =
+    !wire && isSeekingAlphaSource(publisher)
+      ? formatSeekingAlphaTitle({
+          title,
+          summary,
+          companyName: symbol,
+          symbol,
+          eventCategory: classified.eventCategory,
+          subcategory: classified.subcategory,
+        })
+      : title;
 
   return {
     provider: "polygon",
@@ -204,12 +220,12 @@ function newsToNormalized(
     symbol,
     companyName: symbol,
     type: wire ? "Wire" : "Market News",
-    title,
+    title: displayTitle,
     headline: wire ? "Benzinga Wire" : publisher,
     eventCategory: classified.eventCategory,
     subcategory: wire ? "benzinga_wire" : classified.subcategory,
     timestamp,
-    summary: article.description?.trim() || null,
+    summary,
     confidence: wire ? 70 : 60,
     sentiment: sentiment?.sentiment ?? null,
     sentimentReasoning: sentiment?.reasoning ?? null,

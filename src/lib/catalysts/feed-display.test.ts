@@ -258,6 +258,57 @@ describe("titleLine", () => {
     ).toBe("Acme announces CFO transition");
   });
 
+  it("rewrites Seeking Alpha rows into trader-facing titles", () => {
+    expect(
+      titleLine(
+        base({
+          sourceProvider: "finnhub",
+          headline: "SeekingAlpha",
+          title:
+            "I Was Wrong About Johnson & Johnson: Upgrading To Hold (Rating Upgrade)",
+          summary: "Upgrades JNJ from Sell to Hold after Q2.",
+          companyName: "ABBV",
+          symbol: "ABBV",
+          eventCategory: "analyst",
+          subcategory: "upgrade",
+          type: "Company News",
+          sourceUrl: "https://seekingalpha.com/article/1",
+        }),
+      ),
+    ).toBe("Johnson & Johnson - Upgraded to Hold");
+
+    expect(
+      titleLine(
+        base({
+          sourceProvider: "finnhub",
+          headline: "Seeking Alpha",
+          title:
+            "Big Tech Earnings, Fed's Interest Rate Decision To Keep Next Week Busy",
+          companyName: "ABBV",
+          symbol: "ABBV",
+          eventCategory: "earnings",
+          subcategory: "earnings_news",
+          type: "Company News",
+        }),
+      ),
+    ).toBe("Earnings Week Ahead");
+
+    expect(
+      titleLine(
+        base({
+          sourceProvider: "polygon",
+          headline: "Seeking Alpha",
+          title: "Tesla Stock: Robotaxi Timeline Still Unclear",
+          companyName: "TSLA",
+          symbol: "TSLA",
+          eventCategory: "news",
+          subcategory: "company_news",
+          type: "Market News",
+        }),
+      ),
+    ).toBe("Tesla - Robotaxi Timeline Still Unclear");
+  });
+
   it("strips provider prefixes and suffixes from displayed titles", () => {
     expect(
       titleLine(
