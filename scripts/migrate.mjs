@@ -26,6 +26,12 @@
  * entirely, so failures print a normal, readable error/stack trace. A hard
  * timeout is also added so a stuck connection/lock fails the build quickly
  * instead of hanging until Vercel's overall build timeout kills it.
+ *
+ * Turso plan-quota `BLOCKED` (SQL reads forbidden until upgrade / month
+ * reset): on Vercel we skip migrate with a loud warning and continue the
+ * build so app code can still ship. Runtime queries will keep failing until
+ * the quota is restored — that is intentional; a failed migrate cannot fix
+ * a blocked database, and blocking every deploy makes the outage worse.
  */
 import { createClient } from "@libsql/client";
 import { drizzle } from "drizzle-orm/libsql";
@@ -40,6 +46,31 @@ function resolveUrl() {
 
 function isRemoteUrl(url) {
   return /^(libsql|https|wss):\/\//.test(url);
+}
+
+function errorMessageChain(err) {
+  const parts = [];
+  let current = err;
+  for (let i = 0; i < 6 && current != null; i++) {
+    if (current instanceof Error) {
+      parts.push(`${current.name} ${current.message}`);
+      current = current.cause;
+      continue;
+    }
+    if (typeof current === "string") {
+      parts.push(current);
+      break;
+    }
+    parts.push(String(current));
+    break;
+  }
+  return parts.join(" | ");
+}
+
+function isTursoQuotaBlocked(err) {
+  return /BLOCKED|reads are blocked|SQL read operations are forbidden|upgrade your plan/i.test(
+    errorMessageChain(err),
+  );
 }
 
 async function main() {
@@ -72,6 +103,19 @@ async function main() {
     ]);
     console.log("Migrations applied successfully.");
   } catch (err) {
+    if (isTursoQuotaBlocked(err) && process.env.VERCEL) {
+      console.warn(
+        "WARNING: Turso returned BLOCKED (plan quota exceeded — SQL reads forbidden).",
+      );
+      console.warn(
+        "Skipping migrate on Vercel so the build can still ship. Runtime DB queries will keep failing until you upgrade the Turso plan or the monthly quota resets.",
+      );
+      console.warn(
+        "See https://docs.turso.tech/help/usage-and-billing and DEPLOYMENT.md.",
+      );
+      console.warn(errorMessageChain(err));
+      return;
+    }
     console.error("Migration failed:");
     console.error(err);
     process.exitCode = 1;

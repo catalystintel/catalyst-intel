@@ -32,16 +32,20 @@ export default function AppError({
         <h1 className="text-base font-semibold tracking-tight">
           {dbErrorKind === "not-configured"
             ? "Database not configured"
-            : dbErrorKind === "transient"
-              ? "Database temporarily unreachable"
-              : "Something went wrong"}
+            : dbErrorKind === "quota"
+              ? "Database quota exceeded"
+              : dbErrorKind === "transient"
+                ? "Database temporarily unreachable"
+                : "Something went wrong"}
         </h1>
         <p className="mt-2 text-muted-foreground">
           {dbErrorKind === "not-configured"
             ? "This deployment needs a hosted Turso database. Set LIBSQL_URL and LIBSQL_AUTH_TOKEN in Vercel, migrate, and redeploy (see DEPLOYMENT.md)."
-            : dbErrorKind === "transient"
-              ? "This looks like a brief connection hiccup to the database, not a configuration problem. Please try again in a moment."
-              : "An unexpected error occurred. Try again, and if it keeps happening check Vercel logs / PostHog exceptions."}
+            : dbErrorKind === "quota"
+              ? "Turso has blocked SQL reads because this database hit its plan limits (BLOCKED). Upgrade the Turso plan (or wait for the monthly quota to reset), then reload. Reloading alone will not help."
+              : dbErrorKind === "transient"
+                ? "This looks like a brief connection hiccup to the database, not a configuration problem. Please try again in a moment."
+                : "An unexpected error occurred. Try again, and if it keeps happening check Vercel logs / PostHog exceptions."}
         </p>
         <button
           type="button"
