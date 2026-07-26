@@ -26,6 +26,20 @@ describe("withDbRetry", () => {
     expect(fn).toHaveBeenCalledTimes(1);
   });
 
+  it("does not retry Turso BLOCKED quota errors and normalizes the message", async () => {
+    const fn = vi.fn().mockRejectedValue(
+      new Error("Failed query: select 1", {
+        cause: new Error(
+          "BLOCKED: Operation was blocked: SQL read operations are forbidden (reads are blocked, do you need to upgrade your plan?)",
+        ),
+      }),
+    );
+    await expect(withDbRetry(fn, { attempts: 3, delayMs: 0 })).rejects.toThrow(
+      /quota exceeded \(BLOCKED\)/i,
+    );
+    expect(fn).toHaveBeenCalledTimes(1);
+  });
+
   it("gives up and rethrows after exhausting all attempts", async () => {
     const fn = vi
       .fn()

@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { classifyDbError } from "./classify-db-error";
+import {
+  classifyDbError,
+  isTursoQuotaBlockedError,
+  normalizeDbError,
+  TURSO_QUOTA_BLOCKED_MESSAGE,
+} from "./classify-db-error";
 
 describe("classifyDbError", () => {
   it("flags the explicit not-configured message from assertDatabaseConfigured", () => {
@@ -25,6 +30,15 @@ describe("classifyDbError", () => {
     ).toBe("not-configured");
   });
 
+  it("flags Turso plan-quota BLOCKED as quota, not unknown/transient", () => {
+    expect(
+      classifyDbError(
+        "LibsqlError: BLOCKED: Operation was blocked: SQL read operations are forbidden (reads are blocked, do you need to upgrade your plan?)",
+      ),
+    ).toBe("quota");
+    expect(classifyDbError(TURSO_QUOTA_BLOCKED_MESSAGE)).toBe("quota");
+  });
+
   it("flags a real libSQL client connection error as transient, not a config problem", () => {
     // Regression: this exact class of error (a live Turso database that's
     // configured correctly but briefly unreachable) used to be shown with
@@ -43,5 +57,20 @@ describe("classifyDbError", () => {
     expect(classifyDbError("Cannot read properties of undefined")).toBe(
       "unknown",
     );
+  });
+});
+
+describe("normalizeDbError / isTursoQuotaBlockedError", () => {
+  it("detects BLOCKED nested under drizzle Failed query cause", () => {
+    const nested = new Error(
+      'Failed query: SELECT id FROM "__drizzle_migrations"',
+      {
+        cause: new Error(
+          "BLOCKED: Operation was blocked: SQL read operations are forbidden (reads are blocked, do you need to upgrade your plan?)",
+        ),
+      },
+    );
+    expect(isTursoQuotaBlockedError(nested)).toBe(true);
+    expect(normalizeDbError(nested).message).toBe(TURSO_QUOTA_BLOCKED_MESSAGE);
   });
 });
