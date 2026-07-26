@@ -316,6 +316,11 @@
     animation-delay: 120ms;
   }
 
+  .landing-section {
+    animation: page-enter 480ms cubic-bezier(0.22, 1, 0.36, 1) both;
+    animation-delay: 180ms;
+  }
+
   .btn-press {
     transition:
       transform 140ms ease,

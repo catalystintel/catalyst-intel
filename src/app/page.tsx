@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { BookOpen, X } from "lucide-react";
 
 import { PreLoginChrome } from "@/components/pre-login-chrome";
+import { PreLoginLandingSections } from "@/components/pre-login-landing-sections";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -85,7 +86,7 @@ export default async function Home() {
 
   return (
     <PreLoginChrome glowClassName="h-[55vh]">
-      <main className="page-enter relative z-10 mx-auto flex w-full max-w-5xl flex-1 flex-col justify-start gap-8 px-4 pt-2 pb-[calc(5.5rem+env(safe-area-inset-bottom))] sm:justify-center sm:gap-10 sm:px-8 sm:pt-4 sm:pb-16">
+      <main className="page-enter relative z-10 mx-auto flex w-full max-w-5xl flex-1 flex-col justify-start gap-8 px-4 pt-2 pb-[calc(5.5rem+env(safe-area-inset-bottom))] sm:gap-10 sm:px-8 sm:pt-4 sm:pb-20">
         <div className="max-w-2xl">
           <div className="flex flex-wrap items-center gap-2">
             <span className="inline-flex items-center gap-1.5 rounded-full border border-[rgba(240,193,75,0.35)] bg-[rgba(240,193,75,0.12)] px-2.5 py-1 text-[0.68rem] font-bold tracking-[0.08em] text-[var(--desk-live)]">
@@ -253,6 +254,10 @@ export default async function Home() {
             ))}
           </div>
         </section>
+
+        <div className="mt-8 sm:mt-12">
+          <PreLoginLandingSections />
+        </div>
       </main>
     </PreLoginChrome>
   );
