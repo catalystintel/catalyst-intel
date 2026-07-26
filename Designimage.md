@@ -25,3 +25,7 @@ _Keep top / not-mention sections same — dark feed preview; blue Google CTA_
 ![Prelogin redesign result — implemented hero + dark feed preview](./docs/design/prelogin-redesign-result-01.png)
 
 _Implemented redesign (desktop 1440px): light hero, Google-blue CTA, dark terminal feed preview with real category chips; honest sections below (workflow, coverage, capabilities, early-access panel)_
+
+![Prelogin redesign result 02 — single bottom CTA, gold accent](./docs/design/prelogin-redesign-result-02.png)
+
+_Follow-up fix (desktop 1440px, top + bottom composite): removed the duplicate blue "Continue with Google" CTAs near the top (hero + mobile sticky bar) — hero now ends with a plain text sign-in link. The single remaining CTA lives in the final section near the footer, restyled from Google-brand blue to the desk's gold/amber accent (`--desk-live`), matching the LIVE badges, DETAILS buttons, and the About page's CTA._

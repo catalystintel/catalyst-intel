@@ -1,8 +1,8 @@
 import type { ReactNode } from "react";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { BookOpen, X } from "lucide-react";
 
-import { LandingGoogleCta } from "@/components/landing-google-cta";
 import { PreLoginChrome } from "@/components/pre-login-chrome";
 import { PreLoginLandingSections } from "@/components/pre-login-landing-sections";
 import { cn } from "@/lib/utils";
@@ -128,7 +128,7 @@ export default async function Home() {
 
   return (
     <PreLoginChrome glowClassName="h-[55vh]">
-      <main className="page-enter relative z-10 mx-auto flex w-full max-w-5xl flex-1 flex-col justify-start gap-10 px-4 pt-2 pb-[calc(5.5rem+env(safe-area-inset-bottom))] sm:gap-12 sm:px-8 sm:pt-6 sm:pb-20">
+      <main className="page-enter relative z-10 mx-auto flex w-full max-w-5xl flex-1 flex-col justify-start gap-10 px-4 pt-2 pb-[max(2.5rem,env(safe-area-inset-bottom))] sm:gap-12 sm:px-8 sm:pt-6 sm:pb-20">
         <div className="max-w-2xl">
           <div className="flex flex-wrap items-center gap-2">
             <span className="inline-flex items-center gap-1.5 rounded-full border border-[rgba(240,193,75,0.35)] bg-[rgba(240,193,75,0.12)] px-2.5 py-1 text-[0.68rem] font-bold tracking-[0.08em] text-[var(--desk-live)]">
@@ -154,11 +154,13 @@ export default async function Home() {
             Scan symbol, title, and time. Open a row for the facts that matter.
             During Open Early Access every feature is free — no card required.
           </p>
-          <div className="mt-8 flex flex-col items-start gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:gap-4">
-            <LandingGoogleCta className="w-full sm:w-auto" />
-            <span className="font-mono text-xs text-[var(--desk-text-muted)]">
+          <div className="mt-8">
+            <Link
+              href="/login"
+              className="inline-flex items-center font-mono text-xs font-semibold text-[var(--desk-live)] underline-offset-4 hover:underline"
+            >
               Sign in · no password · full access
-            </span>
+            </Link>
           </div>
         </div>
 
@@ -290,17 +292,6 @@ export default async function Home() {
           <PreLoginLandingSections />
         </div>
       </main>
-
-      {/* Mobile: persistent CTA. Sibling of <main>, not a child — the
-          page-enter animation leaves a transform on <main>, which would
-          turn position:fixed into position:absolute-within-main. */}
-      <div className="pointer-events-none fixed inset-x-0 bottom-0 z-30 sm:hidden">
-        <div className="pointer-events-auto border-t border-[var(--desk-border)] bg-[var(--desk-app)]/95 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur-md">
-          <LandingGoogleCta className="w-full">
-            Continue with Google
-          </LandingGoogleCta>
-        </div>
-      </div>
     </PreLoginChrome>
   );
 }
