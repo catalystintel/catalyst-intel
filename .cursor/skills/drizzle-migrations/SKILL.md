@@ -58,18 +58,24 @@ historically lacks snapshots for 0002–0004).
 
 ## Commands
 
-| Script                | Purpose                                                   |
-| --------------------- | --------------------------------------------------------- |
-| `npm run db:generate` | Diff schema → write next `drizzle/*.sql` + meta           |
-| `npm run db:check`    | Journal/SQL consistency + block schema-only commits       |
-| `npm run db:migrate`  | Apply pending migrations to `DATABASE_URL` / Turso        |
-| `npm run build`       | `drizzle-kit migrate && next build` (also runs on Vercel) |
+| Script                | Purpose                                                        |
+| --------------------- | -------------------------------------------------------------- |
+| `npm run db:generate` | Diff schema → write next `drizzle/*.sql` + meta                |
+| `npm run db:check`    | Journal/SQL consistency + block schema-only commits            |
+| `npm run db:migrate`  | Apply pending migrations to `DATABASE_URL` / Turso             |
+| `npm run build`       | `node scripts/migrate.mjs && next build` (also runs on Vercel) |
 
 ## How migrations land on merge
 
 - **CI** (`ci.yml`): `npm run build` against throwaway `file:./local.db` — broken SQL fails the PR
 - **Vercel**: build on `dev` / `main` migrates that env’s Turso DB before `next build`
-- **GHA** (`migrate.yml`): redundant explicit migrate against staging/prod Turso
+- **GHA** (`migrate.yml`): redundant explicit migrate against staging/prod Turso — currently a
+  no-op until `PROD_*`/`STAGING_*` LIBSQL secrets are set (see `DEPLOYMENT.md`)
+
+`npm run build` / `npm run db:migrate` call `scripts/migrate.mjs` (drizzle-orm's programmatic
+migrator), not the `drizzle-kit migrate` CLI — the CLI's spinner can swallow its own error text
+in non-TTY build logs (see `DEPLOYMENT.md` → "Why `scripts/migrate.mjs`..."). If you need to
+change how migrations are applied, edit that script rather than reintroducing the CLI call.
 
 Do **not** hand-edit production DBs. Ship SQL via this flow.
 
