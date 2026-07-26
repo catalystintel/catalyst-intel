@@ -45,8 +45,8 @@ jobs:
       - name: Unit tests (frontend + backend)
         run: npm test
 
-      # `npm run build` = `drizzle-kit migrate && next build` (see package.json), so this
-      # also verifies every committed migration applies cleanly against a throwaway
+      # `npm run build` = `node scripts/migrate.mjs && next build` (see package.json), so
+      # this also verifies every committed migration applies cleanly against a throwaway
       # SQLite file before it ever reaches staging/production - see DEPLOYMENT.md.
       - name: Build (migrations + type-check for frontend + backend)
         run: npm run build
