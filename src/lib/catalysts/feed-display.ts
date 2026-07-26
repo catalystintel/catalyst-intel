@@ -32,6 +32,11 @@ import {
   looksLikeResultsOfOperationsTitle,
   titleCaseEventLabel,
 } from "@/lib/catalysts/catalyst-titles";
+import {
+  formatSeekingAlphaTitle,
+  isSeekingAlphaCatalyst,
+  isSeekingAlphaSource,
+} from "@/lib/catalysts/seeking-alpha-titles";
 
 /** Summary (+ title/headline fallback) for Item 5.02 role/action parsing. */
 function officerChangeContent(c: FeedCatalyst): string {
@@ -137,6 +142,7 @@ const SOURCE_DISPLAY_NAMES = [
   "CNBC",
   "MarketWatch",
   "Seeking Alpha",
+  "SeekingAlpha",
   "Company news",
   "Market News",
 ];
@@ -160,7 +166,7 @@ const SOURCE_NAME_RE = new RegExp(
     "Bloomberg",
     "CNBC",
     "MarketWatch",
-    "Seeking\\s+Alpha",
+    "Seeking\\s*Alpha",
   ].join("|"),
   "i",
 );
@@ -173,6 +179,7 @@ function normalizeDisplayText(text: string): string {
 export function looksLikeSourceLabel(text: string): boolean {
   const t = normalizeDisplayText(text);
   if (!t) return false;
+  if (isSeekingAlphaSource(t)) return true;
   const lower = t.toLowerCase();
   if (SOURCE_DISPLAY_NAMES.some((name) => name.toLowerCase() === lower)) {
     return true;
@@ -802,6 +809,31 @@ function macroDisplayTitle(c: FeedCatalyst): string | null {
   return canonicalizeGroundRuleTitle(c, title) || null;
 }
 
+/**
+ * Seeking Alpha rows → trader-facing `{Company} - {takeaway}` (display rewrite
+ * so legacy Finnhub/Polygon rows update without re-ingest).
+ */
+function seekingAlphaDisplayTitle(c: FeedCatalyst): string | null {
+  if (
+    !isSeekingAlphaCatalyst({
+      headline: c.headline,
+      sourceUrl: c.sourceUrl,
+      title: c.title,
+    })
+  ) {
+    return null;
+  }
+
+  return formatSeekingAlphaTitle({
+    title: c.title,
+    summary: c.summary,
+    companyName: tapeSubject(c) ?? c.companyName,
+    symbol: c.symbol,
+    eventCategory: c.eventCategory,
+    subcategory: c.subcategory,
+  });
+}
+
 /** Analyst / price-target chips → ground-rule titles. */
 function analystDisplayTitle(c: FeedCatalyst): string | null {
   const isAnalyst =
@@ -859,6 +891,9 @@ export function titleLine(
   const headline = normalizeDisplayText(c.headline ?? "");
   const title = normalizeDisplayText(c.title ?? "");
   const subject = tapeSubject(c);
+
+  const seekingAlphaTitle = seekingAlphaDisplayTitle(c);
+  if (seekingAlphaTitle) return seekingAlphaTitle;
 
   if (prefersStoredGroundRuleTitle(c, title)) {
     const canonical = canonicalizeGroundRuleTitle(c, title);
