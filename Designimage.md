@@ -21,3 +21,7 @@ _Keep top / not-mention sections same — dark feed preview; teal-blue Google CT
 ![Prelogin hero + dark feed preview (variant 02)](./docs/design/prelogin-target-hero-dark-feed-02.png)
 
 _Keep top / not-mention sections same — dark feed preview; blue Google CTA_
+
+![Prelogin redesign result — implemented hero + dark feed preview](./docs/design/prelogin-redesign-result-01.png)
+
+_Implemented redesign (desktop 1440px): light hero, Google-blue CTA, dark terminal feed preview with real category chips; honest sections below (workflow, coverage, capabilities, early-access panel)_

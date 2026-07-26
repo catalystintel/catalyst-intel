@@ -1,39 +1,88 @@
 import type { ReactNode } from "react";
-import Link from "next/link";
-import { Bell, BookOpen, Medal, Sparkles, Star, UserRound } from "lucide-react";
+import {
+  Bell,
+  BookOpen,
+  CheckCircle2,
+  ListFilter,
+  Sparkles,
+  Star,
+} from "lucide-react";
 
-import { buttonVariants } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { LandingGoogleCta } from "@/components/landing-google-cta";
+import { CATEGORY_LABELS } from "@/lib/catalysts/taxonomy";
 
-const PARTNER_LOGOS = [
-  { name: "Porligins", mark: "◇" },
-  { name: "Compoore", mark: "△" },
-  { name: "Poolano", mark: "○" },
-  { name: "Wianners", mark: "□" },
-  { name: "Peanrant", mark: "⬡" },
+/**
+ * Real event coverage, straight from the shared taxonomy — honest social
+ * proof for a pre-revenue product (no invented logos or testimonials).
+ */
+const COVERAGE_CATEGORIES = [
+  CATEGORY_LABELS.earnings,
+  CATEGORY_LABELS.deals,
+  CATEGORY_LABELS.regulatory,
+  CATEGORY_LABELS.clinical,
+  CATEGORY_LABELS.trading_halt,
+  CATEGORY_LABELS.insider,
+  CATEGORY_LABELS.analyst,
+  CATEGORY_LABELS.capital,
+  CATEGORY_LABELS.management,
+  CATEGORY_LABELS.macro,
+] as const;
+
+const WORKFLOW_STEPS = [
+  {
+    step: "01",
+    title: "Catch it live",
+    description:
+      "Material events land on the tape as they hit — SEC 8-K items, earnings, FDA decisions, halts, insider filings. Symbol, plain-English title, time: scannable without a click.",
+    icon: ListFilter,
+  },
+  {
+    step: "02",
+    title: "Understand in one click",
+    description:
+      "Open a row for the takeaways and key facts: what happened, the numbers that matter, and a link to the primary document — no legal boilerplate.",
+    icon: Sparkles,
+  },
+  {
+    step: "03",
+    title: "Act on what matters",
+    description:
+      "Watchlist the ticker, set alerts for the names you trade, and check the playbook for how similar catalysts played out before.",
+    icon: Star,
+  },
 ] as const;
 
 const FEATURES = [
   {
-    title: "Real-Time Alerts",
-    description: "get notified the moment a catalyst hits",
+    title: "Real-time alerts",
+    description:
+      "Get notified the moment a catalyst hits a ticker you follow — not an hour later.",
     icon: Bell,
   },
   {
-    title: "Smart Watchlists",
-    description: "track the tickers that matter to you",
+    title: "Smart watchlists",
+    description:
+      "Keep the names you own or trade front and center, and filter the tape down to them.",
     icon: Star,
   },
   {
-    title: "Plain-Language AI Summaries",
-    description: "complex filings explained simply",
+    title: "Plain-language AI summaries",
+    description:
+      "Filings translated into takeaways and key facts, grounded in the document — never speculation.",
     icon: Sparkles,
   },
   {
-    title: "Historical Playbook",
-    description: "see how similar catalysts played out before",
+    title: "Historical playbook",
+    description:
+      "See how similar catalysts played out before, so the current one has context.",
     icon: BookOpen,
   },
+] as const;
+
+const EARLY_ACCESS_POINTS = [
+  "Every feature is included — live feed, alerts, watchlists, playbook, and AI summaries.",
+  "No card, no trial countdown. Sign in with Google and the full desk is yours.",
+  "Your feedback shapes what gets built next — there's a feedback button on every page.",
 ] as const;
 
 function FeatureIcon({ children }: { children: ReactNode }) {
@@ -51,44 +100,79 @@ export function PreLoginLandingSections() {
   return (
     <div className="flex w-full flex-col gap-20 sm:gap-24">
       <section
-        aria-labelledby="social-proof-heading"
+        id="product"
+        aria-labelledby="workflow-heading"
+        className="landing-section"
+      >
+        <h2
+          id="workflow-heading"
+          className="text-center text-2xl font-bold tracking-tight text-balance text-[var(--desk-text)] sm:text-3xl"
+        >
+          From event to understanding in three steps
+        </h2>
+        <p className="mx-auto mt-3 max-w-xl text-center text-sm text-pretty text-[var(--desk-text-muted)] sm:text-base">
+          Catalyst Intel shortens the gap between something happening and you
+          knowing what it means.
+        </p>
+        <ol className="mt-10 grid gap-4 sm:grid-cols-3">
+          {WORKFLOW_STEPS.map((step) => {
+            const Icon = step.icon;
+            return (
+              <li
+                key={step.step}
+                className="rounded-xl border border-[var(--desk-border)] bg-[var(--desk-panel)] px-5 py-6 shadow-[0_1px_0_rgba(0,0,0,0.03)]"
+              >
+                <div className="flex items-center justify-between">
+                  <FeatureIcon>
+                    <Icon className="size-4" strokeWidth={1.75} />
+                  </FeatureIcon>
+                  <span
+                    aria-hidden
+                    className="font-mono text-[0.72rem] font-semibold tracking-[0.14em] text-[var(--desk-text-dim)]"
+                  >
+                    {step.step}
+                  </span>
+                </div>
+                <h3 className="text-[0.98rem] font-bold tracking-tight text-[var(--desk-text)]">
+                  {step.title}
+                </h3>
+                <p className="mt-2 text-sm leading-relaxed text-pretty text-[var(--desk-text-muted)]">
+                  {step.description}
+                </p>
+              </li>
+            );
+          })}
+        </ol>
+      </section>
+
+      <section
+        aria-labelledby="coverage-heading"
         className="landing-section flex flex-col items-center text-center"
       >
-        <span
-          aria-hidden
-          className="mb-4 inline-flex size-10 items-center justify-center rounded-full bg-[rgba(240,193,75,0.18)] text-[var(--desk-live)]"
-        >
-          <Medal className="size-5" strokeWidth={1.75} />
-        </span>
         <h2
-          id="social-proof-heading"
+          id="coverage-heading"
           className="text-2xl font-bold tracking-tight text-balance text-[var(--desk-text)] sm:text-3xl"
         >
-          Trusted during Open Early Access
+          Coverage across the catalysts traders track
         </h2>
-        <p className="mt-3 max-w-lg text-sm text-pretty text-[var(--desk-text-muted)] sm:text-base">
-          Built for traders who need the catalyst story before the crowd
+        <p className="mt-3 max-w-xl text-sm text-pretty text-[var(--desk-text-muted)] sm:text-base">
+          Events are ingested from SEC EDGAR and market data feeds, then
+          categorized on arrival so the tape is filterable from the first
+          second.
         </p>
-        <ul className="mt-10 flex w-full max-w-4xl flex-wrap items-center justify-center gap-x-8 gap-y-5 sm:gap-x-10">
-          {PARTNER_LOGOS.map((logo) => (
+        <ul className="mt-8 flex w-full max-w-3xl flex-wrap items-center justify-center gap-2">
+          {COVERAGE_CATEGORIES.map((label) => (
             <li
-              key={logo.name}
-              className="flex items-center gap-2 font-mono text-[0.78rem] font-medium tracking-[0.04em] text-[var(--desk-text-dim)] uppercase sm:text-[0.82rem]"
+              key={label}
+              className="inline-flex items-center rounded-full border border-[var(--desk-border-strong)] bg-[var(--desk-panel)] px-3.5 py-1.5 font-mono text-[0.72rem] font-semibold tracking-[0.06em] text-[var(--desk-text-secondary)] uppercase"
             >
-              <span aria-hidden className="text-base leading-none opacity-70">
-                {logo.mark}
-              </span>
-              {logo.name}
+              {label}
             </li>
           ))}
         </ul>
       </section>
 
-      <section
-        id="product"
-        aria-labelledby="features-heading"
-        className="landing-section"
-      >
+      <section aria-labelledby="features-heading" className="landing-section">
         <h2
           id="features-heading"
           className="text-center text-2xl font-bold tracking-tight text-balance text-[var(--desk-text)] sm:text-3xl"
@@ -119,25 +203,36 @@ export function PreLoginLandingSections() {
       </section>
 
       <section
-        aria-label="Testimonial"
-        className="landing-section rounded-2xl border border-[rgba(240,193,75,0.22)] bg-[rgba(240,193,75,0.1)] px-6 py-8 sm:px-10 sm:py-10"
+        aria-labelledby="early-access-heading"
+        className="landing-section rounded-2xl border border-[rgba(240,193,75,0.22)] bg-[rgba(240,193,75,0.08)] px-6 py-8 sm:px-10 sm:py-10"
       >
-        <div className="flex flex-col items-start gap-5 sm:flex-row sm:items-center sm:gap-8">
-          <span
-            aria-hidden
-            className="inline-flex size-16 shrink-0 items-center justify-center rounded-full border border-[var(--desk-border-strong)] bg-[var(--desk-panel)] text-[var(--desk-text-dim)]"
-          >
-            <UserRound className="size-7" strokeWidth={1.5} />
-          </span>
-          <blockquote className="min-w-0">
-            <p className="text-xl leading-snug font-medium tracking-tight text-pretty text-[var(--desk-text)] sm:text-2xl">
-              &ldquo;Catalyst Intel turns SEC filings into plain English before
-              the market even reacts.&rdquo;
-            </p>
-            <footer className="mt-4 text-sm text-[var(--desk-text-muted)]">
-              — Day Trader, Early Access User
-            </footer>
-          </blockquote>
+        <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:gap-10">
+          <div className="max-w-sm shrink-0">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-[rgba(240,193,75,0.35)] bg-[rgba(240,193,75,0.12)] px-2.5 py-1 font-mono text-[0.68rem] font-bold tracking-[0.08em] text-[var(--desk-live)] uppercase">
+              Open Early Access
+            </span>
+            <h2
+              id="early-access-heading"
+              className="mt-3 text-xl font-bold tracking-tight text-balance text-[var(--desk-text)] sm:text-2xl"
+            >
+              Free while we build — really free
+            </h2>
+          </div>
+          <ul className="flex min-w-0 flex-col gap-3">
+            {EARLY_ACCESS_POINTS.map((point) => (
+              <li
+                key={point}
+                className="flex items-start gap-2.5 text-sm leading-relaxed text-pretty text-[var(--desk-text-secondary)] sm:text-[0.95rem]"
+              >
+                <CheckCircle2
+                  aria-hidden
+                  className="mt-0.5 size-4 shrink-0 text-[var(--desk-live)]"
+                  strokeWidth={1.75}
+                />
+                {point}
+              </li>
+            ))}
+          </ul>
         </div>
       </section>
 
@@ -149,20 +244,12 @@ export function PreLoginLandingSections() {
           id="final-cta-heading"
           className="max-w-2xl text-2xl font-bold tracking-tight text-balance text-[var(--desk-text)] sm:text-3xl"
         >
-          Never miss a market-moving catalyst again
+          Be there when the next catalyst hits
         </h2>
         <p className="mt-3 text-sm text-pretty text-[var(--desk-text-muted)] sm:text-base">
-          Free during Open Early Access — no card required
+          Free during Open Early Access — no card required.
         </p>
-        <Link
-          href="/login"
-          className={cn(
-            buttonVariants({ size: "lg" }),
-            "btn-press mt-8 min-h-11 w-full justify-center bg-[var(--desk-live)] text-[#121212] hover:brightness-110 sm:w-auto",
-          )}
-        >
-          Continue with Google — free
-        </Link>
+        <LandingGoogleCta className="mt-8 w-full sm:w-auto" />
       </section>
     </div>
   );

@@ -1,11 +1,10 @@
 import type { ReactNode } from "react";
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { BookOpen, X } from "lucide-react";
 
+import { LandingGoogleCta } from "@/components/landing-google-cta";
 import { PreLoginChrome } from "@/components/pre-login-chrome";
 import { PreLoginLandingSections } from "@/components/pre-login-landing-sections";
-import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
@@ -14,43 +13,86 @@ import { isSupabaseConfigured } from "@/lib/supabase/env";
 const PREVIEW_GRID =
   "grid-cols-[4.5rem_minmax(0,1fr)] sm:grid-cols-[5rem_minmax(0,1fr)_156px] lg:grid-cols-[5rem_minmax(0,1fr)_160px_minmax(200px,max-content)]";
 
+/**
+ * Demo rows mirror real tape output: titles follow the product's
+ * catalyst-title generators (see src/lib/catalysts/catalyst-titles.ts) and
+ * categories come from the real event taxonomy — believable, not decorative.
+ */
 const DEMO_ROWS: {
   symbol: string;
   title: string;
+  category: string;
+  /** Gold chip = high-priority catalyst class (halts, FDA) — never color alone. */
+  highPriority?: boolean;
   time: string;
   timeShort: string;
 }[] = [
   {
     symbol: "NVDA",
     title: "NVIDIA Corp - Earnings Report Q3",
-    time: "10:23 AM · Jul 25, 2026",
-    timeShort: "10:23 AM",
-  },
-  {
-    symbol: "TSLA",
-    title: "Item 8.01 — Other Events · guidance update",
-    time: "10:18 AM · Jul 25, 2026",
-    timeShort: "10:18 AM",
-  },
-  {
-    symbol: "AMD",
-    title: "Item 1.01 — Material definitive agreement",
-    time: "10:15 AM · Jul 25, 2026",
-    timeShort: "10:15 AM",
-  },
-  {
-    symbol: "JPM",
-    title: "Item 5.02 — Departure of directors or certain officers",
-    time: "10:12 AM · Jul 25, 2026",
-    timeShort: "10:12 AM",
+    category: "Earnings",
+    time: "9:42 AM · Jul 26, 2026",
+    timeShort: "9:42 AM",
   },
   {
     symbol: "MRK",
-    title: "Item 8.01 — Other Events · FDA decision referenced",
-    time: "10:08 AM · Jul 25, 2026",
-    timeShort: "10:08 AM",
+    title: "Merck & Co. Receives FDA Approval",
+    category: "FDA",
+    highPriority: true,
+    time: "9:36 AM · Jul 26, 2026",
+    timeShort: "9:36 AM",
+  },
+  {
+    symbol: "AMD",
+    title: "AMD - New Deal Announced (Major Contract or Partnership)",
+    category: "M&A",
+    time: "9:31 AM · Jul 26, 2026",
+    timeShort: "9:31 AM",
+  },
+  {
+    symbol: "IONS",
+    title: "Halts (Ionis Pharmaceuticals) - News Pending",
+    category: "Halt",
+    highPriority: true,
+    time: "9:27 AM · Jul 26, 2026",
+    timeShort: "9:27 AM",
+  },
+  {
+    symbol: "JPM",
+    title: "JPMorgan Chase - CFO Change (Departure)",
+    category: "Mgmt",
+    time: "9:20 AM · Jul 26, 2026",
+    timeShort: "9:20 AM",
+  },
+  {
+    symbol: "—",
+    title: "CPI — June 2026",
+    category: "Macro",
+    time: "8:30 AM · Jul 26, 2026",
+    timeShort: "8:30 AM",
   },
 ];
+
+function CategoryChip({
+  children,
+  highPriority = false,
+}: {
+  children: ReactNode;
+  highPriority?: boolean;
+}) {
+  return (
+    <span
+      className={cn(
+        "inline-flex shrink-0 items-center rounded-sm border px-1.5 py-px font-mono text-[0.6rem] font-semibold tracking-[0.08em] uppercase",
+        highPriority
+          ? "border-[rgba(240,193,75,0.4)] bg-[rgba(240,193,75,0.12)] text-[var(--desk-live)]"
+          : "border-[var(--desk-border-strong)] text-[var(--desk-text-muted)]",
+      )}
+    >
+      {children}
+    </span>
+  );
+}
 
 function PreviewActionChip({
   children,
@@ -86,7 +128,7 @@ export default async function Home() {
 
   return (
     <PreLoginChrome glowClassName="h-[55vh]">
-      <main className="page-enter relative z-10 mx-auto flex w-full max-w-5xl flex-1 flex-col justify-start gap-8 px-4 pt-2 pb-[calc(5.5rem+env(safe-area-inset-bottom))] sm:gap-10 sm:px-8 sm:pt-4 sm:pb-20">
+      <main className="page-enter relative z-10 mx-auto flex w-full max-w-5xl flex-1 flex-col justify-start gap-10 px-4 pt-2 pb-[calc(5.5rem+env(safe-area-inset-bottom))] sm:gap-12 sm:px-8 sm:pt-6 sm:pb-20">
         <div className="max-w-2xl">
           <div className="flex flex-wrap items-center gap-2">
             <span className="inline-flex items-center gap-1.5 rounded-full border border-[rgba(240,193,75,0.35)] bg-[rgba(240,193,75,0.12)] px-2.5 py-1 text-[0.68rem] font-bold tracking-[0.08em] text-[var(--desk-live)]">
@@ -100,50 +142,29 @@ export default async function Home() {
               Open Early Access · Free
             </span>
           </div>
-          <h1 className="mt-4 text-4xl font-bold tracking-tight text-balance text-[var(--desk-text)] sm:text-5xl">
+          <h1 className="mt-5 text-4xl font-bold tracking-tight text-balance text-[var(--desk-text)] sm:text-5xl">
             Catalyst Intel
           </h1>
-          <p className="mt-4 max-w-lg text-base text-pretty text-[var(--desk-text-secondary)] sm:text-lg">
-            Material catalysts on a trading blotter — Symbol, Title, Time. Open
-            Details for a plain-language summary.
+          <p className="mt-4 max-w-xl text-base leading-relaxed text-pretty text-[var(--desk-text-secondary)] sm:text-lg">
+            The catalysts that move stocks — earnings, SEC filings, FDA
+            decisions, trading halts — on one live tape, translated into plain
+            English.
           </p>
-          <p className="mt-3 max-w-lg text-sm text-pretty text-[var(--desk-text-muted)] sm:text-base">
-            During Open Early Access, every feature is free — feed, alerts,
-            watchlists, playbook, and AI. No card required.
+          <p className="mt-3 max-w-xl text-sm leading-relaxed text-pretty text-[var(--desk-text-muted)] sm:text-base">
+            Scan symbol, title, and time. Open a row for the facts that matter.
+            During Open Early Access every feature is free — no card required.
           </p>
-          <div className="mt-8 flex flex-col items-start gap-3 sm:flex-row sm:flex-wrap sm:items-center">
-            <Link
-              href="/login"
-              className={cn(
-                buttonVariants({ size: "lg" }),
-                "btn-press min-h-11 w-full justify-center bg-[var(--desk-live)] text-[#121212] hover:brightness-110 sm:w-auto",
-              )}
-            >
-              Continue with Google — free
-            </Link>
+          <div className="mt-8 flex flex-col items-start gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:gap-4">
+            <LandingGoogleCta className="w-full sm:w-auto" />
             <span className="font-mono text-xs text-[var(--desk-text-muted)]">
               Sign in · no password · full access
             </span>
           </div>
         </div>
 
-        <div className="pointer-events-none fixed inset-x-0 bottom-0 z-30 sm:hidden">
-          <div className="pointer-events-auto border-t border-[var(--desk-border)] bg-[var(--desk-app)]/95 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur-md">
-            <Link
-              href="/login"
-              className={cn(
-                buttonVariants({ size: "lg" }),
-                "btn-press min-h-12 w-full justify-center bg-[var(--desk-live)] text-[#121212] hover:brightness-110",
-              )}
-            >
-              Continue with Google
-            </Link>
-          </div>
-        </div>
-
         <section
           aria-label="Feed preview"
-          className="landing-feed overflow-hidden rounded-lg border border-[var(--desk-border)] bg-[var(--desk-panel)] shadow-[0_24px_80px_rgba(0,0,0,0.45)]"
+          className="landing-feed landing-feed-dark overflow-hidden rounded-lg border border-[var(--desk-border)] bg-[var(--desk-panel)] shadow-[0_24px_80px_rgba(10,12,20,0.35)]"
         >
           <div className="flex items-center justify-between border-b border-[var(--desk-border)] bg-[var(--desk-header)] px-4 py-3 sm:px-5">
             <div className="flex min-w-0 items-center gap-3">
@@ -154,7 +175,7 @@ export default async function Home() {
                 />
                 LIVE
               </span>
-              <span className="hidden truncate text-[0.86rem] text-[var(--desk-text-muted)] sm:inline">
+              <span className="truncate text-[0.86rem] text-[var(--desk-text-muted)]">
                 Catalyst Feed preview
               </span>
             </div>
@@ -198,7 +219,7 @@ export default async function Home() {
                 key={`${row.symbol}-${row.timeShort}`}
                 role="row"
                 className={cn(
-                  "feed-row grid min-h-[56px] items-center gap-2 border-b border-[var(--desk-border)] px-4 py-3 sm:gap-3 sm:px-5 sm:py-0",
+                  "feed-row grid min-h-[56px] items-center gap-2 border-b border-[var(--desk-border)] px-4 py-3 last:border-b-0 sm:gap-3 sm:px-5 sm:py-0",
                   PREVIEW_GRID,
                 )}
                 style={{
@@ -212,11 +233,21 @@ export default async function Home() {
                 </div>
 
                 <div role="cell" className="min-w-0">
-                  <span className="line-clamp-2 text-[0.88rem] font-medium text-[var(--desk-text-secondary)] sm:line-clamp-1">
-                    {row.title}
-                  </span>
-                  <div className="mt-1.5 flex flex-col gap-1 sm:hidden">
-                    <time className="font-mono text-[0.72rem] font-medium tracking-tight whitespace-nowrap text-[var(--desk-text-muted)] tabular-nums">
+                  <div className="flex min-w-0 items-center gap-2">
+                    <span className="hidden md:inline-flex">
+                      <CategoryChip highPriority={row.highPriority}>
+                        {row.category}
+                      </CategoryChip>
+                    </span>
+                    <span className="line-clamp-2 min-w-0 text-[0.88rem] font-medium text-[var(--desk-text-secondary)] sm:line-clamp-1">
+                      {row.title}
+                    </span>
+                  </div>
+                  <div className="mt-1.5 flex items-center gap-2 md:hidden">
+                    <CategoryChip highPriority={row.highPriority}>
+                      {row.category}
+                    </CategoryChip>
+                    <time className="font-mono text-[0.72rem] font-medium tracking-tight whitespace-nowrap text-[var(--desk-text-muted)] tabular-nums sm:hidden">
                       {row.timeShort}
                     </time>
                   </div>
@@ -255,10 +286,21 @@ export default async function Home() {
           </div>
         </section>
 
-        <div className="mt-8 sm:mt-12">
+        <div className="mt-6 sm:mt-10">
           <PreLoginLandingSections />
         </div>
       </main>
+
+      {/* Mobile: persistent CTA. Sibling of <main>, not a child — the
+          page-enter animation leaves a transform on <main>, which would
+          turn position:fixed into position:absolute-within-main. */}
+      <div className="pointer-events-none fixed inset-x-0 bottom-0 z-30 sm:hidden">
+        <div className="pointer-events-auto border-t border-[var(--desk-border)] bg-[var(--desk-app)]/95 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur-md">
+          <LandingGoogleCta className="w-full">
+            Continue with Google
+          </LandingGoogleCta>
+        </div>
+      </div>
     </PreLoginChrome>
   );
 }
