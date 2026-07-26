@@ -6,6 +6,7 @@ import { DatabaseSetupNotice } from "@/components/database-setup-notice";
 import { isLibsqlConfigured, isLocalSqliteSetupError } from "@/db/env";
 import { isLocalSqliteReady } from "@/db/local-sqlite-ready";
 import { getCurrentAppUser } from "@/lib/auth/current-user";
+import { normalizeDbError } from "@/lib/errors/classify-db-error";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 
@@ -43,7 +44,9 @@ export default async function DeskLayout({
     if (isLocalSqliteSetupError(err)) {
       return <DatabaseSetupNotice />;
     }
-    throw err;
+    // Normalize Turso BLOCKED (quota) so error.tsx gets a clear message even
+    // after Next strips nested `.cause` on the way to the client.
+    throw normalizeDbError(err);
   }
 
   if (!user) {

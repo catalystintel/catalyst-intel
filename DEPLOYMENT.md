@@ -310,6 +310,21 @@ connection/lock/statement fails fast with a clear message instead of hanging unt
 overall build timeout. If a build fails on this step again, the real cause should now be
 visible in the log.
 
+### Turso `BLOCKED` (plan quota exceeded)
+
+If Vercel logs or the desk error page mention **BLOCKED** / "SQL read operations are
+forbidden" / "upgrade your plan", the Turso database has hit its monthly row-read (or
+row-write / storage) quota. Every SQL query fails until you **upgrade the Turso plan** or
+wait for the calendar-month quota to reset — see
+[Turso usage and billing](https://docs.turso.tech/help/usage-and-billing).
+
+- Reloading the app will not help; env vars are fine.
+- On Vercel, `scripts/migrate.mjs` **skips migrate with a warning** when it sees BLOCKED so
+  app deploys are not stuck behind an unfixable migrate. Runtime queries still fail until
+  the quota is restored.
+- The desk error UI shows **Database quota exceeded** (not the generic "Something went
+  wrong") once that copy is deployed.
+
 **Workflow when you change `src/db/schema.ts`:**
 
 1. `npm run db:generate` - writes a new file under `drizzle/`.
