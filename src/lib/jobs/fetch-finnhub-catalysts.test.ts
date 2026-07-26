@@ -167,6 +167,26 @@ describe("companyNewsToNormalized", () => {
     });
   });
 
+  it("rewrites Seeking Alpha headlines into trader titles", () => {
+    const item = companyNewsToNormalized({
+      id: 99,
+      headline:
+        "I Was Wrong About Johnson & Johnson: Upgrading To Hold (Rating Upgrade)",
+      related: "ABBV",
+      datetime: Math.floor(new Date("2026-07-20T12:00:00Z").getTime() / 1000),
+      summary: "Upgrades JNJ from Sell to Hold.",
+      source: "SeekingAlpha",
+      url: "https://seekingalpha.com/article/99",
+    });
+    expect(item).toMatchObject({
+      provider: "finnhub",
+      headline: "SeekingAlpha",
+      title: "Johnson & Johnson - Upgraded to Hold",
+      eventCategory: "analyst",
+      subcategory: "upgrade",
+    });
+  });
+
   it("drops generic company news", () => {
     expect(
       companyNewsToNormalized({

@@ -7,6 +7,10 @@ import {
   resolveDisplayCompanyName,
 } from "@/lib/catalysts/catalyst-titles";
 import { categorizeNewsHeadline } from "@/lib/catalysts/news-category";
+import {
+  formatSeekingAlphaTitle,
+  isSeekingAlphaSource,
+} from "@/lib/catalysts/seeking-alpha-titles";
 import { RETENTION_DAYS } from "@/lib/jobs/data-retention";
 import {
   ingestNormalizedCatalysts,
@@ -347,6 +351,19 @@ export function companyNewsToNormalized(
       ? String(row.id)
       : `${symbol ?? "UNK"}:${ts}:${headline.slice(0, 40)}`.toLowerCase();
 
+  const source = row.source?.trim() || "Company news";
+  const summary = row.summary?.trim() || null;
+  const title = isSeekingAlphaSource(source)
+    ? formatSeekingAlphaTitle({
+        title: headline,
+        summary,
+        companyName: symbol,
+        symbol,
+        eventCategory: classified.eventCategory,
+        subcategory: classified.subcategory,
+      })
+    : headline;
+
   return {
     provider: "finnhub",
     externalId: `finnhub:news:${id}`,
@@ -355,12 +372,12 @@ export function companyNewsToNormalized(
     symbol: symbol,
     companyName: symbol,
     type: "Company News",
-    title: headline,
-    headline: row.source?.trim() || "Company news",
+    title,
+    headline: source,
     eventCategory: classified.eventCategory,
     subcategory: classified.subcategory,
     timestamp: ts,
-    summary: row.summary?.trim() || null,
+    summary,
     confidence: 62,
     tags: ["finnhub", "news", ...classified.tags, ...(symbol ? [symbol] : [])],
   };
