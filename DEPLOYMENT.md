@@ -151,10 +151,14 @@ env vars are required today.
 
 ### GitHub repo secrets (for the deploy migration workflow)
 
-`migrate.yml` runs `drizzle-kit migrate` from GitHub Actions on every push to `main` /
+`migrate.yml` runs `npm run db:migrate` from GitHub Actions on every push to `main` /
 `dev`, as an explicit, visible-in-Actions step in addition to the migration Vercel's own
-build already runs. Missing secrets skip that push's job (logs a message, exits 0)
+build already runs. Missing secrets skip that push's job (logs a `::warning::`, exits 0)
 instead of failing the workflow - Vercel's build-time migration still applies either way.
+**As of 2026-07-26 these secrets are not set in this repo**, so `migrate.yml` has never
+actually touched the real staging/production DB - Vercel's build-time migration is
+currently the _only_ thing migrating those environments. Set the secrets below to make
+`migrate.yml` a real fallback.
 
 | Secret                      | Notes                                                   |
 | --------------------------- | ------------------------------------------------------- |
@@ -264,8 +268,8 @@ and/or **ClinicalTrials** (not only SEC).
 
 ## Database migrations in CI/CD
 
-`npm run build` is `drizzle-kit migrate && next build` (see `package.json`) - migrations are
-not a separate manual step, they run wherever a build runs:
+`npm run build` is `node scripts/migrate.mjs && next build` (see `package.json`) - migrations
+are not a separate manual step, they run wherever a build runs:
 
 - **Vercel** builds staging on every push to `dev` and production on every push to `main`
   (`vercel.json` restricts deploys to just those two branches). Each build applies any pending
@@ -276,14 +280,35 @@ not a separate manual step, they run wherever a build runs:
   throwaway SQLite file (`DATABASE_URL: file:./local.db`, recreated per run). This isn't a
   real environment, but it does mean every PR into `dev` verifies its migrations apply
   cleanly - a broken migration SQL file fails CI before it can be merged.
-- **GitHub Actions deploy migration** (`migrate.yml`) additionally runs `drizzle-kit migrate`
+- **GitHub Actions deploy migration** (`migrate.yml`) additionally runs `npm run db:migrate`
   directly against the real staging/production Turso DB on every push to `dev`/`main`, as its
   own explicit, visible-in-Actions step (see secrets below). This is redundant with Vercel's
   build-time migration by design - both are safe to run against the same DB - so a migration
-  landing is never solely dependent on Vercel's build succeeding.
+  landing is never solely dependent on Vercel's build succeeding. **Currently a no-op** until
+  the `PROD_*`/`STAGING_*` secrets are set (see above).
 - **Admin UI** (`/admin` → "Run pending migrations") calls `POST /api/admin/migrate`, which runs
   the same drizzle migrator in-process against whichever DB the running app is pointed at. Use
   this to catch up a schema change immediately without waiting on a deploy or Action to finish.
+
+### Why `scripts/migrate.mjs` instead of the `drizzle-kit migrate` CLI
+
+`npm run build` and `npm run db:migrate` call `node scripts/migrate.mjs` (a thin wrapper around
+drizzle-orm's programmatic `migrate()`) instead of running the `drizzle-kit migrate` CLI
+directly. The CLI's progress spinner (`[spinner] applying migrations...`) redraws its terminal
+line with carriage returns, which can clobber its own `console.error` output in a non-TTY build
+log. On 2026-07-26 this caused a production deploy (PR #246) to fail with only
+
+```
+Reading config file '/vercel/path0/drizzle.config.ts'
+Error: Command "npm run build" exited with 1
+[spinner] applying migrations...
+```
+
+in the Vercel build log - no indication of the actual underlying error. `scripts/migrate.mjs`
+prints a normal error/stack trace on failure and adds a 60s timeout so a stuck
+connection/lock/statement fails fast with a clear message instead of hanging until Vercel's
+overall build timeout. If a build fails on this step again, the real cause should now be
+visible in the log.
 
 **Workflow when you change `src/db/schema.ts`:**
 
@@ -293,9 +318,9 @@ not a separate manual step, they run wherever a build runs:
    promoting to `main` applies it to staging / production automatically on the next build.
 
 **Known limitation:** two builds hitting the same Turso DB at the exact same moment (e.g. a
-rapid double-push) both run `drizzle-kit migrate` independently. This is safe in the common
-case - already-applied migrations are skipped - but isn't lock-protected. Not a realistic risk
-at this project's push frequency/team size; revisit if that changes.
+rapid double-push) both run the migrator independently. This is safe in the common case -
+already-applied migrations are skipped - but isn't lock-protected. Not a realistic risk at this
+project's push frequency/team size; revisit if that changes.
 
 ## Data retention
 

@@ -26,7 +26,7 @@ npm run build
 
 - `npm run db:check` enforces Drizzle schema↔migration sync (also runs on
   husky pre-commit). See `.cursor/skills/drizzle-migrations/SKILL.md`.
-- `npm run build` runs `drizzle-kit migrate && next build` - it also verifies
+- `npm run build` runs `node scripts/migrate.mjs && next build` - it also verifies
   every committed migration file applies cleanly, and needs enough
   placeholder env vars to not fail on missing config. If they aren't already
   set in your shell, prefix the build with the same placeholders CI uses (see
