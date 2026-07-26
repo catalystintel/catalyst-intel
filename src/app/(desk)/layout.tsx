@@ -2,11 +2,17 @@ import type { ReactNode } from "react";
 import { redirect } from "next/navigation";
 
 import { AppShell } from "@/components/app-shell";
-import { DatabaseSetupNotice } from "@/components/database-setup-notice";
+import {
+  DatabaseQuotaNotice,
+  DatabaseSetupNotice,
+} from "@/components/database-setup-notice";
 import { isLibsqlConfigured, isLocalSqliteSetupError } from "@/db/env";
 import { isLocalSqliteReady } from "@/db/local-sqlite-ready";
 import { getCurrentAppUser } from "@/lib/auth/current-user";
-import { normalizeDbError } from "@/lib/errors/classify-db-error";
+import {
+  isTursoQuotaBlockedError,
+  normalizeDbError,
+} from "@/lib/errors/classify-db-error";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 
@@ -44,8 +50,12 @@ export default async function DeskLayout({
     if (isLocalSqliteSetupError(err)) {
       return <DatabaseSetupNotice />;
     }
-    // Normalize Turso BLOCKED (quota) so error.tsx gets a clear message even
-    // after Next strips nested `.cause` on the way to the client.
+    // Turso plan-quota BLOCKED: render a notice here. Next.js redacts Server
+    // Component thrown errors in production, so throwing into error.tsx only
+    // shows the generic "Something went wrong" copy.
+    if (isTursoQuotaBlockedError(err)) {
+      return <DatabaseQuotaNotice />;
+    }
     throw normalizeDbError(err);
   }
 
