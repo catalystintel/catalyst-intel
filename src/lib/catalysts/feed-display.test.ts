@@ -92,9 +92,9 @@ describe("sectorLabel", () => {
 });
 
 describe("titleLine", () => {
-  it("formats SEC earnings catalog rows as Company: Earnings Report Qn", () => {
+  it("formats SEC earnings catalog rows as Company - Earnings Report Qn", () => {
     // Filing date 2026-07-20 → calendar Q3 heuristic when Finnhub quarter absent.
-    expect(titleLine(base())).toBe("NVIDIA Corp: Earnings Report Q3");
+    expect(titleLine(base())).toBe("NVIDIA Corp - Earnings Report Q3");
     expect(
       titleLine(
         base({
@@ -106,7 +106,7 @@ describe("titleLine", () => {
     ).toBe("NVIDIA Corp — 8-K filing");
   });
 
-  it("rewrites Results of Operations blurbs to Company: Earnings Report Qn", () => {
+  it("rewrites Results of Operations blurbs to Company - Earnings Report Qn", () => {
     expect(
       titleLine(
         base({
@@ -126,7 +126,7 @@ describe("titleLine", () => {
             "Item 9.01: Financial Statements and Exhibits",
         }),
       ),
-    ).toBe("Liberty Global Ltd: Earnings Report Q3");
+    ).toBe("Liberty Global Ltd - Earnings Report Q3");
   });
 
   it("uses ground-rule 8-K titles instead of raw Item blurbs", () => {
@@ -141,10 +141,10 @@ describe("titleLine", () => {
       summary: `Item 3.01: ${long}`,
     });
     expect(titleLine(row)).toBe(
-      "Quantum-Si Inc: Delisting Risk (Stock Could Lose Its Listing)",
+      "Quantum-Si Inc - Delisting Risk (Stock Could Lose Its Listing)",
     );
     expect(titleTooltipLine(row)).toBe(
-      "Quantum-Si Inc: Delisting Risk (Stock Could Lose Its Listing)",
+      "Quantum-Si Inc - Delisting Risk (Stock Could Lose Its Listing)",
     );
   });
 
@@ -168,7 +168,7 @@ describe("titleLine", () => {
             "Item 5.02: Departure of Directors or Certain Officers; Election of Directors; Appointment of Certain Officers. On July 20, 2026, Jane Smith resigned as Chief Executive Officer of the Company.",
         }),
       ),
-    ).toBe("Acme Corp: CEO Change (Departure)");
+    ).toBe("Acme Corp - CEO Change (Departure)");
 
     expect(
       titleLine(
@@ -190,7 +190,7 @@ describe("titleLine", () => {
             "Item 5.02: Departure of Directors or Certain Officers. The Board appointed Robert Lee as Chief Financial Officer.",
         }),
       ),
-    ).toBe("Acme Corp: CFO Change (Appointment)");
+    ).toBe("Acme Corp - CFO Change (Appointment)");
 
     expect(
       titleLine(
@@ -212,7 +212,7 @@ describe("titleLine", () => {
             "Item 5.02: Departure of Directors or Certain Officers; Election of Directors; Appointment of Certain Officers; Compensatory Arrangements of Certain Officers",
         }),
       ),
-    ).toBe("Acme Corp: Executive Change");
+    ).toBe("Acme Corp - Executive Change");
   });
 
   it("keeps specific news headlines without forcing company prefix", () => {
@@ -293,7 +293,7 @@ describe("titleLine", () => {
           title: "Material agreement — SEC",
         }),
       ),
-    ).toBe("NVIDIA Corp: New Deal Announced (Major Contract or Partnership)");
+    ).toBe("NVIDIA Corp - New Deal Announced (Major Contract or Partnership)");
   });
 
   it("rewrites offering / ownership / clinical / macro / analyst titles", () => {
@@ -308,7 +308,7 @@ describe("titleLine", () => {
           companyName: "Acme Corp",
         }),
       ),
-    ).toBe("Acme Corp: Shelf Registration (S-3)");
+    ).toBe("Acme Corp - Shelf Registration (S-3)");
 
     expect(
       titleLine(
@@ -321,7 +321,7 @@ describe("titleLine", () => {
           companyName: "Acme Corp",
         }),
       ),
-    ).toBe("Acme Corp: New Stock Offering Filed (Potential Dilution Ahead)");
+    ).toBe("Acme Corp - New Stock Offering Filed (Potential Dilution Ahead)");
 
     expect(
       titleLine(
@@ -377,7 +377,7 @@ describe("titleLine", () => {
           companyName: "Acme Corp",
         }),
       ),
-    ).toBe("Acme Corp: Schedule 13D");
+    ).toBe("Acme Corp - Schedule 13D");
 
     expect(
       titleLine(
@@ -390,7 +390,7 @@ describe("titleLine", () => {
           companyName: "Pfizer Inc",
         }),
       ),
-    ).toBe("Pfizer Inc: Clinical Trial");
+    ).toBe("Pfizer Inc - Clinical Trial");
 
     expect(
       titleLine(
@@ -420,7 +420,7 @@ describe("titleLine", () => {
           symbol: "AAPL",
         }),
       ),
-    ).toBe("Apple Inc.: Price Target");
+    ).toBe("Apple Inc. - Price Target");
   });
 
   it("prefers ground-rule Halt / FDA / Earnings titles over generic chips", () => {
@@ -436,7 +436,7 @@ describe("titleLine", () => {
           symbol: "STKH",
         }),
       ),
-    ).toBe("Halts (Steakholder Foods Ltd. ADS): News pending");
+    ).toBe("Halts (Steakholder Foods Ltd. ADS) - News pending");
 
     expect(
       titleLine(
@@ -478,7 +478,7 @@ describe("titleLine", () => {
           symbol: "AAPL",
         }),
       ),
-    ).toBe("Apple Inc.: Earnings Report Q1");
+    ).toBe("Apple Inc. - Earnings Report Q1");
   });
 });
 
