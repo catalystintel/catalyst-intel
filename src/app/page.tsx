@@ -124,8 +124,18 @@ function PreviewActionChip({
   );
 }
 
-export default async function Home() {
-  if (isSupabaseConfigured()) {
+export default async function Home({
+  searchParams,
+}: {
+  searchParams: Promise<{ preview?: string }>;
+}) {
+  const { preview } = await searchParams;
+  // Dev/owner convenience: `?preview=1` outside production lets a signed-in
+  // owner reload `/` to check landing-page design changes without signing out.
+  const isPreviewBypass =
+    process.env.NODE_ENV !== "production" && preview === "1";
+
+  if (isSupabaseConfigured() && !isPreviewBypass) {
     const supabase = await createSupabaseServerClient();
     const {
       data: { user },
