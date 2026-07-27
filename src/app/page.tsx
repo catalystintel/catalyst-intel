@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { BookOpen, Radio, ShieldCheck, Unlock, X } from "lucide-react";
+import { ArrowRight, BookOpen, Lock, ShieldCheck, X, Zap } from "lucide-react";
 
 import { FeedPreviewChartGlow } from "@/components/feed-preview-chart-glow";
 import { LandingGoogleCta } from "@/components/landing-google-cta";
@@ -13,9 +13,9 @@ import { isSupabaseConfigured } from "@/lib/supabase/env";
 
 /** Quick-glance trust row under the hero CTA. */
 const HERO_STATS = [
-  { icon: Radio, label: "LIVE", detail: "Real-time alerts" },
+  { icon: Zap, label: "LIVE", detail: "Real-time alerts" },
   { icon: ShieldCheck, label: "TRUSTED", detail: "5,000+ active traders" },
-  { icon: Unlock, label: "FREE", detail: "Full access now" },
+  { icon: Lock, label: "FREE", detail: "Full access now" },
 ] as const;
 
 /** Matches live blotter: Symbol · Title · Time (+ Actions). */
@@ -173,7 +173,7 @@ export default async function Home() {
               href="/login"
               className="inline-flex items-center font-mono text-xs font-semibold text-[var(--desk-live)] underline-offset-4 hover:underline"
             >
-              Sign in · no password · full access
+              Sign in · No password · Full access
             </Link>
           </div>
           <ul className="mt-8 flex flex-wrap items-center gap-2">
@@ -215,8 +215,8 @@ export default async function Home() {
                 />
                 LIVE
               </span>
-              <span className="truncate text-[0.86rem] text-[var(--desk-text-muted)]">
-                Catalyst Feed preview
+              <span className="truncate text-[0.86rem] font-semibold text-[var(--desk-text)]">
+                Catalyst Feed
               </span>
             </div>
             <span className="font-mono text-[0.72rem] tracking-[0.08em] text-[var(--desk-text-dim)] uppercase">
@@ -240,7 +240,7 @@ export default async function Home() {
                 Symbol
               </div>
               <div role="columnheader" className="min-w-0">
-                Title
+                Event
               </div>
               <div
                 role="columnheader"
@@ -323,6 +323,23 @@ export default async function Home() {
                 </div>
               </article>
             ))}
+          </div>
+
+          <div className="relative z-[1] flex items-center justify-between border-t border-[var(--desk-border)] bg-[color:var(--desk-header)]/85 px-4 py-2.5 backdrop-blur-[1px] sm:px-5">
+            <span className="inline-flex items-center gap-1.5 font-mono text-[0.68rem] font-medium tracking-[0.04em] text-[var(--desk-text-dim)]">
+              <span
+                aria-hidden
+                className="live-pulse size-1.5 rounded-full bg-[var(--desk-live)]"
+              />
+              Live updates · Auto-refreshing
+            </span>
+            <Link
+              href="/login"
+              className="inline-flex shrink-0 items-center gap-1 font-mono text-[0.68rem] font-semibold text-[var(--desk-live)] underline-offset-4 hover:underline"
+            >
+              View full feed
+              <ArrowRight className="size-3" aria-hidden />
+            </Link>
           </div>
         </section>
 
