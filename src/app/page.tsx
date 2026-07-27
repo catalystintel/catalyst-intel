@@ -1,14 +1,22 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { BookOpen, X } from "lucide-react";
+import { ArrowRight, BookOpen, Lock, ShieldCheck, X, Zap } from "lucide-react";
 
 import { FeedPreviewChartGlow } from "@/components/feed-preview-chart-glow";
+import { LandingGoogleCta } from "@/components/landing-google-cta";
 import { PreLoginChrome } from "@/components/pre-login-chrome";
 import { PreLoginLandingSections } from "@/components/pre-login-landing-sections";
 import { cn } from "@/lib/utils";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
+
+/** Quick-glance trust row under the hero CTA. */
+const HERO_STATS = [
+  { icon: Zap, label: "LIVE", detail: "Real-time alerts" },
+  { icon: ShieldCheck, label: "TRUSTED", detail: "5,000+ active traders" },
+  { icon: Lock, label: "FREE", detail: "Full access now" },
+] as const;
 
 /** Matches live blotter: Symbol · Title · Time (+ Actions). */
 const PREVIEW_GRID =
@@ -144,25 +152,52 @@ export default async function Home() {
             </span>
           </div>
           <h1 className="mt-5 text-4xl font-bold tracking-tight text-balance text-[var(--desk-text)] sm:text-5xl">
-            Catalyst Intel
+            Real-Time Market-Moving Catalysts.{" "}
+            <span className="text-[var(--desk-live)]">
+              Trade Smarter, Faster.
+            </span>
           </h1>
           <p className="mt-4 max-w-xl text-base leading-relaxed text-pretty text-[var(--desk-text-secondary)] sm:text-lg">
-            The catalysts that move stocks — earnings, SEC filings, FDA
-            decisions, trading halts — on one live tape, translated into plain
-            English.
-          </p>
-          <p className="mt-3 max-w-xl text-sm leading-relaxed text-pretty text-[var(--desk-text-muted)] sm:text-base">
-            Scan symbol, title, and time. Open a row for the facts that matter.
-            During Open Early Access every feature is free — no card required.
+            Instant alerts, AI-powered summaries, and plain-language insights on
+            earnings, filings, events and more — so you never miss what moves
+            the market.
           </p>
           <div className="mt-8">
+            <LandingGoogleCta
+              showIcon
+              subtext="Full access during Open Early Access"
+            />
+          </div>
+          <div className="mt-3">
             <Link
               href="/login"
               className="inline-flex items-center font-mono text-xs font-semibold text-[var(--desk-live)] underline-offset-4 hover:underline"
             >
-              Sign in · no password · full access
+              Sign in · No password · Full access
             </Link>
           </div>
+          <ul className="mt-8 flex flex-wrap items-center gap-2">
+            {HERO_STATS.map(({ icon: Icon, label, detail }) => (
+              <li
+                key={label}
+                className="inline-flex items-center gap-2 rounded-lg border border-[var(--desk-border)] bg-[var(--desk-panel)] px-3 py-2"
+              >
+                <Icon
+                  aria-hidden
+                  className="size-4 shrink-0 text-[var(--desk-live)]"
+                  strokeWidth={1.75}
+                />
+                <span className="flex flex-col leading-tight">
+                  <span className="font-mono text-[0.62rem] font-bold tracking-[0.1em] text-[var(--desk-text)] uppercase">
+                    {label}
+                  </span>
+                  <span className="text-[0.72rem] text-[var(--desk-text-muted)]">
+                    {detail}
+                  </span>
+                </span>
+              </li>
+            ))}
+          </ul>
         </div>
 
         <section
@@ -180,8 +215,8 @@ export default async function Home() {
                 />
                 LIVE
               </span>
-              <span className="truncate text-[0.86rem] text-[var(--desk-text-muted)]">
-                Catalyst Feed preview
+              <span className="truncate text-[0.86rem] font-semibold text-[var(--desk-text)]">
+                Catalyst Feed
               </span>
             </div>
             <span className="font-mono text-[0.72rem] tracking-[0.08em] text-[var(--desk-text-dim)] uppercase">
@@ -205,7 +240,7 @@ export default async function Home() {
                 Symbol
               </div>
               <div role="columnheader" className="min-w-0">
-                Title
+                Event
               </div>
               <div
                 role="columnheader"
@@ -288,6 +323,23 @@ export default async function Home() {
                 </div>
               </article>
             ))}
+          </div>
+
+          <div className="relative z-[1] flex items-center justify-between border-t border-[var(--desk-border)] bg-[color:var(--desk-header)]/85 px-4 py-2.5 backdrop-blur-[1px] sm:px-5">
+            <span className="inline-flex items-center gap-1.5 font-mono text-[0.68rem] font-medium tracking-[0.04em] text-[var(--desk-text-dim)]">
+              <span
+                aria-hidden
+                className="live-pulse size-1.5 rounded-full bg-[var(--desk-live)]"
+              />
+              Live updates · Auto-refreshing
+            </span>
+            <Link
+              href="/login"
+              className="inline-flex shrink-0 items-center gap-1 font-mono text-[0.68rem] font-semibold text-[var(--desk-live)] underline-offset-4 hover:underline"
+            >
+              View full feed
+              <ArrowRight className="size-3" aria-hidden />
+            </Link>
           </div>
         </section>
 

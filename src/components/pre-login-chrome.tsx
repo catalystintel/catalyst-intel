@@ -80,7 +80,7 @@ export function PreLoginChrome({
               "btn-press min-h-11 border-[var(--desk-border-strong)] bg-transparent px-3 text-[var(--desk-text-secondary)] hover:bg-[var(--desk-overlay-strong)] hover:text-[var(--desk-text)] sm:min-h-0",
             )}
           >
-            Sign in
+            Sign In
           </Link>
         </nav>
       </header>

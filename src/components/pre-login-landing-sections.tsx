@@ -4,8 +4,12 @@ import {
   BookOpen,
   CheckCircle2,
   ListFilter,
+  Quote,
+  ShieldCheck,
   Sparkles,
   Star,
+  TrendingUp,
+  UserRound,
 } from "lucide-react";
 
 import { LandingGoogleCta } from "@/components/landing-google-cta";
@@ -54,30 +58,41 @@ const WORKFLOW_STEPS = [
 
 const FEATURES = [
   {
-    title: "Real-time alerts",
-    description:
-      "Get notified the moment a catalyst hits a ticker you follow — not an hour later.",
+    title: "Real-Time Alerts",
+    description: "Be first to know the moment a catalyst hits.",
     icon: Bell,
   },
   {
-    title: "Smart watchlists",
-    description:
-      "Keep the names you own or trade front and center, and filter the tape down to them.",
-    icon: Star,
+    title: "Smart Watchlists",
+    description: "Track the tickers that matter to you.",
+    icon: TrendingUp,
   },
   {
-    title: "Plain-language AI summaries",
-    description:
-      "Filings translated into takeaways and key facts, grounded in the document — never speculation.",
+    title: "Plain-Language AI",
+    description: "Complex filings, simplified in seconds.",
     icon: Sparkles,
   },
   {
-    title: "Historical playbook",
-    description:
-      "See how similar catalysts played out before, so the current one has context.",
+    title: "Historical Playbook",
+    description: "See how similar catalysts played out before.",
     icon: BookOpen,
   },
 ] as const;
+
+/** Placeholder wordmarks for the "trusted during Open Early Access" preview strip. */
+const TRUSTED_LOGOS = [
+  "Portligns",
+  "Compoore",
+  "Poolano",
+  "Wainners",
+  "Peamtart",
+] as const;
+
+const TESTIMONIAL = {
+  quote:
+    "Catalyst Intel turns SEC filings into plain English before the market even reacts.",
+  attribution: "Day Trader, Early Access User",
+} as const;
 
 const EARLY_ACCESS_POINTS = [
   "Every feature is included — live feed, alerts, watchlists, playbook, and AI summaries.",
@@ -203,6 +218,67 @@ export function PreLoginLandingSections() {
       </section>
 
       <section
+        aria-labelledby="trusted-heading"
+        className="landing-section flex flex-col items-center text-center"
+      >
+        <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--desk-border-strong)] bg-[var(--desk-panel)] px-2.5 py-1 font-mono text-[0.68rem] font-bold tracking-[0.08em] text-[var(--desk-text-muted)] uppercase">
+          <ShieldCheck aria-hidden className="size-3.5" strokeWidth={1.75} />
+          Trusted during Open Early Access
+        </span>
+        <h2
+          id="trusted-heading"
+          className="mt-3 text-lg font-bold tracking-tight text-balance text-[var(--desk-text)] sm:text-xl"
+        >
+          5,000+ active traders and growing
+        </h2>
+        <ul className="mt-8 flex w-full max-w-3xl flex-wrap items-center justify-center gap-x-10 gap-y-4">
+          {TRUSTED_LOGOS.map((name) => (
+            <li
+              key={name}
+              className="font-mono text-sm font-bold tracking-wide text-[var(--desk-text-dim)] opacity-70 grayscale"
+            >
+              {name}
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      <section
+        aria-labelledby="testimonial-heading"
+        className="landing-section flex flex-col items-center text-center"
+      >
+        <h2 id="testimonial-heading" className="sr-only">
+          What early access traders say
+        </h2>
+        <div className="max-w-xl rounded-2xl border border-[var(--desk-border)] bg-[var(--desk-panel)] px-6 py-8 text-left shadow-[0_1px_0_rgba(0,0,0,0.03)] sm:px-10">
+          <div className="flex items-start gap-4">
+            <span aria-hidden className="relative shrink-0">
+              <span className="flex size-11 items-center justify-center rounded-full border border-[var(--desk-border-strong)] bg-[var(--desk-overlay-soft)] text-[var(--desk-text-muted)]">
+                <UserRound className="size-5" strokeWidth={1.75} />
+              </span>
+              <CheckCircle2
+                className="absolute -right-0.5 -bottom-0.5 size-4 rounded-full bg-[var(--desk-panel)] text-[var(--desk-live)]"
+                strokeWidth={2}
+              />
+            </span>
+            <div className="min-w-0">
+              <Quote
+                aria-hidden
+                className="size-5 text-[var(--desk-live)]"
+                strokeWidth={1.75}
+              />
+              <p className="mt-2 text-lg font-medium text-balance text-[var(--desk-text)] sm:text-xl">
+                “{TESTIMONIAL.quote}”
+              </p>
+              <p className="mt-3 font-mono text-[0.78rem] font-semibold tracking-[0.04em] text-[var(--desk-text-muted)]">
+                — {TESTIMONIAL.attribution}
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section
         aria-labelledby="early-access-heading"
         className="landing-section rounded-2xl border border-[rgba(240,193,75,0.22)] bg-[rgba(240,193,75,0.08)] px-6 py-8 sm:px-10 sm:py-10"
       >
@@ -244,12 +320,15 @@ export function PreLoginLandingSections() {
           id="final-cta-heading"
           className="max-w-2xl text-2xl font-bold tracking-tight text-balance text-[var(--desk-text)] sm:text-3xl"
         >
-          Be there when the next catalyst hits
+          Never miss a market-moving catalyst again
         </h2>
         <p className="mt-3 text-sm text-pretty text-[var(--desk-text-muted)] sm:text-base">
-          Free during Open Early Access — no card required.
+          Free during Open Early Access — no card required
         </p>
         <LandingGoogleCta className="mt-8 w-full sm:w-auto" />
+        <p className="mt-3 font-mono text-[0.72rem] tracking-[0.06em] text-[var(--desk-text-dim)] uppercase">
+          Full platform access · No commitment
+        </p>
       </section>
     </div>
   );
