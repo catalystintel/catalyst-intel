@@ -4,6 +4,8 @@ import {
   BookOpen,
   CheckCircle2,
   ListFilter,
+  Quote,
+  ShieldCheck,
   Sparkles,
   Star,
 } from "lucide-react";
@@ -78,6 +80,21 @@ const FEATURES = [
     icon: BookOpen,
   },
 ] as const;
+
+/** Placeholder wordmarks for the "trusted during Open Early Access" preview strip. */
+const TRUSTED_LOGOS = [
+  "Portligns",
+  "Compoore",
+  "Poolano",
+  "Wainners",
+  "Peamtart",
+] as const;
+
+const TESTIMONIAL = {
+  quote:
+    "Catalyst Intel turns SEC filings into plain English before the market even reacts.",
+  attribution: "Day Trader, Early Access User",
+} as const;
 
 const EARLY_ACCESS_POINTS = [
   "Every feature is included — live feed, alerts, watchlists, playbook, and AI summaries.",
@@ -200,6 +217,54 @@ export function PreLoginLandingSections() {
             );
           })}
         </ul>
+      </section>
+
+      <section
+        aria-labelledby="trusted-heading"
+        className="landing-section flex flex-col items-center text-center"
+      >
+        <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--desk-border-strong)] bg-[var(--desk-panel)] px-2.5 py-1 font-mono text-[0.68rem] font-bold tracking-[0.08em] text-[var(--desk-text-muted)] uppercase">
+          <ShieldCheck aria-hidden className="size-3.5" strokeWidth={1.75} />
+          Trusted during Open Early Access
+        </span>
+        <h2
+          id="trusted-heading"
+          className="mt-3 text-lg font-bold tracking-tight text-balance text-[var(--desk-text)] sm:text-xl"
+        >
+          5,000+ active traders and growing
+        </h2>
+        <ul className="mt-8 flex w-full max-w-3xl flex-wrap items-center justify-center gap-x-10 gap-y-4">
+          {TRUSTED_LOGOS.map((name) => (
+            <li
+              key={name}
+              className="font-mono text-sm font-bold tracking-wide text-[var(--desk-text-dim)] opacity-70 grayscale"
+            >
+              {name}
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      <section
+        aria-labelledby="testimonial-heading"
+        className="landing-section flex flex-col items-center text-center"
+      >
+        <h2 id="testimonial-heading" className="sr-only">
+          What early access traders say
+        </h2>
+        <div className="max-w-xl rounded-2xl border border-[var(--desk-border)] bg-[var(--desk-panel)] px-6 py-8 shadow-[0_1px_0_rgba(0,0,0,0.03)] sm:px-10">
+          <Quote
+            aria-hidden
+            className="mx-auto size-6 text-[var(--desk-live)]"
+            strokeWidth={1.75}
+          />
+          <p className="mt-4 text-lg font-medium text-balance text-[var(--desk-text)] sm:text-xl">
+            “{TESTIMONIAL.quote}”
+          </p>
+          <p className="mt-4 font-mono text-[0.78rem] font-semibold tracking-[0.04em] text-[var(--desk-text-muted)]">
+            — {TESTIMONIAL.attribution}
+          </p>
+        </div>
       </section>
 
       <section

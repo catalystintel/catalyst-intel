@@ -3,9 +3,12 @@
  * card — a faint candlestick + trendline motif behind the header, echoing
  * the live tape the product actually ships instead of a plain flat panel.
  *
- * Purely illustrative: `aria-hidden`, gold desk accent only (no new colors),
- * and masked out before it reaches the row content so it never competes
- * with real row text for contrast.
+ * Purely illustrative: `aria-hidden`, uses the dedicated `--desk-chart-accent`
+ * blue (decorative only — never used for text/actions, which stay on the
+ * `--desk-live` gold). Kept deliberately subtle/low-opacity so it reads as
+ * ambient texture behind the header, not a competing brand color, and is
+ * masked out before it reaches the row content so it never competes with
+ * real row text for contrast.
  */
 export function FeedPreviewChartGlow() {
   const bars: { x: number; top: number }[] = [
@@ -34,7 +37,7 @@ export function FeedPreviewChartGlow() {
         WebkitMaskImage: "linear-gradient(to bottom, black, transparent 92%)",
       }}
     >
-      <div className="feed-preview-chart-glow absolute -top-6 right-4 size-24 rounded-full bg-[var(--desk-live)] opacity-20 blur-2xl sm:right-10" />
+      <div className="feed-preview-chart-glow absolute -top-6 right-4 size-24 rounded-full bg-[var(--desk-chart-accent)] opacity-10 blur-2xl sm:right-10" />
       <svg
         viewBox="0 0 400 80"
         preserveAspectRatio="none"
@@ -48,18 +51,18 @@ export function FeedPreviewChartGlow() {
             width={5}
             height={Math.max(baseline - bar.top, 2)}
             rx={1}
-            fill="var(--desk-live)"
-            opacity={0.16}
+            fill="var(--desk-chart-accent)"
+            opacity={0.09}
           />
         ))}
         <polyline
           points={linePoints}
           fill="none"
-          stroke="var(--desk-live)"
+          stroke="var(--desk-chart-accent)"
           strokeWidth={1.5}
           strokeLinecap="round"
           strokeLinejoin="round"
-          opacity={0.5}
+          opacity={0.28}
         />
       </svg>
     </div>
