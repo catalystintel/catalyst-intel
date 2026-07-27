@@ -316,6 +316,38 @@
     animation-delay: 120ms;
   }
 
+  /* Subtle "live-updating" breathing glow behind the market-chart backdrop
+     in the landing feed preview header — never distracting, just enough to
+     read as live rather than a static illustration. */
+  .feed-preview-chart-glow {
+    animation: feed-chart-glow-pulse 3.6s ease-in-out infinite;
+  }
+
+  .landing-section {
+    animation: page-enter 480ms cubic-bezier(0.22, 1, 0.36, 1) both;
+    animation-delay: 180ms;
+  }
+
+  /* Landing feed preview: always the dark terminal card, even on the light
+     marketing page — the product ships a dark desk, and the contrast makes
+     the preview the visual anchor of the hero. Scoped var overrides so the
+     shared feed markup (desk-* tokens) just works inside. */
+  .landing-feed-dark {
+    --desk-app: #0a0a0a;
+    --desk-panel: #111214;
+    --desk-header: #0c0d0f;
+    --desk-border: #24262a;
+    --desk-border-strong: #33363b;
+    --desk-text: #f2f2f2;
+    --desk-text-secondary: #c9cbce;
+    --desk-text-muted: #9a9da2;
+    --desk-text-dim: #84878c;
+    --desk-live: #f0c14b;
+    --desk-overlay-soft: rgba(255, 255, 255, 0.05);
+    --desk-overlay-strong: rgba(255, 255, 255, 0.1);
+    color-scheme: dark;
+  }
+
   .btn-press {
     transition:
       transform 140ms ease,
@@ -459,6 +491,16 @@
   }
 }
 
+@keyframes feed-chart-glow-pulse {
+  0%,
+  100% {
+    opacity: 0.14;
+  }
+  50% {
+    opacity: 0.3;
+  }
+}
+
 @keyframes landing-feed-in {
   from {
     opacity: 0;
@@ -549,6 +591,7 @@
   .feed-filter-recalc,
   .live-pulse,
   .landing-feed,
+  .feed-preview-chart-glow,
   .btn-press,
   .drawer-panel,
   .skeleton-shimmer,
