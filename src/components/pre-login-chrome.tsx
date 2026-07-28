@@ -27,7 +27,12 @@ export function PreLoginChrome({
   const year = new Date().getFullYear();
 
   return (
-    <div className="relative flex min-h-dvh flex-1 flex-col overflow-x-hidden bg-[var(--desk-app)]">
+    // Marketing pages are always the dark trading-desk theme (matches the
+    // reference design) regardless of the signed-in app's default light
+    // theme — `.dark` here re-scopes every `--desk-*`/shadcn token for this
+    // subtree via plain CSS-variable cascade, independent of next-themes'
+    // `<html>` class (see theme-provider.tsx / globals.css `.dark`).
+    <div className="dark relative flex min-h-dvh flex-1 flex-col overflow-x-hidden bg-[var(--desk-app)]">
       <Toaster />
       <div
         aria-hidden
