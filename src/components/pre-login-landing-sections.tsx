@@ -4,12 +4,10 @@ import {
   BookOpen,
   CheckCircle2,
   ListFilter,
-  Quote,
   ShieldCheck,
   Sparkles,
   Star,
   TrendingUp,
-  UserRound,
 } from "lucide-react";
 
 import { LandingGoogleCta } from "@/components/landing-google-cta";
@@ -87,12 +85,6 @@ const TRUSTED_LOGOS = [
   "Wainners",
   "Peamtart",
 ] as const;
-
-const TESTIMONIAL = {
-  quote:
-    "Catalyst Intel turns SEC filings into plain English before the market even reacts.",
-  attribution: "Day Trader, Early Access User",
-} as const;
 
 const EARLY_ACCESS_POINTS = [
   "Every feature is included — live feed, alerts, watchlists, playbook, and AI summaries.",
@@ -241,41 +233,6 @@ export function PreLoginLandingSections() {
             </li>
           ))}
         </ul>
-      </section>
-
-      <section
-        aria-labelledby="testimonial-heading"
-        className="landing-section flex flex-col items-center text-center"
-      >
-        <h2 id="testimonial-heading" className="sr-only">
-          What early access traders say
-        </h2>
-        <div className="max-w-xl rounded-2xl border border-[var(--desk-border)] bg-[var(--desk-panel)] px-6 py-8 text-left shadow-[0_1px_0_rgba(0,0,0,0.03)] sm:px-10">
-          <div className="flex items-start gap-4">
-            <span aria-hidden className="relative shrink-0">
-              <span className="flex size-11 items-center justify-center rounded-full border border-[var(--desk-border-strong)] bg-[var(--desk-overlay-soft)] text-[var(--desk-text-muted)]">
-                <UserRound className="size-5" strokeWidth={1.75} />
-              </span>
-              <CheckCircle2
-                className="absolute -right-0.5 -bottom-0.5 size-4 rounded-full bg-[var(--desk-panel)] text-[var(--landing-primary,#2563eb)]"
-                strokeWidth={2}
-              />
-            </span>
-            <div className="min-w-0">
-              <Quote
-                aria-hidden
-                className="size-5 text-[var(--landing-primary,#2563eb)]"
-                strokeWidth={1.75}
-              />
-              <p className="mt-2 text-lg font-medium text-balance text-[var(--desk-text)] sm:text-xl">
-                “{TESTIMONIAL.quote}”
-              </p>
-              <p className="mt-3 font-mono text-[0.78rem] font-semibold tracking-[0.04em] text-[var(--desk-text-muted)]">
-                — {TESTIMONIAL.attribution}
-              </p>
-            </div>
-          </div>
-        </div>
       </section>
 
       <section
