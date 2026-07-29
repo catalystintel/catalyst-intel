@@ -7,9 +7,9 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-dm-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-plex-sans), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-plex-mono), ui-monospace, monospace;
-  --font-heading: var(--font-dm-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-heading: var(--font-plex-sans), ui-sans-serif, system-ui, sans-serif;
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -87,7 +87,7 @@
   --sidebar-ring: oklch(0.65 0.08 250);
 
   /* Mono desk, light: paper-white panels + amber only where necessary
-     (LIVE / High / Act). Default theme - see theme-provider.tsx. */
+     (LIVE / High / Act). Opt-in via theme toggle — default is dark navy. */
   --desk-app: #f6f6f4;
   --desk-sidebar: #ffffff;
   --desk-panel: #ffffff;
@@ -102,6 +102,7 @@
   --desk-accent: #3a3a3a;
   --desk-accent-fg: #17181a;
   --desk-live: #9a6b00;
+  --desk-link: #2f5fd0;
   /* Decorative-only accent for the landing feed-preview chart backdrop.
      Never used for text/actions — those stay on --desk-live gold. */
   --desk-chart-accent: #3a6bd6;
@@ -118,7 +119,8 @@
 }
 
 .dark {
-  /* Professional black & white trading desk. */
+  /* Marketing / global dark: black + gold (prelogin landing). Authenticated
+     desk chrome overrides these to navy via `.desk-chrome` below. */
   --background: #0a0a0a;
   --foreground: #f2f2f2;
   --card: #111111;
@@ -153,7 +155,7 @@
   --sidebar-border: #222222;
   --sidebar-ring: #f0c14b;
 
-  /* Mono desk, dark: professional black & white trading desk. */
+  /* Marketing dark desk tokens (black + gold). */
   --desk-app: #0a0a0a;
   --desk-sidebar: #070707;
   --desk-panel: #111111;
@@ -167,6 +169,7 @@
   --desk-accent: #cfcfcf;
   --desk-accent-fg: #e8e8e8;
   --desk-live: #f0c14b;
+  --desk-link: #5b8cff;
   /* Decorative-only accent for the landing feed-preview chart backdrop.
      Never used for text/actions — those stay on --desk-live gold. */
   --desk-chart-accent: #5b8cf0;
@@ -180,6 +183,51 @@
   --desk-grid-line: rgba(255, 255, 255, 0.035);
   --desk-shimmer: rgba(255, 255, 255, 0.1);
   --desk-glow: rgba(255, 255, 255, 0.07);
+}
+
+/*
+ * Authenticated desk shell (AppShell): navy trading-desk chrome matching the
+ * `/catalyst-feed` dashboard reference. Scoped so marketing `.dark` keeps
+ * black+gold. Only applies when html has `.dark` (theme toggle).
+ */
+.dark .desk-chrome {
+  --background: #0c0d12;
+  --foreground: #ffffff;
+  --card: #17181e;
+  --card-foreground: #ffffff;
+  --popover: #17181e;
+  --popover-foreground: #ffffff;
+  --secondary: #14151b;
+  --secondary-foreground: #ffffff;
+  --muted: #14151b;
+  --muted-foreground: #9a9ba3;
+  --accent: #1a1b22;
+  --accent-foreground: #ffffff;
+  --border: #22232a;
+  --input: #14151b;
+  --sidebar: #0c0d12;
+  --sidebar-foreground: #ffffff;
+  --sidebar-accent: #14151b;
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: #22232a;
+
+  --desk-app: #0c0d12;
+  --desk-sidebar: #0c0d12;
+  --desk-panel: #17181e;
+  --desk-header: #14151b;
+  --desk-border: #22232a;
+  --desk-border-strong: #2e2f38;
+  --desk-text: #ffffff;
+  --desk-text-secondary: #d0d1d6;
+  --desk-text-muted: #9a9ba3;
+  --desk-text-dim: #7a7b84;
+  --desk-link: #5b8cff;
+  --desk-chart-accent: #5b8cff;
+  --desk-overlay-soft: rgba(255, 255, 255, 0.04);
+  --desk-overlay-strong: rgba(255, 255, 255, 0.08);
+  --desk-grid-line: rgba(255, 255, 255, 0.03);
+  --desk-nav-active: rgba(255, 255, 255, 0.07);
+  color-scheme: dark;
 }
 
 @layer base {
@@ -259,18 +307,15 @@
     background-attachment: fixed;
   }
 
-  /* Feed blotter + article surfaces: Arial/Helvetica system stack for
-     trader-readable desk text. Marketing/global branding keeps DM Sans
-     via root --font-sans. Mono labels (symbols, times, badges) keep
-     --font-mono via .font-mono. */
+  /* Feed blotter + article surfaces inherit site IBM Plex Sans. Keep this
+     class as a stable hook for title weight / future desk-only tweaks. */
   .desk-arial {
-    --font-sans: Arial, Helvetica, "Helvetica Neue", sans-serif;
-    --font-heading: Arial, Helvetica, "Helvetica Neue", sans-serif;
-    font-family: Arial, Helvetica, "Helvetica Neue", sans-serif;
+    font-family: var(--font-plex-sans), ui-sans-serif, system-ui, sans-serif;
   }
 
   /* Blotter primary title lines — bold for scanability. */
-  .desk-arial .feed-article-title {
+  .desk-arial .feed-article-title,
+  .feed-article-title {
     font-weight: 700;
   }
 
@@ -355,28 +400,11 @@
     color-scheme: dark;
   }
 
-  /* Authenticated `/catalyst-feed` dashboard grid only — deep navy panels
-     matching `docs/design/dashboard-target-reference-02.png`. Scoped so the
-     marketing landing gold system and desk sidebar tokens are untouched.
-     `--desk-link` blues ticker/symbol accents; `--desk-live` stays gold for
-     Act / LIVE / Quiet chips. */
+  /* Authenticated `/catalyst-feed` dashboard grid — fills the navy desk
+     chrome from `.desk-chrome`. Token overrides live on the shell so sidebar
+     / header / feed share one palette; light theme uses `:root` desk tokens. */
   .desk-dashboard {
-    --desk-app: #0c0d12;
-    --desk-panel: #17181e;
-    --desk-header: #14151b;
-    --desk-border: #22232a;
-    --desk-border-strong: #2e2f38;
-    --desk-text: #ffffff;
-    --desk-text-secondary: #d0d1d6;
-    --desk-text-muted: #9a9ba3;
-    --desk-text-dim: #7a7b84;
-    --desk-link: #5b8cff;
-    --desk-chart-accent: #5b8cff;
-    --desk-overlay-soft: rgba(255, 255, 255, 0.04);
-    --desk-overlay-strong: rgba(255, 255, 255, 0.08);
-    --desk-grid-line: rgba(255, 255, 255, 0.03);
     background-color: var(--desk-app);
-    color-scheme: dark;
   }
 
   .btn-press {

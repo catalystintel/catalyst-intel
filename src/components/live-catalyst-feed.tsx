@@ -85,13 +85,13 @@ type Presence = "active" | "blurred" | "hidden";
  * fits under Time. Desktop Action buttons stay hover/focus/selected-only so
  * the tape stays quiet until the row is engaged.
  */
-// Title is the scan column — keep Time/Actions tight so headlines aren't
-// ellipsis-clipped to unreadability (esp. with the split panel open).
+// Title is the scan column — keep Time/Actions tight so one-line headlines
+// get maximum width (esp. with the split panel open).
 const FEED_GRID =
-  "grid-cols-[4.5rem_minmax(0,1fr)] sm:grid-cols-[5rem_minmax(10rem,1fr)_10.5rem] lg:grid-cols-[5.25rem_minmax(12rem,1fr)_10.5rem_10.5rem]";
+  "grid-cols-[4.5rem_minmax(0,1fr)] sm:grid-cols-[5rem_minmax(12rem,1fr)_8.75rem] lg:grid-cols-[5rem_minmax(14rem,1fr)_8.5rem_9.25rem]";
 /** Denser tape columns while the split panel steals horizontal space. */
 const FEED_GRID_SPLIT =
-  "grid-cols-[4.5rem_minmax(0,1fr)] sm:grid-cols-[4.75rem_minmax(8rem,1fr)_8.75rem]";
+  "grid-cols-[4.5rem_minmax(0,1fr)] sm:grid-cols-[4.5rem_minmax(10rem,1fr)_7.5rem]";
 
 function readPresence(): Presence {
   if (typeof document === "undefined") return "active";
@@ -1459,7 +1459,7 @@ function FeedTitleWithTooltip({
       onFocus={place}
       onBlur={hide}
     >
-      <span className="feed-article-title line-clamp-2 block text-[0.9rem] leading-snug tracking-tight whitespace-normal text-[var(--desk-text)]">
+      <span className="feed-article-title block truncate text-[0.9rem] tracking-tight text-[var(--desk-text)]">
         {title}
       </span>
       {coords

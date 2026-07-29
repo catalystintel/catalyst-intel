@@ -44,7 +44,7 @@ export function AppShell({
   useAutoFocusScrollRegion(mainRef);
 
   return (
-    <div className="flex h-dvh max-h-dvh min-h-0 flex-1 overflow-hidden overscroll-none bg-[var(--desk-app)]">
+    <div className="desk-chrome flex h-dvh max-h-dvh min-h-0 flex-1 overflow-hidden overscroll-none bg-[var(--desk-app)]">
       <Toaster />
       <aside className="hidden md:block">
         <div className="sticky top-0 h-full max-h-dvh">

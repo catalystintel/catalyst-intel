@@ -22,9 +22,8 @@ export default async function LoginPage({
   const destination = next ?? "/catalyst-feed";
 
   return (
-    // Marketing/auth chrome is always the dark trading-desk theme (matches
-    // the reference design), independent of the app-wide light default —
-    // see the matching comment in pre-login-chrome.tsx.
+    // Marketing/auth chrome is always black+gold dark (matches the landing),
+    // independent of the signed-in desk navy default — see pre-login-chrome.tsx.
     <div className="dark relative flex min-h-dvh flex-1 flex-col overflow-x-hidden bg-[var(--desk-app)]">
       <Toaster />
       <div
