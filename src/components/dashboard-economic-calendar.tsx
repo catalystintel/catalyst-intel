@@ -29,17 +29,17 @@ export function DashboardEconomicCalendar({
   return (
     <section className="flex max-h-[42%] min-h-[200px] shrink-0 flex-col overflow-hidden rounded-xl border border-[var(--desk-border)] bg-[var(--desk-panel)]">
       <div className="flex items-center justify-between gap-2 border-b border-[var(--desk-border)] bg-[var(--desk-header)] px-3 py-2.5">
-        <h2 className="font-mono text-[0.7rem] font-semibold tracking-[0.14em] text-[var(--desk-text)] uppercase">
+        <h2 className="desk-caps font-mono text-[0.7rem] font-semibold tracking-[0.14em] text-[var(--desk-text)] uppercase">
           Economic Calendar
         </h2>
-        <span className="font-mono text-[0.62rem] tracking-wide text-[var(--desk-text-dim)] uppercase">
+        <span className="desk-data tracking-wide text-[var(--desk-text-dim)] uppercase">
           CPI · NFP · FOMC
         </span>
       </div>
 
       <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
         {events.length === 0 ? (
-          <p className="p-3 font-mono text-[0.7rem] text-[var(--desk-text-dim)]">
+          <p className="desk-data p-3 text-[var(--desk-text-dim)]">
             No scheduled releases in the lookahead window.
           </p>
         ) : (
@@ -50,18 +50,18 @@ export function DashboardEconomicCalendar({
                 className="border-b border-[var(--desk-border)] px-3 py-2.5"
               >
                 <div className="flex items-start justify-between gap-2">
-                  <p className="text-[0.8rem] leading-snug text-[var(--desk-text-secondary)]">
+                  <p className="desk-body leading-snug text-[var(--desk-text-secondary)]">
                     {event.title}
                   </p>
                   <span
                     className={cn(
-                      "shrink-0 rounded-sm border border-[var(--desk-border-strong)] bg-[var(--desk-overlay-soft)] px-1.5 py-0.5 font-mono text-[0.58rem] tracking-[0.08em] text-[var(--desk-text-muted)] uppercase",
+                      "desk-data shrink-0 rounded-sm border border-[var(--desk-border-strong)] bg-[var(--desk-overlay-soft)] px-1.5 py-0.5 tracking-[0.08em] text-[var(--desk-text-muted)] uppercase",
                     )}
                   >
                     {TAG_LABEL[event.subcategory]}
                   </span>
                 </div>
-                <p className="mt-1 font-mono text-[0.65rem] tracking-wide text-[var(--desk-text-dim)]">
+                <p className="desk-data mt-1 tracking-wide text-[var(--desk-text-dim)]">
                   {formatEventDate(event.date)} · {formatTimeEt(event.timeEt)}{" "}
                   ET · {SOURCE_LABEL[event.subcategory]}
                 </p>

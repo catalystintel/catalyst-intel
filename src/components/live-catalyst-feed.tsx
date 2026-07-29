@@ -619,9 +619,7 @@ export function LiveCatalystFeed({
       aria-label="Catalyst Feed"
     >
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--desk-border)] bg-[var(--desk-header)] px-4 py-3.5 sm:px-5">
-        <h1 className="text-[1.05rem] font-semibold tracking-tight text-[var(--desk-text)]">
-          Catalyst Feed
-        </h1>
+        <h1 className="desk-heading text-[var(--desk-text)]">Catalyst Feed</h1>
         <div className="flex flex-wrap items-center gap-2 sm:gap-3">
           <button
             type="button"
@@ -1212,7 +1210,7 @@ function CatalystFeedList({
                 onDismiss={() => onDismiss(catalyst.id)}
               />
             ) : (
-              <span className="truncate font-mono text-[0.88rem] font-semibold tracking-tight text-[var(--desk-text-dim)]">
+              <span className="desk-data truncate font-semibold tracking-tight text-[var(--desk-text-dim)]">
                 —
               </span>
             );
@@ -1266,7 +1264,7 @@ function CatalystFeedList({
                 <div className="mt-1.5 flex flex-col gap-1 sm:hidden">
                   <time
                     dateTime={catalyst.timestamp}
-                    className="font-mono text-[0.72rem] font-medium tracking-tight whitespace-nowrap text-[var(--desk-text-muted)] tabular-nums"
+                    className="desk-data font-medium tracking-tight whitespace-nowrap text-[var(--desk-text-muted)]"
                   >
                     {formatClockTime(catalyst.timestamp)}
                   </time>
@@ -1315,7 +1313,7 @@ function CatalystFeedList({
               >
                 <time
                   dateTime={catalyst.timestamp}
-                  className="block truncate font-mono text-[0.72rem] font-medium tracking-tight whitespace-nowrap text-[var(--desk-text-muted)] tabular-nums"
+                  className="desk-data block truncate font-medium tracking-tight whitespace-nowrap text-[var(--desk-text-muted)]"
                   title={formatTimeDate(catalyst.timestamp)}
                 >
                   {formatTimeDate(catalyst.timestamp)}
@@ -1459,7 +1457,7 @@ function FeedTitleWithTooltip({
       onFocus={place}
       onBlur={hide}
     >
-      <span className="feed-article-title block truncate text-[0.9rem] tracking-tight text-[var(--desk-text)]">
+      <span className="feed-article-title block truncate text-[var(--desk-text)]">
         {title}
       </span>
       {coords
@@ -1477,11 +1475,11 @@ function FeedTitleWithTooltip({
                 "shadow-[0_12px_32px_rgba(0,0,0,0.5)]",
               )}
             >
-              <span className="feed-article-title block text-[0.8rem] leading-snug break-words whitespace-normal text-[var(--desk-text)]">
+              <span className="desk-card-title block leading-snug break-words whitespace-normal text-[var(--desk-text)]">
                 {tip}
               </span>
               {meta ? (
-                <span className="mt-1 block font-mono text-[0.65rem] leading-snug tracking-wide text-[var(--desk-text-muted)]">
+                <span className="desk-data mt-1 block leading-snug tracking-wide text-[var(--desk-text-muted)]">
                   {meta}
                 </span>
               ) : null}

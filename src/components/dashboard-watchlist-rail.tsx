@@ -120,7 +120,7 @@ export function DashboardWatchlistRail({
   return (
     <section className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-[var(--desk-border)] bg-[var(--desk-panel)]">
       <div className="flex items-center justify-between gap-2 border-b border-[var(--desk-border)] bg-[var(--desk-header)] px-3 py-2.5">
-        <h2 className="font-mono text-[0.7rem] font-semibold tracking-[0.14em] text-[var(--desk-text)] uppercase">
+        <h2 className="desk-caps font-mono text-[0.7rem] font-semibold tracking-[0.14em] text-[var(--desk-text)] uppercase">
           Watchlists
         </h2>
         <form onSubmit={addSymbol} className="flex items-center gap-1">
@@ -186,7 +186,7 @@ export function DashboardWatchlistRail({
                       title={`Focus ${t.symbol}`}
                     >
                       <ChevronRight className="size-3 shrink-0 text-[var(--desk-text-dim)]" />
-                      <span className="truncate font-mono text-[0.8rem] font-semibold tracking-tight text-[var(--desk-text)]">
+                      <span className="desk-data truncate font-semibold tracking-tight text-[var(--desk-text)]">
                         {t.symbol}
                       </span>
                     </button>
@@ -222,7 +222,7 @@ function TrendArrow({ changePercent }: { changePercent: number | null }) {
   }
   if (changePercent > 0) {
     return (
-      <span className="flex shrink-0 items-center gap-1 font-mono text-[0.65rem] text-emerald-400 tabular-nums">
+      <span className="desk-data flex shrink-0 items-center gap-1 text-[var(--desk-positive)]">
         <TrendingUp className="size-3.5" />
         {changePercent.toFixed(1)}%
       </span>
@@ -230,14 +230,14 @@ function TrendArrow({ changePercent }: { changePercent: number | null }) {
   }
   if (changePercent < 0) {
     return (
-      <span className="flex shrink-0 items-center gap-1 font-mono text-[0.65rem] text-rose-400 tabular-nums">
+      <span className="desk-data flex shrink-0 items-center gap-1 text-[var(--desk-negative)]">
         <TrendingDown className="size-3.5" />
         {changePercent.toFixed(1)}%
       </span>
     );
   }
   return (
-    <span className="flex shrink-0 items-center gap-1 font-mono text-[0.65rem] text-[var(--desk-text-dim)] tabular-nums">
+    <span className="desk-data flex shrink-0 items-center gap-1 text-[var(--desk-text-dim)]">
       <Minus className="size-3.5" />
       0.0%
     </span>

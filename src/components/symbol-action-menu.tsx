@@ -47,8 +47,8 @@ export function SymbolActionMenu({
     <DropdownMenu>
       <DropdownMenuTrigger
         className={cn(
-          "group/symbol relative truncate font-mono text-[0.88rem] font-bold tracking-tight text-[var(--desk-link,var(--desk-text))] transition-colors",
-          "hover:text-[var(--desk-link,var(--desk-live))] focus-visible:text-[var(--desk-link,var(--desk-live))] focus-visible:outline-none",
+          "desk-data group/symbol relative truncate font-bold tracking-tight text-[var(--desk-interactive,var(--desk-link,var(--desk-text)))] transition-colors",
+          "hover:text-[var(--desk-interactive,var(--desk-link))] focus-visible:text-[var(--desk-interactive,var(--desk-link))] focus-visible:outline-none",
           "-mx-0.5 rounded-sm px-0.5",
         )}
         aria-label={hoverLabel}
@@ -63,7 +63,7 @@ export function SymbolActionMenu({
             className={cn(
               "pointer-events-none absolute top-full left-0 z-20 mt-1 max-w-[14rem]",
               "rounded-sm border border-[var(--desk-border-strong)] bg-[var(--desk-panel)] px-2 py-1",
-              "font-sans text-[0.68rem] leading-snug font-normal tracking-normal text-[var(--desk-text-secondary)] shadow-md",
+              "desk-body font-normal tracking-normal text-[var(--desk-text-secondary)] shadow-md",
               "opacity-0 transition-opacity duration-150",
               "group-hover/symbol:opacity-100 group-focus-visible/symbol:opacity-100",
             )}

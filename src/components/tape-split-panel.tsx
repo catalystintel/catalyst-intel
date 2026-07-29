@@ -319,8 +319,8 @@ export function TapeSplitPanel({
                   </span>
                   <span
                     className={cn(
-                      change.up === true && "text-emerald-400",
-                      change.up === false && "text-rose-400",
+                      change.up === true && "text-[var(--desk-positive)]",
+                      change.up === false && "text-[var(--desk-negative)]",
                       change.up == null && "text-[var(--desk-text-muted)]",
                     )}
                     title={

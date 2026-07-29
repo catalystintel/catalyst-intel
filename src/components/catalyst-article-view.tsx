@@ -158,18 +158,18 @@ export function CatalystArticleView({
           ) : null}
         </div>
 
-        <h1 className="text-xl font-semibold tracking-tight text-[var(--desk-text)] sm:text-2xl">
+        <h1 className="desk-heading text-[var(--desk-text)] sm:text-[1.5rem]">
           {eventTitle}
         </h1>
 
         {catalyst.companyName ? (
-          <p className="text-sm text-[var(--desk-text-muted)]">
+          <p className="desk-body text-[var(--desk-text-muted)]">
             {catalyst.companyName}
           </p>
         ) : null}
 
         {!symbol ? (
-          <p className="font-mono text-[0.72rem] leading-snug text-[var(--desk-text-dim)]">
+          <p className="desk-data leading-snug text-[var(--desk-text-dim)]">
             No tradable symbol on this catalyst — use the summary and text
             below.
           </p>
@@ -242,8 +242,9 @@ export function CatalystArticleView({
                 <span
                   className={cn(
                     deltaSincePublish.pctChange > 0 &&
-                      "text-[var(--desk-live)]",
-                    deltaSincePublish.pctChange < 0 && "text-red-400",
+                      "text-[var(--desk-positive)]",
+                    deltaSincePublish.pctChange < 0 &&
+                      "text-[var(--desk-negative)]",
                   )}
                 >
                   {deltaSincePublish.pctChange > 0 ? "+" : ""}
@@ -522,8 +523,9 @@ export function CatalystArticleView({
                 className={cn(
                   "mt-1 text-sm tabular-nums",
                   (enrichment.quote.changePercent ?? 0) > 0 &&
-                    "text-[var(--desk-live)]",
-                  (enrichment.quote.changePercent ?? 0) < 0 && "text-red-400",
+                    "text-[var(--desk-positive)]",
+                  (enrichment.quote.changePercent ?? 0) < 0 &&
+                    "text-[var(--desk-negative)]",
                   (enrichment.quote.changePercent ?? 0) === 0 &&
                     "text-[var(--desk-text)]",
                 )}
@@ -682,9 +684,9 @@ function renderSegment(seg: HighlightSegment, key: number) {
 function accentClass(tone: HighlightTone): string {
   switch (tone) {
     case "positive":
-      return "font-medium text-[var(--desk-live)]";
+      return "font-medium text-[var(--desk-positive)]";
     case "negative":
-      return "font-medium text-red-400";
+      return "font-medium text-[var(--desk-negative)]";
     default:
       return "font-medium text-[var(--desk-text)]";
   }
@@ -693,9 +695,9 @@ function accentClass(tone: HighlightTone): string {
 function toneClass(tone?: DetailTone): string {
   switch (tone) {
     case "positive":
-      return "text-[var(--desk-live)]";
+      return "text-[var(--desk-positive)]";
     case "negative":
-      return "text-red-400";
+      return "text-[var(--desk-negative)]";
     case "neutral":
       return "text-[var(--desk-text)]";
     default:

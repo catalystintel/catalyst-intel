@@ -290,7 +290,7 @@ export function ReportsDesk() {
                     type="button"
                     aria-label="Delete report"
                     onClick={() => void deleteReport(selected.id)}
-                    className="btn-press grid size-8 place-items-center rounded-md border border-[var(--desk-border)] text-[var(--desk-text-muted)] hover:border-rose-500/40 hover:text-rose-400"
+                    className="btn-press grid size-8 place-items-center rounded-md border border-[var(--desk-border)] text-[var(--desk-text-muted)] hover:border-[var(--desk-negative)]/40 hover:text-[var(--desk-negative)]"
                   >
                     <Trash2 className="size-3.5" aria-hidden />
                   </button>
