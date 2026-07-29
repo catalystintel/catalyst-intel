@@ -74,6 +74,41 @@ export function formatTimeDate(
   return formatEventTime(iso, options);
 }
 
+export type EventTimeParts = {
+  /** Local clock, e.g. `10:23 AM`. */
+  clock: string;
+  /** Short zone label, e.g. `EDT` / `GMT+3` (empty if unavailable). */
+  zone: string;
+  /** Local calendar day, e.g. `Jul 20, 2026`. */
+  day: string;
+};
+
+/**
+ * Structured event-occurrence parts for multi-line tape cells.
+ * Prefer this when a single-line `formatEventTime` would force a wide column.
+ */
+export function formatEventTimeParts(
+  iso: string,
+  options?: FormatTimeOptions,
+): EventTimeParts | null {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return null;
+  return {
+    clock: date.toLocaleTimeString("en-US", {
+      ...zoneOpts(options?.timeZone),
+      hour: "numeric",
+      minute: "2-digit",
+    }),
+    zone: shortTimeZoneName(date, options?.timeZone),
+    day: date.toLocaleDateString("en-US", {
+      ...zoneOpts(options?.timeZone),
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    }),
+  };
+}
+
 /**
  * Canonical display of when the catalyst event occurred (filed / published /
  * scheduled). Prefer this over ad-hoc `new Date(...).toLocaleString()`.
@@ -82,21 +117,11 @@ export function formatEventTime(
   iso: string,
   options?: FormatTimeOptions,
 ): string {
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return "—";
-  const time = date.toLocaleTimeString("en-US", {
-    ...zoneOpts(options?.timeZone),
-    hour: "numeric",
-    minute: "2-digit",
-  });
-  const zone = shortTimeZoneName(date, options?.timeZone);
-  const day = date.toLocaleDateString("en-US", {
-    ...zoneOpts(options?.timeZone),
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
-  return zone ? `${time} ${zone} · ${day}` : `${time} · ${day}`;
+  const parts = formatEventTimeParts(iso, options);
+  if (!parts) return "—";
+  return parts.zone
+    ? `${parts.clock} ${parts.zone} · ${parts.day}`
+    : `${parts.clock} · ${parts.day}`;
 }
 
 /**
