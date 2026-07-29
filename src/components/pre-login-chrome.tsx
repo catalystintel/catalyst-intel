@@ -40,6 +40,10 @@ export function PreLoginChrome({
     // navy stays on `.desk-chrome` and is not overridden here.
     <div className="dark prelogin-surface relative flex min-h-dvh flex-1 flex-col overflow-x-hidden bg-[var(--desk-app)]">
       <Toaster />
+      <div
+        aria-hidden
+        className="desk-grid pointer-events-none absolute inset-0"
+      />
       {/* Dual atmosphere: subtle blue wash + soft purple bloom (landing only). */}
       <div
         aria-hidden

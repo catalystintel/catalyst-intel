@@ -7,6 +7,7 @@ import { FeedPreviewChartGlow } from "@/components/feed-preview-chart-glow";
 import { LandingGoogleCta } from "@/components/landing-google-cta";
 import { PreLoginChrome } from "@/components/pre-login-chrome";
 import { PreLoginLandingSections } from "@/components/pre-login-landing-sections";
+import { PreloginRisingChart } from "@/components/prelogin-rising-chart";
 import { cn } from "@/lib/utils";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
@@ -153,9 +154,10 @@ export default async function Home({
   return (
     <PreLoginChrome glowClassName="h-[55vh]">
       <main className="page-enter relative z-10 mx-auto flex w-full max-w-6xl flex-1 flex-col justify-start gap-10 px-4 pt-2 pb-[max(2.5rem,env(safe-area-inset-bottom))] sm:gap-12 sm:px-8 sm:pt-6 sm:pb-20">
+        <PreloginRisingChart />
         {/* Hero: text/CTA beside the feed preview on desktop/tablet (matches
             reference design), stacking back to a single column on mobile. */}
-        <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] lg:items-start lg:gap-10">
+        <div className="relative z-[1] grid gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] lg:items-start lg:gap-10">
           <div className="max-w-2xl">
             <div className="flex flex-wrap items-center gap-2">
               <span className="inline-flex items-center gap-1.5 rounded-full border border-[color-mix(in_srgb,var(--desk-live)_35%,transparent)] bg-[color-mix(in_srgb,var(--desk-live)_12%,transparent)] px-2.5 py-1 text-[0.68rem] font-bold tracking-[0.08em] text-[var(--desk-live)]">
@@ -368,7 +370,7 @@ export default async function Home({
           </section>
         </div>
 
-        <div className="mt-6 sm:mt-10">
+        <div className="relative z-[1] mt-6 sm:mt-10">
           <PreLoginLandingSections />
         </div>
       </main>
