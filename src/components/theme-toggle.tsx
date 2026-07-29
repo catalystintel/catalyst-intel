@@ -15,7 +15,7 @@ const noopSubscribe = () => () => {};
 
 /**
  * Avoids a hydration mismatch: the server has no access to localStorage, so
- * it always renders the default ("light") segment selected; this reports
+ * it always renders the default ("dark") segment selected; this reports
  * `false` for that same first client render, then `true` right after, so the
  * real saved value only appears once client and server have agreed once.
  */
