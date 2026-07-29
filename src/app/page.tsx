@@ -169,7 +169,7 @@ export default async function Home({
                 Open Early Access · Free
               </span>
             </div>
-            <h1 className="mt-5 text-4xl font-bold tracking-tight text-balance text-[var(--desk-text)] sm:text-5xl">
+            <h1 className="marketing-headline mt-5 text-4xl text-balance text-[var(--desk-text)] sm:text-5xl">
               Real-Time Market-Moving Catalysts.{" "}
               <span className="text-[var(--desk-live)]">
                 Trade Smarter, Faster.
@@ -250,7 +250,7 @@ export default async function Home({
               <div
                 role="row"
                 className={cn(
-                  "grid h-10 items-center gap-2 border-b border-[var(--desk-border-strong)] bg-[var(--desk-header)] px-4 font-mono text-[0.62rem] font-medium tracking-[0.12em] text-[var(--desk-text-dim)] uppercase shadow-[0_1px_0_rgba(0,0,0,0.35)] sm:gap-3 sm:px-5",
+                  "desk-caps grid h-10 items-center gap-2 border-b border-[var(--desk-border-strong)] bg-[var(--desk-header)] px-4 font-mono text-[0.62rem] font-medium text-[var(--desk-text-dim)] uppercase shadow-[0_1px_0_rgba(0,0,0,0.35)] sm:gap-3 sm:px-5",
                   PREVIEW_GRID,
                 )}
               >
@@ -285,7 +285,7 @@ export default async function Home({
                   }}
                 >
                   <div role="cell" className="min-w-0">
-                    <span className="truncate font-mono text-[0.88rem] font-semibold tracking-tight text-[var(--desk-text)]">
+                    <span className="truncate font-mono text-[0.88rem] font-bold tracking-tight text-[var(--desk-text)]">
                       {row.symbol}
                     </span>
                   </div>

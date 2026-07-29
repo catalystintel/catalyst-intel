@@ -70,7 +70,7 @@ export function PreLoginChrome({
       <header className="relative z-10 flex items-center justify-between gap-2 px-4 pt-[max(1rem,env(safe-area-inset-top))] pb-4 sm:gap-4 sm:px-8 sm:py-5">
         <Link
           href="/"
-          className="flex min-w-0 items-center gap-2.5 text-base font-bold tracking-tight text-[var(--desk-text)] sm:text-lg"
+          className="marketing-headline flex min-w-0 items-center gap-2.5 text-base text-[var(--desk-text)] sm:text-lg"
         >
           <span
             aria-hidden
@@ -124,7 +124,7 @@ export function PreLoginChrome({
             <div className="flex flex-col items-center gap-5 sm:flex-row sm:items-center sm:justify-between">
               <Link
                 href="/"
-                className="flex items-center gap-2.5 text-sm font-bold tracking-tight text-[var(--desk-text)]"
+                className="marketing-headline flex items-center gap-2.5 text-sm text-[var(--desk-text)]"
               >
                 <span
                   aria-hidden

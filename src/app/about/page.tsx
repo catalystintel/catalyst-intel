@@ -35,7 +35,7 @@ export default function AboutPage() {
           <span className="font-mono text-[0.72rem] font-medium tracking-[0.14em] text-[var(--desk-text-dim)] uppercase">
             About · Open Early Access
           </span>
-          <h1 className="mt-3 text-3xl font-bold tracking-tight text-balance text-[var(--desk-text)] sm:text-4xl">
+          <h1 className="marketing-headline mt-3 text-3xl text-balance text-[var(--desk-text)] sm:text-4xl">
             Catalyst Intel
           </h1>
           <p className="mt-4 text-base text-pretty text-[var(--desk-text-secondary)] sm:text-lg">
