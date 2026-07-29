@@ -125,6 +125,7 @@ export function LiveCatalystFeed({
   isAdmin,
   initialSymbolFilter,
   initialSelectedId,
+  onFocusSymbol,
 }: {
   initialCatalysts: FeedCatalyst[];
   isAdmin: boolean;
@@ -132,6 +133,13 @@ export function LiveCatalystFeed({
   initialSymbolFilter?: string;
   /** Re-opens the split panel, e.g. arriving via `?c=` after details. */
   initialSelectedId?: number;
+  /**
+   * Fired with the resolved symbol whenever the split panel opens on a row
+   * that has one — lets a dashboard-level Charting panel stay in sync with
+   * whichever tape row you're triaging, alongside the split panel's own
+   * inline chart. Optional; no-op when omitted (unchanged behavior).
+   */
+  onFocusSymbol?: (symbol: string) => void;
 }) {
   const query = useLiveFeedQuery(initialCatalysts, {
     symbolQuery: initialSymbolFilter?.trim() ?? "",
@@ -574,6 +582,12 @@ export function LiveCatalystFeed({
   const selected =
     selectedRaw && passesSymbolFeedGate(selectedRaw) ? selectedRaw : null;
 
+  // Keep an external dashboard Charting panel (if any) pointed at whatever
+  // row is currently open — additive, no-op without `onFocusSymbol`.
+  useEffect(() => {
+    if (selected?.symbol) onFocusSymbol?.(selected.symbol);
+  }, [selected, onFocusSymbol]);
+
   // Symbol-only is a header toggle — don't drive Clear / Filters badge from it.
   const panelFiltersActive = !isPanelFiltersDefault(filterState);
   const filtersActive = panelFiltersActive || quietMode;
@@ -597,7 +611,7 @@ export function LiveCatalystFeed({
 
   return (
     <section
-      className="news-panel desk-arial flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-[var(--desk-border)] bg-[var(--desk-panel)]"
+      className="news-panel desk-arial flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-xl border border-[var(--desk-border)] bg-[var(--desk-panel)]"
       aria-label="Catalyst Feed"
     >
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--desk-border)] bg-[var(--desk-header)] px-4 py-3.5 sm:px-5">
