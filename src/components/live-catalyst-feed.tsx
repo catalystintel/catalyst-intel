@@ -85,8 +85,13 @@ type Presence = "active" | "blurred" | "hidden";
  * fits under Time. Desktop Action buttons stay hover/focus/selected-only so
  * the tape stays quiet until the row is engaged.
  */
+// Title is the scan column — keep Time/Actions tight so headlines aren't
+// ellipsis-clipped to unreadability (esp. with the split panel open).
 const FEED_GRID =
-  "grid-cols-[4.5rem_minmax(0,1fr)] sm:grid-cols-[5rem_minmax(0,1fr)_15.5rem] lg:grid-cols-[5rem_minmax(0,1fr)_15.5rem_16rem]";
+  "grid-cols-[4.5rem_minmax(0,1fr)] sm:grid-cols-[5rem_minmax(10rem,1fr)_10.5rem] lg:grid-cols-[5.25rem_minmax(12rem,1fr)_10.5rem_10.5rem]";
+/** Denser tape columns while the split panel steals horizontal space. */
+const FEED_GRID_SPLIT =
+  "grid-cols-[4.5rem_minmax(0,1fr)] sm:grid-cols-[4.75rem_minmax(8rem,1fr)_8.75rem]";
 
 function readPresence(): Presence {
   if (typeof document === "undefined") return "active";
@@ -769,6 +774,7 @@ export function LiveCatalystFeed({
               flashIds={flashIds}
               dismissingIds={dismissingIds}
               selectedId={selectedId}
+              splitOpen={Boolean(selected)}
               watchlistSymbols={watchlistSymbols}
               onSelect={openSplit}
               onRead={openArticle}
@@ -1014,6 +1020,7 @@ function CatalystFeedList({
   flashIds,
   dismissingIds,
   selectedId,
+  splitOpen = false,
   watchlistSymbols,
   onSelect,
   onRead,
@@ -1031,6 +1038,8 @@ function CatalystFeedList({
   flashIds: Set<number>;
   dismissingIds: Set<number>;
   selectedId: number | null;
+  /** When the split panel is open, drop the Actions column so titles stay readable. */
+  splitOpen?: boolean;
   watchlistSymbols: string[];
   onSelect: (id: number) => void;
   onRead: (id: number) => void;
@@ -1045,6 +1054,7 @@ function CatalystFeedList({
   loadingMore?: boolean;
   onLoadMore?: () => void;
 }) {
+  const feedGrid = splitOpen ? FEED_GRID_SPLIT : FEED_GRID;
   const listRef = useRef<HTMLDivElement | null>(null);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
   const didRestoreScrollRef = useRef(false);
@@ -1136,8 +1146,8 @@ function CatalystFeedList({
       <div
         role="row"
         className={cn(
-          "sticky top-0 z-[2] grid h-10 items-center gap-2 border-b border-[var(--desk-border-strong)] bg-[var(--desk-header)] px-4 font-mono text-[0.62rem] font-medium tracking-[0.12em] text-[var(--desk-text-muted)] uppercase shadow-[0_1px_0_rgba(0,0,0,0.35)] sm:gap-3 sm:px-5 lg:gap-5",
-          FEED_GRID,
+          "sticky top-0 z-[2] grid h-10 items-center gap-2 border-b border-[var(--desk-border-strong)] bg-[var(--desk-header)] px-4 font-mono text-[0.62rem] font-medium tracking-[0.12em] text-[var(--desk-text-muted)] uppercase shadow-[0_1px_0_rgba(0,0,0,0.35)] sm:gap-3 sm:px-5 lg:gap-4",
+          feedGrid,
         )}
       >
         <div role="columnheader" className="min-w-0">
@@ -1153,12 +1163,14 @@ function CatalystFeedList({
         >
           Time
         </div>
-        <div
-          role="columnheader"
-          className="hidden justify-self-end pl-1 text-right lg:block"
-        >
-          Actions
-        </div>
+        {!splitOpen ? (
+          <div
+            role="columnheader"
+            className="hidden justify-self-end pl-1 text-right lg:block"
+          >
+            Actions
+          </div>
+        ) : null}
       </div>
 
       {pendingNew > 0 ? (
@@ -1220,8 +1232,8 @@ function CatalystFeedList({
                 }
               }}
               className={cn(
-                "feed-row group relative grid min-h-[56px] cursor-pointer items-center gap-2 border-b border-[var(--desk-border)] px-4 py-3 transition-colors duration-150 outline-none sm:gap-3 sm:px-5 sm:py-0 lg:gap-5",
-                FEED_GRID,
+                "feed-row group relative grid min-h-[56px] cursor-pointer items-center gap-2 border-b border-[var(--desk-border)] px-4 py-3 transition-colors duration-150 outline-none sm:min-h-[64px] sm:gap-3 sm:px-5 sm:py-1.5 lg:gap-4",
+                feedGrid,
                 "hover:bg-[var(--desk-overlay-soft)] focus-visible:bg-[var(--desk-overlay-soft)] focus-visible:shadow-[inset_2px_0_0_var(--desk-live)]",
                 "hover:shadow-[inset_2px_0_0_rgba(240,193,75,0.35)]",
                 selected && "bg-[var(--desk-overlay-strong)]",
@@ -1303,58 +1315,61 @@ function CatalystFeedList({
               >
                 <time
                   dateTime={catalyst.timestamp}
-                  className="block font-mono text-[0.72rem] font-medium tracking-tight whitespace-nowrap text-[var(--desk-text-muted)] tabular-nums"
+                  className="block truncate font-mono text-[0.72rem] font-medium tracking-tight whitespace-nowrap text-[var(--desk-text-muted)] tabular-nums"
                   title={formatTimeDate(catalyst.timestamp)}
                 >
                   {formatTimeDate(catalyst.timestamp)}
                 </time>
               </div>
 
-              {/* Desktop: actions appear on row hover / focus / selection. */}
-              <div
-                role="cell"
-                className="relative z-0 hidden min-w-0 justify-end justify-self-end overflow-hidden pl-1 lg:flex"
-                onClick={(e) => e.stopPropagation()}
-                onKeyDown={(e) => e.stopPropagation()}
-              >
+              {/* Desktop: actions appear on row hover / focus / selection.
+                  Hidden while split is open — that column was starving titles. */}
+              {!splitOpen ? (
                 <div
-                  className={cn(
-                    "flex w-full min-w-0 flex-nowrap items-center justify-end gap-1.5 transition-opacity duration-100",
-                    "opacity-0 group-focus-within:opacity-100 group-hover:opacity-100",
-                    selected && "opacity-100",
-                  )}
+                  role="cell"
+                  className="relative z-0 hidden min-w-0 justify-end justify-self-end overflow-hidden pl-1 lg:flex"
+                  onClick={(e) => e.stopPropagation()}
+                  onKeyDown={(e) => e.stopPropagation()}
                 >
-                  <FeedActionButton
-                    variant="primary"
-                    onClick={() => onRead(catalyst.id)}
-                    tip="Open event details"
+                  <div
+                    className={cn(
+                      "flex w-full min-w-0 flex-nowrap items-center justify-end gap-1.5 transition-opacity duration-100",
+                      "opacity-0 group-focus-within:opacity-100 group-hover:opacity-100",
+                      selected && "opacity-100",
+                    )}
                   >
-                    <BookOpen className="size-3" />
-                    Details
-                  </FeedActionButton>
-                  <FeedActionButton
-                    onClick={() => onDismiss(catalyst.id)}
-                    tip="Hide from results"
-                  >
-                    <X className="size-3" />
-                    Dismiss
-                  </FeedActionButton>
-                  {catalyst.symbol ? (
                     <FeedActionButton
-                      onClick={() => onQuiet(catalyst.symbol)}
-                      tip={
-                        onWatchlist
-                          ? "Already on your watchlist"
-                          : "Add to watchlist"
-                      }
-                      disabled={onWatchlist}
+                      variant="primary"
+                      onClick={() => onRead(catalyst.id)}
+                      tip="Open event details"
                     >
-                      <Plus className="size-3" />
-                      Watch
+                      <BookOpen className="size-3" />
+                      Details
                     </FeedActionButton>
-                  ) : null}
+                    <FeedActionButton
+                      onClick={() => onDismiss(catalyst.id)}
+                      tip="Hide from results"
+                    >
+                      <X className="size-3" />
+                      Dismiss
+                    </FeedActionButton>
+                    {catalyst.symbol ? (
+                      <FeedActionButton
+                        onClick={() => onQuiet(catalyst.symbol)}
+                        tip={
+                          onWatchlist
+                            ? "Already on your watchlist"
+                            : "Add to watchlist"
+                        }
+                        disabled={onWatchlist}
+                      >
+                        <Plus className="size-3" />
+                        Watch
+                      </FeedActionButton>
+                    ) : null}
+                  </div>
                 </div>
-              </div>
+              ) : null}
             </article>
           );
         })}
@@ -1444,7 +1459,7 @@ function FeedTitleWithTooltip({
       onFocus={place}
       onBlur={hide}
     >
-      <span className="feed-article-title block truncate text-[0.86rem] tracking-tight text-[var(--desk-text-secondary)] transition-colors group-hover:text-[var(--desk-text)] group-focus-visible:text-[var(--desk-text)] max-sm:line-clamp-2 max-sm:whitespace-normal">
+      <span className="feed-article-title line-clamp-2 block text-[0.9rem] leading-snug tracking-tight whitespace-normal text-[var(--desk-text)]">
         {title}
       </span>
       {coords
