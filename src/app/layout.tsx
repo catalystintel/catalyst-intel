@@ -7,10 +7,13 @@ import { ThemeProvider } from "@/components/theme-provider";
 import "./globals.css";
 
 /**
- * IBM Plex Sans + Mono: one coherent family for dense trading-desk UI.
- * Geometric clarity at small sizes; Mono already used for symbols/times.
- * Alternatives considered: Source Sans 3 (also strong for data UI), DM Sans
- * (previous marketing default — softer, less terminal).
+ * Font decision (trader desk research): KEEP IBM Plex Sans + Mono.
+ * Winner because one coherent family covers dense feed rows, marketing
+ * headlines, and tabular mono for symbols/times — terminal/fintech feel
+ * without Inter/Geist AI-SaaS generics. Runners-up rejected: Source Sans 3
+ * (strong UI but no matching mono; less desk character), Geist (Vercel/AI
+ * SaaS association), JetBrains Mono as UI body (too mono for marketing),
+ * DM Sans (previous default — softer, less terminal).
  */
 const plexSans = IBM_Plex_Sans({
   variable: "--font-plex-sans",

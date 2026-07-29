@@ -220,7 +220,7 @@ export default async function Home({
 
           <section
             aria-label="Feed preview"
-            className="landing-feed landing-feed-dark relative overflow-hidden rounded-lg border border-[var(--desk-border)] bg-[var(--desk-panel)] shadow-[0_24px_80px_rgba(10,12,20,0.35)]"
+            className="landing-feed landing-feed-dark relative overflow-hidden rounded-lg border border-[var(--desk-border)] bg-[var(--desk-panel)] shadow-[0_24px_80px_rgba(12,13,18,0.55),0_0_0_1px_rgba(240,193,75,0.06)]"
           >
             <FeedPreviewChartGlow />
 

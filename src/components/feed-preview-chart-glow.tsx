@@ -37,7 +37,8 @@ export function FeedPreviewChartGlow() {
         WebkitMaskImage: "linear-gradient(to bottom, black, transparent 92%)",
       }}
     >
-      <div className="feed-preview-chart-glow absolute -top-6 right-4 size-24 rounded-full bg-[var(--desk-chart-accent)] opacity-10 blur-2xl sm:right-10" />
+      <div className="feed-preview-chart-glow absolute -top-6 right-4 size-28 rounded-full bg-[var(--desk-chart-accent)] opacity-[0.12] blur-2xl sm:right-10" />
+      <div className="absolute -top-8 left-8 size-20 rounded-full bg-[var(--desk-live)] opacity-[0.06] blur-3xl" />
       <svg
         viewBox="0 0 400 80"
         preserveAspectRatio="none"

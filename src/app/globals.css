@@ -116,28 +116,29 @@
   --desk-grid-line: rgba(0, 0, 0, 0.045);
   --desk-shimmer: rgba(0, 0, 0, 0.06);
   --desk-glow: rgba(0, 0, 0, 0.05);
+  --desk-glow-chart: rgba(58, 107, 214, 0.06);
 }
 
 .dark {
-  /* Marketing / global dark: black + gold (prelogin landing). Authenticated
-     desk chrome overrides these to navy via `.desk-chrome` below. */
-  --background: #0a0a0a;
-  --foreground: #f2f2f2;
-  --card: #111111;
-  --card-foreground: #f2f2f2;
-  --popover: #111111;
-  --popover-foreground: #f2f2f2;
+  /* Marketing / global dark: navy-nudged black + gold (prelogin landing).
+     Authenticated desk chrome overrides these to navy via `.desk-chrome`. */
+  --background: #0a0b0f;
+  --foreground: #ffffff;
+  --card: #12131a;
+  --card-foreground: #ffffff;
+  --popover: #12131a;
+  --popover-foreground: #ffffff;
   --primary: #f0c14b;
   --primary-foreground: #121212;
-  --secondary: #161616;
-  --secondary-foreground: #f2f2f2;
-  --muted: #161616;
-  --muted-foreground: #888888;
-  --accent: #1a1a1a;
-  --accent-foreground: #f2f2f2;
+  --secondary: #14151b;
+  --secondary-foreground: #ffffff;
+  --muted: #14151b;
+  --muted-foreground: #9a9ba3;
+  --accent: #1a1b22;
+  --accent-foreground: #ffffff;
   --destructive: oklch(0.65 0.18 25);
-  --border: #222222;
-  --input: #1a1a1a;
+  --border: #22242c;
+  --input: #14151b;
   --ring: #f0c14b;
   --steel: #cfcfcf;
   --steel-foreground: #e8e8e8;
@@ -146,26 +147,29 @@
   --chart-3: #888888;
   --chart-4: #5c5c5c;
   --chart-5: #2e2e2e;
-  --sidebar: #070707;
-  --sidebar-foreground: #f2f2f2;
+  --sidebar: #07080c;
+  --sidebar-foreground: #ffffff;
   --sidebar-primary: #f0c14b;
   --sidebar-primary-foreground: #121212;
-  --sidebar-accent: #161616;
-  --sidebar-accent-foreground: #f2f2f2;
-  --sidebar-border: #222222;
+  --sidebar-accent: #14151b;
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: #22242c;
   --sidebar-ring: #f0c14b;
 
-  /* Marketing dark desk tokens (black + gold). */
-  --desk-app: #0a0a0a;
-  --desk-sidebar: #070707;
-  --desk-panel: #111111;
-  --desk-header: #0d0d0d;
-  --desk-border: #222222;
-  --desk-border-strong: #2e2e2e;
-  --desk-text: #f2f2f2;
-  --desk-text-secondary: #c4c4c4;
-  --desk-text-muted: #9a9a9a;
-  --desk-text-dim: #858585;
+  /* Marketing dark: near-black + gold, nudged toward desk navy so prelogin
+     and authenticated chrome feel like one product. Gold = LIVE/CTA; chart
+     blue is decorative only. Dual glows (gold + chart) add trader atmosphere
+     without purple-AI SaaS gradients. */
+  --desk-app: #0a0b0f;
+  --desk-sidebar: #07080c;
+  --desk-panel: #12131a;
+  --desk-header: #0e0f14;
+  --desk-border: #22242c;
+  --desk-border-strong: #2e3038;
+  --desk-text: #ffffff;
+  --desk-text-secondary: #d0d1d6;
+  --desk-text-muted: #9a9ba3;
+  --desk-text-dim: #7a7b84;
   --desk-accent: #cfcfcf;
   --desk-accent-fg: #e8e8e8;
   --desk-live: #f0c14b;
@@ -180,9 +184,12 @@
   --desk-nav-active: rgba(255, 255, 255, 0.07);
   --desk-overlay-soft: rgba(255, 255, 255, 0.05);
   --desk-overlay-strong: rgba(255, 255, 255, 0.1);
-  --desk-grid-line: rgba(255, 255, 255, 0.035);
+  --desk-grid-line: rgba(255, 255, 255, 0.04);
   --desk-shimmer: rgba(255, 255, 255, 0.1);
-  --desk-glow: rgba(255, 255, 255, 0.07);
+  /* Warm gold wash (primary atmosphere) — was flat white. */
+  --desk-glow: rgba(240, 193, 75, 0.11);
+  /* Cool chart bloom (secondary atmosphere, marketing only). */
+  --desk-glow-chart: rgba(91, 140, 240, 0.09);
 }
 
 /*
@@ -382,22 +389,49 @@
   /* Landing feed preview: always the dark terminal card, even on the light
      marketing page — the product ships a dark desk, and the contrast makes
      the preview the visual anchor of the hero. Scoped var overrides so the
-     shared feed markup (desk-* tokens) just works inside. */
+     shared feed markup (desk-* tokens) just works inside. Tones align with
+     authenticated navy desk (`#0c0d12` / `#17181e`). */
   .landing-feed-dark {
-    --desk-app: #0a0a0a;
-    --desk-panel: #111214;
-    --desk-header: #0c0d0f;
-    --desk-border: #24262a;
-    --desk-border-strong: #33363b;
-    --desk-text: #f2f2f2;
-    --desk-text-secondary: #c9cbce;
-    --desk-text-muted: #9a9da2;
-    --desk-text-dim: #84878c;
+    --desk-app: #0c0d12;
+    --desk-panel: #17181e;
+    --desk-header: #14151b;
+    --desk-border: #22232a;
+    --desk-border-strong: #2e2f38;
+    --desk-text: #ffffff;
+    --desk-text-secondary: #d0d1d6;
+    --desk-text-muted: #9a9ba3;
+    --desk-text-dim: #7a7b84;
     --desk-live: #f0c14b;
     --desk-chart-accent: #5b8cf0;
     --desk-overlay-soft: rgba(255, 255, 255, 0.05);
     --desk-overlay-strong: rgba(255, 255, 255, 0.1);
     color-scheme: dark;
+  }
+
+  /* Marketing dual-atmosphere: warm gold top + cool chart bloom (prelogin /
+     auth). Keeps black+gold language interesting without purple SaaS washes. */
+  .marketing-glow-gold {
+    background: radial-gradient(
+      ellipse 80% 70% at 50% -10%,
+      var(--desk-glow),
+      transparent 68%
+    );
+  }
+
+  .marketing-glow-chart {
+    background: radial-gradient(
+      ellipse 55% 50% at 88% 18%,
+      var(--desk-glow-chart),
+      transparent 70%
+    );
+  }
+
+  .marketing-auth-enter {
+    animation: marketing-auth-enter 480ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  .marketing-brand-pulse {
+    animation: marketing-brand-pulse 4.2s ease-in-out infinite;
   }
 
   /* Authenticated `/catalyst-feed` dashboard grid — fills the navy desk
@@ -571,6 +605,31 @@
   }
 }
 
+@keyframes marketing-auth-enter {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes marketing-brand-pulse {
+  0%,
+  100% {
+    box-shadow:
+      inset 0 0 0 1px rgba(255, 255, 255, 0.14),
+      0 0 0 0 rgba(240, 193, 75, 0);
+  }
+  50% {
+    box-shadow:
+      inset 0 0 0 1px rgba(255, 255, 255, 0.18),
+      0 0 28px 2px rgba(240, 193, 75, 0.18);
+  }
+}
+
 @keyframes nav-pending-fade-in {
   to {
     opacity: 1;
@@ -651,6 +710,8 @@
   .live-pulse,
   .landing-feed,
   .feed-preview-chart-glow,
+  .marketing-auth-enter,
+  .marketing-brand-pulse,
   .btn-press,
   .drawer-panel,
   .skeleton-shimmer,

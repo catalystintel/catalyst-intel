@@ -1,9 +1,8 @@
 import Link from "next/link";
 
-import { EarlyAccessBanner } from "@/components/early-access-banner";
 import { GoogleSignInButton } from "@/components/google-sign-in-button";
+import { PreLoginChrome } from "@/components/pre-login-chrome";
 import { buttonVariants } from "@/components/ui/button";
-import { Toaster } from "@/components/ui/toaster";
 import {
   getDevBypassEmail,
   isDevAuthBypassEnabled,
@@ -11,6 +10,11 @@ import {
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { cn } from "@/lib/utils";
 
+/**
+ * Auth composition (research → apply): brand-first trading-desk sign-in.
+ * Same dual gold/chart atmosphere as prelogin; hero is the Catalyst mark +
+ * name (not a generic SaaS card). Google OAuth stays the single clear CTA.
+ */
 export default async function LoginPage({
   searchParams,
 }: {
@@ -22,99 +26,87 @@ export default async function LoginPage({
   const destination = next ?? "/catalyst-feed";
 
   return (
-    // Marketing/auth chrome is always black+gold dark (matches the landing),
-    // independent of the signed-in desk navy default — see pre-login-chrome.tsx.
-    <div className="dark relative flex min-h-dvh flex-1 flex-col overflow-x-hidden bg-[var(--desk-app)]">
-      <Toaster />
-      <div
-        aria-hidden
-        className="desk-grid pointer-events-none absolute inset-0"
-      />
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-x-0 top-0 h-[40vh] bg-[radial-gradient(ellipse_at_top,var(--desk-glow),transparent_65%)]"
-      />
-
-      <EarlyAccessBanner variant="marketing" />
-
-      <header className="relative z-10 flex items-center justify-between px-4 pt-[max(1rem,env(safe-area-inset-top))] pb-4 sm:px-8 sm:py-5">
-        <Link
-          href="/"
-          className="flex min-h-11 items-center gap-2.5 text-sm font-bold tracking-tight text-[var(--desk-text)]"
-        >
+    <PreLoginChrome variant="auth" glowClassName="h-[55vh]">
+      <main className="marketing-auth-enter relative z-10 flex flex-1 flex-col items-center justify-center px-4 pb-[max(3.5rem,env(safe-area-inset-bottom))] sm:px-8">
+        <div className="flex w-full max-w-md flex-col items-center text-center">
           <span
             aria-hidden
-            className="brand-mark relative size-7 shrink-0 rounded-lg"
+            className="brand-mark marketing-brand-pulse relative size-14 shrink-0 rounded-2xl sm:size-16"
           />
-          Catalyst Intel
-        </Link>
-      </header>
-
-      <main className="page-enter relative z-10 flex flex-1 items-center justify-center px-4 pb-[max(4rem,env(safe-area-inset-bottom))]">
-        <div className="w-full max-w-sm rounded-xl border border-[var(--desk-border)] bg-[var(--desk-panel)] p-6 shadow-[0_24px_80px_rgba(0,0,0,0.28)]">
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-[rgba(240,193,75,0.35)] bg-[rgba(240,193,75,0.12)] px-2.5 py-1 text-[0.68rem] font-bold tracking-[0.08em] text-[var(--desk-live)]">
-            <span
-              aria-hidden
-              className="live-pulse size-1.5 rounded-full bg-[var(--desk-live)]"
-            />
-            OPEN EARLY ACCESS
-          </span>
-          <h1 className="mt-3 text-xl font-semibold tracking-tight text-[var(--desk-text)]">
-            Sign in free
+          <p className="mt-5 font-mono text-[0.72rem] font-medium tracking-[0.16em] text-[var(--desk-live)] uppercase">
+            Trading desk
+          </p>
+          <h1 className="mt-2 text-3xl font-bold tracking-tight text-[var(--desk-text)] sm:text-4xl">
+            Catalyst Intel
           </h1>
-          <p className="mt-1 text-sm text-[var(--desk-text-muted)]">
-            Continue with Google for full desk access — every feature is free
-            during Open Early Access.
+          <p className="mt-3 max-w-sm text-base leading-relaxed text-pretty text-[var(--desk-text-secondary)]">
+            Live SEC catalysts for day traders — sign in free for full desk
+            access during Open Early Access.
           </p>
 
-          <div className="mt-6 flex flex-col gap-4">
-            {devBypass ? (
-              <div className="flex flex-col gap-3 rounded-md border border-amber-400/40 bg-amber-400/10 p-3">
-                <div className="text-sm">
-                  <p className="font-medium text-amber-800 dark:text-amber-200">
-                    Dev auth bypass is on
-                  </p>
-                  <p className="mt-1 font-mono text-xs break-all text-amber-800/80 dark:text-amber-200/80">
-                    {getDevBypassEmail()}
+          <div className="mt-8 w-full max-w-sm border-t border-[var(--desk-border-strong)] pt-7 text-left">
+            <p className="font-mono text-[0.68rem] font-semibold tracking-[0.12em] text-[var(--desk-text-muted)] uppercase">
+              Continue with Google
+            </p>
+            <p className="mt-1 text-sm text-[var(--desk-text-dim)]">
+              No password. Full feed, filters, watchlists, and AI triage.
+            </p>
+
+            <div className="mt-5 flex flex-col gap-4">
+              {devBypass ? (
+                <div className="flex flex-col gap-3 rounded-md border border-amber-400/40 bg-amber-400/10 p-3">
+                  <div className="text-sm">
+                    <p className="font-medium text-amber-800 dark:text-amber-200">
+                      Dev auth bypass is on
+                    </p>
+                    <p className="mt-1 font-mono text-xs break-all text-amber-800/80 dark:text-amber-200/80">
+                      {getDevBypassEmail()}
+                    </p>
+                  </div>
+                  <Link
+                    href={destination}
+                    className={cn(buttonVariants(), "btn-press w-full")}
+                  >
+                    Enter as dev user
+                  </Link>
+                </div>
+              ) : null}
+
+              {!configured ? (
+                <div className="border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
+                  <p className="font-medium">Supabase Auth is not configured</p>
+                  <p className="mt-1 text-destructive/90">
+                    Put your real project URL and anon key in{" "}
+                    <code className="text-xs">.env.local</code>, enable Google
+                    under Authentication → Providers, add{" "}
+                    <code className="text-xs">
+                      http://localhost:3000/auth/callback
+                    </code>{" "}
+                    and{" "}
+                    <code className="text-xs">
+                      https://catalyst-intel.vercel.app/auth/callback
+                    </code>{" "}
+                    to Redirect URLs, then restart the dev server.
                   </p>
                 </div>
-                <Link
-                  href={destination}
-                  className={cn(buttonVariants(), "btn-press w-full")}
-                >
-                  Enter as dev user
-                </Link>
-              </div>
-            ) : null}
+              ) : null}
 
-            {!configured ? (
-              <div className="border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
-                <p className="font-medium">Supabase Auth is not configured</p>
-                <p className="mt-1 text-destructive/90">
-                  Put your real project URL and anon key in{" "}
-                  <code className="text-xs">.env.local</code>, enable Google
-                  under Authentication → Providers, add{" "}
-                  <code className="text-xs">
-                    http://localhost:3000/auth/callback
-                  </code>{" "}
-                  and{" "}
-                  <code className="text-xs">
-                    https://catalyst-intel.vercel.app/auth/callback
-                  </code>{" "}
-                  to Redirect URLs, then restart the dev server.
-                </p>
-              </div>
-            ) : null}
+              {message ? (
+                <p className="text-sm text-muted-foreground">{message}</p>
+              ) : null}
+              {error ? (
+                <p className="text-sm text-destructive">{error}</p>
+              ) : null}
 
-            {message ? (
-              <p className="text-sm text-muted-foreground">{message}</p>
-            ) : null}
-            {error ? <p className="text-sm text-destructive">{error}</p> : null}
-
-            <GoogleSignInButton next={destination} configured={configured} />
+              <GoogleSignInButton next={destination} configured={configured} />
+            </div>
           </div>
+
+          <p className="mt-8 font-mono text-[0.68rem] tracking-[0.04em] text-[var(--desk-text-dim)]">
+            By continuing you open the live catalyst desk.
+          </p>
         </div>
       </main>
-    </div>
+    </PreLoginChrome>
   );
 }

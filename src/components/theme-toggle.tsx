@@ -69,13 +69,14 @@ export function ThemeToggle() {
 
 /**
  * Compact sun/moon control for the desk header (next to account menu).
- * Instant theme flip; hover shows a tooltip.
+ * Default theme is dark (white on navy); this flips to light for users who
+ * want to replace it. Instant theme flip; hover shows a tooltip.
  */
 export function HeaderThemeToggle({ className }: { className?: string }) {
   const { resolvedTheme, setTheme } = useTheme();
   const mounted = useHasMounted();
   const isDark = mounted && resolvedTheme === "dark";
-  const nextLabel = isDark ? "Light mode" : "Dark mode";
+  const nextLabel = isDark ? "Switch to light" : "Switch to dark (default)";
 
   return (
     <button
