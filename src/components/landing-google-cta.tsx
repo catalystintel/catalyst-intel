@@ -8,10 +8,8 @@ import { cn } from "@/lib/utils";
  * Primary sign-up CTA — used both in the hero (with icon + subtext) and the
  * final section near the footer (plain single line).
  *
- * Styled with the desk's gold/amber accent (`--desk-live`), matching the
- * LIVE badges, DETAILS buttons, and the About page's final CTA — so the
- * one CTA on the page reads as part of the product, not a generic OAuth
- * widget bolted on top of it.
+ * Uses landing primary blue (`--landing-primary` / `#2563EB`), not LIVE amber.
+ * Amber stays reserved for LIVE / warning chips on the prelogin surface.
  */
 export function LandingGoogleCta({
   children = "Continue with Google — free",
@@ -31,8 +29,8 @@ export function LandingGoogleCta({
       href="/login"
       className={cn(
         buttonVariants({ size: "lg" }),
-        "btn-press h-auto min-h-11 flex-col justify-center gap-0.5 bg-[var(--desk-live)] px-6 py-2.5 text-[0.95rem] font-semibold tracking-tight text-[#1a1520] shadow-[0_1px_2px_rgba(0,0,0,0.12),0_8px_24px_rgba(240,193,75,0.22)]",
-        "hover:bg-[#f5cc63] focus-visible:ring-2 focus-visible:ring-[var(--desk-live)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--desk-app)] focus-visible:outline-none",
+        "btn-press h-auto min-h-11 flex-col justify-center gap-0.5 bg-[var(--landing-primary,#2563eb)] px-6 py-2.5 text-[0.95rem] font-semibold tracking-tight text-[#f8fafc] shadow-[0_1px_2px_rgba(0,0,0,0.2),0_8px_24px_rgba(37,99,235,0.28)]",
+        "hover:bg-[var(--landing-primary-hover,#1d4ed8)] focus-visible:ring-2 focus-visible:ring-[var(--landing-primary,#2563eb)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--desk-app)] focus-visible:outline-none",
         className,
       )}
     >
@@ -43,7 +41,7 @@ export function LandingGoogleCta({
         {children}
       </span>
       {subtext ? (
-        <span className="text-[0.7rem] font-medium tracking-tight text-[#1a1520]/75">
+        <span className="text-[0.7rem] font-medium tracking-tight text-[#f8fafc]/80">
           {subtext}
         </span>
       ) : null}

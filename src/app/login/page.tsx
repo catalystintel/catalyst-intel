@@ -11,9 +11,9 @@ import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { cn } from "@/lib/utils";
 
 /**
- * Auth composition (research → apply): brand-first trading-desk sign-in.
- * Same dual gold/chart atmosphere as prelogin; hero is the Catalyst mark +
- * name (not a generic SaaS card). Google OAuth stays the single clear CTA.
+ * Auth composition: brand-first trading-desk sign-in on the prelogin palette
+ * (deep navy + blue primary). Hero is the Catalyst mark + name; Google OAuth
+ * stays the single clear CTA.
  */
 export default async function LoginPage({
   searchParams,
@@ -33,7 +33,7 @@ export default async function LoginPage({
             aria-hidden
             className="brand-mark marketing-brand-pulse relative size-14 shrink-0 rounded-2xl sm:size-16"
           />
-          <p className="mt-5 font-mono text-[0.72rem] font-medium tracking-[0.16em] text-[var(--desk-live)] uppercase">
+          <p className="mt-5 font-mono text-[0.72rem] font-medium tracking-[0.16em] text-[var(--landing-primary,#2563eb)] uppercase">
             Trading desk
           </p>
           <h1 className="marketing-headline mt-2 text-3xl text-[var(--desk-text)] sm:text-4xl">

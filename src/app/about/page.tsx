@@ -126,7 +126,7 @@ export default function AboutPage() {
               href="/login"
               className={cn(
                 buttonVariants({ size: "lg" }),
-                "btn-press min-h-11 w-full justify-center bg-[var(--desk-live)] text-[#1a1520] hover:bg-[#f5cc63] sm:w-auto",
+                "btn-press min-h-11 w-full justify-center bg-[var(--landing-primary,#2563eb)] text-[#f8fafc] hover:bg-[var(--landing-primary-hover,#1d4ed8)] sm:w-auto",
               )}
             >
               Continue with Google — free
