@@ -1,13 +1,19 @@
 import type { Metadata, Viewport } from "next";
-import { DM_Sans, IBM_Plex_Mono } from "next/font/google";
+import { IBM_Plex_Mono, IBM_Plex_Sans } from "next/font/google";
 
 import { PostHogProvider } from "@/components/posthog-provider";
 import { ThemeProvider } from "@/components/theme-provider";
 
 import "./globals.css";
 
-const dmSans = DM_Sans({
-  variable: "--font-dm-sans",
+/**
+ * IBM Plex Sans + Mono: one coherent family for dense trading-desk UI.
+ * Geometric clarity at small sizes; Mono already used for symbols/times.
+ * Alternatives considered: Source Sans 3 (also strong for data UI), DM Sans
+ * (previous marketing default — softer, less terminal).
+ */
+const plexSans = IBM_Plex_Sans({
+  variable: "--font-plex-sans",
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
 });
@@ -39,13 +45,13 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${dmSans.variable} ${plexMono.variable} h-full overflow-x-hidden antialiased`}
+      className={`${plexSans.variable} ${plexMono.variable} h-full overflow-x-hidden antialiased`}
       suppressHydrationWarning
     >
       <body className="flex min-h-dvh flex-col overflow-x-hidden font-sans">
         <ThemeProvider
           attribute="class"
-          defaultTheme="light"
+          defaultTheme="dark"
           enableSystem={false}
           storageKey="ci.theme"
         >

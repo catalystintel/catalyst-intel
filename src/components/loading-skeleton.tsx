@@ -26,7 +26,7 @@ export function Skeleton({ className }: { className?: string }) {
  */
 export function AppChromeSkeleton({ children }: { children: ReactNode }) {
   return (
-    <div className="page-enter flex h-dvh max-h-dvh min-h-0 flex-1 overflow-hidden bg-[var(--desk-app)]">
+    <div className="desk-chrome page-enter flex h-dvh max-h-dvh min-h-0 flex-1 overflow-hidden bg-[var(--desk-app)]">
       <aside className="hidden h-full w-[220px] shrink-0 flex-col gap-4 border-r border-[var(--desk-border)] bg-[var(--desk-sidebar)] px-3 py-4 md:flex">
         <div className="mb-2 flex items-center gap-2.5 px-2">
           <span className="brand-mark relative size-7 shrink-0 rounded-md" />
