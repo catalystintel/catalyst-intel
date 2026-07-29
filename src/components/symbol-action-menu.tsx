@@ -47,8 +47,8 @@ export function SymbolActionMenu({
     <DropdownMenu>
       <DropdownMenuTrigger
         className={cn(
-          "group/symbol relative truncate font-mono text-[0.88rem] font-semibold tracking-tight text-[var(--desk-text)] transition-colors",
-          "hover:text-[var(--desk-live)] focus-visible:text-[var(--desk-live)] focus-visible:outline-none",
+          "group/symbol relative truncate font-mono text-[0.88rem] font-semibold tracking-tight text-[var(--desk-link,var(--desk-text))] transition-colors",
+          "hover:text-[var(--desk-link,var(--desk-live))] focus-visible:text-[var(--desk-link,var(--desk-live))] focus-visible:outline-none",
           "-mx-0.5 rounded-sm px-0.5",
         )}
         aria-label={hoverLabel}

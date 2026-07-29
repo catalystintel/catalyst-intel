@@ -16,15 +16,16 @@ import { useWatchlistQuotes } from "@/hooks/use-watchlist-quotes";
 import { cn } from "@/lib/utils";
 
 /**
- * Compact "WATCHLISTS" rail for the dashboard's left column — maps to the
- * reference image's watchlist panel. Real data: reads/writes the same
- * `/api/watchlist` endpoints as the full Watchlist page and the Live tape's
- * "Watch" action, so adding/removing here stays in sync everywhere else.
+ * Compact "WATCHLISTS" rail for the dashboard's right column (below Economic
+ * Calendar) — maps to `docs/design/dashboard-target-reference-02.png`. Real
+ * data: reads/writes the same `/api/watchlist` endpoints as the full
+ * Watchlist page and the Live tape's "Watch" action, so adding/removing here
+ * stays in sync everywhere else.
  *
  * Trend arrows use `/api/market/quote` (the same quote endpoint the split
  * panel uses) — green up / red down / gray flat by session change %.
- * Clicking a row focuses the dashboard's Charting panel on that symbol
- * (via `onFocusSymbol`); it does not filter the tape — use a row's own
+ * Clicking a row highlights it and syncs focus with the open tape row (via
+ * `onFocusSymbol`); it does not filter the tape — use a row's own
  * "Filter to symbol" action for that (unchanged elsewhere).
  */
 export function DashboardWatchlistRail({
@@ -182,7 +183,7 @@ export function DashboardWatchlistRail({
                       type="button"
                       onClick={() => onFocusSymbol?.(t.symbol)}
                       className="flex min-w-0 flex-1 items-center gap-1.5 text-left"
-                      title={`Chart ${t.symbol}`}
+                      title={`Focus ${t.symbol}`}
                     >
                       <ChevronRight className="size-3 shrink-0 text-[var(--desk-text-dim)]" />
                       <span className="truncate font-mono text-[0.8rem] font-semibold tracking-tight text-[var(--desk-text)]">

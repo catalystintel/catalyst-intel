@@ -355,6 +355,30 @@
     color-scheme: dark;
   }
 
+  /* Authenticated `/catalyst-feed` dashboard grid only — deep navy panels
+     matching `docs/design/dashboard-target-reference-02.png`. Scoped so the
+     marketing landing gold system and desk sidebar tokens are untouched.
+     `--desk-link` blues ticker/symbol accents; `--desk-live` stays gold for
+     Act / LIVE / Quiet chips. */
+  .desk-dashboard {
+    --desk-app: #0c0d12;
+    --desk-panel: #17181e;
+    --desk-header: #14151b;
+    --desk-border: #22232a;
+    --desk-border-strong: #2e2f38;
+    --desk-text: #ffffff;
+    --desk-text-secondary: #d0d1d6;
+    --desk-text-muted: #9a9ba3;
+    --desk-text-dim: #7a7b84;
+    --desk-link: #5b8cff;
+    --desk-chart-accent: #5b8cff;
+    --desk-overlay-soft: rgba(255, 255, 255, 0.04);
+    --desk-overlay-strong: rgba(255, 255, 255, 0.08);
+    --desk-grid-line: rgba(255, 255, 255, 0.03);
+    background-color: var(--desk-app);
+    color-scheme: dark;
+  }
+
   .btn-press {
     transition:
       transform 140ms ease,

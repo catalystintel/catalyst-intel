@@ -135,9 +135,8 @@ export function LiveCatalystFeed({
   initialSelectedId?: number;
   /**
    * Fired with the resolved symbol whenever the split panel opens on a row
-   * that has one — lets a dashboard-level Charting panel stay in sync with
-   * whichever tape row you're triaging, alongside the split panel's own
-   * inline chart. Optional; no-op when omitted (unchanged behavior).
+   * that has one — keeps the dashboard Watchlist rail highlight in sync with
+   * whichever tape row you're triaging. Optional; no-op when omitted.
    */
   onFocusSymbol?: (symbol: string) => void;
 }) {
@@ -582,8 +581,8 @@ export function LiveCatalystFeed({
   const selected =
     selectedRaw && passesSymbolFeedGate(selectedRaw) ? selectedRaw : null;
 
-  // Keep an external dashboard Charting panel (if any) pointed at whatever
-  // row is currently open — additive, no-op without `onFocusSymbol`.
+  // Keep the dashboard Watchlist rail highlight in sync with the open row —
+  // additive, no-op without `onFocusSymbol`.
   useEffect(() => {
     if (selected?.symbol) onFocusSymbol?.(selected.symbol);
   }, [selected, onFocusSymbol]);
