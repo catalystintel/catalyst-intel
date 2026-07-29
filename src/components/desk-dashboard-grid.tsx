@@ -2,10 +2,7 @@
 
 import { useState } from "react";
 
-import { DashboardChartingPanel } from "@/components/dashboard-charting-panel";
 import { DashboardEconomicCalendar } from "@/components/dashboard-economic-calendar";
-import { DashboardMarketDataTabs } from "@/components/dashboard-market-data-tabs";
-import { DashboardSquawkPanel } from "@/components/dashboard-squawk-panel";
 import { DashboardTickerTape } from "@/components/dashboard-ticker-tape";
 import { DashboardWatchlistRail } from "@/components/dashboard-watchlist-rail";
 import {
@@ -15,18 +12,14 @@ import {
 import type { MacroEventDef } from "@/lib/jobs/fetch-macro-calendar";
 
 /**
- * Trading-desk dashboard shell for `/catalyst-feed` — restyled/composed per
- * `docs/design/dashboard-target-reference-01.png` + the prelogin dark/gold
- * guidelines. Keeps the existing Live tape (`LiveCatalystFeed`) as the
- * center column unchanged in behavior, and adds real-data side panels
- * (Watchlist rail, Economic Calendar, Charting, ticker tape) plus an
- * honestly-labeled Live Squawk placeholder — see each panel's own file for
- * what's real vs. placeholder.
+ * Trading-desk dashboard shell for `/catalyst-feed` — two-column layout
+ * aligned to `docs/design/dashboard-target-reference-02.png`: a broadened
+ * center Live tape plus a right rail (Economic Calendar + Watchlists).
+ * Charting stays available in the row split/detail panel only; the former
+ * Live Squawk placeholder and Market Data tab strip are removed.
  *
- * The extra panels are desktop-only (`xl:` and up) so the mobile/tablet
- * experience is unchanged from today's single-column Live tape + split
- * panel (those panels also remain reachable via their own full pages —
- * `/watchlist`, etc.).
+ * Extra panels are desktop-only (`xl:` and up); mobile/tablet stay
+ * single-column Live tape + split (Watchlists still at `/watchlist`).
  */
 export function DeskDashboardGrid({
   initialCatalysts,
@@ -50,19 +43,8 @@ export function DeskDashboardGrid({
   const [watchlistSymbols, setWatchlistSymbols] = useState<string[]>([]);
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-3">
-      <DashboardMarketDataTabs active="live" isAdmin={isAdmin} />
-
+    <div className="desk-dashboard flex min-h-0 flex-1 flex-col gap-3">
       <div className="flex min-h-0 flex-1 flex-col gap-3 xl:flex-row">
-        <div className="hidden min-h-0 w-[260px] shrink-0 flex-col gap-3 xl:flex">
-          <DashboardSquawkPanel />
-          <DashboardWatchlistRail
-            focusSymbol={focusSymbol}
-            onFocusSymbol={setFocusSymbol}
-            onSymbolsChange={setWatchlistSymbols}
-          />
-        </div>
-
         <LiveCatalystFeed
           initialCatalysts={initialCatalysts}
           isAdmin={isAdmin}
@@ -71,11 +53,12 @@ export function DeskDashboardGrid({
           onFocusSymbol={setFocusSymbol}
         />
 
-        <div className="hidden min-h-0 w-[320px] shrink-0 flex-col gap-3 xl:flex">
+        <div className="hidden min-h-0 w-[300px] shrink-0 flex-col gap-3 xl:flex 2xl:w-[340px]">
           <DashboardEconomicCalendar events={macroEvents} />
-          <DashboardChartingPanel
-            symbol={focusSymbol}
-            onSymbolChange={setFocusSymbol}
+          <DashboardWatchlistRail
+            focusSymbol={focusSymbol}
+            onFocusSymbol={setFocusSymbol}
+            onSymbolsChange={setWatchlistSymbols}
           />
         </div>
       </div>

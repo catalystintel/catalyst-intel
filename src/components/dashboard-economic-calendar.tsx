@@ -27,7 +27,7 @@ export function DashboardEconomicCalendar({
   events: MacroEventDef[];
 }) {
   return (
-    <section className="flex max-h-[45%] min-h-[220px] flex-col overflow-hidden rounded-xl border border-[var(--desk-border)] bg-[var(--desk-panel)]">
+    <section className="flex max-h-[42%] min-h-[200px] shrink-0 flex-col overflow-hidden rounded-xl border border-[var(--desk-border)] bg-[var(--desk-panel)]">
       <div className="flex items-center justify-between gap-2 border-b border-[var(--desk-border)] bg-[var(--desk-header)] px-3 py-2.5">
         <h2 className="font-mono text-[0.7rem] font-semibold tracking-[0.14em] text-[var(--desk-text)] uppercase">
           Economic Calendar
