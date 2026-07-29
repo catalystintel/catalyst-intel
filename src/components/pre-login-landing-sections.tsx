@@ -121,7 +121,7 @@ export function PreLoginLandingSections() {
       >
         <h2
           id="workflow-heading"
-          className="text-center text-2xl font-bold tracking-tight text-balance text-[var(--desk-text)] sm:text-3xl"
+          className="marketing-headline text-center text-2xl text-balance text-[var(--desk-text)] sm:text-3xl"
         >
           From event to understanding in three steps
         </h2>
@@ -166,7 +166,7 @@ export function PreLoginLandingSections() {
       >
         <h2
           id="coverage-heading"
-          className="text-2xl font-bold tracking-tight text-balance text-[var(--desk-text)] sm:text-3xl"
+          className="marketing-headline text-2xl text-balance text-[var(--desk-text)] sm:text-3xl"
         >
           Coverage across the catalysts traders track
         </h2>
@@ -190,7 +190,7 @@ export function PreLoginLandingSections() {
       <section aria-labelledby="features-heading" className="landing-section">
         <h2
           id="features-heading"
-          className="text-center text-2xl font-bold tracking-tight text-balance text-[var(--desk-text)] sm:text-3xl"
+          className="marketing-headline text-center text-2xl text-balance text-[var(--desk-text)] sm:text-3xl"
         >
           Everything you need to catch the catalyst
         </h2>
@@ -318,7 +318,7 @@ export function PreLoginLandingSections() {
       >
         <h2
           id="final-cta-heading"
-          className="max-w-2xl text-2xl font-bold tracking-tight text-balance text-[var(--desk-text)] sm:text-3xl"
+          className="marketing-headline max-w-2xl text-2xl text-balance text-[var(--desk-text)] sm:text-3xl"
         >
           Never miss a market-moving catalyst again
         </h2>

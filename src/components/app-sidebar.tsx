@@ -59,7 +59,7 @@ export function AppSidebar({
             <p className="font-mono text-[0.62rem] font-semibold tracking-[0.16em] text-[var(--desk-text-dim)] uppercase">
               Trading desk
             </p>
-            <p className="truncate text-[0.95rem] font-bold tracking-tight text-[var(--desk-text)]">
+            <p className="marketing-headline truncate text-[0.95rem] text-[var(--desk-text)]">
               Catalyst Intel
             </p>
           </div>

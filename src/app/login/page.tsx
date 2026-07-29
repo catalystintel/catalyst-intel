@@ -36,7 +36,7 @@ export default async function LoginPage({
           <p className="mt-5 font-mono text-[0.72rem] font-medium tracking-[0.16em] text-[var(--desk-live)] uppercase">
             Trading desk
           </p>
-          <h1 className="mt-2 text-3xl font-bold tracking-tight text-[var(--desk-text)] sm:text-4xl">
+          <h1 className="marketing-headline mt-2 text-3xl text-[var(--desk-text)] sm:text-4xl">
             Catalyst Intel
           </h1>
           <p className="mt-3 max-w-sm text-base leading-relaxed text-pretty text-[var(--desk-text-secondary)]">
