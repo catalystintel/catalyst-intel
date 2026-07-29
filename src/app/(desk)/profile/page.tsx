@@ -74,9 +74,8 @@ export default async function ProfilePage() {
             Appearance
           </h2>
           <p className="mt-1 text-sm text-[var(--desk-text-muted)]">
-            Dark (white on navy) is the default. Use the colors control in the
-            header — or here — to switch to light; your choice is saved on this
-            device.
+            Use the colors control in the header — or here — to switch between
+            dark (white on navy) and light. Your choice is saved on this device.
           </p>
         </div>
         <ThemeToggle />
