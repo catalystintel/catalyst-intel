@@ -34,7 +34,7 @@ export function DashboardTickerTape({ symbols }: { symbols: string[] }) {
           <div
             key={symbol}
             role="listitem"
-            className="flex shrink-0 items-center gap-1.5 font-mono text-[0.72rem] whitespace-nowrap tabular-nums"
+            className="desk-data flex shrink-0 items-center gap-1.5 whitespace-nowrap"
           >
             <span className="font-semibold text-[var(--desk-text)]">
               {symbol}
@@ -47,8 +47,8 @@ export function DashboardTickerTape({ symbols }: { symbols: string[] }) {
             {quote?.change != null && quote?.changePercent != null ? (
               <span
                 className={cn(
-                  up === true && "text-emerald-400",
-                  up === false && "text-rose-400",
+                  up === true && "text-[var(--desk-positive)]",
+                  up === false && "text-[var(--desk-negative)]",
                   up == null && "text-[var(--desk-text-dim)]",
                 )}
               >

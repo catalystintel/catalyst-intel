@@ -125,7 +125,7 @@ export function PreLoginLandingSections() {
         >
           From event to understanding in three steps
         </h2>
-        <p className="mx-auto mt-3 max-w-xl text-center text-sm text-pretty text-[var(--desk-text-muted)] sm:text-base">
+        <p className="desk-body mx-auto mt-3 max-w-xl text-center text-pretty text-[var(--desk-text-muted)] sm:text-base">
           Catalyst Intel shortens the gap between something happening and you
           knowing what it means.
         </p>
@@ -143,15 +143,15 @@ export function PreLoginLandingSections() {
                   </FeatureIcon>
                   <span
                     aria-hidden
-                    className="font-mono text-[0.72rem] font-semibold tracking-[0.14em] text-[var(--desk-text-dim)]"
+                    className="desk-data font-semibold tracking-[0.14em] text-[var(--desk-text-dim)]"
                   >
                     {step.step}
                   </span>
                 </div>
-                <h3 className="text-[0.98rem] font-bold tracking-tight text-[var(--desk-text)]">
+                <h3 className="desk-card-title mt-3 text-[var(--desk-text)]">
                   {step.title}
                 </h3>
-                <p className="mt-2 text-sm leading-relaxed text-pretty text-[var(--desk-text-muted)]">
+                <p className="desk-body mt-2 text-pretty text-[var(--desk-text-muted)]">
                   {step.description}
                 </p>
               </li>
@@ -170,7 +170,7 @@ export function PreLoginLandingSections() {
         >
           Coverage across the catalysts traders track
         </h2>
-        <p className="mt-3 max-w-xl text-sm text-pretty text-[var(--desk-text-muted)] sm:text-base">
+        <p className="desk-body mt-3 max-w-xl text-pretty text-[var(--desk-text-muted)] sm:text-base">
           Events are ingested from SEC EDGAR and market data feeds, then
           categorized on arrival so the tape is filterable from the first
           second.
@@ -205,10 +205,10 @@ export function PreLoginLandingSections() {
                 <FeatureIcon>
                   <Icon className="size-4" strokeWidth={1.75} />
                 </FeatureIcon>
-                <h3 className="text-[0.95rem] font-bold tracking-tight text-[var(--desk-text)]">
+                <h3 className="desk-card-title mt-3 text-[var(--desk-text)]">
                   {feature.title}
                 </h3>
-                <p className="mt-2 text-sm leading-relaxed text-pretty text-[var(--desk-text-muted)]">
+                <p className="desk-body mt-2 text-pretty text-[var(--desk-text-muted)]">
                   {feature.description}
                 </p>
               </li>

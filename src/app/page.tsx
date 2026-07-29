@@ -175,7 +175,7 @@ export default async function Home({
                 Trade Smarter, Faster.
               </span>
             </h1>
-            <p className="mt-4 max-w-xl text-base leading-relaxed text-pretty text-[var(--desk-text-secondary)] sm:text-lg">
+            <p className="desk-body mt-4 max-w-xl text-pretty text-[var(--desk-text-secondary)] sm:text-base sm:leading-relaxed">
               Instant alerts, AI-powered summaries, and plain-language insights
               on earnings, filings, events and more — so you never miss what
               moves the market.
@@ -285,7 +285,7 @@ export default async function Home({
                   }}
                 >
                   <div role="cell" className="min-w-0">
-                    <span className="truncate font-mono text-[0.88rem] font-bold tracking-tight text-[var(--desk-text)]">
+                    <span className="desk-data truncate font-bold tracking-tight text-[var(--desk-text)]">
                       {row.symbol}
                     </span>
                   </div>
@@ -297,7 +297,7 @@ export default async function Home({
                           {row.category}
                         </CategoryChip>
                       </span>
-                      <span className="line-clamp-2 min-w-0 text-[0.88rem] font-medium text-[var(--desk-text-secondary)] sm:line-clamp-1">
+                      <span className="feed-article-title line-clamp-2 min-w-0 text-[var(--desk-text-secondary)] sm:line-clamp-1">
                         {row.title}
                       </span>
                     </div>
@@ -305,7 +305,7 @@ export default async function Home({
                       <CategoryChip highPriority={row.highPriority}>
                         {row.category}
                       </CategoryChip>
-                      <time className="font-mono text-[0.72rem] font-medium tracking-tight whitespace-nowrap text-[var(--desk-text-muted)] tabular-nums sm:hidden">
+                      <time className="desk-data font-medium tracking-tight whitespace-nowrap text-[var(--desk-text-muted)] sm:hidden">
                         {row.timeShort}
                       </time>
                     </div>
@@ -325,7 +325,7 @@ export default async function Home({
                     role="cell"
                     className="hidden min-w-0 text-right sm:block"
                   >
-                    <time className="inline-block max-w-full font-mono text-[0.72rem] font-medium tracking-tight whitespace-nowrap text-[var(--desk-text-dim)] tabular-nums">
+                    <time className="desk-data inline-block max-w-full font-medium tracking-tight whitespace-nowrap text-[var(--desk-text-dim)]">
                       {row.time}
                     </time>
                   </div>

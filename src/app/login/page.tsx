@@ -39,7 +39,7 @@ export default async function LoginPage({
           <h1 className="marketing-headline mt-2 text-3xl text-[var(--desk-text)] sm:text-4xl">
             Catalyst Intel
           </h1>
-          <p className="mt-3 max-w-sm text-base leading-relaxed text-pretty text-[var(--desk-text-secondary)]">
+          <p className="desk-body mt-3 max-w-sm text-pretty text-[var(--desk-text-secondary)] sm:text-base">
             Live SEC catalysts for day traders — sign in free for full desk
             access during Open Early Access.
           </p>

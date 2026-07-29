@@ -23,8 +23,8 @@ const LEAN_LABEL: Record<AiLean, string> = {
 };
 
 const LEAN_CLASS: Record<AiLean, string> = {
-  bullish: "text-emerald-400",
-  bearish: "text-rose-400",
+  bullish: "text-[var(--desk-positive)]",
+  bearish: "text-[var(--desk-negative)]",
   neutral: "text-[var(--desk-text-secondary)]",
   uncertain: "text-[var(--desk-text-dim)]",
 };
