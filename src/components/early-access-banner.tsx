@@ -75,13 +75,23 @@ export function EarlyAccessBanner({
       <div
         role="status"
         className={cn(
-          "relative z-50 flex items-center justify-center gap-2 border-b border-[rgba(240,193,75,0.28)] bg-[rgba(240,193,75,0.12)] px-3 py-2 text-center sm:gap-3 sm:px-5",
+          "relative z-50 flex items-center justify-center gap-2 border-b px-3 py-2 text-center sm:gap-3 sm:px-5",
+          variant === "marketing"
+            ? "border-[color-mix(in_srgb,var(--landing-primary,#2563eb)_28%,transparent)] bg-[color-mix(in_srgb,var(--landing-primary,#2563eb)_10%,transparent)]"
+            : "border-[color-mix(in_srgb,var(--desk-live)_28%,transparent)] bg-[color-mix(in_srgb,var(--desk-live)_12%,transparent)]",
           variant === "app" && "pr-11 sm:pr-12",
           className,
         )}
       >
         <p className="min-w-0 text-[0.78rem] leading-snug font-medium text-[var(--desk-text)] sm:text-[0.82rem]">
-          <span className="font-mono text-[0.68rem] font-bold tracking-[0.1em] text-[var(--desk-live)] uppercase">
+          <span
+            className={cn(
+              "font-mono text-[0.68rem] font-bold tracking-[0.1em] uppercase",
+              variant === "marketing"
+                ? "text-[var(--landing-primary,#2563eb)]"
+                : "text-[var(--desk-live)]",
+            )}
+          >
             {EARLY_ACCESS.badge}
           </span>
           <span className="mx-1.5 text-[var(--desk-text-dim)]" aria-hidden>
@@ -93,7 +103,12 @@ export function EarlyAccessBanner({
           <button
             type="button"
             onClick={() => setFeedbackOpen(true)}
-            className="btn-press inline-flex shrink-0 items-center gap-1 rounded-md border border-[rgba(240,193,75,0.4)] bg-[rgba(240,193,75,0.08)] px-2 py-1 font-mono text-[0.65rem] font-semibold tracking-[0.06em] text-[var(--desk-live)] uppercase transition-colors hover:bg-[rgba(240,193,75,0.18)]"
+            className={cn(
+              "btn-press inline-flex shrink-0 items-center gap-1 rounded-md border px-2 py-1 font-mono text-[0.65rem] font-semibold tracking-[0.06em] uppercase transition-colors",
+              variant === "marketing"
+                ? "border-[color-mix(in_srgb,var(--landing-primary,#2563eb)_40%,transparent)] bg-[color-mix(in_srgb,var(--landing-primary,#2563eb)_08%,transparent)] text-[var(--landing-primary,#2563eb)] hover:bg-[color-mix(in_srgb,var(--landing-primary,#2563eb)_18%,transparent)]"
+                : "border-[color-mix(in_srgb,var(--desk-live)_40%,transparent)] bg-[color-mix(in_srgb,var(--desk-live)_08%,transparent)] text-[var(--desk-live)] hover:bg-[color-mix(in_srgb,var(--desk-live)_18%,transparent)]",
+            )}
           >
             <MessageSquareText className="size-3" aria-hidden />
             <span className="hidden sm:inline">Feedback</span>

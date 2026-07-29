@@ -104,7 +104,7 @@ function FeatureIcon({ children }: { children: ReactNode }) {
   return (
     <span
       aria-hidden
-      className="mb-4 inline-flex size-9 items-center justify-center rounded-md bg-[rgba(240,193,75,0.16)] text-[var(--desk-live)]"
+      className="mb-4 inline-flex size-9 items-center justify-center rounded-md bg-[color-mix(in_srgb,var(--landing-primary,#2563eb)_16%,transparent)] text-[var(--landing-primary,#2563eb)]"
     >
       {children}
     </span>
@@ -257,14 +257,14 @@ export function PreLoginLandingSections() {
                 <UserRound className="size-5" strokeWidth={1.75} />
               </span>
               <CheckCircle2
-                className="absolute -right-0.5 -bottom-0.5 size-4 rounded-full bg-[var(--desk-panel)] text-[var(--desk-live)]"
+                className="absolute -right-0.5 -bottom-0.5 size-4 rounded-full bg-[var(--desk-panel)] text-[var(--landing-primary,#2563eb)]"
                 strokeWidth={2}
               />
             </span>
             <div className="min-w-0">
               <Quote
                 aria-hidden
-                className="size-5 text-[var(--desk-live)]"
+                className="size-5 text-[var(--landing-primary,#2563eb)]"
                 strokeWidth={1.75}
               />
               <p className="mt-2 text-lg font-medium text-balance text-[var(--desk-text)] sm:text-xl">
@@ -280,11 +280,11 @@ export function PreLoginLandingSections() {
 
       <section
         aria-labelledby="early-access-heading"
-        className="landing-section rounded-2xl border border-[rgba(240,193,75,0.22)] bg-[rgba(240,193,75,0.08)] px-6 py-8 sm:px-10 sm:py-10"
+        className="landing-section rounded-2xl border border-[color-mix(in_srgb,var(--landing-primary,#2563eb)_22%,transparent)] bg-[color-mix(in_srgb,var(--landing-primary,#2563eb)_08%,transparent)] px-6 py-8 sm:px-10 sm:py-10"
       >
         <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:gap-10">
           <div className="max-w-sm shrink-0">
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-[rgba(240,193,75,0.35)] bg-[rgba(240,193,75,0.12)] px-2.5 py-1 font-mono text-[0.68rem] font-bold tracking-[0.08em] text-[var(--desk-live)] uppercase">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-[color-mix(in_srgb,var(--landing-primary,#2563eb)_35%,transparent)] bg-[color-mix(in_srgb,var(--landing-primary,#2563eb)_12%,transparent)] px-2.5 py-1 font-mono text-[0.68rem] font-bold tracking-[0.08em] text-[var(--landing-primary,#2563eb)] uppercase">
               Open Early Access
             </span>
             <h2
@@ -302,7 +302,7 @@ export function PreLoginLandingSections() {
               >
                 <CheckCircle2
                   aria-hidden
-                  className="mt-0.5 size-4 shrink-0 text-[var(--desk-live)]"
+                  className="mt-0.5 size-4 shrink-0 text-[var(--landing-primary,#2563eb)]"
                   strokeWidth={1.75}
                 />
                 {point}

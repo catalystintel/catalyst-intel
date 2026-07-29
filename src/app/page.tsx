@@ -7,6 +7,7 @@ import { FeedPreviewChartGlow } from "@/components/feed-preview-chart-glow";
 import { LandingGoogleCta } from "@/components/landing-google-cta";
 import { PreLoginChrome } from "@/components/pre-login-chrome";
 import { PreLoginLandingSections } from "@/components/pre-login-landing-sections";
+import { PreloginRisingChart } from "@/components/prelogin-rising-chart";
 import { cn } from "@/lib/utils";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
@@ -36,7 +37,7 @@ const DEMO_ROWS: {
   symbol: string;
   title: string;
   category: string;
-  /** Gold chip = high-priority catalyst class (halts, FDA) — never color alone. */
+  /** Amber chip = high-priority catalyst class (halts, FDA) — never color alone. */
   highPriority?: boolean;
   time: string;
   timeShort: string;
@@ -99,7 +100,7 @@ function CategoryChip({
       className={cn(
         "inline-flex shrink-0 items-center rounded-sm border px-1.5 py-px font-mono text-[0.6rem] font-semibold tracking-[0.08em] uppercase",
         highPriority
-          ? "border-[rgba(240,193,75,0.4)] bg-[rgba(240,193,75,0.12)] text-[var(--desk-live)]"
+          ? "border-[color-mix(in_srgb,var(--desk-live)_40%,transparent)] bg-[color-mix(in_srgb,var(--desk-live)_12%,transparent)] text-[var(--desk-live)]"
           : "border-[var(--desk-border-strong)] text-[var(--desk-text-muted)]",
       )}
     >
@@ -120,7 +121,7 @@ function PreviewActionChip({
       className={cn(
         "inline-flex items-center gap-1 rounded-sm px-2 py-0.5 font-mono text-[0.65rem] font-semibold tracking-wide uppercase",
         variant === "primary"
-          ? "bg-[var(--desk-live)] text-[#121212]"
+          ? "bg-[var(--landing-primary,#2563eb)] text-[#f8fafc]"
           : "border border-[var(--desk-border-strong)] text-[var(--desk-text-muted)]",
       )}
     >
@@ -153,12 +154,13 @@ export default async function Home({
   return (
     <PreLoginChrome glowClassName="h-[55vh]">
       <main className="page-enter relative z-10 mx-auto flex w-full max-w-6xl flex-1 flex-col justify-start gap-10 px-4 pt-2 pb-[max(2.5rem,env(safe-area-inset-bottom))] sm:gap-12 sm:px-8 sm:pt-6 sm:pb-20">
+        <PreloginRisingChart />
         {/* Hero: text/CTA beside the feed preview on desktop/tablet (matches
             reference design), stacking back to a single column on mobile. */}
-        <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] lg:items-start lg:gap-10">
+        <div className="relative z-[1] grid gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] lg:items-start lg:gap-10">
           <div className="max-w-2xl">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-[rgba(240,193,75,0.35)] bg-[rgba(240,193,75,0.12)] px-2.5 py-1 text-[0.68rem] font-bold tracking-[0.08em] text-[var(--desk-live)]">
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-[color-mix(in_srgb,var(--desk-live)_35%,transparent)] bg-[color-mix(in_srgb,var(--desk-live)_12%,transparent)] px-2.5 py-1 text-[0.68rem] font-bold tracking-[0.08em] text-[var(--desk-live)]">
                 <span
                   aria-hidden
                   className="live-pulse size-1.5 rounded-full bg-[var(--desk-live)]"
@@ -171,7 +173,7 @@ export default async function Home({
             </div>
             <h1 className="marketing-headline mt-5 text-4xl text-balance text-[var(--desk-text)] sm:text-5xl">
               Real-Time Market-Moving Catalysts.{" "}
-              <span className="text-[var(--desk-live)]">
+              <span className="text-[var(--landing-primary,#2563eb)]">
                 Trade Smarter, Faster.
               </span>
             </h1>
@@ -189,7 +191,7 @@ export default async function Home({
             <div className="mt-3">
               <Link
                 href="/login"
-                className="inline-flex items-center font-mono text-xs font-semibold text-[var(--desk-live)] underline-offset-4 hover:underline"
+                className="inline-flex items-center font-mono text-xs font-semibold text-[var(--landing-primary,#2563eb)] underline-offset-4 hover:underline"
               >
                 Sign in · No password · Full access
               </Link>
@@ -202,7 +204,7 @@ export default async function Home({
                 >
                   <Icon
                     aria-hidden
-                    className="size-4 shrink-0 text-[var(--desk-live)]"
+                    className="size-4 shrink-0 text-[var(--landing-primary,#2563eb)]"
                     strokeWidth={1.75}
                   />
                   <span className="flex flex-col leading-tight">
@@ -220,13 +222,13 @@ export default async function Home({
 
           <section
             aria-label="Feed preview"
-            className="landing-feed landing-feed-dark relative overflow-hidden rounded-lg border border-[var(--desk-border)] bg-[var(--desk-panel)] shadow-[0_24px_80px_rgba(12,13,18,0.55),0_0_0_1px_rgba(240,193,75,0.06)]"
+            className="landing-feed landing-feed-dark relative overflow-hidden rounded-lg border border-[var(--desk-border)] bg-[var(--desk-panel)] shadow-[0_24px_80px_rgba(7,11,20,0.65),0_0_0_1px_rgba(37,99,235,0.08)]"
           >
             <FeedPreviewChartGlow />
 
             <div className="relative z-[1] flex items-center justify-between border-b border-[var(--desk-border)] bg-[color:var(--desk-header)]/85 px-4 py-3 backdrop-blur-[1px] sm:px-5">
               <div className="flex min-w-0 items-center gap-3">
-                <span className="inline-flex items-center gap-1.5 rounded-full border border-[rgba(240,193,75,0.35)] bg-[rgba(240,193,75,0.12)] px-2.5 py-1 text-[0.68rem] font-bold tracking-[0.08em] text-[var(--desk-live)]">
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-[color-mix(in_srgb,var(--desk-live)_35%,transparent)] bg-[color-mix(in_srgb,var(--desk-live)_12%,transparent)] px-2.5 py-1 text-[0.68rem] font-bold tracking-[0.08em] text-[var(--desk-live)]">
                   <span
                     aria-hidden
                     className="live-pulse size-1.5 rounded-full bg-[var(--desk-live)]"
@@ -359,7 +361,7 @@ export default async function Home({
               </span>
               <Link
                 href="/login"
-                className="inline-flex shrink-0 items-center gap-1 font-mono text-[0.68rem] font-semibold text-[var(--desk-live)] underline-offset-4 hover:underline"
+                className="inline-flex shrink-0 items-center gap-1 font-mono text-[0.68rem] font-semibold text-[var(--landing-primary,#2563eb)] underline-offset-4 hover:underline"
               >
                 View full feed
                 <ArrowRight className="size-3" aria-hidden />
@@ -368,7 +370,7 @@ export default async function Home({
           </section>
         </div>
 
-        <div className="mt-6 sm:mt-10">
+        <div className="relative z-[1] mt-6 sm:mt-10">
           <PreLoginLandingSections />
         </div>
       </main>

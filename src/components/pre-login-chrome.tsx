@@ -34,18 +34,17 @@ export function PreLoginChrome({
   const isAuth = variant === "auth";
 
   return (
-    // Marketing pages are always the dark trading-desk theme (black + gold,
-    // navy-nudged) regardless of the signed-in app theme toggle — `.dark`
-    // here re-scopes every `--desk-*`/shadcn token for this subtree via
-    // CSS-variable cascade, independent of next-themes' `<html>` class.
-    // Authenticated desk navy lives on `.desk-chrome` and does not apply here.
-    <div className="dark relative flex min-h-dvh flex-1 flex-col overflow-x-hidden bg-[var(--desk-app)]">
+    // Prelogin always uses the landing fintech palette (`.prelogin-surface`)
+    // regardless of the signed-in app theme toggle — `.dark` + scoped tokens
+    // cascade independently of next-themes' `<html>` class. Authenticated desk
+    // navy stays on `.desk-chrome` and is not overridden here.
+    <div className="dark prelogin-surface relative flex min-h-dvh flex-1 flex-col overflow-x-hidden bg-[var(--desk-app)]">
       <Toaster />
       <div
         aria-hidden
         className="desk-grid pointer-events-none absolute inset-0"
       />
-      {/* Dual atmosphere: warm gold wash + cool chart bloom (trader desk). */}
+      {/* Dual atmosphere: subtle blue wash + soft purple bloom (landing only). */}
       <div
         aria-hidden
         className={cn(

@@ -445,34 +445,119 @@
     animation-delay: 180ms;
   }
 
-  /* Landing feed preview: always the dark terminal card, even on the light
-     marketing page — the product ships a dark desk, and the contrast makes
-     the preview the visual anchor of the hero. Scoped var overrides so the
-     shared feed markup (desk-* tokens) just works inside. Aligns with
-     authenticated navy (`#0b0f19` / `#111827`). */
+  /* Landing hero rising chart — draw-on line + fade-in area over the grid.
+     Defaults are the final visible state so SSR/headless still show the chart;
+     animation uses `both` to start from the hidden keyframe. */
+  .prelogin-rising-chart-line {
+    stroke-dasharray: 1;
+    stroke-dashoffset: 0;
+    animation: prelogin-rising-chart-draw 1.85s cubic-bezier(0.22, 1, 0.36, 1)
+      180ms both;
+  }
+
+  .prelogin-rising-chart-area {
+    opacity: 1;
+    animation: prelogin-rising-chart-area-in 1.1s ease 720ms both;
+  }
+
+  .prelogin-rising-chart-dot {
+    opacity: 0.95;
+    animation: prelogin-rising-chart-dot-in 420ms ease 1.7s both;
+  }
+
+  /* Landing feed preview: always the dark terminal card. Inherits prelogin
+     palette; keeps a slightly lifted panel so the blotter reads as product UI. */
   .landing-feed-dark {
-    --desk-app: #0b0f19;
+    --desk-app: #070b14;
     --desk-panel: #111827;
-    --desk-header: #0e1420;
+    --desk-header: #0c1220;
     --desk-border: #1e293b;
     --desk-border-strong: #334155;
-    --desk-text: #f9fafb;
-    --desk-text-secondary: #cbd5e1;
+    --desk-text: #f8fafc;
+    --desk-text-secondary: #94a3b8;
     --desk-text-muted: #94a3b8;
     --desk-text-dim: #64748b;
-    --desk-live: #f0c14b;
-    --desk-interactive: #3b82f6;
-    --desk-link: #3b82f6;
-    --desk-chart-accent: #3b82f6;
-    --desk-positive: #22c55e;
+    --desk-live: #f59e0b;
+    --desk-interactive: #2563eb;
+    --desk-link: #2563eb;
+    --desk-chart-accent: #2563eb;
+    --desk-positive: #10b981;
     --desk-negative: #ef4444;
     --desk-overlay-soft: rgba(255, 255, 255, 0.05);
     --desk-overlay-strong: rgba(255, 255, 255, 0.1);
     color-scheme: dark;
   }
 
-  /* Marketing dual-atmosphere: warm gold top + cool chart bloom (prelogin /
-     auth). Keeps black+gold language interesting without purple SaaS washes. */
+  /*
+   * Prelogin / marketing surface (landing, about, login). Scoped so the
+   * authenticated desk keeps its existing navy + gold LIVE language.
+   * Landing palette: #070B14 bg, #111827 cards, #2563EB primary actions,
+   * #F59E0B LIVE/warning only, subtle blue→purple hero glow.
+   */
+  .prelogin-surface {
+    --background: #070b14;
+    --foreground: #f8fafc;
+    --card: #111827;
+    --card-foreground: #f8fafc;
+    --popover: #111827;
+    --popover-foreground: #f8fafc;
+    --primary: #2563eb;
+    --primary-foreground: #f8fafc;
+    --secondary: #0f1522;
+    --secondary-foreground: #f8fafc;
+    --muted: #0f1522;
+    --muted-foreground: #94a3b8;
+    --accent: #111827;
+    --accent-foreground: #f8fafc;
+    --destructive: #ef4444;
+    --border: #1e293b;
+    --input: #0f1522;
+    --ring: #2563eb;
+    --sidebar: #070b14;
+    --sidebar-foreground: #f8fafc;
+    --sidebar-primary: #2563eb;
+    --sidebar-primary-foreground: #f8fafc;
+    --sidebar-accent: #0f1522;
+    --sidebar-accent-foreground: #f8fafc;
+    --sidebar-border: #1e293b;
+    --sidebar-ring: #2563eb;
+
+    --desk-app: #070b14;
+    --desk-sidebar: #070b14;
+    --desk-panel: #111827;
+    --desk-header: #0c1220;
+    --desk-border: #1e293b;
+    --desk-border-strong: #334155;
+    --desk-text: #f8fafc;
+    --desk-text-secondary: #94a3b8;
+    --desk-text-muted: #94a3b8;
+    --desk-text-dim: #64748b;
+    --desk-accent: #cbd5e1;
+    --desk-accent-fg: #e2e8f0;
+    /* LIVE / uncertainty — warning amber, not CTA gold. */
+    --desk-live: #f59e0b;
+    --desk-interactive: #2563eb;
+    --desk-link: #2563eb;
+    --landing-primary: #2563eb;
+    --landing-primary-hover: #1d4ed8;
+    --desk-chart-accent: #2563eb;
+    --desk-positive: #10b981;
+    --desk-negative: #ef4444;
+    --desk-warn-bg: rgba(245, 158, 11, 0.14);
+    --desk-warn-border: rgba(245, 158, 11, 0.4);
+    --desk-warn-text: #f59e0b;
+    --desk-nav-active: rgba(255, 255, 255, 0.07);
+    --desk-overlay-soft: rgba(255, 255, 255, 0.05);
+    --desk-overlay-strong: rgba(255, 255, 255, 0.1);
+    --desk-grid-line: rgba(255, 255, 255, 0.04);
+    --desk-shimmer: rgba(255, 255, 255, 0.1);
+    /* Hero glow: subtle blue → purple, highlights only. */
+    --desk-glow: rgba(37, 99, 235, 0.2);
+    --desk-glow-chart: rgba(124, 58, 237, 0.14);
+    color-scheme: dark;
+  }
+
+  /* Marketing dual-atmosphere: cool blue wash + soft purple bloom (prelogin). */
   .marketing-glow-gold {
     background: radial-gradient(
       ellipse 80% 70% at 50% -10%,
@@ -487,6 +572,24 @@
       var(--desk-glow-chart),
       transparent 70%
     );
+  }
+
+  .prelogin-surface .brand-mark::after {
+    border-right-color: var(--landing-primary, #2563eb);
+    border-bottom-color: var(--landing-primary, #2563eb);
+  }
+
+  .prelogin-surface .brand-mark::after {
+    border-right-color: var(--landing-primary, #2563eb);
+    border-bottom-color: var(--landing-primary, #2563eb);
+  }
+
+  .prelogin-surface .live-pulse {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--desk-live) 55%, transparent);
+  }
+
+  .prelogin-surface .marketing-brand-pulse {
+    animation-name: marketing-brand-pulse-prelogin;
   }
 
   .marketing-auth-enter {
@@ -657,6 +760,35 @@
   }
 }
 
+@keyframes prelogin-rising-chart-draw {
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes prelogin-rising-chart-area-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes prelogin-rising-chart-dot-in {
+  from {
+    opacity: 0;
+    transform: scale(0.4);
+  }
+  to {
+    opacity: 0.95;
+    transform: scale(1);
+  }
+}
+
 @keyframes landing-feed-in {
   from {
     opacity: 0;
@@ -690,6 +822,20 @@
     box-shadow:
       inset 0 0 0 1px rgba(255, 255, 255, 0.18),
       0 0 28px 2px rgba(240, 193, 75, 0.18);
+  }
+}
+
+@keyframes marketing-brand-pulse-prelogin {
+  0%,
+  100% {
+    box-shadow:
+      inset 0 0 0 1px rgba(255, 255, 255, 0.14),
+      0 0 0 0 rgba(37, 99, 235, 0);
+  }
+  50% {
+    box-shadow:
+      inset 0 0 0 1px rgba(255, 255, 255, 0.18),
+      0 0 28px 2px rgba(37, 99, 235, 0.22);
   }
 }
 
@@ -773,8 +919,12 @@
   .live-pulse,
   .landing-feed,
   .feed-preview-chart-glow,
+  .prelogin-rising-chart-line,
+  .prelogin-rising-chart-area,
+  .prelogin-rising-chart-dot,
   .marketing-auth-enter,
   .marketing-brand-pulse,
+  .prelogin-surface .marketing-brand-pulse,
   .btn-press,
   .drawer-panel,
   .skeleton-shimmer,
@@ -785,6 +935,15 @@
   .ai-analyzing-dots span {
     animation: none !important;
     transition: none !important;
+  }
+
+  .prelogin-rising-chart-line {
+    stroke-dashoffset: 0 !important;
+  }
+
+  .prelogin-rising-chart-area,
+  .prelogin-rising-chart-dot {
+    opacity: 1 !important;
   }
 
   .ai-scanline {

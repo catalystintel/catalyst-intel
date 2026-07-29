@@ -1,14 +1,12 @@
 /**
  * Decorative market-chart backdrop for the landing "Catalyst Feed preview"
  * card — a faint candlestick + trendline motif behind the header, echoing
- * the live tape the product actually ships instead of a plain flat panel.
+ * the live tape the product ships.
  *
- * Purely illustrative: `aria-hidden`, uses the dedicated `--desk-chart-accent`
- * blue (decorative only — never used for text/actions, which stay on the
- * `--desk-live` gold). Kept deliberately subtle/low-opacity so it reads as
- * ambient texture behind the header, not a competing brand color, and is
- * masked out before it reaches the row content so it never competes with
- * real row text for contrast.
+ * Purely illustrative: `aria-hidden`, uses `--desk-chart-accent` (landing
+ * primary blue). LIVE amber is reserved for status chips, not this texture.
+ * Kept low-opacity and masked before row content so it never competes with
+ * text contrast.
  */
 export function FeedPreviewChartGlow() {
   const bars: { x: number; top: number }[] = [
@@ -37,8 +35,8 @@ export function FeedPreviewChartGlow() {
         WebkitMaskImage: "linear-gradient(to bottom, black, transparent 92%)",
       }}
     >
-      <div className="feed-preview-chart-glow absolute -top-6 right-4 size-28 rounded-full bg-[var(--desk-chart-accent)] opacity-[0.12] blur-2xl sm:right-10" />
-      <div className="absolute -top-8 left-8 size-20 rounded-full bg-[var(--desk-live)] opacity-[0.06] blur-3xl" />
+      <div className="feed-preview-chart-glow absolute -top-6 right-4 size-28 rounded-full bg-[var(--desk-chart-accent)] opacity-[0.14] blur-2xl sm:right-10" />
+      <div className="absolute -top-8 left-8 size-20 rounded-full bg-[color-mix(in_srgb,#7c3aed_70%,var(--desk-chart-accent))] opacity-[0.08] blur-3xl" />
       <svg
         viewBox="0 0 400 80"
         preserveAspectRatio="none"
