@@ -69,14 +69,15 @@ export function ThemeToggle() {
 
 /**
  * Compact sun/moon control for the desk header (next to account menu).
- * Default theme is dark (white on navy); this flips to light for users who
- * want to replace it. Instant theme flip; hover shows a tooltip.
+ * App starts in dark (white on navy); this flips to light for users who
+ * want it. Instant theme flip; hover shows a tooltip. Do not label dark
+ * as "Default" in the UI — it simply is the starting theme.
  */
 export function HeaderThemeToggle({ className }: { className?: string }) {
   const { resolvedTheme, setTheme } = useTheme();
   const mounted = useHasMounted();
   const isDark = mounted && resolvedTheme === "dark";
-  const nextLabel = isDark ? "Switch to light" : "Switch to dark (default)";
+  const nextLabel = isDark ? "Switch to light" : "Switch to dark";
 
   return (
     <button
