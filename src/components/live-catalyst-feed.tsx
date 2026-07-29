@@ -81,7 +81,7 @@ type Presence = "active" | "blurred" | "hidden";
  * Symbol leads as the row index. No Event / Source primary columns.
  * Time = event occurrence in the viewer's local timezone.
  *
- * Time/Action use fixed tracks so `5:31 PM GMT+3 · Jul 24, 2026` (Plex Mono)
+ * Time/Action use fixed tracks so `5:31 PM GMT+3 · Jul 24, 2026` (JetBrains Mono)
  * fits under Time. Desktop Action buttons stay hover/focus/selected-only so
  * the tape stays quiet until the row is engaged.
  */
@@ -1146,7 +1146,7 @@ function CatalystFeedList({
       <div
         role="row"
         className={cn(
-          "sticky top-0 z-[2] grid h-10 items-center gap-2 border-b border-[var(--desk-border-strong)] bg-[var(--desk-header)] px-4 font-mono text-[0.62rem] font-medium tracking-[0.12em] text-[var(--desk-text-muted)] uppercase shadow-[0_1px_0_rgba(0,0,0,0.35)] sm:gap-3 sm:px-5 lg:gap-4",
+          "desk-caps sticky top-0 z-[2] grid h-10 items-center gap-2 border-b border-[var(--desk-border-strong)] bg-[var(--desk-header)] px-4 font-mono text-[0.62rem] font-medium text-[var(--desk-text-muted)] uppercase shadow-[0_1px_0_rgba(0,0,0,0.35)] sm:gap-3 sm:px-5 lg:gap-4",
           feedGrid,
         )}
       >
