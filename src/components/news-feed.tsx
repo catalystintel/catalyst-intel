@@ -43,8 +43,8 @@ function SentimentCue({ sentiment }: SentimentCueProps) {
       className={cn(
         "font-mono text-[0.65rem] font-semibold tracking-wide uppercase",
         sentiment === "bullish"
-          ? "text-emerald-500 dark:text-emerald-400"
-          : "text-rose-500 dark:text-rose-400",
+          ? "text-[var(--desk-positive)]"
+          : "text-[var(--desk-negative)]",
       )}
     >
       {sentiment === "bullish" ? "▲" : "▼"}

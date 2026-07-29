@@ -55,7 +55,7 @@ export function ProfileNameForm({ currentName }: ProfileNameFormProps) {
           className={cn(
             "text-xs",
             state.status === "success"
-              ? "text-emerald-400"
+              ? "text-[var(--desk-positive)]"
               : "text-destructive",
           )}
         >
