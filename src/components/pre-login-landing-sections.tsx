@@ -96,7 +96,7 @@ function FeatureIcon({ children }: { children: ReactNode }) {
   return (
     <span
       aria-hidden
-      className="mb-4 inline-flex size-9 items-center justify-center rounded-md bg-[color-mix(in_srgb,var(--landing-primary,#2563eb)_16%,transparent)] text-[var(--landing-primary,#2563eb)]"
+      className="mb-4 inline-flex size-9 items-center justify-center rounded-md bg-[var(--desk-overlay-soft)] text-[var(--desk-text-muted)]"
     >
       {children}
     </span>
@@ -237,11 +237,11 @@ export function PreLoginLandingSections() {
 
       <section
         aria-labelledby="early-access-heading"
-        className="landing-section rounded-2xl border border-[color-mix(in_srgb,var(--landing-primary,#2563eb)_22%,transparent)] bg-[color-mix(in_srgb,var(--landing-primary,#2563eb)_08%,transparent)] px-6 py-8 sm:px-10 sm:py-10"
+        className="landing-section rounded-2xl border border-[var(--desk-border-strong)] bg-[var(--desk-overlay-soft)] px-6 py-8 sm:px-10 sm:py-10"
       >
         <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:gap-10">
           <div className="max-w-sm shrink-0">
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-[color-mix(in_srgb,var(--landing-primary,#2563eb)_35%,transparent)] bg-[color-mix(in_srgb,var(--landing-primary,#2563eb)_12%,transparent)] px-2.5 py-1 font-mono text-[0.68rem] font-bold tracking-[0.08em] text-[var(--landing-primary,#2563eb)] uppercase">
+            <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--desk-border-strong)] bg-[var(--desk-panel)] px-2.5 py-1 font-mono text-[0.68rem] font-bold tracking-[0.08em] text-[var(--desk-text-muted)] uppercase">
               Open Early Access
             </span>
             <h2
@@ -259,7 +259,7 @@ export function PreLoginLandingSections() {
               >
                 <CheckCircle2
                   aria-hidden
-                  className="mt-0.5 size-4 shrink-0 text-[var(--landing-primary,#2563eb)]"
+                  className="mt-0.5 size-4 shrink-0 text-[var(--desk-text-muted)]"
                   strokeWidth={1.75}
                 />
                 {point}

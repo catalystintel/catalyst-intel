@@ -172,10 +172,7 @@ export default async function Home({
               </span>
             </div>
             <h1 className="marketing-headline mt-5 text-4xl text-balance text-[var(--desk-text)] sm:text-5xl">
-              Real-Time Market-Moving Catalysts.{" "}
-              <span className="text-[var(--landing-primary,#2563eb)]">
-                Trade Smarter, Faster.
-              </span>
+              Real-Time Market-Moving Catalysts. Trade Smarter, Faster.
             </h1>
             <p className="desk-body mt-4 max-w-xl text-pretty text-[var(--desk-text-secondary)] sm:text-base sm:leading-relaxed">
               Instant alerts, AI-powered summaries, and plain-language insights
@@ -191,7 +188,7 @@ export default async function Home({
             <div className="mt-3">
               <Link
                 href="/login"
-                className="inline-flex items-center font-mono text-xs font-semibold text-[var(--landing-primary,#2563eb)] underline-offset-4 hover:underline"
+                className="inline-flex items-center font-mono text-xs font-semibold text-[var(--desk-text-secondary)] underline-offset-4 transition-colors hover:text-[var(--desk-text)] hover:underline"
               >
                 Sign in · No password · Full access
               </Link>
@@ -204,7 +201,7 @@ export default async function Home({
                 >
                   <Icon
                     aria-hidden
-                    className="size-4 shrink-0 text-[var(--landing-primary,#2563eb)]"
+                    className="size-4 shrink-0 text-[var(--desk-text-muted)]"
                     strokeWidth={1.75}
                   />
                   <span className="flex flex-col leading-tight">
@@ -361,7 +358,7 @@ export default async function Home({
               </span>
               <Link
                 href="/login"
-                className="inline-flex shrink-0 items-center gap-1 font-mono text-[0.68rem] font-semibold text-[var(--landing-primary,#2563eb)] underline-offset-4 hover:underline"
+                className="inline-flex shrink-0 items-center gap-1 font-mono text-[0.68rem] font-semibold text-[var(--desk-text-secondary)] underline-offset-4 transition-colors hover:text-[var(--desk-text)] hover:underline"
               >
                 View full feed
                 <ArrowRight className="size-3" aria-hidden />
