@@ -1182,9 +1182,9 @@ function CatalystFeedList({
           <button
             type="button"
             onClick={scrollToTop}
-            className="btn-press pointer-events-auto inline-flex items-center gap-1.5 rounded-full border border-[rgba(240,193,75,0.45)] bg-[var(--desk-live)] px-3 py-1 font-mono text-[0.72rem] font-semibold tracking-wide text-[#121212] uppercase shadow-[0_6px_18px_rgba(0,0,0,0.35)]"
+            className="btn-press pointer-events-auto inline-flex items-center gap-1.5 rounded-full border border-[color-mix(in_srgb,var(--desk-live-status)_45%,transparent)] bg-[var(--desk-live-status)] px-3 py-1 font-mono text-[0.72rem] font-semibold tracking-wide text-[#04140c] uppercase shadow-[0_6px_18px_rgba(0,0,0,0.35)]"
           >
-            <span className="live-pulse size-1.5 rounded-full bg-[#121212]" />
+            <span className="live-pulse size-1.5 rounded-full bg-[#04140c]" />
             {pendingNew} new
           </button>
         </div>
