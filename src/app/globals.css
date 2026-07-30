@@ -491,8 +491,8 @@
   /*
    * Prelogin / marketing surface (landing, about, login). Scoped so the
    * authenticated desk keeps its existing navy + gold LIVE language.
-   * Landing palette: #070B14 bg, #111827 cards, #2563EB primary actions,
-   * #F59E0B LIVE/warning only, subtle blue→purple hero glow.
+   * Landing palette: #070B14 bg, #111827 cards, #2563EB reserved for CTAs,
+   * #F59E0B LIVE/warning only, soft cool wash (no purple bloom).
    */
   .prelogin-surface {
     --background: #070b14;
@@ -537,7 +537,8 @@
     /* LIVE / uncertainty — warning amber, not CTA gold. */
     --desk-live: #f59e0b;
     --desk-interactive: #2563eb;
-    --desk-link: #2563eb;
+    /* Links stay muted steel; saturated blue is for primary CTAs only. */
+    --desk-link: #cbd5e1;
     --landing-primary: #2563eb;
     --landing-primary-hover: #1d4ed8;
     --desk-chart-accent: #2563eb;
@@ -551,13 +552,13 @@
     --desk-overlay-strong: rgba(255, 255, 255, 0.1);
     --desk-grid-line: rgba(255, 255, 255, 0.04);
     --desk-shimmer: rgba(255, 255, 255, 0.1);
-    /* Hero glow: subtle blue → purple, highlights only. */
-    --desk-glow: rgba(37, 99, 235, 0.2);
-    --desk-glow-chart: rgba(124, 58, 237, 0.14);
+    /* Soft cool wash only — purple bloom neutered for trader-fit. */
+    --desk-glow: rgba(37, 99, 235, 0.1);
+    --desk-glow-chart: rgba(148, 163, 184, 0.06);
     color-scheme: dark;
   }
 
-  /* Marketing dual-atmosphere: cool blue wash + soft purple bloom (prelogin). */
+  /* Marketing atmosphere: soft cool wash (prelogin). */
   .marketing-glow-gold {
     background: radial-gradient(
       ellipse 80% 70% at 50% -10%,

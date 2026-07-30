@@ -77,7 +77,7 @@ export function EarlyAccessBanner({
         className={cn(
           "relative z-50 flex items-center justify-center gap-2 border-b px-3 py-2 text-center sm:gap-3 sm:px-5",
           variant === "marketing"
-            ? "border-[color-mix(in_srgb,var(--landing-primary,#2563eb)_28%,transparent)] bg-[color-mix(in_srgb,var(--landing-primary,#2563eb)_10%,transparent)]"
+            ? "border-[var(--desk-border-strong)] bg-[var(--desk-overlay-soft)]"
             : "border-[color-mix(in_srgb,var(--desk-live)_28%,transparent)] bg-[color-mix(in_srgb,var(--desk-live)_12%,transparent)]",
           variant === "app" && "pr-11 sm:pr-12",
           className,
@@ -88,7 +88,7 @@ export function EarlyAccessBanner({
             className={cn(
               "font-mono text-[0.68rem] font-bold tracking-[0.1em] uppercase",
               variant === "marketing"
-                ? "text-[var(--landing-primary,#2563eb)]"
+                ? "text-[var(--desk-text-muted)]"
                 : "text-[var(--desk-live)]",
             )}
           >
@@ -106,7 +106,7 @@ export function EarlyAccessBanner({
             className={cn(
               "btn-press inline-flex shrink-0 items-center gap-1 rounded-md border px-2 py-1 font-mono text-[0.65rem] font-semibold tracking-[0.06em] uppercase transition-colors",
               variant === "marketing"
-                ? "border-[color-mix(in_srgb,var(--landing-primary,#2563eb)_40%,transparent)] bg-[color-mix(in_srgb,var(--landing-primary,#2563eb)_08%,transparent)] text-[var(--landing-primary,#2563eb)] hover:bg-[color-mix(in_srgb,var(--landing-primary,#2563eb)_18%,transparent)]"
+                ? "border-[var(--desk-border-strong)] bg-[var(--desk-overlay-soft)] text-[var(--desk-text-secondary)] hover:bg-[var(--desk-overlay-strong)] hover:text-[var(--desk-text)]"
                 : "border-[color-mix(in_srgb,var(--desk-live)_40%,transparent)] bg-[color-mix(in_srgb,var(--desk-live)_08%,transparent)] text-[var(--desk-live)] hover:bg-[color-mix(in_srgb,var(--desk-live)_18%,transparent)]",
             )}
           >

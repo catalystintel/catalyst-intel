@@ -44,7 +44,7 @@ export function PreLoginChrome({
         aria-hidden
         className="desk-grid pointer-events-none absolute inset-0"
       />
-      {/* Dual atmosphere: subtle blue wash + soft purple bloom (landing only). */}
+      {/* Soft cool wash only — purple bloom neutered for trader-fit. */}
       <div
         aria-hidden
         className={cn(
