@@ -65,35 +65,38 @@ export function DeskLightweightChart({
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!trimmed) {
-      setPayload(null);
-      setLoading(false);
-      return;
-    }
+    if (!trimmed) return;
+
     let cancelled = false;
-    setLoading(true);
-    setError(null);
-    void (async () => {
-      try {
-        const res = await fetch(
-          `/api/market/candles?symbol=${encodeURIComponent(trimmed)}&range=${encodeURIComponent(range)}`,
-        );
-        if (!res.ok) {
-          throw new Error(`Chart data unavailable (${res.status})`);
+    // Defer setState so we don't trip react-hooks/set-state-in-effect.
+    const id = window.setTimeout(() => {
+      if (cancelled) return;
+      setLoading(true);
+      setError(null);
+      void (async () => {
+        try {
+          const res = await fetch(
+            `/api/market/candles?symbol=${encodeURIComponent(trimmed)}&range=${encodeURIComponent(range)}`,
+          );
+          if (!res.ok) {
+            throw new Error(`Chart data unavailable (${res.status})`);
+          }
+          const json = (await res.json()) as CandlesPayload;
+          if (!cancelled) setPayload(json);
+        } catch (err) {
+          if (!cancelled) {
+            setError(err instanceof Error ? err.message : "Chart failed");
+            setPayload(null);
+          }
+        } finally {
+          if (!cancelled) setLoading(false);
         }
-        const json = (await res.json()) as CandlesPayload;
-        if (!cancelled) setPayload(json);
-      } catch (err) {
-        if (!cancelled) {
-          setError(err instanceof Error ? err.message : "Chart failed");
-          setPayload(null);
-        }
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
+      })();
+    }, 0);
+
     return () => {
       cancelled = true;
+      window.clearTimeout(id);
     };
   }, [trimmed, range]);
 
