@@ -8,8 +8,8 @@ import { cn } from "@/lib/utils";
  * Primary sign-up CTA — used both in the hero (with icon + subtext) and the
  * final section near the footer (plain single line).
  *
- * Uses landing primary blue (`--landing-primary` / `#2563EB`), not LIVE amber.
- * Amber stays reserved for LIVE / warning chips on the prelogin surface.
+ * Uses landing primary blue (`--landing-primary` / `#2563EB`), not LIVE green.
+ * Trader emerald (`--desk-live-status`) stays reserved for LIVE status chips.
  */
 export function LandingGoogleCta({
   children = "Continue with Google — free",

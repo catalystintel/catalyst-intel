@@ -4,7 +4,7 @@
  * the live tape the product ships.
  *
  * Purely illustrative: `aria-hidden`, uses `--desk-chart-accent` (landing
- * primary blue). LIVE amber is reserved for status chips, not this texture.
+ * primary blue). LIVE emerald is reserved for status chips, not this texture.
  * Kept low-opacity and masked before row content so it never competes with
  * text contrast.
  */

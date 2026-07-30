@@ -50,7 +50,7 @@ export function LiveHeaderStatus() {
         className={cn(
           "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[0.68rem] font-bold tracking-[0.08em]",
           live
-            ? "border-[rgba(240,193,75,0.35)] bg-[rgba(240,193,75,0.12)] text-[var(--desk-live)]"
+            ? "border-[color-mix(in_srgb,var(--desk-live-status)_35%,transparent)] bg-[color-mix(in_srgb,var(--desk-live-status)_12%,transparent)] text-[var(--desk-live-status)]"
             : "border-[var(--desk-border-strong)] bg-[var(--desk-overlay-soft)] text-[var(--desk-text-muted)]",
         )}
       >
@@ -59,7 +59,7 @@ export function LiveHeaderStatus() {
           className={cn(
             "size-1.5 rounded-full",
             live
-              ? "live-pulse bg-[var(--desk-live)]"
+              ? "live-pulse bg-[var(--desk-live-status)]"
               : "bg-[var(--desk-text-dim)]",
           )}
         />
