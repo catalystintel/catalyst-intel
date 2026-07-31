@@ -27,9 +27,10 @@ Three environments, one app:
   `main` (and matching feature-branch globs). Treat it as secondary; CI CLI
   deploy is authoritative for staging/production tip.
 - **Backup — Unblock Omer CD heal** (`.github/workflows/vercel-unblock-redeploy.yml`):
-  after a **successful CI on `main`** (verify + deploy), waits **1 minute** then
-  heals blocked/failed Omer Production deploys; also polls every 10 minutes as a
-  safety net (see below).
+  independent of CI (not gated on green checks). On every push to `main`, waits
+  **1 minute** (so Vercel can create a Blocked git deploy first), then heals
+  blocked/failed Omer deploys. Also polls every 10 minutes + manual
+  `workflow_dispatch`.
 - **Scheduled ETL (production):** [cron-job.org](https://cron-job.org) POSTs
   `/api/admin/fetch/all` every **1 minute** with `x-cron-secret`. See "Production scheduler"
   below for setup and the in-app self-healing backstop.
@@ -205,16 +206,14 @@ gh secret set STAGING_LIBSQL_AUTH_TOKEN --body "<same value as Vercel Preview LI
 `dev`/`main` via the Vercel CLI with the team token, so author **Blocked**
 git deploys should not stall staging or production.
 
-**CD heal (post-merge to `main`):** `.github/workflows/vercel-unblock-redeploy.yml`
-listens for a **successful `CI` `workflow_run` on `main`** (tests + deploy
-finished). It is **not** a job inside `ci.yml`. On that trigger it:
+**CD heal (independent of CI):** `.github/workflows/vercel-unblock-redeploy.yml`
+is **not** a job inside `ci.yml` and is **not** gated on green checks. It runs
+on:
 
-1. Waits **60 seconds** after the CI/CD run completes
-2. Runs `scripts/vercel-unblock-redeploy.mjs` to heal any leftover
-   **BLOCKED** / access-failed Production deploy for Omer commits
-
-**Backup poll:** the same workflow still runs every **10 minutes** on schedule,
-and on **Actions → Unblock Omer Vercel deploys → Run workflow**.
+1. **Every push to `main`** — waits **60s** (so Vercel git integration can
+   Block first), then heals leftover BLOCKED / access-failed Production deploys
+2. **Every 10 minutes** (cron backup)
+3. **Manual** — Actions → Unblock Omer Vercel deploys → Run workflow
 
 Vercel can still **Block** or **fail** a git-triggered deploy when:
 
@@ -223,9 +222,9 @@ Vercel can still **Block** or **fail** a git-triggered deploy when:
   owner seat is linked), or
 - GitHub App / private-repo / permission / unauthorized access rejects the push
 
-Heals cover **`main` → Production** and **`dev` → Preview**
-(`catalyst-intel-git-dev-zhbar10s-projects.vercel.app`) when a blocked git
-deploy was left behind.
+It heals **`main` → Production** and **`dev` → Preview**
+(`catalyst-intel-git-dev-zhbar10s-projects.vercel.app`) if a blocked git deploy
+was left behind.
 
 **Author match rules** (case-insensitive): commit author name, login, email, or
 actor matching `omer.nachshon`, `Omer Nachshon`, `OmerNachshon`, or `nachshon`.
@@ -267,9 +266,9 @@ gh secret set VERCEL_PROJECT_ID --body "prj_bzkyprBR2Hl8TbqadquO1z0L23On"
 ```
 
 If those secrets are missing, CI deploy and the unblock job each log a warning
-and exit 0 (same soft-fail pattern as `migrate.yml`). The unblock **schedule
-and `workflow_run` only run from the default branch (`main`)** — that workflow
-must be on `main` for post-merge CD heal + cron to be live; until then use
+and exit 0 (same soft-fail pattern as `migrate.yml`). Unblock **`push` +
+`schedule` only fire from the default branch (`main`)** — that workflow must
+be on `main` for post-push heal / cron to be live; until then use
 **workflow_dispatch**. CI deploy runs from whichever branch was pushed (`dev`
 or `main`) once the workflow file is on that branch.
 
@@ -282,8 +281,10 @@ VERCEL_TOKEN=… VERCEL_ORG_ID=… VERCEL_PROJECT_ID=… node scripts/vercel-unb
 **Optional Cursor Automation (complement, not required):** you can add a
 scheduled Cursor agent that every ~15 minutes runs
 `node scripts/vercel-unblock-redeploy.mjs` with the same three env vars. CI
-CLI deploy is primary; the GitHub unblock Action is the CD heal + always-on
-backup; a Cursor Automation is only useful if Actions secrets are unset.
+deploy is primary for shipping the tip; the GitHub unblock Action (main push
+
+- cron) is the independent Block heal; a Cursor Automation is only useful if
+  Actions secrets are unset.
 
 ---
 
