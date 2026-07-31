@@ -8,9 +8,12 @@ import { getCurrentAppUser } from "@/lib/auth/current-user";
 import { withDbRetry } from "@/lib/db/with-db-retry";
 import { isFinnhubConfigured } from "@/lib/jobs/finnhub-env";
 
+import { isNonProductionEnv } from "@/lib/ops/non-production-env";
+
 import { FetchTrigger } from "./fetch-trigger";
 import { IngestionRunsPanel } from "./ingestion-runs-panel";
 import { MigrateTrigger } from "./migrate-trigger";
+import { ResetDbTrigger } from "./reset-db-trigger";
 import { WhatsNewPanel } from "./whats-new-panel";
 
 export default async function AdminPage() {
@@ -52,6 +55,7 @@ export default async function AdminPage() {
   const sourceCount = sourceCountRow?.value ?? 0;
   const nyseCount = nyseCountRow?.value ?? 0;
   const finnhubConfigured = isFinnhubConfigured();
+  const showResetDb = isNonProductionEnv();
 
   return (
     <PageEnter className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-6 p-4 sm:p-5">
@@ -82,9 +86,9 @@ export default async function AdminPage() {
               Multi-source ingest
             </h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              Phased fetch (A keyless → B Finnhub/Form4API → C Polygon news then
-              prices). Results listed Must→Should. Soft-skips when optional keys
-              are missing. See FETCH-ORDER.md.
+              Phased fetch (A keyless → B PR wire + Finnhub → C Polygon news
+              then prices). Results listed Must→Should. Soft-skips when optional
+              keys are missing. See FETCH-ORDER.md.
             </p>
           </div>
           <dl className="grid grid-cols-2 gap-x-8 gap-y-1 font-mono text-xs">
@@ -153,6 +157,24 @@ export default async function AdminPage() {
           <MigrateTrigger />
         </div>
       </section>
+
+      {showResetDb ? (
+        <section className="overflow-hidden rounded-xl border border-[var(--desk-negative)]/40 bg-[var(--desk-panel)]">
+          <div className="border-b border-border/60 px-4 py-4 sm:px-5">
+            <h2 className="font-mono text-sm tracking-wide text-foreground">
+              Clear database (non-production)
+            </h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Hidden when{" "}
+              <code className="font-mono">VERCEL_ENV=production</code>. Use
+              locally or on preview to wipe the tape and re-ingest.
+            </p>
+          </div>
+          <div className="px-4 py-4 sm:px-5">
+            <ResetDbTrigger />
+          </div>
+        </section>
+      ) : null}
 
       <section className="overflow-hidden rounded-xl border border-[var(--desk-border)] bg-[var(--desk-panel)]">
         <div className="flex flex-wrap items-start justify-between gap-4 border-b border-border/60 px-4 py-4 sm:px-5">

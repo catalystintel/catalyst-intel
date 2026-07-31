@@ -84,6 +84,14 @@ describe("extractArticleThumbUrl", () => {
     ).toBe("https://cdn.example.com/n.jpg");
   });
 
+  it("reads nested images.original.url", () => {
+    expect(
+      extractArticleThumbUrl({
+        images: { original: { url: "https://cdn.example.com/o.jpg" } },
+      }),
+    ).toBe("https://cdn.example.com/o.jpg");
+  });
+
   it("returns null when missing", () => {
     expect(extractArticleThumbUrl({ title: "No image" })).toBeNull();
   });

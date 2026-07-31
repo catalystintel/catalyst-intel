@@ -15,6 +15,17 @@ describe("evaluateCatalystQuality", () => {
     ).toBe("drop");
   });
 
+  it("keeps PR-wire press releases even when category is news", () => {
+    expect(
+      evaluateCatalystQuality({
+        provider: "pr-wire",
+        eventCategory: "news",
+        subcategory: "pr_wire",
+        symbol: "AAPL",
+      }).decision,
+    ).toBe("keep");
+  });
+
   it("keeps near-term earnings with symbol", () => {
     expect(
       evaluateCatalystQuality({

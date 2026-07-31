@@ -167,7 +167,7 @@ export function FetchTrigger() {
         <div className="max-w-2xl space-y-2 text-sm text-[var(--desk-text-muted)]">
           <p>
             Documented order (Must → Should). Runtime is phased: A keyless
-            parallel, B Finnhub + Form4API, C Polygon news then prices.
+            parallel, B PR wire + Finnhub, C Polygon news then prices.
           </p>
           <ol className="list-decimal space-y-1 pl-5 font-mono text-xs text-[var(--desk-text-secondary)]">
             {CATALYST_SOURCE_CATALOG.map((s) => (

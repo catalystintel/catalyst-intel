@@ -4,7 +4,7 @@
  * Same story often arrives from SEC + Finnhub/Polygon (and cluster-events
  * later collapses related rows). This module provides pure helpers for:
  * - title normalization / similarity
- * - provider preference (SEC over wire duplicates)
+ * - provider preference (PR wire favored over other vendors on duplicates)
  * - deciding whether a candidate should skip ingest
  */
 
@@ -14,8 +14,13 @@ export const DEDUPE_WINDOW_MINUTES = 90;
 /** Jaccard token overlap at/above this counts as the same story. */
 export const TITLE_SIMILARITY_THRESHOLD = 0.72;
 
-/** Higher = prefer as the tape primary when stories collide. */
+/**
+ * Higher = prefer as the tape primary when stories collide.
+ * PR wire is favored over every other vendor for duplicate events (free RT
+ * press path). SEC/halts still win only when titles do not near-match.
+ */
 const PROVIDER_RANK: Record<string, number> = {
+  "pr-wire": 110,
   "sec-edgar": 100,
   "nasdaq-halts": 95,
   "macro-calendar": 90,
@@ -45,7 +50,7 @@ export function normalizeDedupeTitle(
       .replace(/https?:\/\/\S+/g, " ")
       .replace(/[^a-z0-9\s]/g, " ")
       .replace(
-        /\b(?:sec edgar|finnhub|polygon|benzinga|reuters|bloomberg|pr newswire|business wire|globe newswire)\b/g,
+        /\b(?:sec edgar|finnhub|polygon|benzinga|reuters|bloomberg|pr newswire|business wire|globe newswire|rtpr|pr wire)\b/g,
         " ",
       )
       .replace(/\s+/g, " ")

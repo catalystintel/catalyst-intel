@@ -45,6 +45,11 @@ interface PolygonNewsArticle {
   tickers?: string[];
   publisher?: { name?: string };
   insights?: PolygonNewsInsight[];
+  /** Present on some Massive/Polygon news payloads — used for article thumbs. */
+  image_url?: string;
+  imageUrl?: string;
+  thumbnail?: string;
+  images?: Record<string, unknown>;
 }
 
 interface AggBar {

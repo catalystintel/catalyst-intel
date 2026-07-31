@@ -11,14 +11,21 @@ import {
   enrichHistoricalImpact,
   fetchPolygonNews,
 } from "@/lib/jobs/fetch-polygon";
+import { fetchPrWire } from "@/lib/jobs/fetch-pr-wire";
 import { fetchSecEdgar } from "@/lib/jobs/fetch-sec-edgar";
 import type { SourceFetchResult } from "@/lib/jobs/ingest-pipeline";
-import { toSourceResult } from "@/lib/jobs/ingest-pipeline";
+import {
+  skippedSourceResult,
+  toSourceResult,
+} from "@/lib/jobs/ingest-pipeline";
 import { formatSecFetchError } from "@/lib/jobs/sec-edgar-http";
 import {
   CATALYST_SOURCE_CATALOG,
   CATALYST_SOURCE_IDS,
   FETCH_PHASES,
+  activeCatalystSourceIds,
+  getCatalystSourceMeta,
+  isCatalystSourceFetchEnabled,
   type CatalystSourceId,
   type FetchPhaseDef,
   type FetchPhaseId,
@@ -29,7 +36,9 @@ export {
   CATALYST_SOURCE_CATALOG,
   CATALYST_SOURCE_IDS,
   FETCH_PHASES,
+  activeCatalystSourceIds,
   getCatalystSourceMeta,
+  isCatalystSourceFetchEnabled,
   isCatalystSourceId,
   type CatalystSourceId,
   type CatalystSourceMeta,
@@ -108,6 +117,15 @@ async function runSource(id: CatalystSourceId): Promise<SourceFetchResult> {
 async function runSourceInner(
   id: CatalystSourceId,
 ): Promise<SourceFetchResult> {
+  if (!isCatalystSourceFetchEnabled(id)) {
+    const meta = getCatalystSourceMeta(id);
+    return skippedSourceResult(
+      id,
+      meta?.contributes ??
+        "Paused — not fetched (kept in catalog; re-enable in catalyst-sources).",
+    );
+  }
+
   switch (id) {
     case "sec-edgar": {
       try {
@@ -136,6 +154,8 @@ async function runSourceInner(
       return fetchNasdaqHalts();
     case "macro-calendar":
       return fetchMacroCalendar();
+    case "pr-wire":
+      return fetchPrWire();
     case "finnhub":
       return fetchFinnhubCatalysts();
     case "polygon-news":
@@ -211,21 +231,23 @@ function phasesForSelection(selected: CatalystSourceId[]): FetchPhasePlan[] {
 /**
  * Multi-source orchestrator with documented phased parallel order:
  *
- * - Phase A — keyless Must sources in parallel (SEC, Nasdaq, openFDA, CT)
- * - Phase B — optional-key Should sources in parallel (Finnhub, Form4API)
- * - Phase C — Polygon news then prices sequentially (shared ~5 req/min budget)
+ * - Phase A — keyless Must sources in parallel (SEC, Nasdaq, macro, openFDA)
+ * - Phase B — PR wire + Finnhub
+ * - Phase C — Polygon prices (polygon-news paused)
  *
- * Per-source results are always returned in CATALYST_SOURCE_IDS (Must→Should)
- * display order. See FETCH-ORDER.md.
+ * Default selection is `activeCatalystSourceIds()` (paused catalog entries
+ * skipped). See FETCH-ORDER.md.
  */
 export async function fetchAllCatalystSources(options?: {
   sources?: CatalystSourceId[];
   includeLaterStubs?: boolean;
 }): Promise<FetchAllSourcesResult> {
   const runStartIso = new Date().toISOString();
+  // Default: active sources only (paused catalog ids like CT.gov / polygon-news
+  // stay in Admin list but are not fetched by cron / Fetch all).
   const selected = options?.sources?.length
     ? options.sources
-    : [...CATALYST_SOURCE_IDS];
+    : activeCatalystSourceIds();
   const selectedSet = new Set(selected);
   const byId = new Map<string, SourceFetchResult>();
   const phases = phasesForSelection(selected);

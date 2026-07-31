@@ -166,10 +166,14 @@ export const hasNewerNonBlockedForSha = hasNewerHealthyForSha;
  * @param {string} token
  * @param {string} [teamId]
  * @param {RequestInit} [init]
+ * @param {Record<string, string>} [extraQuery]
  */
-async function vercelFetch(apiPath, token, teamId, init = {}) {
+async function vercelFetch(apiPath, token, teamId, init = {}, extraQuery = {}) {
   const url = new URL(apiPath, API);
   if (teamId) url.searchParams.set("teamId", teamId);
+  for (const [k, v] of Object.entries(extraQuery)) {
+    if (v != null && v !== "") url.searchParams.set(k, v);
+  }
   const res = await fetch(url, {
     ...init,
     headers: {
@@ -200,6 +204,18 @@ async function vercelFetch(apiPath, token, teamId, init = {}) {
     throw err;
   }
   return body;
+}
+
+/** Confirm VERCEL_TOKEN resolves to a user (CLI needs this; some token types don't). */
+export async function assertVercelUserToken(token, teamId) {
+  const user = await vercelFetch("/v2/user", token, teamId);
+  const id = user?.user?.id ?? user?.id;
+  if (!id) {
+    throw new Error(
+      "VERCEL_TOKEN did not resolve to a Vercel user (GET /v2/user). Create a personal token at https://vercel.com/account/tokens (team-owner account) and update the GitHub secret.",
+    );
+  }
+  return user;
 }
 
 export function isAccessErrorMessage(err) {
@@ -236,15 +252,22 @@ export async function apiRedeploy(cfg, deploymentUid, target, opts = {}) {
   const payload = {
     name: cfg.projectName,
     deploymentId: deploymentUid,
-    forceNew: 1,
   };
   if (opts.withLatestCommit) payload.withLatestCommit = true;
   if (target === "production") payload.target = "production";
 
-  return vercelFetch("/v13/deployments", cfg.token, cfg.teamId, {
-    method: "POST",
-    body: JSON.stringify(payload),
-  });
+  // forceNew is a query param (not body) — body forceNew 400s on gitSource deploys
+  // and is ignored/invalid for some redeploy shapes.
+  return vercelFetch(
+    "/v13/deployments",
+    cfg.token,
+    cfg.teamId,
+    {
+      method: "POST",
+      body: JSON.stringify(payload),
+    },
+    { forceNew: "1", skipAutoDetectionConfirmation: "1" },
+  );
 }
 
 /**
@@ -282,14 +305,21 @@ export async function apiDeployBranchTip(cfg, branch, target, meta) {
     name: cfg.projectName,
     project: cfg.projectId,
     gitSource,
-    forceNew: 1,
   };
   if (target === "production") payload.target = "production";
 
-  return vercelFetch("/v13/deployments", cfg.token, cfg.teamId, {
-    method: "POST",
-    body: JSON.stringify(payload),
-  });
+  // forceNew must be a query param — body `forceNew` returns 400:
+  // "should NOT have additional property `forceNew`".
+  return vercelFetch(
+    "/v13/deployments",
+    cfg.token,
+    cfg.teamId,
+    {
+      method: "POST",
+      body: JSON.stringify(payload),
+    },
+    { forceNew: "1", skipAutoDetectionConfirmation: "1" },
+  );
 }
 
 /**
@@ -316,20 +346,26 @@ export function cliDeployBranchTip(cfg, branch, target) {
     );
   }
 
-  const args = ["deploy", "--yes", "--token", cfg.token, "--scope", cfg.teamId];
+  // Prefer global `vercel` (workflow installs it); fall back to npx.
+  // Pass token via env only — CLI reads VERCEL_TOKEN natively.
+  const args = ["deploy", "--yes", "--scope", cfg.teamId];
   if (target === "production") args.push("--prod");
 
-  // Prefer local vercel if present; else npx.
-  const bin = process.platform === "win32" ? "npx.cmd" : "npx";
-  const result = spawnSync(bin, ["vercel", ...args], {
-    encoding: "utf8",
-    env: {
-      ...process.env,
-      VERCEL_ORG_ID: cfg.teamId,
-      VERCEL_PROJECT_ID: cfg.projectId,
-      VERCEL_TOKEN: cfg.token,
-    },
-  });
+  const env = {
+    ...process.env,
+    VERCEL_ORG_ID: cfg.teamId,
+    VERCEL_PROJECT_ID: cfg.projectId,
+    VERCEL_TOKEN: cfg.token,
+  };
+
+  let result = spawnSync("vercel", args, { encoding: "utf8", env });
+  if (
+    result.error &&
+    /** @type {NodeJS.ErrnoException} */ (result.error).code === "ENOENT"
+  ) {
+    const bin = process.platform === "win32" ? "npx.cmd" : "npx";
+    result = spawnSync(bin, ["vercel", ...args], { encoding: "utf8", env });
+  }
   const out = `${result.stdout ?? ""}\n${result.stderr ?? ""}`.trim();
   if (result.status !== 0) {
     throw new Error(`vercel deploy failed: ${out.slice(-800)}`);
@@ -408,6 +444,13 @@ export async function runUnblock(cfg) {
         } catch (err3) {
           console.warn(`api-gitSource-branch-tip failed: ${err3}`);
           if (!allowCli) throw err3;
+          try {
+            await assertVercelUserToken(cfg.token, cfg.teamId);
+          } catch (authErr) {
+            throw new Error(
+              `CLI fallback unavailable: ${authErr instanceof Error ? authErr.message : authErr}`,
+            );
+          }
           const cli = cliDeployBranchTip(cfg, mapped.branch, mapped.target);
           method = "cli-file-upload-branch-tip";
           createdDeploy = {
@@ -452,12 +495,24 @@ export async function runUnblock(cfg) {
   };
 }
 
+function stripSecret(value) {
+  const v = value?.trim() ?? "";
+  // Accidental quotes from `gh secret set --body '"…"'` break Bearer auth / CLI.
+  if (
+    (v.startsWith('"') && v.endsWith('"')) ||
+    (v.startsWith("'") && v.endsWith("'"))
+  ) {
+    return v.slice(1, -1).trim();
+  }
+  return v;
+}
+
 async function main() {
-  const token = process.env.VERCEL_TOKEN?.trim();
-  const teamId = process.env.VERCEL_ORG_ID?.trim();
-  const projectId = process.env.VERCEL_PROJECT_ID?.trim();
+  const token = stripSecret(process.env.VERCEL_TOKEN);
+  const teamId = stripSecret(process.env.VERCEL_ORG_ID);
+  const projectId = stripSecret(process.env.VERCEL_PROJECT_ID);
   const projectName =
-    process.env.VERCEL_PROJECT_NAME?.trim() || "catalyst-intel";
+    stripSecret(process.env.VERCEL_PROJECT_NAME) || "catalyst-intel";
   const allowCli = process.env.VERCEL_UNBLOCK_ALLOW_CLI !== "0";
 
   if (!token || !teamId || !projectId) {

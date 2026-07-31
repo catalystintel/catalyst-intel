@@ -53,6 +53,18 @@ describe("providerPreference / pickClusterPrimary", () => {
     );
   });
 
+  it("ranks PR wire above every other vendor", () => {
+    expect(providerPreference("pr-wire")).toBeGreaterThan(
+      providerPreference("sec-edgar"),
+    );
+    expect(providerPreference("pr-wire")).toBeGreaterThan(
+      providerPreference("finnhub"),
+    );
+    expect(providerPreference("pr-wire")).toBeGreaterThan(
+      providerPreference("polygon"),
+    );
+  });
+
   it("prefers higher impact, then better provider", () => {
     const primary = pickClusterPrimary([
       { id: 1, impactScore: 60, provider: "polygon" },
@@ -93,13 +105,13 @@ describe("shouldSkipAsDuplicate", () => {
     expect(verdict.matchedId).toBe(10);
   });
 
-  it("allows a better-source arrival after a wire", () => {
+  it("allows a better-source arrival after a weaker wire", () => {
     const verdict = shouldSkipAsDuplicate(
       {
         symbol: "ACME",
         title: "Material Agreement - Acme Corp",
         headline: "Material agreement",
-        provider: "sec-edgar",
+        provider: "pr-wire",
         eventCategory: "deals",
         timestamp: "2026-07-25T12:08:00.000Z",
       },
@@ -116,6 +128,48 @@ describe("shouldSkipAsDuplicate", () => {
       { nowMs: Date.parse("2026-07-25T12:10:00.000Z") },
     );
     expect(verdict.skip).toBe(false);
+  });
+
+  it("skips Finnhub/SEC retellings when PR wire already has the story", () => {
+    const existingPr = [
+      {
+        id: 12,
+        title: "Acme Corp announces material agreement",
+        headline: "PR Wire",
+        provider: "pr-wire",
+        eventCategory: "deals",
+        timestamp: "2026-07-25T12:00:00.000Z",
+        impactScore: 70,
+      },
+    ];
+    expect(
+      shouldSkipAsDuplicate(
+        {
+          symbol: "ACME",
+          title: "Acme Corp Announces Material Agreement",
+          headline: "Company news",
+          provider: "finnhub",
+          eventCategory: "deals",
+          timestamp: "2026-07-25T12:05:00.000Z",
+        },
+        existingPr,
+        { nowMs: Date.parse("2026-07-25T12:10:00.000Z") },
+      ).skip,
+    ).toBe(true);
+    expect(
+      shouldSkipAsDuplicate(
+        {
+          symbol: "ACME",
+          title: "Acme Corp announces material agreement",
+          headline: "Material agreement",
+          provider: "sec-edgar",
+          eventCategory: "deals",
+          timestamp: "2026-07-25T12:06:00.000Z",
+        },
+        existingPr,
+        { nowMs: Date.parse("2026-07-25T12:10:00.000Z") },
+      ).skip,
+    ).toBe(true);
   });
 
   it("does not skip unrelated same-symbol events", () => {

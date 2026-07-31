@@ -33,6 +33,7 @@ type ArticlePayload = {
   detailCards?: ArticleDetailCard[];
   enrichment?: ArticleEnrichment | null;
   filingProofMeta?: FilingProofMeta | null;
+  thumbUrl?: string | null;
 };
 
 type LoadState =
@@ -202,7 +203,7 @@ export function CatalystArticleDialog({
                 ready.article.body,
               )}
               relatedSymbols={[]}
-              thumbUrl={null}
+              thumbUrl={ready.article.thumbUrl ?? null}
               deltaSincePublish={parseDeltaSincePublish(
                 ready.catalyst.historicalImpact,
               )}
