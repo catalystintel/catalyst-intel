@@ -92,6 +92,15 @@ so iOS Safari does not lose the verifier the way a Server Action `redirect()` so
 and is **not** the source of truth — do not rely on `npm run make-admin` alone. Manual fetch
 via `/admin` uses the same allowlist; cron-job.org uses `x-cron-secret`.
 
+**Preview / staging access (admin-only):** every Vercel Preview deployment
+(`VERCEL_ENV=preview`) — including the stable `dev` staging host and PR preview
+URLs — requires an allowlisted admin session. Non-admins are sent to `/login`
+with a clear error; OAuth for non-admins is signed out immediately on callback.
+Exempt: `/login`, `/auth/*`, `GET /api/health`, `/api/admin/*` (cron/admin
+self-auth), and `/api/telegram/webhook`. Production (`main`) stays open to
+normal signed-in users. Report share links (`/reports/s/[token]`) also require
+a signed-in session (no anonymous token fetch).
+
 ## Multi-source fetch order
 
 Canonical Must → Should order and phased runtime are documented in

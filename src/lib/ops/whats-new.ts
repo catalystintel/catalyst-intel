@@ -13,6 +13,15 @@ export type WhatsNewEntry = {
 /** Newest first — update this when shipping user-visible or ops-visible work. */
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
+    date: "2026-07-31",
+    title: "Preview / staging admin-only",
+    bullets: [
+      "Vercel Preview deployments (staging + PR preview links) require an allowlisted admin session.",
+      "Non-admins hitting a preview URL see a sign-in message; OAuth for non-admins is dropped on callback.",
+      "Report share links require a signed-in session (no anonymous API fetch).",
+    ],
+  },
+  {
     date: "2026-07-25",
     title: "Open Early Access + feedback",
     bullets: [
@@ -86,6 +95,7 @@ export const PLATFORM_MAP: {
       "Live feed `/catalyst-feed` — poll while tab visible; filters, watchlist, playbook/quiet mode.",
       "Article detail drawer / `/catalyst-feed/catalyst/[id]` — proof URL, materiality, takeaways.",
       "Watchlist, Alerts (email/webhook rules + test fire), Analytics, Profile.",
+      "Reports digests — share links require a signed-in session; Preview hosts are admin-only.",
       "Admin (allowlisted emails) — ingest controls, run audit, migrations, NYSE status.",
     ],
   },

@@ -23,6 +23,7 @@ export function SharedReportView({ token }: { token: string }) {
         const res = await fetch(
           `/api/reports/share/${encodeURIComponent(token)}`,
           {
+            credentials: "same-origin",
             cache: "no-store",
             signal: controller.signal,
           },

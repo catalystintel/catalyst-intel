@@ -134,6 +134,8 @@ Visit [http://localhost:3000](http://localhost:3000).
    admin email allowlist (`ADMIN_EMAILS` or the defaults in `src/lib/auth/admin.ts`).
 3. Only allowlisted emails can open `/admin` or trigger the manual fetch API. Everyone else
    lands on the Live feed (`/catalyst-feed`) after login.
+4. **Vercel Preview / staging URLs are admin-only** (`VERCEL_ENV=preview`). Non-admins
+   cannot use staging or PR preview links — production remains open to signed-in users.
 
 ### 7. Populate real data
 

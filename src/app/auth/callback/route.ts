@@ -1,5 +1,9 @@
 import { NextResponse } from "next/server";
 
+import {
+  canAccessPreviewDeployment,
+  isPreviewDeployment,
+} from "@/lib/ops/preview-access";
 import { safeNextPath } from "@/lib/http/origin";
 import {
   getPostHogClient,
@@ -29,6 +33,18 @@ export async function GET(request: Request) {
     const supabase = await createSupabaseServerClient();
     const { data, error } = await supabase.auth.exchangeCodeForSession(code);
     if (!error && data.user) {
+      // Preview / staging: drop the session immediately for non-admins so a
+      // successful Google OAuth cannot leave a usable cookie on the host.
+      if (
+        isPreviewDeployment() &&
+        !canAccessPreviewDeployment(data.user.email)
+      ) {
+        await supabase.auth.signOut();
+        return NextResponse.redirect(
+          `${origin}/login?error=${encodeURIComponent("preview_admin_only")}`,
+        );
+      }
+
       if (isPostHogServerConfigured()) {
         const posthog = getPostHogClient();
         posthog.capture({

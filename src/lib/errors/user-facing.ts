@@ -13,6 +13,8 @@ export const USER_FACING = {
   databaseQuota: "The desk is temporarily at capacity. Please try again later.",
   signInUnavailable:
     "Sign-in is temporarily unavailable. Please try again shortly.",
+  previewAdminOnly:
+    "This preview / staging link is restricted to admins. Use the production site to sign in.",
   aiUnavailable:
     "AI analysis is not available at the moment. You can try again shortly.",
   pushUnavailable: "Browser push is not available right now.",
@@ -66,6 +68,9 @@ export function toUserFacingMessage(
   }
   if (/Supabase is not configured/i.test(message)) {
     return USER_FACING.signInUnavailable;
+  }
+  if (/preview_admin_only|Preview deployments are admin-only/i.test(message)) {
+    return USER_FACING.previewAdminOnly;
   }
   if (/AI analysis is not configured|OpenRouter/i.test(message)) {
     return USER_FACING.aiUnavailable;
