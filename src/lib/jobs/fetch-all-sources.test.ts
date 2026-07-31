@@ -34,6 +34,7 @@ describe("fetch order catalog", () => {
       "clinicaltrials",
       "polygon-news",
       "polygon-prices",
+      "fmp-econ-calendar",
     ]);
   });
 
@@ -42,7 +43,7 @@ describe("fetch order catalog", () => {
       ...CATALYST_SOURCE_IDS,
     ]);
     expect(CATALYST_SOURCE_CATALOG.map((s) => s.order)).toEqual([
-      1, 2, 3, 4, 5, 6, 7, 8, 9,
+      1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
     ]);
   });
 
@@ -62,9 +63,18 @@ describe("fetch order catalog", () => {
     });
   });
 
-  it("covers every active catalog id exactly once across phases", () => {
+  it("covers every fetch/all-active catalog id exactly once across phases", () => {
     const fromPhases = FETCH_PHASES.flatMap((p) => [...p.sources]);
     expect(fromPhases.sort()).toEqual([...activeCatalystSourceIds()].sort());
+  });
+
+  it("keeps FMP econ on dedicated cron (excluded from fetch/all)", () => {
+    expect(isCatalystSourceFetchEnabled("fmp-econ-calendar")).toBe(true);
+    expect(activeCatalystSourceIds()).not.toContain("fmp-econ-calendar");
+    expect(
+      CATALYST_SOURCE_CATALOG.find((s) => s.id === "fmp-econ-calendar")
+        ?.includeInFetchAll,
+    ).toBe(false);
   });
 
   it("keeps clinicaltrials and polygon-news paused (not deleted)", () => {

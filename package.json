@@ -18,6 +18,7 @@
     "make-admin": "tsx --conditions=react-server scripts/make-admin.ts",
     "backfill:items": "tsx --conditions=react-server scripts/backfill-catalyst-items.ts",
     "cron": "tsx --conditions=react-server scripts/run-cron.ts",
+    "cron:fmp-econ": "tsx --conditions=react-server scripts/run-fmp-econ-cron.ts",
     "test": "vitest run",
     "test:watch": "vitest",
     "format": "prettier --write .",
