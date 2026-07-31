@@ -34,6 +34,28 @@ export function isForm4ApiConfigured(): boolean {
 }
 
 /**
+ * Optional authenticated PR wire upgrade. Default ingest uses the keyless
+ * public high-impact board (no credentials). Product copy always says "PR wire".
+ */
+export function getPrWireApiKey(): string | null {
+  const key = process.env.PR_WIRE_API_KEY?.trim();
+  return key || null;
+}
+
+/** Optional HTTPS origin for authenticated full-feed upgrade (no trailing slash). */
+export function getPrWireApiBase(): string | null {
+  const base = process.env.PR_WIRE_API_BASE?.trim().replace(/\/+$/, "");
+  if (!base) return null;
+  if (!/^https:\/\//i.test(base)) return null;
+  return base;
+}
+
+/** Always true — keyless public scrape needs no env. */
+export function isPrWireConfigured(): boolean {
+  return true;
+}
+
+/**
  * OpenRouter free-tier LLM for on-demand AI analysis.
  * Prefer helpers in `llm-provider.ts` (key pool + failover). These thin
  * wrappers remain for env-check call sites.

@@ -5,17 +5,18 @@ Canonical Must → Should order for multi-source ingest
 
 ## Display order (Must → Should)
 
-| #   | Source id        | Label              | Priority | Runtime phase | What it contributes                                                                        |
-| --- | ---------------- | ------------------ | -------- | ------------- | ------------------------------------------------------------------------------------------ |
-| 1   | `sec-edgar`      | SEC EDGAR          | Must     | A             | 8-K, Form 4 buy·sell, S-3, 424B, SC 13D/G (needs `SEC_EDGAR_USER_AGENT`)                   |
-| 2   | `nasdaq-halts`   | Nasdaq Halts       | Must     | A             | Trading halt / resume events (keyless)                                                     |
-| 3   | `macro-calendar` | Macro calendar     | Must     | A             | CPI / NFP / FOMC dates (keyless; embedded BLS + Fed schedule)                              |
-| 4   | `finnhub`        | Finnhub            | Should   | B             | Earnings + FDA + classified news + recent PT + IPO (`FINNHUB_API_KEY`; soft-skip if unset) |
-| 5   | `openfda`        | openFDA            | Must     | A             | Recent FDA drug approval (AP) submissions (keyless)                                        |
-| 6   | `clinicaltrials` | ClinicalTrials.gov | Must     | A             | Recent study updates (keyless)                                                             |
-| 7   | `polygon-news`   | Polygon news       | Should   | C             | Market / Benzinga Wire-tagged news (`POLYGON_API_KEY` / `MASSIVE_API_KEY`)                 |
-| 8   | `polygon-prices` | Polygon prices     | Should   | C             | `historical_impact` from daily aggs (**after** news; same key)                             |
-| 9   | `form4api`       | Form4API           | Should   | B             | Intentionally skipped — EDGAR Form 4 (+ buy/sell XML) covers insiders                      |
+| #   | Source id        | Label              | Priority | Runtime phase | What it contributes                                                                                                                                                                                                                                          |
+| --- | ---------------- | ------------------ | -------- | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 1   | `sec-edgar`      | SEC EDGAR          | Must     | A             | 8-K, Form 4 buy·sell, S-3, 424B, SC 13D/G (needs `SEC_EDGAR_USER_AGENT`)                                                                                                                                                                                     |
+| 2   | `nasdaq-halts`   | Nasdaq Halts       | Must     | A             | Trading halt / resume events (keyless)                                                                                                                                                                                                                       |
+| 3   | `macro-calendar` | Macro calendar     | Must     | A             | CPI / NFP / PPI / FOMC dates (keyless; embedded BLS + Fed schedule)                                                                                                                                                                                          |
+| 4   | `pr-wire`        | PR wire            | Must     | B             | Keyless public high-impact board (~60m delay, score≥70; ~5-day lookback ≈100 receipts). Maps score/direction/event_type/theme + settled session move → impact/sentiment/category/`historicalImpact`. Optional auth full feed via env. Favored on duplicates. |
+| 5   | `finnhub`        | Finnhub            | Should   | B             | Earnings + FDA + classified news + recent PT + IPO (`FINNHUB_API_KEY`; soft-skip if unset)                                                                                                                                                                   |
+| 6   | `openfda`        | openFDA            | Must     | A             | Recent FDA drug approval (AP) submissions (keyless)                                                                                                                                                                                                          |
+| 7   | `clinicaltrials` | ClinicalTrials.gov | Must     | —             | **PAUSED** (not fetched) — CT.gov refreshes ~daily; code kept                                                                                                                                                                                                |
+| 8   | `polygon-news`   | Polygon news       | Should   | —             | **PAUSED** (not fetched) — Ticker News ≈ hourly, not RT Benzinga; code kept                                                                                                                                                                                  |
+| 9   | `polygon-prices` | Polygon prices     | Should   | C             | `historical_impact` from daily aggs (`POLYGON_API_KEY` / `MASSIVE_API_KEY`)                                                                                                                                                                                  |
+| 10  | `form4api`       | Form4API           | Should   | B             | Intentionally skipped — EDGAR Form 4 (+ buy/sell XML) covers insiders                                                                                                                                                                                        |
 
 Source of truth in code: `src/lib/jobs/catalyst-sources.ts`
 (`CATALYST_SOURCE_IDS`, `CATALYST_SOURCE_CATALOG`, `FETCH_PHASES`).
@@ -24,14 +25,16 @@ Source of truth in code: `src/lib/jobs/catalyst-sources.ts`
 
 Execution is **not** fully sequential. Phases run in order A → B → C:
 
-| Phase | Mode       | Sources                                                          | Why                                       |
-| ----- | ---------- | ---------------------------------------------------------------- | ----------------------------------------- |
-| **A** | Parallel   | SEC EDGAR, Nasdaq Halts, Macro calendar, openFDA, ClinicalTrials | Keyless Must sources; safe to fan out     |
-| **B** | Parallel   | Finnhub, Form4API                                                | Optional keys; soft-skip when unset       |
-| **C** | Sequential | Polygon news → Polygon prices                                    | Shared free-tier REST budget (~5 req/min) |
+| Phase | Mode       | Sources                                          | Why                                     |
+| ----- | ---------- | ------------------------------------------------ | --------------------------------------- |
+| **A** | Parallel   | SEC EDGAR, Nasdaq Halts, Macro calendar, openFDA | Keyless Must sources; safe to fan out   |
+| **B** | Parallel   | PR wire, Finnhub                                 | Keyed Must/Should; soft-skip when unset |
+| **C** | Sequential | Polygon prices                                   | Free-tier REST budget (~5 req/min)      |
 
 One vendor failure never blocks later sources within a parallel phase
-(`Promise.allSettled`). Polygon prices always wait for polygon news.
+(`Promise.allSettled`). `clinicaltrials` and `polygon-news` remain in the
+catalog with `fetchEnabled: false` — Admin can still see them; Fetch all / cron
+skip them.
 
 ## API response shape
 
@@ -52,15 +55,16 @@ One vendor failure never blocks later sources within a parallel phase
 
 ### Common messages / errors
 
-| Source           | Typical issue                             | Meaning                                                                                               |
-| ---------------- | ----------------------------------------- | ----------------------------------------------------------------------------------------------------- |
-| `form4api`       | `Intentionally skipped…`                  | Expected always (quality-first); EDGAR Form 4 still ingests; Form4API off to avoid duplicates         |
-| `finnhub`        | `FINNHUB_API_KEY is not set…`             | Soft-skip; calendars/news not fetched                                                                 |
-| `polygon-*`      | `POLYGON_API_KEY is not set…`             | Soft-skip news + price enrichment                                                                     |
-| `polygon-prices` | HTTP **429** / rate limit note            | Free tier ~5 REST req/min; remaining enrichments deferred; **watermark held**, next tick larger batch |
-| `polygon-news`   | HTTP **429** / rate limit note            | Soft-handled; **`last_fetched_at` not advanced**; next tick widens `published_utc.gte` + limit 100    |
-| `polygon-prices` | HTTP **403** `NOT_AUTHORIZED` / timeframe | Plan cannot read that session window; marked unavailable and skipped                                  |
-| `sec-edgar`      | User-Agent / SEC HTTP errors              | Fix `SEC_EDGAR_USER_AGENT`; required for Must path                                                    |
+| Source                            | Typical issue                             | Meaning                                                                                               |
+| --------------------------------- | ----------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `form4api`                        | `Intentionally skipped…`                  | Expected always (quality-first); EDGAR Form 4 still ingests; Form4API off to avoid duplicates         |
+| `pr-wire`                         | (always configured)                       | Keyless public scrape by default; optional `PR_WIRE_API_KEY` + `PR_WIRE_API_BASE` for full feed       |
+| `finnhub`                         | `FINNHUB_API_KEY is not set…`             | Soft-skip; calendars/news not fetched                                                                 |
+| `clinicaltrials` / `polygon-news` | `PAUSED — not fetched…`                   | Intentionally disabled for latency; code kept; flip `fetchEnabled` to re-enable                       |
+| `polygon-*`                       | `POLYGON_API_KEY is not set…`             | Soft-skip price enrichment (news already paused)                                                      |
+| `polygon-prices`                  | HTTP **429** / rate limit note            | Free tier ~5 REST req/min; remaining enrichments deferred; **watermark held**, next tick larger batch |
+| `polygon-prices`                  | HTTP **403** `NOT_AUTHORIZED` / timeframe | Plan cannot read that session window; marked unavailable and skipped                                  |
+| `sec-edgar`                       | User-Agent / SEC HTTP errors              | Fix `SEC_EDGAR_USER_AGENT`; required for Must path                                                    |
 
 ## Per-vendor watermarks (`vendor_fetch_state`)
 

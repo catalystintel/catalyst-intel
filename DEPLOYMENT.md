@@ -26,22 +26,23 @@ Three environments, one app:
 
 ### Local (`.env.local` on your machine)
 
-| Variable                           | Required? | Notes                                                                                                   |
-| ---------------------------------- | --------- | ------------------------------------------------------------------------------------------------------- |
-| `DATABASE_URL`                     | Yes       | `file:./local.db` (default is fine)                                                                     |
-| `NEXT_PUBLIC_SUPABASE_URL`         | Yes       | Supabase Project Settings → API                                                                         |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY`    | Yes       | Supabase Project Settings → API                                                                         |
-| `SEC_EDGAR_USER_AGENT`             | Yes       | e.g. `you@email.com CatalystIntel/0.1`                                                                  |
-| `CRON_INTERVAL_MINUTES`            | No        | Default `1` for `npm run cron`                                                                          |
-| `NEXT_PUBLIC_POSTHOG_KEY`          | No        | PostHog Project API key; omit to disable analytics                                                      |
-| `NEXT_PUBLIC_POSTHOG_HOST`         | No        | Default `https://us.i.posthog.com`                                                                      |
-| `ADMIN_EMAILS`                     | No        | Comma-separated admin emails; defaults to `zhbar10@gmail.com,omer.nachshon@gmail.com`                   |
-| `FINNHUB_API_KEY`                  | No        | Finnhub: NYSE listings, earnings/FDA calendars, news (soft-fail)                                        |
-| `POLYGON_API_KEY`                  | No        | Polygon/Massive news + historical_impact enrichment (soft-fail; free tier ~5 req/min, no same-day aggs) |
-| `MASSIVE_API_KEY`                  | No        | Alias for `POLYGON_API_KEY`                                                                             |
-| `FORM4_API_KEY`                    | No        | Optional Form4API enrichment (EDGAR Form 4 still works without it)                                      |
-| `LIBSQL_URL` / `LIBSQL_AUTH_TOKEN` | No        | Leave unset locally - use the SQLite file                                                               |
-| `CRON_SECRET`                      | No        | Only needed for remote cron callers                                                                     |
+| Variable                               | Required? | Notes                                                                                                                          |
+| -------------------------------------- | --------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| `DATABASE_URL`                         | Yes       | `file:./local.db` (default is fine)                                                                                            |
+| `NEXT_PUBLIC_SUPABASE_URL`             | Yes       | Supabase Project Settings → API                                                                                                |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY`        | Yes       | Supabase Project Settings → API                                                                                                |
+| `SEC_EDGAR_USER_AGENT`                 | Yes       | e.g. `you@email.com CatalystIntel/0.1`                                                                                         |
+| `CRON_INTERVAL_MINUTES`                | No        | Default `1` for `npm run cron`                                                                                                 |
+| `NEXT_PUBLIC_POSTHOG_KEY`              | No        | PostHog Project API key; omit to disable analytics                                                                             |
+| `NEXT_PUBLIC_POSTHOG_HOST`             | No        | Default `https://us.i.posthog.com`                                                                                             |
+| `ADMIN_EMAILS`                         | No        | Comma-separated admin emails; defaults to `zhbar10@gmail.com,omer.nachshon@gmail.com`                                          |
+| `FINNHUB_API_KEY`                      | No        | Finnhub: NYSE listings, earnings/FDA calendars, news (soft-fail)                                                               |
+| `PR_WIRE_API_KEY` / `PR_WIRE_API_BASE` | No        | Optional. PR wire scrapes a **free public high-impact board** with no key; set these only for the authenticated full firehose. |
+| `POLYGON_API_KEY`                      | No        | Polygon/Massive news + historical_impact enrichment (soft-fail; free tier ~5 req/min, no same-day aggs)                        |
+| `MASSIVE_API_KEY`                      | No        | Alias for `POLYGON_API_KEY`                                                                                                    |
+| `FORM4_API_KEY`                        | No        | Optional Form4API enrichment (EDGAR Form 4 still works without it)                                                             |
+| `LIBSQL_URL` / `LIBSQL_AUTH_TOKEN`     | No        | Leave unset locally - use the SQLite file                                                                                      |
+| `CRON_SECRET`                          | No        | Only needed for remote cron callers                                                                                            |
 
 Auth is **Google OAuth only** via Supabase. Passwords are never collected or stored in our DB
 (our `users` table only has id / supabase user id / email / role / subscription).
@@ -109,45 +110,47 @@ env vars are required today.
 
 ### Staging (Vercel → Environment: **Preview**, used by the `dev` branch)
 
-| Variable                        | Required?   | Notes                                                            |
-| ------------------------------- | ----------- | ---------------------------------------------------------------- |
-| `NEXT_PUBLIC_SUPABASE_URL`      | Yes         | Same Supabase project is fine for MVP                            |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Yes         | Same as local                                                    |
-| `SEC_EDGAR_USER_AGENT`          | Yes         | Same contact string is fine                                      |
-| `LIBSQL_URL`                    | Yes         | Turso **staging** DB URL                                         |
-| `LIBSQL_AUTH_TOKEN`             | Yes         | Turso **staging** DB token                                       |
-| `NEXT_PUBLIC_POSTHOG_KEY`       | Recommended | Same PostHog project is fine for MVP                             |
-| `NEXT_PUBLIC_POSTHOG_HOST`      | Recommended | `https://us.i.posthog.com` or EU host                            |
-| `ADMIN_EMAILS`                  | No          | Override admin allowlist if needed (same defaults as local)      |
-| `CRON_SECRET`                   | Recommended | So you can manually trigger fetch against staging                |
-| `FINNHUB_API_KEY`               | No          | Enables Finnhub catalysts + NYSE listings (Admin / cron)         |
-| `POLYGON_API_KEY`               | No          | Enables Polygon/Benzinga news + price enrichment                 |
-| `FORM4_API_KEY`                 | No          | Optional Form4API enrichment                                     |
-| `RESEND_API_KEY`                | No          | Enables email alert delivery + feedback emails                   |
-| `RESEND_FROM_EMAIL`             | No          | Optional From for Resend (defaults to onboarding sender)         |
-| `FEEDBACK_TO_EMAIL`             | No          | Feedback inbox (defaults to `catalyst.intel.feedback@gmail.com`) |
-| `OPENROUTER_API_KEY`            | No          | On-demand AI analysis (or `OPENROUTER_API_KEYS` comma pool)      |
+| Variable                               | Required?   | Notes                                                            |
+| -------------------------------------- | ----------- | ---------------------------------------------------------------- |
+| `NEXT_PUBLIC_SUPABASE_URL`             | Yes         | Same Supabase project is fine for MVP                            |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY`        | Yes         | Same as local                                                    |
+| `SEC_EDGAR_USER_AGENT`                 | Yes         | Same contact string is fine                                      |
+| `LIBSQL_URL`                           | Yes         | Turso **staging** DB URL                                         |
+| `LIBSQL_AUTH_TOKEN`                    | Yes         | Turso **staging** DB token                                       |
+| `NEXT_PUBLIC_POSTHOG_KEY`              | Recommended | Same PostHog project is fine for MVP                             |
+| `NEXT_PUBLIC_POSTHOG_HOST`             | Recommended | `https://us.i.posthog.com` or EU host                            |
+| `ADMIN_EMAILS`                         | No          | Override admin allowlist if needed (same defaults as local)      |
+| `CRON_SECRET`                          | Recommended | So you can manually trigger fetch against staging                |
+| `FINNHUB_API_KEY`                      | No          | Enables Finnhub catalysts + NYSE listings (Admin / cron)         |
+| `PR_WIRE_API_KEY` / `PR_WIRE_API_BASE` | No          | Optional full-feed upgrade; public PR wire scrape needs no key   |
+| `POLYGON_API_KEY`                      | No          | Enables Polygon/Benzinga news + price enrichment                 |
+| `FORM4_API_KEY`                        | No          | Optional Form4API enrichment                                     |
+| `RESEND_API_KEY`                       | No          | Enables email alert delivery + feedback emails                   |
+| `RESEND_FROM_EMAIL`                    | No          | Optional From for Resend (defaults to onboarding sender)         |
+| `FEEDBACK_TO_EMAIL`                    | No          | Feedback inbox (defaults to `catalyst.intel.feedback@gmail.com`) |
+| `OPENROUTER_API_KEY`                   | No          | On-demand AI analysis (or `OPENROUTER_API_KEYS` comma pool)      |
 
 ### Production (Vercel → Environment: **Production**, used by `main`)
 
-| Variable                        | Required?   | Notes                                                            |
-| ------------------------------- | ----------- | ---------------------------------------------------------------- |
-| `NEXT_PUBLIC_SUPABASE_URL`      | Yes         | Same Supabase project is fine for MVP                            |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Yes         | Same as local/staging                                            |
-| `SEC_EDGAR_USER_AGENT`          | Yes         | Same contact string is fine                                      |
-| `LIBSQL_URL`                    | Yes         | Turso **production** DB URL (separate DB)                        |
-| `LIBSQL_AUTH_TOKEN`             | Yes         | Turso **production** DB token                                    |
-| `NEXT_PUBLIC_POSTHOG_KEY`       | Recommended | Same PostHog project is fine for MVP                             |
-| `NEXT_PUBLIC_POSTHOG_HOST`      | Recommended | `https://us.i.posthog.com` or EU host                            |
-| `ADMIN_EMAILS`                  | No          | Override admin allowlist if needed (same defaults as local)      |
-| `CRON_SECRET`                   | Yes         | Must match the value configured in cron-job.org                  |
-| `FINNHUB_API_KEY`               | No          | Enables Finnhub catalysts + NYSE listings (Admin / cron)         |
-| `POLYGON_API_KEY`               | No          | Enables Polygon/Benzinga news + price enrichment                 |
-| `FORM4_API_KEY`                 | No          | Optional Form4API enrichment                                     |
-| `RESEND_API_KEY`                | No          | Enables email alert delivery + feedback emails                   |
-| `RESEND_FROM_EMAIL`             | No          | Optional From for Resend                                         |
-| `FEEDBACK_TO_EMAIL`             | No          | Feedback inbox (defaults to `catalyst.intel.feedback@gmail.com`) |
-| `OPENROUTER_API_KEY`            | No          | On-demand AI analysis (or `OPENROUTER_API_KEYS` comma pool)      |
+| Variable                               | Required?   | Notes                                                            |
+| -------------------------------------- | ----------- | ---------------------------------------------------------------- |
+| `NEXT_PUBLIC_SUPABASE_URL`             | Yes         | Same Supabase project is fine for MVP                            |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY`        | Yes         | Same as local/staging                                            |
+| `SEC_EDGAR_USER_AGENT`                 | Yes         | Same contact string is fine                                      |
+| `LIBSQL_URL`                           | Yes         | Turso **production** DB URL (separate DB)                        |
+| `LIBSQL_AUTH_TOKEN`                    | Yes         | Turso **production** DB token                                    |
+| `NEXT_PUBLIC_POSTHOG_KEY`              | Recommended | Same PostHog project is fine for MVP                             |
+| `NEXT_PUBLIC_POSTHOG_HOST`             | Recommended | `https://us.i.posthog.com` or EU host                            |
+| `ADMIN_EMAILS`                         | No          | Override admin allowlist if needed (same defaults as local)      |
+| `CRON_SECRET`                          | Yes         | Must match the value configured in cron-job.org                  |
+| `FINNHUB_API_KEY`                      | No          | Enables Finnhub catalysts + NYSE listings (Admin / cron)         |
+| `PR_WIRE_API_KEY` / `PR_WIRE_API_BASE` | No          | Optional full-feed upgrade; public PR wire scrape needs no key   |
+| `POLYGON_API_KEY`                      | No          | Enables Polygon/Benzinga news + price enrichment                 |
+| `FORM4_API_KEY`                        | No          | Optional Form4API enrichment                                     |
+| `RESEND_API_KEY`                       | No          | Enables email alert delivery + feedback emails                   |
+| `RESEND_FROM_EMAIL`                    | No          | Optional From for Resend                                         |
+| `FEEDBACK_TO_EMAIL`                    | No          | Feedback inbox (defaults to `catalyst.intel.feedback@gmail.com`) |
+| `OPENROUTER_API_KEY`                   | No          | On-demand AI analysis (or `OPENROUTER_API_KEYS` comma pool)      |
 
 ### GitHub repo secrets (for the deploy migration workflow)
 
@@ -321,18 +324,20 @@ node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 After **Fetch all sources now** (or a successful cron-job.org run), the admin per-source
 breakdown and `raw_sources.provider` counts should include:
 
-| Provider                          | Expected status                     | Notes                                                                                                                                             |
-| --------------------------------- | ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `sec-edgar`                       | `ok` (Form 4 via Atom `type=4`)     | Needs `SEC_EDGAR_USER_AGENT`                                                                                                                      |
-| `nasdaq-halts`                    | `ok`                                | No key                                                                                                                                            |
-| `macro-calendar`                  | `ok` (CPI / NFP / FOMC)             | No key; embedded BLS + Fed schedule                                                                                                               |
-| `openfda`                         | `ok` (recent AP submissions only)   | No key; dates inside 30-day retention                                                                                                             |
-| `clinicaltrials`                  | `ok`                                | No key                                                                                                                                            |
-| `finnhub`                         | `skipped` without `FINNHUB_API_KEY` | Soft-fail OK                                                                                                                                      |
-| `polygon-news` / `polygon-prices` | `skipped` without `POLYGON_API_KEY` | Soft-fail OK. Free tier: ~5 REST req/min; same-day aggs often 403 timeframe — prices enrich prior sessions in small batches and soft-skip 429/403 |
-| `form4api`                        | `skipped` without `FORM4_API_KEY`   | EDGAR Form 4 still works via `sec-edgar`                                                                                                          |
+| Provider         | Expected status                     | Notes                                                                                                                                       |
+| ---------------- | ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| `sec-edgar`      | `ok` (Form 4 via Atom `type=4`)     | Needs `SEC_EDGAR_USER_AGENT`                                                                                                                |
+| `nasdaq-halts`   | `ok`                                | No key                                                                                                                                      |
+| `macro-calendar` | `ok` (CPI / NFP / FOMC)             | No key; embedded BLS + Fed schedule                                                                                                         |
+| `openfda`        | `ok` (recent AP submissions only)   | No key; dates inside 30-day retention                                                                                                       |
+| `clinicaltrials` | `skipped` (paused)                  | Not fetched — daily lag; code kept (`fetchEnabled: false`)                                                                                  |
+| `pr-wire`        | always runs (keyless public board)  | Free public high-impact scrape by default (~60m delay, score≥70). Optional auth full feed via env. Label **PR Wire**; favored on duplicates |
+| `finnhub`        | `skipped` without `FINNHUB_API_KEY` | Soft-fail OK                                                                                                                                |
+| `polygon-news`   | `skipped` (paused)                  | Not fetched — hourly ticker news; code kept                                                                                                 |
+| `polygon-prices` | `skipped` without `POLYGON_API_KEY` | Soft-fail OK. Free tier: ~5 REST req/min; same-day aggs often 403 timeframe                                                                 |
+| `form4api`       | `skipped` without `FORM4_API_KEY`   | EDGAR Form 4 still works via `sec-edgar`                                                                                                    |
 
-On `/catalyst-feed`, Source column should show **SEC EDGAR**, **Nasdaq Halts**, **Macro**, **openFDA**,
+On `/catalyst-feed`, Source column should show **SEC EDGAR**, **Nasdaq Halts**, **Macro**, **PR Wire**, **openFDA**,
 and/or **ClinicalTrials** (not only SEC).
 
 ## Database migrations in CI/CD

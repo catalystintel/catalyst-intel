@@ -4,6 +4,8 @@ import {
   CATALYST_SOURCE_CATALOG,
   CATALYST_SOURCE_IDS,
   FETCH_PHASES,
+  activeCatalystSourceIds,
+  isCatalystSourceFetchEnabled,
   isCatalystSourceId,
 } from "./catalyst-sources";
 import { skippedSourceResult } from "./ingest-pipeline";
@@ -26,6 +28,7 @@ describe("fetch order catalog", () => {
       "sec-edgar",
       "nasdaq-halts",
       "macro-calendar",
+      "pr-wire",
       "finnhub",
       "openfda",
       "clinicaltrials",
@@ -39,35 +42,37 @@ describe("fetch order catalog", () => {
       ...CATALYST_SOURCE_IDS,
     ]);
     expect(CATALYST_SOURCE_CATALOG.map((s) => s.order)).toEqual([
-      1, 2, 3, 4, 5, 6, 7, 8,
+      1, 2, 3, 4, 5, 6, 7, 8, 9,
     ]);
   });
 
-  it("defines phased parallel A → B → C with Polygon sequential", () => {
+  it("defines phased parallel A → B → C (paused sources omitted)", () => {
     expect(FETCH_PHASES.map((p) => p.id)).toEqual(["A", "B", "C"]);
     expect(FETCH_PHASES[0]).toMatchObject({
       mode: "parallel",
-      sources: [
-        "sec-edgar",
-        "nasdaq-halts",
-        "macro-calendar",
-        "openfda",
-        "clinicaltrials",
-      ],
+      sources: ["sec-edgar", "nasdaq-halts", "macro-calendar", "openfda"],
     });
     expect(FETCH_PHASES[1]).toMatchObject({
       mode: "parallel",
-      sources: ["finnhub"],
+      sources: ["pr-wire", "finnhub"],
     });
     expect(FETCH_PHASES[2]).toMatchObject({
       mode: "sequential",
-      sources: ["polygon-news", "polygon-prices"],
+      sources: ["polygon-prices"],
     });
   });
 
-  it("covers every catalog id exactly once across phases", () => {
+  it("covers every active catalog id exactly once across phases", () => {
     const fromPhases = FETCH_PHASES.flatMap((p) => [...p.sources]);
-    expect(fromPhases.sort()).toEqual([...CATALYST_SOURCE_IDS].sort());
+    expect(fromPhases.sort()).toEqual([...activeCatalystSourceIds()].sort());
+  });
+
+  it("keeps clinicaltrials and polygon-news paused (not deleted)", () => {
+    expect(isCatalystSourceFetchEnabled("clinicaltrials")).toBe(false);
+    expect(isCatalystSourceFetchEnabled("polygon-news")).toBe(false);
+    expect(isCatalystSourceFetchEnabled("openfda")).toBe(true);
+    expect(CATALYST_SOURCE_IDS).toContain("clinicaltrials");
+    expect(CATALYST_SOURCE_IDS).toContain("polygon-news");
   });
 });
 

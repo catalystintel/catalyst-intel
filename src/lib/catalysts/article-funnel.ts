@@ -245,9 +245,15 @@ export function extractRelatedSymbols(
   return out.slice(0, 8);
 }
 
+function httpsUrl(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const t = value.trim();
+  return /^https?:\/\//i.test(t) ? t : null;
+}
+
 /**
  * Optional source thumb when the vendor already stored an image URL.
- * Never invents media.
+ * Never invents media; skips favicons / site logos.
  */
 export function extractArticleThumbUrl(rawContent: unknown): string | null {
   const root = asRecord(rawContent);
@@ -260,28 +266,37 @@ export function extractArticleThumbUrl(rawContent: unknown): string | null {
     root.thumbnail_url,
     root.thumb,
     root.image,
+    root.og_image,
+    root.ogImage,
   ];
   for (const v of direct) {
-    if (typeof v === "string" && /^https?:\/\//i.test(v.trim())) {
-      return v.trim();
+    const url = httpsUrl(v);
+    if (url) return url;
+    const nested = asRecord(v);
+    if (nested) {
+      const nestedUrl = httpsUrl(nested.url) ?? httpsUrl(nested.href);
+      if (nestedUrl) return nestedUrl;
     }
   }
 
   const images = asRecord(root.images);
   if (images) {
-    for (const key of ["thumb", "small", "large", "url", "default"]) {
+    for (const key of [
+      "thumb",
+      "small",
+      "large",
+      "url",
+      "default",
+      "original",
+    ]) {
       const v = images[key];
-      if (typeof v === "string" && /^https?:\/\//i.test(v.trim())) {
-        return v.trim();
+      const url = httpsUrl(v);
+      if (url) return url;
+      const nested = asRecord(v);
+      if (nested) {
+        const nestedUrl = httpsUrl(nested.url) ?? httpsUrl(nested.href);
+        if (nestedUrl) return nestedUrl;
       }
-    }
-  }
-
-  const publisher = asRecord(root.publisher);
-  if (publisher) {
-    for (const key of ["favicon_url", "logo_url", "homepage_url"]) {
-      // Prefer real article images over favicons — only accept logo if no image.
-      void key;
     }
   }
 
