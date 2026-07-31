@@ -495,7 +495,8 @@ export async function runUnblock(cfg) {
   };
 }
 
-function stripSecret(value) {
+/** Strip accidental quotes / whitespace from `gh secret set` values. */
+export function stripSecret(value) {
   const v = value?.trim() ?? "";
   // Accidental quotes from `gh secret set --body '"…"'` break Bearer auth / CLI.
   if (
@@ -505,6 +506,57 @@ function stripSecret(value) {
     return v.slice(1, -1).trim();
   }
   return v;
+}
+
+/**
+ * CLI file-upload deploy of the current working tree (no git fetch/checkout).
+ * Prefer env linkage (VERCEL_ORG_ID / VERCEL_PROJECT_ID) over `--scope` — passing
+ * `--scope` forces a GET /v2/user that fails for some token types.
+ * @param {{ token: string, teamId: string, projectId: string }} cfg
+ * @param {"production" | null} target
+ */
+export function cliDeployCwd(cfg, target) {
+  const args = ["deploy", "--yes"];
+  if (target === "production") args.push("--prod");
+
+  const env = {
+    ...process.env,
+    VERCEL_ORG_ID: cfg.teamId,
+    VERCEL_PROJECT_ID: cfg.projectId,
+    VERCEL_TOKEN: cfg.token,
+  };
+
+  let result = spawnSync("vercel", args, { encoding: "utf8", env });
+  if (
+    result.error &&
+    /** @type {NodeJS.ErrnoException} */ (result.error).code === "ENOENT"
+  ) {
+    const bin = process.platform === "win32" ? "npx.cmd" : "npx";
+    result = spawnSync(bin, ["vercel", ...args], { encoding: "utf8", env });
+  }
+  const out = `${result.stdout ?? ""}\n${result.stderr ?? ""}`.trim();
+  if (result.status !== 0) {
+    throw new Error(`vercel deploy failed: ${out.slice(-800)}`);
+  }
+  const urlMatch = out.match(/https:\/\/[^\s]+\.vercel\.app/);
+  return { url: urlMatch?.[0] ?? null, log: out.slice(-400) };
+}
+
+/**
+ * Point a hostname at a deployment (API — works without CLI user token).
+ * @param {{ token: string, teamId: string }} cfg
+ * @param {string} deploymentIdOrUrl
+ * @param {string} alias
+ */
+export async function apiSetAlias(cfg, deploymentIdOrUrl, alias) {
+  return vercelFetch("/v2/aliases", cfg.token, cfg.teamId, {
+    method: "POST",
+    body: JSON.stringify({
+      alias,
+      // API accepts deployment id (dpl_…) or URL hostname.
+      deploymentId: deploymentIdOrUrl,
+    }),
+  });
 }
 
 async function main() {
