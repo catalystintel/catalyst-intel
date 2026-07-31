@@ -1,15 +1,29 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { FlaskConical, Plus, Trash2 } from "lucide-react";
+import { ChevronsUpDown, FlaskConical, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { SkeletonCard } from "@/components/loading-skeleton";
 import type { AlertChannel, AlertRuleConditions } from "@/db/schema";
 import { useWebPush } from "@/hooks/use-web-push";
 import { cn } from "@/lib/utils";
+
+const ALERT_CHANNEL_OPTIONS: { value: AlertChannel; label: string }[] = [
+  { value: "push", label: "Push (browser, free)" },
+  { value: "telegram", label: "Telegram" },
+  { value: "webhook", label: "Webhook" },
+  { value: "email", label: "Email" },
+];
 
 interface AlertRuleRow {
   id: number;
@@ -196,17 +210,53 @@ export function AlertRulesPanel() {
               aria-label="Rule name"
               className="h-9 w-48 border-[var(--desk-border-strong)] bg-[var(--desk-overlay-soft)]"
             />
-            <select
-              value={channel}
-              onChange={(e) => setChannel(e.target.value as AlertChannel)}
-              aria-label="Channel"
-              className="h-9 rounded-md border border-[var(--desk-border-strong)] bg-[var(--desk-overlay-soft)] px-2 font-mono text-xs text-[var(--desk-text)]"
-            >
-              <option value="push">Push (browser, free)</option>
-              <option value="telegram">Telegram</option>
-              <option value="webhook">Webhook</option>
-              <option value="email">Email</option>
-            </select>
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                type="button"
+                aria-label="Channel"
+                className={cn(
+                  "inline-flex h-9 min-w-[12.5rem] items-center justify-between gap-2 rounded-md border border-[var(--desk-border-strong)] bg-[var(--desk-overlay-soft)] px-2.5 font-mono text-xs text-[var(--desk-text)]",
+                  "outline-none transition-colors hover:bg-[var(--desk-overlay-strong)]",
+                  "focus-visible:border-[var(--desk-text-dim)] focus-visible:ring-1 focus-visible:ring-[var(--desk-border-strong)]",
+                )}
+              >
+                <span className="truncate">
+                  {ALERT_CHANNEL_OPTIONS.find((o) => o.value === channel)
+                    ?.label ?? channel}
+                </span>
+                <ChevronsUpDown className="size-3.5 shrink-0 opacity-60" />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent
+                align="start"
+                side="bottom"
+                sideOffset={4}
+                className="min-w-[12.5rem] border-[var(--desk-border)] bg-[var(--desk-panel)] p-1 text-[var(--desk-text)] shadow-md"
+              >
+                <DropdownMenuRadioGroup
+                  value={channel}
+                  onValueChange={(value) => {
+                    if (
+                      value === "push" ||
+                      value === "telegram" ||
+                      value === "webhook" ||
+                      value === "email"
+                    ) {
+                      setChannel(value);
+                    }
+                  }}
+                >
+                  {ALERT_CHANNEL_OPTIONS.map((opt) => (
+                    <DropdownMenuRadioItem
+                      key={opt.value}
+                      value={opt.value}
+                      className="font-mono text-xs text-[var(--desk-text-secondary)] focus:bg-[var(--desk-overlay-strong)] focus:text-[var(--desk-text)]"
+                    >
+                      {opt.label}
+                    </DropdownMenuRadioItem>
+                  ))}
+                </DropdownMenuRadioGroup>
+              </DropdownMenuContent>
+            </DropdownMenu>
             <Input
               value={minImpact}
               onChange={(e) => setMinImpact(e.target.value)}
