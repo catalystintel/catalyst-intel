@@ -59,7 +59,7 @@ export async function fetchFinnhubNyse(options?: {
       quoteErrors: 0,
       ranAt,
       message:
-        "Finnhub is not configured. Add credentials in Vercel / .env.local to enable NYSE listings.",
+        "Finnhub is not configured. Add Finnhub credentials in the hosting environment to enable NYSE listings.",
     };
   }
 

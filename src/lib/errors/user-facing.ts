@@ -27,12 +27,30 @@ export const USER_FACING = {
 const OPS_LEAK_PATTERN =
   /\b(LIBSQL_|DATABASE_URL|OPENROUTER_|RESEND_|TELEGRAM_BOT|WEB_PUSH_|NEXT_PUBLIC_|SUPABASE_|Vercel|Turso|DEPLOYMENT\.md|npm run |\.env\.local|BLOCKED|SQLITE_|local\.db|file:)/i;
 
+/** Raw vendor/env credential names that must not appear in product UI. */
+const SOURCE_KEY_ENV_PATTERN =
+  /\b(?:[A-Z][A-Z0-9_]*(?:_API_KEY|_API_KEYS|_API_BASE)|SEC_EDGAR_USER_AGENT|PR_WIRE_API_\*)\b/i;
+
 /**
  * True when a string looks like operator/setup detail that should not be
  * shown verbatim on trader surfaces.
  */
 export function looksLikeOpsMessage(message: string): boolean {
-  return OPS_LEAK_PATTERN.test(message);
+  return (
+    OPS_LEAK_PATTERN.test(message) || SOURCE_KEY_ENV_PATTERN.test(message)
+  );
+}
+
+/**
+ * Soften leftover env/credential token names in copy that still has a
+ * useful product meaning (e.g. empty-state notes). Prefer fixing messages
+ * at the source; this is a display-side belt-and-suspenders scrub.
+ */
+export function scrubEnvNamesFromMessage(message: string): string {
+  return message
+    .replace(new RegExp(SOURCE_KEY_ENV_PATTERN.source, "gi"), "credentials")
+    .replace(/\s{2,}/g, " ")
+    .trim();
 }
 
 /**
@@ -78,7 +96,11 @@ export function toUserFacingMessage(
   if (/WEB_PUSH_VAPID|push.*(not configured|unavailable)/i.test(message)) {
     return USER_FACING.pushUnavailable;
   }
-  if (/RESEND_API_KEY|email delivery skipped/i.test(message)) {
+  if (
+    /RESEND_API_KEY|email delivery skipped|Resend.*(not configured|unavailable)/i.test(
+      message,
+    )
+  ) {
     return USER_FACING.emailUnavailable;
   }
   if (/TELEGRAM_BOT_TOKEN|Telegram delivery skipped/i.test(message)) {

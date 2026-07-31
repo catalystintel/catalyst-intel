@@ -46,7 +46,7 @@ export function getSecUserAgent(): string {
     throw new SecEdgarRequestError({
       kind: "config",
       message:
-        "SEC_EDGAR_USER_AGENT env var is required (SEC requires a descriptive User-Agent, " +
+        "SEC EDGAR User-Agent is required (SEC requires a descriptive User-Agent, " +
         "e.g. 'you@email.com CatalystIntel/0.1').",
       url: "",
     });
@@ -162,7 +162,7 @@ export async function fetchSecUrl(
         kind: "http",
         message:
           res.status === 403 || res.status === 401
-            ? `SEC EDGAR blocked request (${res.status} ${res.statusText}) for ${url} — check SEC_EDGAR_USER_AGENT`
+            ? `SEC EDGAR blocked request (${res.status} ${res.statusText}) for ${url} — check the SEC EDGAR User-Agent credential`
             : `SEC EDGAR request failed: ${res.status} ${res.statusText} for ${url}`,
         url,
         status: res.status,

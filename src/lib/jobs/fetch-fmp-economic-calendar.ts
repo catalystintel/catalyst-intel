@@ -225,7 +225,7 @@ export async function fetchFmpEconomicCalendarJson(options?: {
 }): Promise<FmpEconomicEvent[]> {
   const apiKey = options?.apiKey ?? getFmpApiKey();
   if (!apiKey) {
-    throw new Error("FMP_API_KEY is not set");
+    throw new Error("FMP credentials are not configured");
   }
   const now = options?.now ?? new Date();
   const today = now.toISOString().slice(0, 10);
@@ -292,7 +292,7 @@ export async function fetchFmpEconomicCalendar(options?: {
   if (!apiKey) {
     return skippedSourceResult(
       FMP_ECON_CALENDAR_PROVIDER,
-      "FMP_API_KEY is not set — soft-skip. Dedicated ~10m cron when keyed.",
+      "FMP is not configured — soft-skip. Dedicated ~10m cron when credentials are set.",
     );
   }
 

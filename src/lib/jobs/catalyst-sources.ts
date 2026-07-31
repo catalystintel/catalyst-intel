@@ -57,7 +57,7 @@ export const CATALYST_SOURCE_CATALOG: readonly CatalystSourceMeta[] = [
     priority: "must",
     phase: "A",
     contributes:
-      "8-K (tradeable items) / Form 4 buy·sell / S-3 / 424B / 425 / SC 13D·G (keyless; needs SEC_EDGAR_USER_AGENT). Non-catalyst 8-K (7.01/8.01/9.01 + routine 1.04/5.05/5.07/5.08) and Form 4 awards/tax/gifts dropped.",
+      "8-K (tradeable items) / Form 4 buy·sell / S-3 / 424B / 425 / SC 13D·G (keyless; needs an SEC EDGAR User-Agent). Non-catalyst 8-K (7.01/8.01/9.01 + routine 1.04/5.05/5.07/5.08) and Form 4 awards/tax/gifts dropped.",
     keyEnv: "SEC_EDGAR_USER_AGENT",
   },
   {
@@ -84,7 +84,7 @@ export const CATALYST_SOURCE_CATALOG: readonly CatalystSourceMeta[] = [
     priority: "must",
     phase: "B",
     contributes:
-      "Press releases from major PR wires. Keyless public impact board by default (newest-first; ~60m delay; upstream score≥70 floor — cannot lower on free API; no article URLs). Structured extract for Details. Optional PR_WIRE_API_* unlocks authenticated firehose + /a/{id} body scrape (all scores).",
+      "Press releases from major PR wires. Keyless public impact board by default (newest-first; ~60m delay; upstream score≥70 floor — cannot lower on free API; no article URLs). Structured extract for Details. Optional authenticated PR wire credentials unlock the full firehose + article body scrape (all scores).",
   },
   {
     id: "finnhub",
@@ -93,7 +93,7 @@ export const CATALYST_SOURCE_CATALOG: readonly CatalystSourceMeta[] = [
     priority: "should",
     phase: "B",
     contributes:
-      "Near-term earnings + FDA + classified news + recent PT + IPO calendar + profile enrichment (needs FINNHUB_API_KEY). Consensus rec snapshots skipped.",
+      "Near-term earnings + FDA + classified news + recent PT + IPO calendar + profile enrichment (needs Finnhub credentials). Consensus rec snapshots skipped.",
     keyEnv: "FINNHUB_API_KEY",
   },
   {
@@ -147,7 +147,7 @@ export const CATALYST_SOURCE_CATALOG: readonly CatalystSourceMeta[] = [
     // Dedicated ~10m cron only — keep off 1-min fetch/all (free tier ~250/day).
     includeInFetchAll: false,
     contributes:
-      "US high-impact econ releases with estimate/previous/actual (needs FMP_API_KEY). Soft-skips on free-plan 402. Dedicated cron every ~10m — not on fetch/all.",
+      "US high-impact econ releases with estimate/previous/actual (needs FMP credentials). Soft-skips on free-plan 402. Dedicated cron every ~10m — not on fetch/all.",
     keyEnv: "FMP_API_KEY",
   },
 ] as const;
