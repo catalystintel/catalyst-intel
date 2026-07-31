@@ -15,8 +15,10 @@ import {
 } from "@/lib/jobs/sec-filing-extract";
 import { selectPrimaryItem, type ParsedItem } from "@/lib/jobs/parse-8k-items";
 import { type SecFetchMode, fetchSecUrl } from "@/lib/jobs/sec-edgar-http";
-import type { EventCategoryKey } from "@/lib/catalysts/taxonomy";
-import { isEventCategoryKey } from "@/lib/catalysts/taxonomy";
+import {
+  isEventCategoryKey,
+  type EventCategoryKey,
+} from "@/lib/catalysts/taxonomy";
 
 function formNeedsDocEnrich(formType: string): boolean {
   const f = formType.trim().toUpperCase();
