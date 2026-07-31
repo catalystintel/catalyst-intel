@@ -1,6 +1,6 @@
 /**
  * Desk tape rule: prefer rows tied to a tradable symbol.
- * CPI and Jobs/NFP macro calendar (and matching headlines) stay visible
+ * CPI, Jobs/NFP, and PPI macro calendar (and matching headlines) stay visible
  * even when symbol is null — see `fetch-macro-calendar`.
  */
 
@@ -9,7 +9,7 @@ import { or, sql, type SQL } from "drizzle-orm";
 import { catalysts } from "@/db/schema";
 
 /** Macro-calendar subcategories allowed without a symbol. */
-export const SYMBOLLESS_MACRO_SUBCATEGORIES = ["cpi", "nfp"] as const;
+export const SYMBOLLESS_MACRO_SUBCATEGORIES = ["cpi", "nfp", "ppi"] as const;
 
 export type SymbollessMacroSubcategory =
   (typeof SYMBOLLESS_MACRO_SUBCATEGORIES)[number];
@@ -24,19 +24,22 @@ export interface SymbolFeedGateInput {
 }
 
 /**
- * True for CPI index / Jobs report (NFP) rows that may appear without a
- * symbol. Matches macro-calendar storage (`subcategory` + tags) and common
+ * True for CPI / Jobs (NFP) / PPI rows that may appear without a symbol.
+ * Matches macro-calendar storage (`subcategory` + tags) and common
  * title/headline phrasing; FOMC is intentionally excluded.
  */
 export function isSymbollessMacroException(item: SymbolFeedGateInput): boolean {
   const sub = (item.subcategory ?? "").trim().toLowerCase();
-  if (sub === "cpi" || sub === "nfp") return true;
+  if (sub === "cpi" || sub === "nfp" || sub === "ppi") return true;
 
   const tags = (item.tags ?? []).map((t) => t.trim().toLowerCase());
-  if (tags.includes("cpi") || tags.includes("nfp")) return true;
+  if (tags.includes("cpi") || tags.includes("nfp") || tags.includes("ppi")) {
+    return true;
+  }
 
   const text = `${item.title ?? ""} ${item.headline ?? ""}`.toLowerCase();
   if (/\bcpi\b/.test(text)) return true;
+  if (/\bppi\b|producer price/.test(text)) return true;
   if (/\b(nfp|non[\s-]?farm|jobs report|employment situation)\b/.test(text)) {
     return true;
   }
@@ -51,11 +54,11 @@ export function passesSymbolFeedGate(item: SymbolFeedGateInput): boolean {
 }
 
 /**
- * SQL predicate for “has symbol OR CPI/Jobs exception”.
+ * SQL predicate for “has symbol OR CPI/Jobs/PPI exception”.
  * Always applied by `buildFeedWhere` for the dashboard / `/api/catalysts` tape.
  *
  * Primary match = macro-calendar fields (`subcategory` / tags). Title/headline
- * LIKE patterns cover the same CPI / NFP wording used at ingest.
+ * LIKE patterns cover the same CPI / NFP / PPI wording used at ingest.
  */
 export function symbolFeedGateSql(): SQL {
   const haystack = sql`lower(coalesce(${catalysts.title}, '') || ' ' || coalesce(${catalysts.headline}, ''))`;
@@ -65,14 +68,17 @@ export function symbolFeedGateSql(): SQL {
       ${catalysts.symbol} IS NOT NULL
       AND trim(${catalysts.symbol}) != ''
     )`,
-    sql`lower(coalesce(${catalysts.subcategory}, '')) IN ('cpi', 'nfp')`,
+    sql`lower(coalesce(${catalysts.subcategory}, '')) IN ('cpi', 'nfp', 'ppi')`,
     sql`lower(coalesce(${catalysts.tags}, '')) LIKE '%"cpi"%'`,
     sql`lower(coalesce(${catalysts.tags}, '')) LIKE '%"nfp"%'`,
+    sql`lower(coalesce(${catalysts.tags}, '')) LIKE '%"ppi"%'`,
     sql`${haystack} LIKE '%cpi%'`,
+    sql`${haystack} LIKE '%ppi%'`,
     sql`${haystack} LIKE '%nfp%'`,
     sql`${haystack} LIKE '%nonfarm%'`,
     sql`${haystack} LIKE '%non-farm%'`,
     sql`${haystack} LIKE '%jobs report%'`,
     sql`${haystack} LIKE '%employment situation%'`,
+    sql`${haystack} LIKE '%producer price%'`,
   )!;
 }

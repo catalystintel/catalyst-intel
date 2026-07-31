@@ -59,7 +59,16 @@ describe("parseFeedQueryFromSearchParams", () => {
     expect(filters.sources).toEqual(["sec-edgar"]);
     expect(filters.timeWindow).toBe("24h");
     expect(filters.symbolOnly).toBe(true);
+    expect(filters.earningsSurprisesOnly).toBe(false);
     expect(filters.since).toBeTruthy();
+  });
+
+  it("parses earningsSurprises flag", () => {
+    const filters = parseFeedQueryFromSearchParams(
+      new URLSearchParams({ earningsSurprises: "1" }),
+      { nowIso: "2026-07-24T20:00:00.000Z" },
+    );
+    expect(filters.earningsSurprisesOnly).toBe(true);
   });
 
   it("defaults symbolOnly on when param absent", () => {
@@ -67,6 +76,7 @@ describe("parseFeedQueryFromSearchParams", () => {
       nowIso: "2026-07-24T20:00:00.000Z",
     });
     expect(filters.symbolOnly).toBe(true);
+    expect(filters.earningsSurprisesOnly).toBe(false);
   });
 
   it("still parses symbolOnly false (gate remains always-on in SQL)", () => {

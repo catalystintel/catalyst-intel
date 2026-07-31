@@ -58,7 +58,14 @@ export function ThemeToggle() {
                 : "text-[var(--desk-text-muted)] hover:text-[var(--desk-text)]",
             )}
           >
-            <Icon className="size-4" />
+            <Icon
+              className={cn(
+                "size-4",
+                active && value === "light" && "text-amber-500",
+                active && value === "dark" && "text-sky-400",
+              )}
+              strokeWidth={active ? 2.25 : 1.75}
+            />
             {label}
           </button>
         );
@@ -84,16 +91,34 @@ export function HeaderThemeToggle({ className }: { className?: string }) {
       type="button"
       onClick={() => setTheme(isDark ? "light" : "dark")}
       aria-label={nextLabel}
+      title={nextLabel}
       className={cn(
-        "btn-press group relative inline-flex size-9 items-center justify-center rounded-lg text-[var(--desk-text-muted)] transition-colors hover:bg-[var(--desk-overlay-strong)] hover:text-[var(--desk-text)]",
+        "btn-press group relative inline-flex size-9 items-center justify-center rounded-lg border border-transparent text-[var(--desk-text-muted)] transition-colors hover:border-[var(--desk-border)] hover:bg-[var(--desk-overlay-strong)] hover:text-[var(--desk-text)]",
         className,
       )}
     >
-      {isDark ? (
-        <Sun className="size-4" aria-hidden />
-      ) : (
-        <Moon className="size-4" aria-hidden />
-      )}
+      <span className="relative size-4">
+        <Sun
+          aria-hidden
+          strokeWidth={2}
+          className={cn(
+            "absolute inset-0 size-4 text-amber-400 transition-all duration-200",
+            isDark
+              ? "scale-100 rotate-0 opacity-100"
+              : "pointer-events-none scale-50 rotate-90 opacity-0",
+          )}
+        />
+        <Moon
+          aria-hidden
+          strokeWidth={2}
+          className={cn(
+            "absolute inset-0 size-4 text-sky-400 transition-all duration-200",
+            isDark
+              ? "pointer-events-none scale-50 -rotate-90 opacity-0"
+              : "scale-100 rotate-0 opacity-100",
+          )}
+        />
+      </span>
       <span
         role="tooltip"
         className="pointer-events-none absolute top-full right-0 z-50 mt-2 rounded-md border border-[var(--desk-border-strong)] bg-[var(--desk-panel)] px-2 py-1 font-mono text-[0.68rem] whitespace-nowrap text-[var(--desk-text-secondary)] opacity-0 shadow-[0_8px_24px_rgba(0,0,0,0.28)] transition-opacity duration-150 group-hover:opacity-100 group-focus-visible:opacity-100"

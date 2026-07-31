@@ -160,11 +160,11 @@ export function AlertRulesPanel() {
             New alert rule
           </h2>
           <p className="mt-1 text-sm text-[var(--desk-text-muted)]">
-            Webhook always works. Email needs{" "}
-            <code className="font-mono text-[0.75rem]">RESEND_API_KEY</code>
+            Webhook always works. Email needs the outbound mail provider
+            configured
             {emailConfigured
-              ? " (configured)"
-              : " (not set — will fail on send)"}
+              ? " (ready)"
+              : " (not set — email delivery will fail)"}
             . Push is coming soon.
           </p>
         </div>

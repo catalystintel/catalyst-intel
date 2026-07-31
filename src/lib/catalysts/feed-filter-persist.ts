@@ -19,7 +19,7 @@ import type { EventCategoryKey } from "@/lib/jobs/parse-8k-items";
  * {@link FEED_FILTER_IDLE_MS} of idle time, then falls back to product
  * defaults so a forgotten session doesn't haunt the next day.
  */
-export const FEED_FILTER_STORAGE_KEY = "ci.feed-filters.v3";
+export const FEED_FILTER_STORAGE_KEY = "ci.feed-filters.v4";
 export const FEED_FILTER_IDLE_MS = 60 * 60 * 1000; // 1 hour
 
 export interface PersistedFeedFilters {
@@ -34,6 +34,11 @@ export interface PersistedFeedFilters {
    * Kept on the persisted shape for API query compat / legacy readers.
    */
   symbolOnly: boolean;
+  /**
+   * When true, tape shows earnings rows with material EPS surprise only
+   * (|surprise %| ≥ threshold — see earnings-surprise.ts).
+   */
+  earningsSurprisesOnly: boolean;
   /** Epoch ms of last activity while these filters were in use. */
   lastActiveAt: number;
 }
@@ -50,6 +55,7 @@ export const DEFAULT_FEED_FILTERS: FeedFilterState = {
   timeWindow: "all",
   /** Always on: tradable names only (CPI / Jobs NFP still allowed). */
   symbolOnly: true,
+  earningsSurprisesOnly: false,
 };
 
 /**
@@ -63,7 +69,8 @@ export function isPanelFiltersDefault(filters: FeedFilterState): boolean {
     filters.sectorFilters.length === 0 &&
     filters.formFilters.length === 0 &&
     filters.sourceFilters.length === 0 &&
-    filters.timeWindow === "all"
+    filters.timeWindow === "all" &&
+    !filters.earningsSurprisesOnly
   );
 }
 
@@ -87,6 +94,7 @@ export function readPersistedFeedFilters(
     // Prefer v3; fall back to prior keys once.
     const raw =
       window.localStorage.getItem(FEED_FILTER_STORAGE_KEY) ??
+      window.localStorage.getItem("ci.feed-filters.v3") ??
       window.localStorage.getItem("ci.feed-filters.v2") ??
       window.localStorage.getItem("ci.feed-filters.v1");
     if (!raw) return null;
@@ -98,6 +106,7 @@ export function readPersistedFeedFilters(
       typeof parsed.lastActiveAt === "number" ? parsed.lastActiveAt : 0;
     if (!lastActiveAt || now - lastActiveAt > FEED_FILTER_IDLE_MS) {
       window.localStorage.removeItem(FEED_FILTER_STORAGE_KEY);
+      window.localStorage.removeItem("ci.feed-filters.v3");
       window.localStorage.removeItem("ci.feed-filters.v2");
       window.localStorage.removeItem("ci.feed-filters.v1");
       return null;
@@ -139,6 +148,7 @@ export function readPersistedFeedFilters(
       timeWindow,
       // Always enforce symbol gate (ignore legacy persisted false).
       symbolOnly: true,
+      earningsSurprisesOnly: parsed.earningsSurprisesOnly === true,
     };
   } catch {
     return null;
@@ -152,6 +162,7 @@ export function writePersistedFeedFilters(
   if (typeof window === "undefined") return;
   if (isFiltersDefault(filters)) {
     window.localStorage.removeItem(FEED_FILTER_STORAGE_KEY);
+    window.localStorage.removeItem("ci.feed-filters.v3");
     window.localStorage.removeItem("ci.feed-filters.v2");
     window.localStorage.removeItem("ci.feed-filters.v1");
     return;
@@ -164,9 +175,11 @@ export function writePersistedFeedFilters(
     sourceFilters: filters.sourceFilters,
     timeWindow: filters.timeWindow,
     symbolOnly: filters.symbolOnly,
+    earningsSurprisesOnly: filters.earningsSurprisesOnly,
     lastActiveAt: now,
   };
   window.localStorage.setItem(FEED_FILTER_STORAGE_KEY, JSON.stringify(payload));
+  window.localStorage.removeItem("ci.feed-filters.v3");
   window.localStorage.removeItem("ci.feed-filters.v2");
   window.localStorage.removeItem("ci.feed-filters.v1");
 }
@@ -174,6 +187,7 @@ export function writePersistedFeedFilters(
 export function clearPersistedFeedFilters(): void {
   if (typeof window === "undefined") return;
   window.localStorage.removeItem(FEED_FILTER_STORAGE_KEY);
+  window.localStorage.removeItem("ci.feed-filters.v3");
   window.localStorage.removeItem("ci.feed-filters.v2");
   window.localStorage.removeItem("ci.feed-filters.v1");
 }
@@ -208,6 +222,9 @@ export function feedApiQuery(
   }
   // Always request the symbol gate (server also enforces unconditionally).
   params.set("symbolOnly", "1");
+  if (filters.earningsSurprisesOnly) {
+    params.set("earningsSurprises", "1");
+  }
   if (options?.cursor) params.set("cursor", options.cursor);
   if (typeof options?.limit === "number") {
     params.set("limit", String(options.limit));
