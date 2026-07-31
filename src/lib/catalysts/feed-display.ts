@@ -66,6 +66,7 @@ const PROVIDER_DISPLAY: Record<string, Omit<SourceDisplay, "meta">> = {
   "sec-edgar": { name: "SEC EDGAR", initial: "S", tone: "sec" },
   "nasdaq-halts": { name: "Nasdaq Halts", initial: "N", tone: "generic" },
   "macro-calendar": { name: "Macro", initial: "M", tone: "generic" },
+  "fmp-econ-calendar": { name: "FMP Econ", initial: "E", tone: "generic" },
   "pr-wire": { name: "PR Wire", initial: "W", tone: "wire" },
   finnhub: { name: "Finnhub", initial: "F", tone: "generic" },
   polygon: { name: "Polygon", initial: "P", tone: "generic" },
@@ -396,6 +397,7 @@ function prefersStoredGroundRuleTitle(c: FeedCatalyst, title: string): boolean {
 
   if (c.sourceProvider === "nasdaq-halts") return true;
   if (c.sourceProvider === "macro-calendar") return true;
+  if (c.sourceProvider === "fmp-econ-calendar") return true;
   if (c.type === "FDA Approval" || c.subcategory === "openfda_approval") {
     return true;
   }
@@ -797,7 +799,9 @@ function clinicalDisplayTitle(c: FeedCatalyst): string | null {
 /** Macro calendar → CPI / Jobs Report (NFP) / FOMC Rate Decision. */
 function macroDisplayTitle(c: FeedCatalyst): string | null {
   const isMacro =
-    c.sourceProvider === "macro-calendar" || c.eventCategory === "macro";
+    c.sourceProvider === "macro-calendar" ||
+    c.sourceProvider === "fmp-econ-calendar" ||
+    c.eventCategory === "macro";
   if (!isMacro) return null;
 
   const title = normalizeDisplayText(c.title ?? "");

@@ -16,6 +16,7 @@ export const CATALYST_SOURCE_IDS = [
   "clinicaltrials",
   "polygon-news",
   "polygon-prices",
+  "fmp-econ-calendar",
 ] as const;
 
 export type CatalystSourceId = (typeof CATALYST_SOURCE_IDS)[number];
@@ -39,6 +40,12 @@ export interface CatalystSourceMeta {
    * Default true when omitted.
    */
   fetchEnabled?: boolean;
+  /**
+   * When false, excluded from `fetch/all` / 1-min cron phases. Still
+   * fetchable via `POST /api/admin/fetch/[source]` (dedicated cron).
+   * Default true when omitted.
+   */
+  includeInFetchAll?: boolean;
 }
 
 /** Must→Should catalog — order matches CATALYST_SOURCE_IDS. */
@@ -131,6 +138,18 @@ export const CATALYST_SOURCE_CATALOG: readonly CatalystSourceMeta[] = [
       "historical_impact + session_context enrichment from daily aggs (free tier ~5 req/min)",
     keyEnv: "POLYGON_API_KEY",
   },
+  {
+    id: "fmp-econ-calendar",
+    order: 10,
+    label: "FMP economic calendar",
+    priority: "should",
+    phase: "B",
+    // Dedicated ~10m cron only — keep off 1-min fetch/all (free tier ~250/day).
+    includeInFetchAll: false,
+    contributes:
+      "US high-impact econ releases with estimate/previous/actual (needs FMP_API_KEY). Soft-skips on free-plan 402. Dedicated cron every ~10m — not on fetch/all.",
+    keyEnv: "FMP_API_KEY",
+  },
 ] as const;
 
 export interface FetchPhaseDef {
@@ -186,7 +205,13 @@ export function isCatalystSourceFetchEnabled(id: CatalystSourceId): boolean {
   return meta?.fetchEnabled !== false;
 }
 
-/** Sources that still run in cron / Fetch all (paused ids excluded). */
+/** Included in fetch/all phased orchestrator (excludes dedicated-cron-only). */
+export function isCatalystSourceInFetchAll(id: CatalystSourceId): boolean {
+  const meta = getCatalystSourceMeta(id);
+  return isCatalystSourceFetchEnabled(id) && meta?.includeInFetchAll !== false;
+}
+
+/** Sources that still run in cron / Fetch all (paused + dedicated-only excluded). */
 export function activeCatalystSourceIds(): CatalystSourceId[] {
-  return CATALYST_SOURCE_IDS.filter((id) => isCatalystSourceFetchEnabled(id));
+  return CATALYST_SOURCE_IDS.filter((id) => isCatalystSourceInFetchAll(id));
 }
