@@ -177,12 +177,9 @@ export default async function AdminPage() {
         </div>
         {!finnhubConfigured ? (
           <p className="px-4 py-4 text-sm text-[var(--desk-text-muted)] sm:px-5">
-            Set{" "}
-            <code className="font-mono text-[0.85em] text-[var(--desk-text-secondary)]">
-              FINNHUB_API_KEY
-            </code>{" "}
-            in Vercel / .env.local, then run Fetch NYSE listings. Watchlist
-            stays usable without it (empty price enrichment).
+            Finnhub is not configured in this environment. Add the Finnhub
+            credential in Vercel / .env.local, then run Fetch NYSE listings.
+            Watchlist stays usable without it (empty price enrichment).
           </p>
         ) : null}
       </section>

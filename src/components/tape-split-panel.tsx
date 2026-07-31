@@ -540,7 +540,7 @@ export function TapeSplitPanel({
                   ? Math.floor(new Date(catalyst.timestamp).getTime() / 1000)
                   : null
               }
-              className="h-[300px] sm:h-[380px]"
+              className="h-[320px] sm:h-[400px]"
             />
           </div>
         ) : null}

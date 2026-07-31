@@ -267,11 +267,8 @@ export function FetchTrigger() {
           Finnhub · NYSE listings
         </h3>
         <p className="mt-1 max-w-xl text-sm text-[var(--desk-text-muted)]">
-          Pull US symbols filtered to NYSE (MIC XNYS). Requires{" "}
-          <code className="font-mono text-[0.8em] text-[var(--desk-text-secondary)]">
-            FINNHUB_API_KEY
-          </code>
-          . Soft-fails with a clear message when unset.
+          Pull US symbols filtered to NYSE (MIC XNYS). Requires Finnhub to be
+          configured. Soft-fails with a clear message when unset.
         </p>
         <div className="mt-3 flex flex-col gap-3">
           <Button
@@ -306,7 +303,7 @@ export function FetchTrigger() {
             ) : (
               <p className="max-w-lg rounded-md border border-[var(--desk-border-strong)] bg-[var(--desk-overlay-soft)] px-3 py-2 text-sm text-[var(--desk-text-muted)]">
                 {nyseResult.message ??
-                  "FINNHUB_API_KEY is not set. Add it to enable NYSE listings."}
+                  "Finnhub is not configured. Add credentials to enable NYSE listings."}
               </p>
             )
           ) : null}
