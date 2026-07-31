@@ -11,7 +11,7 @@ name: CI
 # scripts/vercel-ci-deploy.mjs (API redeploy / gitSource, CLI fallback) using
 # the team VERCEL_* secrets so git-author Blocked deploys do not stall
 # staging/production. Omer/access-block heal is intentionally separate
-# (vercel-unblock-redeploy.yml: push to main + 1m wait + 10-min cron) so a red
+# (vercel-unblock-redeploy.yml: push to main + API poll + 10-min cron) so a red
 # CI deploy never skips the heal.
 on:
   push:
