@@ -1,22 +1,54 @@
-**Features and Tasks - **
+# Features list — POC strategy
 
-Buy/Sell buttons in articles — connect in advance to a trading platform, so users can act on a catalyst without leaving the article.
+## 1. POC goal
 
-Scraping data from the website rtpr that are providing relevant news for the POC
+Ship a **web app for market-moving events** (not a news reader): filtering, speed, and relevance for traders’ books — and prove the **act-faster** edge (catalyst → trade path).
 
-Add Economic calender - Economics Trading API
+---
 
-In prelogin make chart upward stock
+## 2. P0 — Crucial for POC
 
-1. Improve the article chart (bottom split-view page) — goal: more visually professional.
-2. (Optional) Auto-add a relevant image to each article for context/visual polish.
-3. WhatsApp integration — let users opt out of visiting the site and instead get filtered news-by-subject sent via WhatsApp.
-4. Improve the dark-mode icon.
-5. In landing page theres gonna be a "Search" option which users can have 2-3 limit searching for stock they want to see instant news about
-6. An option for user to add an export of their portfolio to focus the news regarding subject stocks or having track in website about open stocks - Check if can integrate with trading platforms
+- **RTPR via API** (not website scrape) for real-time PR / catalyst supply
+- **Watchlist / portfolio focus** — CSV or manual entry first; broker sync later
+- **Earnings surprises filter** — beat/miss vs estimates (surface only material surprises)
+- **Thin Buy/Sell in articles** — deep-link / open broker with symbol to prove time-to-order edge; full broker OAuth later
+- **Remove source keys / irrelevant UI clutter** — keep the desk focused on events that matter
+- **Google login solid** — reliable auth; profile as needed
 
-Economic Calender that correlate a API Data that is a calender for trader to understand when the next relevant news for them is about to publish
+---
 
-Set Earnings goal - for example post earnings that is a much more or less than expect estimations so post only an earnings surprises reports
+## 3. P1 — Strong differentiators
 
-Remove source keys in website and other that are not relevant to the project
+- **Economic calendar API** — correlate macro events to trader relevance / watchlist
+- **Landing search** — 2–3 free symbol lookups for instant event context
+- **Article / split chart polish** — Lightweight Charts on `dev` (example in place; deepen for production polish)
+
+---
+
+## 4. P2 — After POC / polish
+
+- **WhatsApp filtered alerts** — opt-in, subject-filtered notifications without visiting the site
+- **Auto images** (optional) — relevant imagery on articles for context / polish
+- **Dark-mode icon** — improve theme toggle affordance
+- **Full trading-platform connect / portfolio broker sync** — beyond thin Buy/Sell deep-links
+
+---
+
+## 5. Done / shipped (brief)
+
+- Prelogin upward / rising chart atmosphere on the landing hero
+- Google OAuth sign-in (Supabase) as the auth path
+- Desk feed + split / details hierarchy for catalyst events
+- Lightweight Charts example on `dev` (chart polish continues under P1)
+
+---
+
+## 6. How we validate (not a news site)
+
+| Signal                           | What “good” looks like                                                 |
+| -------------------------------- | ---------------------------------------------------------------------- |
+| **Event, not article**           | Users treat rows as catalysts (actionable events), not a headline feed |
+| **Latency**                      | Catalyst appears fast enough to matter vs discovering it elsewhere     |
+| **Watchlist / surprise filters** | Traders can focus on their book and material earnings surprises        |
+| **Buy/Sell click rate**          | Thin Buy/Sell is used — proves interest in catalyst → order path       |
+| **Qualitative feedback**         | Traders say it helps them act faster on what matters to their book     |
