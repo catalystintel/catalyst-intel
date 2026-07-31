@@ -48,7 +48,7 @@ import {
 import { FEED_TIME_WINDOWS } from "@/lib/catalysts/feed-time-window";
 import { classifyFeedEmpty } from "@/lib/catalysts/feed-empty-state";
 import { passesSymbolFeedGate } from "@/lib/catalysts/symbol-feed-gate";
-import { isLocalDevUi, LOCAL_DEV_ONLY_LABEL } from "@/lib/dev/local-dev-ui";
+import { isLocalDevUi } from "@/lib/dev/local-dev-ui";
 import {
   isFiltersDefault,
   isPanelFiltersDefault,
@@ -748,9 +748,9 @@ export function LiveCatalystFeed({
                     Nothing in this time window
                   </p>
                   <p className="max-w-md text-sm text-pretty text-[var(--desk-text-muted)]">
-                    The tape lists events by when they happened — not when we
-                    last fetched. New ingest can still be older filings. Widen
-                    the window or show All.
+                    The tape lists events by when they happened. Older filings
+                    can still appear after a refresh. Widen the window or show
+                    All.
                   </p>
                 </>
               ) : (
@@ -988,7 +988,7 @@ function FeedFilters({
         </FilterChip>
         {isLocalDevUi() ? (
           <FeedFilterMultiSelect
-            label={`Source ${LOCAL_DEV_ONLY_LABEL}`}
+            label="Source"
             options={facetOptions.sources}
             selected={filterState.sourceFilters}
             onChange={(sourceFilters) => onPatchFilters({ sourceFilters })}

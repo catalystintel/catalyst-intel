@@ -38,9 +38,6 @@ export function ArticleLoadError({ catalystId }: { catalystId: number }) {
           >
             Back to Catalyst Feed
           </button>
-          <span className="font-mono text-xs text-muted-foreground">
-            #{catalystId}
-          </span>
         </div>
       </div>
     </div>

@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { isLocalDevUi, LOCAL_DEV_ONLY_LABEL } from "./local-dev-ui";
+import { isLocalDevUi } from "./local-dev-ui";
 
 describe("isLocalDevUi", () => {
   afterEach(() => {
@@ -16,9 +16,5 @@ describe("isLocalDevUi", () => {
 
     vi.stubEnv("NODE_ENV", "test");
     expect(isLocalDevUi()).toBe(false);
-  });
-
-  it("exports a stable only-in-dev label", () => {
-    expect(LOCAL_DEV_ONLY_LABEL).toBe("(only in dev)");
   });
 });

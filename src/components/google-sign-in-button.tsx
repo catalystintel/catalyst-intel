@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 
 import { Button } from "@/components/ui/button";
 import { GoogleIcon } from "@/components/google-icon";
+import { toUserFacingMessage } from "@/lib/errors/user-facing";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 /**
@@ -41,15 +42,16 @@ export function GoogleSignInButton({
         });
 
         if (oauthError) {
-          setError(oauthError.message);
+          setError(
+            toUserFacingMessage(
+              oauthError.message,
+              "Could not start Google sign-in.",
+            ),
+          );
           window.location.assign(fallbackHref);
         }
       } catch (err) {
-        setError(
-          err instanceof Error
-            ? err.message
-            : "Could not start Google sign-in.",
-        );
+        setError(toUserFacingMessage(err, "Could not start Google sign-in."));
         window.location.assign(fallbackHref);
       }
     });

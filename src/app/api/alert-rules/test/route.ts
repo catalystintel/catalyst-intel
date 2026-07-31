@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { desc, eq } from "drizzle-orm";
 
-import { databaseSetupHint, isLibsqlConfigured } from "@/db/env";
+import { databaseUnavailableMessage, isLibsqlConfigured } from "@/db/env";
 import { db } from "@/db/client";
 import {
   alertRules,
@@ -25,7 +25,10 @@ import {
  */
 export async function POST(request: NextRequest) {
   if (!isLibsqlConfigured()) {
-    return NextResponse.json({ error: databaseSetupHint() }, { status: 503 });
+    return NextResponse.json(
+      { error: databaseUnavailableMessage() },
+      { status: 503 },
+    );
   }
 
   const ip = getClientIp(request);

@@ -3,7 +3,7 @@
 import { ExternalLink } from "lucide-react";
 
 import { originalSourceLabel } from "@/lib/catalysts/article-content";
-import { isLocalDevUi, LOCAL_DEV_ONLY_LABEL } from "@/lib/dev/local-dev-ui";
+import { isLocalDevUi } from "@/lib/dev/local-dev-ui";
 import { cn } from "@/lib/utils";
 
 /**
@@ -25,13 +25,13 @@ export function EdgarProofLink({
 }) {
   if (!isLocalDevUi()) return null;
 
-  const label = `${originalSourceLabel(provider)} ${LOCAL_DEV_ONLY_LABEL}`;
+  const label = originalSourceLabel(provider);
   const shortLabel =
     provider === "sec-edgar"
-      ? `EDGAR ${LOCAL_DEV_ONLY_LABEL}`
+      ? "EDGAR"
       : provider === "nasdaq-halts"
-        ? `Nasdaq ${LOCAL_DEV_ONLY_LABEL}`
-        : `Source ${LOCAL_DEV_ONLY_LABEL}`;
+        ? "Nasdaq"
+        : "Source";
 
   if (!url) {
     return (
@@ -40,10 +40,10 @@ export function EdgarProofLink({
           "inline-flex items-center gap-1 font-mono text-[0.68rem] text-[var(--desk-text-dim)]",
           className,
         )}
-        title={`No original source URL stored for this row ${LOCAL_DEV_ONLY_LABEL}`}
+        title="No original source URL stored for this row"
       >
         <ExternalLink className="size-3 opacity-50" />
-        {compact ? "—" : `No source link ${LOCAL_DEV_ONLY_LABEL}`}
+        {compact ? "—" : "No source link"}
       </span>
     );
   }

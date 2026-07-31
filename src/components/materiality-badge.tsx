@@ -30,7 +30,7 @@ export function MaterialityBadge({
         TIER_STYLES[m.tier],
         className,
       )}
-      title={`Rule-based materiality ${m.score}/100`}
+      title={`Materiality ${m.score}/100`}
     >
       <span className="opacity-70">{m.score}</span>
       <span className="font-semibold">{m.label}</span>

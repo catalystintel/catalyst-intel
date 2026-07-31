@@ -3,7 +3,6 @@ import Link from "next/link";
 
 import { PreLoginChrome } from "@/components/pre-login-chrome";
 import { buttonVariants } from "@/components/ui/button";
-import { isLocalDevUi, LOCAL_DEV_ONLY_LABEL } from "@/lib/dev/local-dev-ui";
 import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = {
@@ -98,23 +97,6 @@ export default function AboutPage() {
             ))}
           </ul>
         </section>
-
-        {isLocalDevUi() ? (
-          <section className="space-y-4 border-t border-[var(--desk-border)] pt-10">
-            <h2 className="text-lg font-semibold tracking-tight text-[var(--desk-text)]">
-              Local engineering notes{" "}
-              <span className="font-mono text-[0.72rem] font-medium tracking-normal text-[var(--desk-text-dim)]">
-                {LOCAL_DEV_ONLY_LABEL}
-              </span>
-            </h2>
-            <p className="text-pretty text-[var(--desk-text-secondary)]">
-              Vendor Source filters and outbound “original URL” proof links are
-              marked {LOCAL_DEV_ONLY_LABEL}. They exist here for ingest
-              debugging. Deployed desks hide them — traders treat Catalyst Intel
-              as the source.
-            </p>
-          </section>
-        ) : null}
 
         <section className="border-t border-[var(--desk-border)] pt-10">
           <p className="max-w-xl text-pretty text-[var(--desk-text-secondary)]">
