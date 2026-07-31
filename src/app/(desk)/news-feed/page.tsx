@@ -28,7 +28,7 @@ export default async function NewsFeedPage() {
   );
 
   return (
-    <PageEnter className="flex min-h-0 flex-1 flex-col p-4 sm:p-5">
+    <PageEnter className="flex min-h-0 flex-1 flex-col px-4 pt-4 pb-8 sm:px-5 sm:pt-5 sm:pb-10">
       <NewsFeed
         initialHeadlines={initialHeadlines}
         initialTotal={initialTotal}
