@@ -14,6 +14,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
+import { scrubEnvNamesFromMessage } from "@/lib/errors/user-facing";
 import type { IngestionRunSourceSnapshot } from "@/lib/jobs/record-ingestion-run";
 
 const PAGE_SIZE = 20;
@@ -359,7 +360,7 @@ function RunRows({
                   </p>
                   {s.message ? (
                     <p className="mt-1 break-words text-muted-foreground normal-case">
-                      {s.message}
+                      {scrubEnvNamesFromMessage(s.message)}
                     </p>
                   ) : null}
                 </li>

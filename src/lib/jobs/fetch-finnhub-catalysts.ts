@@ -483,7 +483,7 @@ export async function fetchFinnhubCatalysts(options?: {
   if (!apiKey) {
     return skippedSourceResult(
       "finnhub",
-      "FINNHUB_API_KEY is not set. Add it to enable Finnhub earnings/FDA/news/IPO ingest + profile enrichment.",
+      "Finnhub is not configured. Add credentials to enable earnings/FDA/news/IPO ingest + profile enrichment.",
     );
   }
 

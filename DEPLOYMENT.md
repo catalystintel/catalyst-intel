@@ -17,15 +17,18 @@ Three environments, one app:
   - pull requests **targeting `dev`**
     (This is a single Next.js app - tests cover both frontend pages and backend API/lib code.)
 - **Primary CD — CI Vercel deploy** (same `ci.yml`, `deploy` job after a green
-  `test-and-build`): on push to `main` runs `vercel deploy --prod`; on push to
-  `dev` runs `vercel deploy` (preview) and aliases to the stable staging host
+  `test-and-build`): runs `node scripts/vercel-ci-deploy.mjs` on push to
+  `dev`/`main`. Order: API redeploy of this SHA (team token can approve a
+  git-author **Blocked** deploy) → API `gitSource` branch tip → CLI file-upload
+  fallback. `dev` is aliased to
   `catalyst-intel-git-dev-zhbar10s-projects.vercel.app`. Uses repo secrets
   `VERCEL_TOKEN` / `VERCEL_ORG_ID` / `VERCEL_PROJECT_ID` (soft-skip with
-  `::warning::` if unset — same pattern as the unblock workflow). This is the
-  reliable path when Vercel’s git-author checks would **Block** a deploy.
+  `::warning::` if unset — same pattern as the unblock workflow). Prefer a
+  **personal** token from [vercel.com/account/tokens](https://vercel.com/account/tokens)
+  (team-owner) so the CLI fallback can resolve `/v2/user`.
 - **Vercel Git integration** (`vercel.json`): still may deploy on push to `dev` /
-  `main` (and matching feature-branch globs). Treat it as secondary; CI CLI
-  deploy is authoritative for staging/production tip.
+  `main` (and matching feature-branch globs). Treat it as secondary; CI deploy
+  is authoritative for staging/production tip.
 - **Backup — Unblock Omer CD heal** (`.github/workflows/vercel-unblock-redeploy.yml`):
   independent of CI (not gated on green checks). On every push to `main`,
   **polls the Vercel deployments API** for that commit SHA until it is
@@ -200,28 +203,28 @@ gh secret set STAGING_LIBSQL_URL --body "<same value as Vercel Preview LIBSQL_UR
 gh secret set STAGING_LIBSQL_AUTH_TOKEN --body "<same value as Vercel Preview LIBSQL_AUTH_TOKEN>"
 ```
 
-### Auto-heal Omer / access-blocked Vercel deploys (GitHub Actions CD)
+### Auto-heal Omer / access-blocked Vercel deploys (GitHub Actions)
 
-**Primary path:** after CI is green, `ci.yml`’s `deploy` job already ships
-`dev`/`main` via the Vercel CLI with the team token, so author **Blocked**
-git deploys should not stall staging or production.
+**Primary path:** after CI is green, `ci.yml`’s `deploy` job runs
+`scripts/vercel-ci-deploy.mjs` (API redeploy of this SHA → API gitSource →
+CLI file-upload fallback) with the team token, so author **Blocked** git
+deploys should not stall staging or production.
 
-**CD heal (independent of CI):** `.github/workflows/vercel-unblock-redeploy.yml`
-is **not** a job inside `ci.yml` and is **not** gated on green checks. It runs
-on:
+**Backup:** Vercel can still **Block** or **fail** a git-triggered deploy when:
+
+- the commit author is not a recognized team member (common for
+  `omer.nachshon` / `OmerNachshon` / `omer.nachshon@…` while only the Vercel
+  owner seat is linked), or
+- GitHub App / private-repo / permission / unauthorized access rejects the push
+
+The always-on workflow `.github/workflows/vercel-unblock-redeploy.yml` is
+**not part of CI**. It runs on:
 
 1. **Every push to `main`** — polls `GET /v6/deployments` for this commit SHA
    (~2.5s interval, 90s cap) until Vercel shows BLOCKED/ERROR (heal) or a
    healthy/building deploy, then runs the heal script
 2. **Every 10 minutes** (cron backup)
 3. **Manual** — Actions → Unblock Omer Vercel deploys → Run workflow
-
-Vercel can still **Block** or **fail** a git-triggered deploy when:
-
-- the commit author is not a recognized team member (common for
-  `omer.nachshon` / `OmerNachshon` / `omer.nachshon@…` while only the Vercel
-  owner seat is linked), or
-- GitHub App / private-repo / permission / unauthorized access rejects the push
 
 It heals **`main` → Production** and **`dev` → Preview**
 (`catalyst-intel-git-dev-zhbar10s-projects.vercel.app`) if a blocked git deploy
@@ -239,7 +242,7 @@ actor matching `omer.nachshon`, `Omer Nachshon`, `OmerNachshon`, or `nachshon`.
 
 Only `main` / Production and `dev` Preview are healed (feature branches ignored).
 
-**Redeploy fallback chain** (team `VERCEL_TOKEN` — this is how CD “allows” the
+**Redeploy fallback chain** (team `VERCEL_TOKEN` — this is how CI “allows” the
 deploy when git integration rejects the author):
 
 1. API redeploy same SHA (token owner approves the blocked commit)
@@ -252,7 +255,7 @@ Idempotent: skips if a newer healthy (`READY` / building) deploy already exists
 for the same commit SHA or the same branch after the failure.
 
 **Required GitHub Actions secrets** (shared by CI `deploy` and the unblock
-CD workflow — repo → Settings → Secrets and variables → Actions):
+cron — repo → Settings → Secrets and variables → Actions):
 
 | Secret              | Notes                                                                                                   |
 | ------------------- | ------------------------------------------------------------------------------------------------------- |
@@ -365,19 +368,18 @@ node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 After **Fetch all sources now** (or a successful cron-job.org run), the admin per-source
 breakdown and `raw_sources.provider` counts should include:
 
-| Provider            | Expected status                     | Notes                                                                                                                                                                                                                                                           |
-| ------------------- | ----------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `sec-edgar`         | `ok` (Form 4 via Atom `type=4`)     | Needs `SEC_EDGAR_USER_AGENT`                                                                                                                                                                                                                                    |
-| `nasdaq-halts`      | `ok`                                | No key                                                                                                                                                                                                                                                          |
-| `macro-calendar`    | `ok` (CPI / NFP / FOMC)             | No key; embedded BLS + Fed schedule                                                                                                                                                                                                                             |
-| `fmp-econ-calendar` | `ok` / `skipped`                    | Needs `FMP_API_KEY`; dedicated ~10m cron (not 1-min fetch/all). Soft-skip on 402. Desk rail prefers FMP when rows exist.                                                                                                                                        |
-| `openfda`           | `ok` (recent AP submissions only)   | No key; dates inside 30-day retention                                                                                                                                                                                                                           |
-| `clinicaltrials`    | `skipped` (paused)                  | Not fetched — daily lag; code kept (`fetchEnabled: false`)                                                                                                                                                                                                      |
-| `pr-wire`           | always runs (keyless public board)  | Free public impact scrape by default (newest-first; ~60m delay; upstream score≥70 floor). No article URLs on free receipts — Details uses structured extract. Optional auth full feed + `/a/{id}` body scrape via env. Label **PR Wire**; favored on duplicates |
-| `finnhub`           | `skipped` without `FINNHUB_API_KEY` | Soft-fail OK                                                                                                                                                                                                                                                    |
-| `polygon-news`      | `skipped` (paused)                  | Not fetched — hourly ticker news; code kept                                                                                                                                                                                                                     |
-| `polygon-prices`    | `skipped` without `POLYGON_API_KEY` | Soft-fail OK. Free tier: ~5 REST req/min; same-day aggs often 403 timeframe                                                                                                                                                                                     |
-| `form4api`          | `skipped` without `FORM4_API_KEY`   | EDGAR Form 4 still works via `sec-edgar`                                                                                                                                                                                                                        |
+| Provider         | Expected status                     | Notes                                                                                                                                       |
+| ---------------- | ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
+| `sec-edgar`      | `ok` (Form 4 via Atom `type=4`)     | Needs `SEC_EDGAR_USER_AGENT`                                                                                                                |
+| `nasdaq-halts`   | `ok`                                | No key                                                                                                                                      |
+| `macro-calendar` | `ok` (CPI / NFP / FOMC)             | No key; embedded BLS + Fed schedule                                                                                                         |
+| `openfda`        | `ok` (recent AP submissions only)   | No key; dates inside 30-day retention                                                                                                       |
+| `clinicaltrials` | `skipped` (paused)                  | Not fetched — daily lag; code kept (`fetchEnabled: false`)                                                                                  |
+| `pr-wire`        | always runs (keyless public board)  | Free public high-impact scrape by default (~60m delay, score≥70). Optional auth full feed via env. Label **PR Wire**; favored on duplicates |
+| `finnhub`        | `skipped` without `FINNHUB_API_KEY` | Soft-fail OK                                                                                                                                |
+| `polygon-news`   | `skipped` (paused)                  | Not fetched — hourly ticker news; code kept                                                                                                 |
+| `polygon-prices` | `skipped` without `POLYGON_API_KEY` | Soft-fail OK. Free tier: ~5 REST req/min; same-day aggs often 403 timeframe                                                                 |
+| `form4api`       | `skipped` without `FORM4_API_KEY`   | EDGAR Form 4 still works via `sec-edgar`                                                                                                    |
 
 On `/catalyst-feed`, Source column should show **SEC EDGAR**, **Nasdaq Halts**, **Macro**, **PR Wire**, **openFDA**,
 and/or **ClinicalTrials** (not only SEC).
@@ -477,13 +479,6 @@ with header `x-cron-secret: <CRON_SECRET>` every **1 minute** (`* * * * *`).
 
 Vercel Hobby allows one cron/day only; external cron-job.org gives reliable 1-min cadence without
 Vercel Pro. See [ARCHITECTURE.md](ARCHITECTURE.md).
-
-**Optional FMP economic calendar (every 10 minutes):** add a second cron-job.org job that POSTs
-`/api/admin/fetch/fmp-econ-calendar` with the same `x-cron-secret` on `*/10 * * * *`. Requires
-`FMP_API_KEY` on Vercel. Kept off the 1-min `fetch/all` path so a free-tier key (~250/day) lasts.
-Local: `npm run cron:fmp-econ`. Soft-skips when the key is missing or FMP returns HTTP 402
-(econ calendar often premium-gated). Desk calendar prefers FMP rows when present; otherwise the
-embedded keyless schedule.
 
 Polygon free-tier (~5 REST req/min) will still hit **429** under a 1-min full orchestrator. The
 app holds per-vendor `last_fetched_at` on rate-limit so the **next** tick widens the news window

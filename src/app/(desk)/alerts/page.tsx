@@ -11,17 +11,20 @@ export default async function AlertsPage() {
   }
 
   return (
-    <PageEnter className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-6 p-4 sm:p-5">
-      <div className="border-b border-[var(--desk-border)] pb-4">
+    <PageEnter className="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-6 p-4 sm:p-5">
+      <div className="border-b border-[var(--desk-border)] pb-5">
         <p className="font-mono text-[0.65rem] tracking-[0.2em] text-[var(--desk-live)] uppercase">
           Away desk
         </p>
         <h1 className="mt-1 text-xl font-semibold tracking-tight text-[var(--desk-text)] sm:text-2xl">
           Alert rules
         </h1>
-        <p className="mt-1 max-w-xl text-sm text-[var(--desk-text-muted)]">
-          Push, Telegram, webhook, and email rules for AH/PM bombs. Use Test to
-          fire against the latest catalyst.
+        <p className="mt-2 max-w-2xl text-sm leading-relaxed text-[var(--desk-text-muted)]">
+          Get AH/PM bombs when you are away from the tape. Pick Push, Telegram,
+          webhook, or email — each channel has a short setup checklist. After
+          you save a rule, use{" "}
+          <span className="text-[var(--desk-text)]">Test</span> to fire against
+          the latest catalyst and confirm delivery.
         </p>
       </div>
       <AlertRulesPanel />

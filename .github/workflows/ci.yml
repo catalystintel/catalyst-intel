@@ -7,10 +7,12 @@ name: CI
 # frontend pages and backend API routes/lib code, since this is a single
 # Next.js app) before merging.
 #
-# After a green push to `dev`/`main`, the `deploy` job ships via Vercel CLI
-# (team token) so commits are not stuck on Vercel git-author Blocked deploys.
-# Omer/access-block heal is intentionally separate (vercel-unblock-redeploy.yml:
-# push to main + API poll + 10-min cron) so a red CI deploy never skips the heal.
+# After a green push to `dev`/`main`, the `deploy` job ships via
+# scripts/vercel-ci-deploy.mjs (API redeploy / gitSource, CLI fallback) using
+# the team VERCEL_* secrets so git-author Blocked deploys do not stall
+# staging/production. Omer/access-block heal is intentionally separate
+# (vercel-unblock-redeploy.yml: push to main + API poll + 10-min cron) so a red
+# CI deploy never skips the heal.
 on:
   push:
     branches: [main, dev]
@@ -65,41 +67,16 @@ jobs:
         with:
           node-version: "24"
 
-      - name: Install Vercel CLI
+      - name: Install Vercel CLI (CLI fallback deploy)
         run: npm install -g vercel@56
 
-      - name: Deploy to Vercel (CLI / team token)
+      - name: Deploy to Vercel after green CI
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-          # Stable staging host for the `dev` branch (same as DEPLOYMENT.md /
-          # unblock workflow). CLI previews do not auto-get the git-dev alias.
+          VERCEL_PROJECT_NAME: catalyst-intel
+          DEPLOY_BRANCH: ${{ github.ref_name }}
+          GITHUB_SHA: ${{ github.sha }}
           STAGING_ALIAS: catalyst-intel-git-dev-zhbar10s-projects.vercel.app
-        run: |
-          if [ -z "$VERCEL_TOKEN" ]; then
-            echo "::warning::VERCEL_TOKEN not set — skipping CI Vercel deploy. See DEPLOYMENT.md."
-            exit 0
-          fi
-          if [ -z "$VERCEL_ORG_ID" ] || [ -z "$VERCEL_PROJECT_ID" ]; then
-            echo "::warning::VERCEL_ORG_ID / VERCEL_PROJECT_ID not set — skipping CI Vercel deploy. See DEPLOYMENT.md."
-            exit 0
-          fi
-
-          if [ "${{ github.ref_name }}" = "main" ]; then
-            echo "Deploying production from main…"
-            vercel deploy --prod --yes --scope "$VERCEL_ORG_ID"
-            exit 0
-          fi
-
-          echo "Deploying preview/staging from dev…"
-          OUT=$(vercel deploy --yes --scope "$VERCEL_ORG_ID")
-          echo "$OUT"
-          DEPLOY_URL=$(printf '%s\n' "$OUT" | grep -oE 'https://[^[:space:]]+\.vercel\.app' | tail -n1)
-          if [ -z "$DEPLOY_URL" ]; then
-            echo "::error::Could not parse Vercel deployment URL from CLI output"
-            exit 1
-          fi
-          echo "Preview URL: $DEPLOY_URL"
-          echo "Aliasing to staging: $STAGING_ALIAS"
-          vercel alias set "$DEPLOY_URL" "$STAGING_ALIAS" --scope "$VERCEL_ORG_ID"
+        run: node scripts/vercel-ci-deploy.mjs

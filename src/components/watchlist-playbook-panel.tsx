@@ -18,7 +18,10 @@ import {
   subscribeWatchlistChanged,
 } from "@/lib/watchlist/watchlist-events";
 import { cn } from "@/lib/utils";
-import { toUserFacingMessage } from "@/lib/errors/user-facing";
+import {
+  scrubEnvNamesFromMessage,
+  toUserFacingMessage,
+} from "@/lib/errors/user-facing";
 
 const ALL_CATEGORIES = Object.keys(CATEGORY_LABELS) as EventCategoryKey[];
 
@@ -84,10 +87,7 @@ export function WatchlistPlaybookPanel() {
         setNyseBySymbol(map);
         setNyseNote(
           nData.emptyReason
-            ? String(nData.emptyReason).replace(
-                /FINNHUB_API_KEY|POLYGON_API_KEY|RESEND_API_KEY/gi,
-                "market data",
-              )
+            ? scrubEnvNamesFromMessage(String(nData.emptyReason))
             : nData.total
               ? `${nData.total.toLocaleString()} NYSE listings loaded`
               : null,
