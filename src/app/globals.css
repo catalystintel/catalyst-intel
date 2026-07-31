@@ -389,6 +389,17 @@
     letter-spacing: 0.1em;
   }
 
+  /* Sticky feed column headers must paint an opaque surface. Without a
+     solid background (and a stacking context above animated rows), scrolled
+     tape text shows through the Symbol/Title/Time/Actions labels. */
+  .feed-sticky-cols {
+    background-color: var(--desk-header);
+  }
+
+  .feed-sticky-cols > [role="columnheader"] {
+    background-color: var(--desk-header);
+  }
+
   .desk-grid {
     background-color: var(--background);
     background-image:
