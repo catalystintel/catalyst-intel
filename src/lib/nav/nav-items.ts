@@ -4,7 +4,6 @@ import {
   ChartNoAxesCombined,
   LayoutDashboard,
   Newspaper,
-  Settings,
   Star,
   Wrench,
   type LucideIcon,
@@ -37,6 +36,7 @@ export interface NavItem {
   comingSoonHint?: string;
 }
 
+/** Workspace destinations shown to every signed-in user. */
 const PRIMARY_NAV: NavItem[] = [
   {
     key: "live",
@@ -64,9 +64,9 @@ const PRIMARY_NAV: NavItem[] = [
     icon: ChartNoAxesCombined,
     href: "/analytics",
   },
-  { key: "profile", label: "Settings", icon: Settings, href: "/profile" },
 ];
 
+/** Admin console — sidebar System section only; settings live in the account menu. */
 const ADMIN_NAV: NavItem = {
   key: "admin",
   label: "Admin",
@@ -77,12 +77,13 @@ const ADMIN_NAV: NavItem = {
 
 /**
  * Builds the sidebar's primary nav, appending the admin entry only for admins.
+ * Profile/settings are not listed here — they open from the account menu only.
  *
  * @param isAdmin - Whether the current user is on the admin allowlist.
  * @returns Ordered nav items for the sidebar.
  */
 export function getPrimaryNav(isAdmin: boolean): NavItem[] {
-  return isAdmin ? [...PRIMARY_NAV, ADMIN_NAV] : PRIMARY_NAV;
+  return isAdmin ? [...PRIMARY_NAV, ADMIN_NAV] : [...PRIMARY_NAV];
 }
 
 /** Resolve active nav key from the current URL (shared desk layout). */
