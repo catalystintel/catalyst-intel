@@ -1,30 +1,27 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { ChevronsUpDown, FlaskConical, Plus, Trash2 } from "lucide-react";
+import { useCallback, useEffect, useId, useState } from "react";
+import {
+  Bell,
+  CheckCircle2,
+  CircleAlert,
+  FlaskConical,
+  Info,
+  Link2,
+  Mail,
+  MessageCircle,
+  Plus,
+  Trash2,
+} from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuRadioGroup,
-  DropdownMenuRadioItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { SkeletonCard } from "@/components/loading-skeleton";
 import type { AlertChannel, AlertRuleConditions } from "@/db/schema";
 import { useWebPush } from "@/hooks/use-web-push";
 import { toUserFacingMessage } from "@/lib/errors/user-facing";
 import { cn } from "@/lib/utils";
-
-const ALERT_CHANNEL_OPTIONS: { value: AlertChannel; label: string }[] = [
-  { value: "push", label: "Push (browser, free)" },
-  { value: "telegram", label: "Telegram" },
-  { value: "webhook", label: "Webhook" },
-  { value: "email", label: "Email" },
-];
 
 interface AlertRuleRow {
   id: number;
@@ -38,7 +35,52 @@ interface AlertRuleRow {
   createdAt: string;
 }
 
+type ChannelMeta = {
+  value: AlertChannel;
+  label: string;
+  blurb: string;
+  Icon: typeof Bell;
+};
+
+const CHANNELS: ChannelMeta[] = [
+  {
+    value: "push",
+    label: "Push",
+    blurb: "Browser notifications — free, works with the tab closed",
+    Icon: Bell,
+  },
+  {
+    value: "telegram",
+    label: "Telegram",
+    blurb: "Message the bot, paste your chat ID, get fires on your phone",
+    Icon: MessageCircle,
+  },
+  {
+    value: "webhook",
+    label: "Webhook",
+    blurb: "POST JSON to any HTTPS URL (Slack, Discord, Zapier…)",
+    Icon: Link2,
+  },
+  {
+    value: "email",
+    label: "Email",
+    blurb: "Delivered to the email on your signed-in account",
+    Icon: Mail,
+  },
+];
+
+function channelIcon(channel: AlertChannel) {
+  return CHANNELS.find((c) => c.value === channel)?.Icon ?? Bell;
+}
+
+function channelLabel(channel: AlertChannel) {
+  return CHANNELS.find((c) => c.value === channel)?.label ?? channel;
+}
+
+type ReadyState = "ready" | "action" | "blocked";
+
 export function AlertRulesPanel() {
+  const formId = useId();
   const [rules, setRules] = useState<AlertRuleRow[]>([]);
   const [emailConfigured, setEmailConfigured] = useState(false);
   const [pushAvailable, setPushAvailable] = useState(false);
@@ -46,6 +88,7 @@ export function AlertRulesPanel() {
   const [telegramConfigured, setTelegramConfigured] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [testingId, setTestingId] = useState<number | null>(null);
 
   const [name, setName] = useState("AH/PM bombs");
   const [channel, setChannel] = useState<AlertChannel>("push");
@@ -87,8 +130,53 @@ export function AlertRulesPanel() {
     return () => window.clearTimeout(id);
   }, [load]);
 
+  function channelReady(ch: AlertChannel): {
+    state: ReadyState;
+    label: string;
+  } {
+    switch (ch) {
+      case "push":
+        if (!pushAvailable)
+          return { state: "blocked", label: "Not on this deploy" };
+        if (webPush.status === "subscribed")
+          return { state: "ready", label: "Browser ready" };
+        if (webPush.status === "denied")
+          return { state: "blocked", label: "Permission denied" };
+        if (webPush.status === "unsupported")
+          return { state: "blocked", label: "Unsupported browser" };
+        return { state: "action", label: "Enable notifications" };
+      case "telegram":
+        if (!telegramConfigured)
+          return { state: "blocked", label: "Bot not configured" };
+        return { state: "ready", label: "Bot ready" };
+      case "webhook":
+        return { state: "ready", label: "Always available" };
+      case "email":
+        if (!emailConfigured)
+          return { state: "blocked", label: "Email not configured" };
+        if (!sessionEmail)
+          return { state: "blocked", label: "No account email" };
+        return { state: "ready", label: "Delivery ready" };
+    }
+  }
+
+  function canSave(): boolean {
+    const ready = channelReady(channel);
+    if (ready.state === "blocked") return false;
+    if (channel === "webhook" && !webhookUrl.trim()) return false;
+    if (channel === "telegram" && !telegramChatId.trim()) return false;
+    if (channel === "push" && webPush.status !== "subscribed") return false;
+    if (channel === "email" && (!emailConfigured || !sessionEmail))
+      return false;
+    return true;
+  }
+
   async function createRule(e: React.FormEvent) {
     e.preventDefault();
+    if (!canSave()) {
+      toast.error("Finish channel setup before saving.");
+      return;
+    }
     setSaving(true);
     try {
       const conditions: AlertRuleConditions = {
@@ -110,8 +198,9 @@ export function AlertRulesPanel() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Could not create rule.");
       setWebhookUrl("");
+      if (channel === "telegram") setTelegramChatId("");
       await load();
-      toast.success(`Rule "${name}" saved`);
+      toast.success(`Rule "${name}" saved — use Test to verify delivery.`);
     } catch (err) {
       toast.error(toUserFacingMessage(err, "Could not create rule."));
     } finally {
@@ -119,7 +208,7 @@ export function AlertRulesPanel() {
     }
   }
 
-  async function deleteRule(id: number, name: string) {
+  async function deleteRule(id: number, ruleName: string) {
     setSaving(true);
     try {
       const res = await fetch(`/api/alert-rules?id=${id}`, {
@@ -129,7 +218,7 @@ export function AlertRulesPanel() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Could not delete rule.");
       await load();
-      toast.success(`Rule "${name}" deleted`);
+      toast.success(`Rule "${ruleName}" deleted`);
     } catch (err) {
       toast.error(toUserFacingMessage(err, "Could not delete rule."));
     } finally {
@@ -138,6 +227,7 @@ export function AlertRulesPanel() {
   }
 
   async function testRule(id: number) {
+    setTestingId(id);
     setSaving(true);
     try {
       const res = await fetch("/api/alert-rules/test", {
@@ -165,267 +255,697 @@ export function AlertRulesPanel() {
       toast.error(toUserFacingMessage(err, "Test fire failed."));
     } finally {
       setSaving(false);
+      setTestingId(null);
     }
   }
 
   if (!loaded) {
     return (
-      <div className="flex flex-col gap-8">
-        <SkeletonCard lines={3} />
+      <div className="flex flex-col gap-6">
+        <SkeletonCard lines={2} />
+        <SkeletonCard lines={4} />
         <SkeletonCard lines={2} />
       </div>
     );
   }
 
+  const activeReady = channelReady(channel);
+
   return (
     <div className="flex flex-col gap-8">
-      <section className="overflow-hidden rounded-xl border border-[var(--desk-border)] bg-[var(--desk-panel)]">
+      {/* How it works */}
+      <section
+        aria-labelledby={`${formId}-howto`}
+        className="alert-panel-enter overflow-hidden rounded-xl border border-[var(--desk-border)] bg-[var(--desk-panel)]"
+      >
         <div className="border-b border-[var(--desk-border)] px-4 py-4 sm:px-5">
-          <h2 className="text-sm font-semibold text-[var(--desk-text)]">
-            New alert rule
-          </h2>
-          <p className="mt-1 text-sm text-[var(--desk-text-muted)]">
-            Push (browser) is free and works even when this tab is closed —
-            recommended. Telegram and email need delivery to be enabled for this
-            deployment
-            {telegramConfigured ? " (Telegram ready)" : ""}
-            {emailConfigured ? " (email ready)" : ""}. Webhook always works.
-          </p>
-        </div>
-        <form
-          onSubmit={createRule}
-          className="flex flex-col gap-3 px-4 py-4 sm:px-5"
-        >
-          <div className="flex flex-wrap gap-2">
-            <Input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Rule name"
-              aria-label="Rule name"
-              className="h-9 w-48 border-[var(--desk-border-strong)] bg-[var(--desk-overlay-soft)]"
-            />
-            <DropdownMenu>
-              <DropdownMenuTrigger
-                type="button"
-                aria-label="Channel"
-                className={cn(
-                  "inline-flex h-9 min-w-[12.5rem] items-center justify-between gap-2 rounded-md border border-[var(--desk-border-strong)] bg-[var(--desk-overlay-soft)] px-2.5 font-mono text-xs text-[var(--desk-text)]",
-                  "transition-colors outline-none hover:bg-[var(--desk-overlay-strong)]",
-                  "focus-visible:border-[var(--desk-text-dim)] focus-visible:ring-1 focus-visible:ring-[var(--desk-border-strong)]",
-                  "data-popup-open:border-[var(--desk-text-dim)] data-popup-open:bg-[var(--desk-overlay-strong)]",
-                )}
+          <div className="flex items-start gap-3">
+            <span className="mt-0.5 grid size-8 shrink-0 place-items-center rounded-lg border border-[var(--desk-border-strong)] bg-[var(--desk-overlay-soft)] text-[var(--desk-live)]">
+              <Info className="size-4" aria-hidden />
+            </span>
+            <div>
+              <h2
+                id={`${formId}-howto`}
+                className="text-sm font-semibold text-[var(--desk-text)]"
               >
-                <span className="truncate">
-                  {ALERT_CHANNEL_OPTIONS.find((o) => o.value === channel)
-                    ?.label ?? channel}
-                </span>
-                <ChevronsUpDown className="size-3.5 shrink-0 opacity-60" />
-              </DropdownMenuTrigger>
-              <DropdownMenuContent
-                align="start"
-                side="bottom"
-                sideOffset={6}
-                positionMethod="fixed"
-                className={cn(
-                  "min-w-[12.5rem] rounded-md border border-[var(--desk-border-strong)] bg-[var(--desk-panel)] p-1",
-                  "text-[var(--desk-text)] shadow-lg ring-0",
-                )}
-              >
-                <DropdownMenuRadioGroup
-                  value={channel}
-                  onValueChange={(value) => {
-                    if (
-                      value === "push" ||
-                      value === "telegram" ||
-                      value === "webhook" ||
-                      value === "email"
-                    ) {
-                      setChannel(value);
-                    }
-                  }}
-                >
-                  {ALERT_CHANNEL_OPTIONS.map((opt) => (
-                    <DropdownMenuRadioItem
-                      key={opt.value}
-                      value={opt.value}
-                      className={cn(
-                        "rounded-sm font-mono text-xs text-[var(--desk-text-secondary)]",
-                        "focus:bg-[var(--desk-overlay-strong)] focus:text-[var(--desk-text)]",
-                        "data-checked:text-[var(--desk-text)]",
-                      )}
-                    >
-                      {opt.label}
-                    </DropdownMenuRadioItem>
-                  ))}
-                </DropdownMenuRadioGroup>
-              </DropdownMenuContent>
-            </DropdownMenu>
-            <Input
-              value={minImpact}
-              onChange={(e) => setMinImpact(e.target.value)}
-              placeholder="Min impact"
-              aria-label="Minimum impact score"
-              className="h-9 w-28 border-[var(--desk-border-strong)] bg-[var(--desk-overlay-soft)] font-mono text-xs"
-            />
-            <label className="inline-flex items-center gap-2 font-mono text-xs text-[var(--desk-text-muted)]">
-              <input
-                type="checkbox"
-                checked={sessionsAhPm}
-                onChange={(e) => setSessionsAhPm(e.target.checked)}
-              />
-              AH / PM only
-            </label>
-          </div>
-          {channel === "webhook" ? (
-            <Input
-              value={webhookUrl}
-              onChange={(e) => setWebhookUrl(e.target.value)}
-              placeholder="https://hooks.example.com/…"
-              aria-label="Webhook URL"
-              className="h-9 border-[var(--desk-border-strong)] bg-[var(--desk-overlay-soft)] font-mono text-xs"
-            />
-          ) : null}
-          {channel === "email" ? (
-            <Input
-              value={sessionEmail}
-              readOnly
-              placeholder="Signed-in email"
-              aria-label="Email recipient (signed-in account)"
-              type="email"
-              className="h-9 border-[var(--desk-border-strong)] bg-[var(--desk-overlay-soft)] font-mono text-xs"
-            />
-          ) : null}
-          {channel === "telegram" ? (
-            <div className="flex flex-col gap-1.5">
-              <Input
-                value={telegramChatId}
-                onChange={(e) => setTelegramChatId(e.target.value)}
-                placeholder="Chat ID (message the bot to get yours)"
-                aria-label="Telegram chat ID"
-                className="h-9 border-[var(--desk-border-strong)] bg-[var(--desk-overlay-soft)] font-mono text-xs"
-              />
-              <p className="font-mono text-[0.7rem] text-[var(--desk-text-dim)]">
-                Message the bot once (any text) — it replies with your chat ID
-                to paste here.
+                How alert rules work
+              </h2>
+              <p className="mt-1 text-sm text-[var(--desk-text-muted)]">
+                Rules watch the live tape. When a catalyst matches your filters,
+                we fire on the channel you chose — even if you are away from the
+                desk.
               </p>
             </div>
-          ) : null}
-          {channel === "push" ? (
-            <div className="flex items-center gap-2">
-              {!pushAvailable ? (
-                <p className="font-mono text-xs text-[var(--desk-text-dim)]">
-                  Push notifications aren&apos;t available on this deployment.
-                </p>
-              ) : webPush.status === "subscribed" ? (
-                <p className="font-mono text-xs text-[var(--desk-live)]">
-                  This browser is subscribed to push.
-                </p>
-              ) : webPush.status === "denied" ? (
-                <p className="font-mono text-xs text-destructive">
-                  Notification permission denied — enable it in browser
-                  settings.
-                </p>
-              ) : webPush.status === "unsupported" ? (
-                <p className="font-mono text-xs text-[var(--desk-text-dim)]">
-                  This browser doesn&apos;t support push notifications.
-                </p>
-              ) : (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => void webPush.subscribe()}
-                  className="font-mono text-xs"
-                >
-                  Enable browser notifications
-                </Button>
+          </div>
+        </div>
+        <ol className="grid gap-0 sm:grid-cols-3">
+          {[
+            {
+              n: "1",
+              title: "Pick a channel",
+              body: "Push, Telegram, webhook, or email — each card shows if it is ready on this deployment.",
+            },
+            {
+              n: "2",
+              title: "Finish setup",
+              body: "Follow the short checklist for that channel (enable push, paste a chat ID or webhook URL).",
+            },
+            {
+              n: "3",
+              title: "Save, then Test",
+              body: "Save the rule, then hit Test to fire against the latest catalyst and confirm delivery.",
+            },
+          ].map((step, i) => (
+            <li
+              key={step.n}
+              className={cn(
+                "alert-step-enter relative flex gap-3 px-4 py-4 sm:px-5",
+                i < 2 &&
+                  "border-b border-[var(--desk-border)] sm:border-r sm:border-b-0",
               )}
-            </div>
-          ) : null}
-          <Button
-            type="submit"
-            disabled={saving}
-            className="btn-press w-fit gap-1.5 bg-[var(--desk-live)] text-[#121212] hover:brightness-110"
+              style={{ animationDelay: `${80 + i * 70}ms` }}
+            >
+              <span
+                className="grid size-7 shrink-0 place-items-center rounded-md bg-[var(--desk-live)] font-mono text-[0.7rem] font-bold text-[#121212]"
+                aria-hidden
+              >
+                {step.n}
+              </span>
+              <div className="min-w-0">
+                <p className="text-sm font-medium text-[var(--desk-text)]">
+                  {step.title}
+                </p>
+                <p className="mt-1 text-xs leading-relaxed text-[var(--desk-text-muted)]">
+                  {step.body}
+                </p>
+              </div>
+            </li>
+          ))}
+        </ol>
+      </section>
+
+      {/* Create rule */}
+      <section
+        aria-labelledby={`${formId}-create`}
+        className="alert-panel-enter overflow-hidden rounded-xl border border-[var(--desk-border)] bg-[var(--desk-panel)]"
+        style={{ animationDelay: "60ms" }}
+      >
+        <div className="border-b border-[var(--desk-border)] px-4 py-4 sm:px-5">
+          <h2
+            id={`${formId}-create`}
+            className="text-sm font-semibold text-[var(--desk-text)]"
           >
-            <Plus className="size-3.5" />
-            Save rule
-          </Button>
+            Create a rule
+          </h2>
+          <p className="mt-1 text-sm text-[var(--desk-text-muted)]">
+            Start with where you want the alert. Setup fields appear for that
+            channel only.
+          </p>
+        </div>
+
+        <form
+          onSubmit={createRule}
+          className="flex flex-col gap-6 px-4 py-5 sm:px-5"
+        >
+          {/* Channel picker */}
+          <fieldset>
+            <legend className="mb-3 font-mono text-[0.65rem] tracking-[0.16em] text-[var(--desk-text-dim)] uppercase">
+              1 · Delivery channel
+            </legend>
+            <div
+              className="grid gap-2 sm:grid-cols-2"
+              role="radiogroup"
+              aria-label="Alert channel"
+            >
+              {CHANNELS.map((opt, i) => {
+                const ready = channelReady(opt.value);
+                const selected = channel === opt.value;
+                const Icon = opt.Icon;
+                return (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    role="radio"
+                    aria-checked={selected}
+                    onClick={() => setChannel(opt.value)}
+                    className={cn(
+                      "alert-channel-card btn-press group relative flex items-start gap-3 rounded-xl border px-3.5 py-3.5 text-left transition-[border-color,background-color,box-shadow,transform] duration-200",
+                      selected
+                        ? "border-[var(--desk-live)] bg-[color-mix(in_srgb,var(--desk-live)_10%,transparent)] shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--desk-live)_35%,transparent)]"
+                        : "border-[var(--desk-border-strong)] bg-[var(--desk-overlay-soft)] hover:border-[var(--desk-text-dim)] hover:bg-[var(--desk-overlay-strong)]",
+                    )}
+                    style={{ animationDelay: `${100 + i * 50}ms` }}
+                  >
+                    <span
+                      className={cn(
+                        "grid size-10 shrink-0 place-items-center rounded-lg border transition-colors duration-200",
+                        selected
+                          ? "border-[color-mix(in_srgb,var(--desk-live)_45%,transparent)] bg-[color-mix(in_srgb,var(--desk-live)_16%,transparent)] text-[var(--desk-live)]"
+                          : "border-[var(--desk-border-strong)] bg-[var(--desk-panel)] text-[var(--desk-text-muted)] group-hover:text-[var(--desk-text)]",
+                      )}
+                    >
+                      <Icon className="size-[1.15rem]" aria-hidden />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="flex flex-wrap items-center gap-2">
+                        <span className="text-sm font-semibold text-[var(--desk-text)]">
+                          {opt.label}
+                        </span>
+                        <ReadyBadge state={ready.state} label={ready.label} />
+                      </span>
+                      <span className="mt-1 block text-xs leading-relaxed text-[var(--desk-text-muted)]">
+                        {opt.blurb}
+                      </span>
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </fieldset>
+
+          {/* Channel setup */}
+          <div
+            key={channel}
+            className="alert-channel-panel rounded-xl border border-[var(--desk-border)] bg-[var(--desk-header)]/60 px-4 py-4 sm:px-5"
+          >
+            <p className="mb-3 font-mono text-[0.65rem] tracking-[0.16em] text-[var(--desk-text-dim)] uppercase">
+              2 · Set up {channelLabel(channel)}
+            </p>
+            <ChannelSetup
+              channel={channel}
+              ready={activeReady}
+              pushAvailable={pushAvailable}
+              webPush={webPush}
+              telegramConfigured={telegramConfigured}
+              telegramChatId={telegramChatId}
+              setTelegramChatId={setTelegramChatId}
+              webhookUrl={webhookUrl}
+              setWebhookUrl={setWebhookUrl}
+              emailConfigured={emailConfigured}
+              sessionEmail={sessionEmail}
+            />
+          </div>
+
+          {/* Conditions */}
+          <fieldset>
+            <legend className="mb-3 font-mono text-[0.65rem] tracking-[0.16em] text-[var(--desk-text-dim)] uppercase">
+              3 · When to fire
+            </legend>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label className="flex flex-col gap-1.5">
+                <span className="text-xs font-medium text-[var(--desk-text-secondary)]">
+                  Rule name
+                </span>
+                <Input
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="e.g. AH/PM bombs"
+                  aria-label="Rule name"
+                  className="h-10 border-[var(--desk-border-strong)] bg-[var(--desk-overlay-soft)]"
+                />
+              </label>
+              <label className="flex flex-col gap-1.5">
+                <span className="flex items-center justify-between text-xs font-medium text-[var(--desk-text-secondary)]">
+                  <span>Minimum impact score</span>
+                  <span className="font-mono text-[var(--desk-live)]">
+                    {minImpact || "0"}+
+                  </span>
+                </span>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="range"
+                    min={0}
+                    max={100}
+                    step={5}
+                    value={Number(minImpact) || 0}
+                    onChange={(e) => setMinImpact(e.target.value)}
+                    aria-label="Minimum impact score"
+                    className="alert-range h-2 w-full flex-1 cursor-pointer appearance-none rounded-full bg-[var(--desk-overlay-strong)] accent-[var(--desk-live)]"
+                  />
+                  <Input
+                    value={minImpact}
+                    onChange={(e) => setMinImpact(e.target.value)}
+                    inputMode="numeric"
+                    aria-label="Minimum impact score value"
+                    className="h-10 w-16 border-[var(--desk-border-strong)] bg-[var(--desk-overlay-soft)] text-center font-mono text-xs"
+                  />
+                </div>
+                <span className="text-[0.7rem] text-[var(--desk-text-dim)]">
+                  Higher = fewer, more material alerts. 70 is a solid AH/PM
+                  default.
+                </span>
+              </label>
+            </div>
+
+            <button
+              type="button"
+              role="switch"
+              aria-checked={sessionsAhPm}
+              onClick={() => setSessionsAhPm((v) => !v)}
+              className={cn(
+                "btn-press mt-4 flex w-full items-center justify-between gap-3 rounded-xl border px-4 py-3 text-left transition-colors duration-200",
+                sessionsAhPm
+                  ? "border-[color-mix(in_srgb,var(--desk-live)_40%,transparent)] bg-[color-mix(in_srgb,var(--desk-live)_08%,transparent)]"
+                  : "border-[var(--desk-border-strong)] bg-[var(--desk-overlay-soft)]",
+              )}
+            >
+              <span>
+                <span className="block text-sm font-medium text-[var(--desk-text)]">
+                  After-hours / pre-market only
+                </span>
+                <span className="mt-0.5 block text-xs text-[var(--desk-text-muted)]">
+                  {sessionsAhPm
+                    ? "Fires on AH and PM sessions — the classic bomb window."
+                    : "Fires in any session (regular hours included)."}
+                </span>
+              </span>
+              <span
+                aria-hidden
+                className={cn(
+                  "relative h-6 w-11 shrink-0 rounded-full transition-colors duration-200",
+                  sessionsAhPm
+                    ? "bg-[var(--desk-live)]"
+                    : "bg-[var(--desk-overlay-strong)]",
+                )}
+              >
+                <span
+                  className={cn(
+                    "absolute top-0.5 left-0.5 size-5 rounded-full bg-[#121212] shadow transition-transform duration-200",
+                    sessionsAhPm && "translate-x-5",
+                  )}
+                />
+              </span>
+            </button>
+          </fieldset>
+
+          <div className="flex flex-col gap-2 border-t border-[var(--desk-border)] pt-4 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-xs text-[var(--desk-text-dim)]">
+              {canSave()
+                ? "Ready to save. After saving, use Test on the rule to confirm delivery."
+                : activeReady.state === "blocked"
+                  ? `${channelLabel(channel)} is not available yet — pick another channel or fix the blocker above.`
+                  : "Complete the channel checklist above, then save."}
+            </p>
+            <Button
+              type="submit"
+              disabled={saving || !canSave()}
+              className="btn-press w-full gap-1.5 bg-[var(--desk-live)] text-[#121212] hover:brightness-110 sm:w-auto"
+            >
+              <Plus className="size-3.5" />
+              Save rule
+            </Button>
+          </div>
         </form>
       </section>
 
-      <section className="overflow-hidden rounded-xl border border-[var(--desk-border)] bg-[var(--desk-panel)]">
-        <div className="border-b border-[var(--desk-border)] px-4 py-4 sm:px-5">
-          <h2 className="text-sm font-semibold text-[var(--desk-text)]">
-            Saved rules
-          </h2>
+      {/* Saved rules */}
+      <section
+        aria-labelledby={`${formId}-saved`}
+        className="alert-panel-enter overflow-hidden rounded-xl border border-[var(--desk-border)] bg-[var(--desk-panel)]"
+        style={{ animationDelay: "120ms" }}
+      >
+        <div className="flex items-center justify-between gap-3 border-b border-[var(--desk-border)] px-4 py-4 sm:px-5">
+          <div>
+            <h2
+              id={`${formId}-saved`}
+              className="text-sm font-semibold text-[var(--desk-text)]"
+            >
+              Your rules
+            </h2>
+            <p className="mt-1 text-sm text-[var(--desk-text-muted)]">
+              {rules.length === 0
+                ? "None yet — create one above."
+                : `${rules.length} active · Test fires against the latest catalyst on the tape.`}
+            </p>
+          </div>
+          {rules.length > 0 ? (
+            <span className="hidden font-mono text-[0.65rem] tracking-[0.12em] text-[var(--desk-text-dim)] uppercase sm:inline">
+              {rules.length} saved
+            </span>
+          ) : null}
         </div>
+
         {rules.length === 0 ? (
-          <p className="px-4 py-6 font-mono text-xs text-[var(--desk-text-dim)] sm:px-5">
-            No rules yet.
-          </p>
+          <div className="flex flex-col items-center gap-3 px-4 py-10 text-center sm:px-5">
+            <span className="grid size-12 place-items-center rounded-xl border border-dashed border-[var(--desk-border-strong)] bg-[var(--desk-overlay-soft)] text-[var(--desk-text-dim)]">
+              <Bell className="size-5" aria-hidden />
+            </span>
+            <p className="text-sm text-[var(--desk-text-muted)]">
+              No rules yet. Pick a channel, finish setup, and save your first
+              one.
+            </p>
+          </div>
         ) : (
           <ul className="divide-y divide-[var(--desk-border)]">
-            {rules.map((rule) => (
-              <li
-                key={rule.id}
-                className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-5"
-              >
-                <div className="min-w-0">
-                  <p className="font-mono text-sm text-[var(--desk-text)]">
-                    {rule.name}{" "}
-                    <span
-                      className={cn(
-                        "ml-1 text-[0.7rem] uppercase",
-                        rule.enabled
-                          ? "text-[var(--desk-live)]"
-                          : "text-[var(--desk-text-dim)]",
-                      )}
-                    >
-                      {rule.channel}
+            {rules.map((rule, i) => {
+              const Icon = channelIcon(rule.channel);
+              const destination =
+                rule.channel === "webhook"
+                  ? rule.webhookUrl
+                  : rule.channel === "email"
+                    ? rule.emailTo
+                    : rule.channel === "telegram"
+                      ? `Chat ${rule.telegramChatId ?? "—"}`
+                      : "This browser’s push subscriptions";
+              return (
+                <li
+                  key={rule.id}
+                  className="alert-rule-row flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5"
+                  style={{ animationDelay: `${40 + i * 45}ms` }}
+                >
+                  <div className="flex min-w-0 items-start gap-3">
+                    <span className="mt-0.5 grid size-9 shrink-0 place-items-center rounded-lg border border-[var(--desk-border-strong)] bg-[var(--desk-overlay-soft)] text-[var(--desk-live)]">
+                      <Icon className="size-4" aria-hidden />
                     </span>
-                  </p>
-                  <p className="mt-0.5 truncate font-mono text-[0.7rem] text-[var(--desk-text-dim)]">
-                    {rule.channel === "webhook"
-                      ? rule.webhookUrl
-                      : rule.channel === "email"
-                        ? rule.emailTo
-                        : rule.channel === "telegram"
-                          ? `Chat ${rule.telegramChatId ?? "—"}`
-                          : "This browser's push subscriptions"}
-                    {" · "}
-                    min {rule.conditions.minImpact ?? 0}
-                    {rule.conditions.sessions?.length
-                      ? ` · ${rule.conditions.sessions.join("/")}`
-                      : ""}
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    disabled={saving}
-                    onClick={() => void testRule(rule.id)}
-                    className="gap-1.5 font-mono text-xs"
-                  >
-                    <FlaskConical className="size-3.5" />
-                    Test
-                  </Button>
-                  <button
-                    type="button"
-                    aria-label={`Delete ${rule.name}`}
-                    disabled={saving}
-                    onClick={() => void deleteRule(rule.id, rule.name)}
-                    className="rounded-md p-2 text-[var(--desk-text-muted)] hover:bg-[var(--desk-overlay-strong)] hover:text-destructive"
-                  >
-                    <Trash2 className="size-4" />
-                  </button>
-                </div>
-              </li>
-            ))}
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium text-[var(--desk-text)]">
+                        {rule.name}
+                      </p>
+                      <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-[var(--desk-text-muted)]">
+                        <span className="font-medium text-[var(--desk-text-secondary)]">
+                          {channelLabel(rule.channel)}
+                        </span>
+                        <span
+                          aria-hidden
+                          className="text-[var(--desk-text-dim)]"
+                        >
+                          ·
+                        </span>
+                        <span className="truncate font-mono text-[0.7rem] text-[var(--desk-text-dim)]">
+                          {destination}
+                        </span>
+                      </p>
+                      <p className="mt-1 font-mono text-[0.65rem] tracking-wide text-[var(--desk-text-dim)] uppercase">
+                        Min impact {rule.conditions.minImpact ?? 0}
+                        {rule.conditions.sessions?.length
+                          ? ` · ${rule.conditions.sessions.join(" / ")}`
+                          : ""}
+                        {rule.enabled ? "" : " · paused"}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 sm:shrink-0">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      disabled={saving}
+                      onClick={() => void testRule(rule.id)}
+                      className="btn-press gap-1.5 border-[var(--desk-border-strong)] font-mono text-xs"
+                    >
+                      <FlaskConical
+                        className={cn(
+                          "size-3.5",
+                          testingId === rule.id && "animate-spin",
+                        )}
+                      />
+                      {testingId === rule.id ? "Firing…" : "Test"}
+                    </Button>
+                    <button
+                      type="button"
+                      aria-label={`Delete ${rule.name}`}
+                      disabled={saving}
+                      onClick={() => void deleteRule(rule.id, rule.name)}
+                      className="btn-press rounded-md p-2 text-[var(--desk-text-muted)] transition-colors hover:bg-[var(--desk-overlay-strong)] hover:text-destructive"
+                    >
+                      <Trash2 className="size-4" />
+                    </button>
+                  </div>
+                </li>
+              );
+            })}
           </ul>
         )}
       </section>
+    </div>
+  );
+}
+
+function ReadyBadge({ state, label }: { state: ReadyState; label: string }) {
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 font-mono text-[0.6rem] tracking-wide uppercase",
+        state === "ready" &&
+          "bg-[color-mix(in_srgb,var(--desk-live-status)_14%,transparent)] text-[var(--desk-live-status)]",
+        state === "action" &&
+          "bg-[color-mix(in_srgb,var(--desk-live)_14%,transparent)] text-[var(--desk-live)]",
+        state === "blocked" &&
+          "bg-[var(--desk-overlay-strong)] text-[var(--desk-text-dim)]",
+      )}
+    >
+      {state === "ready" ? (
+        <CheckCircle2 className="size-2.5" aria-hidden />
+      ) : (
+        <CircleAlert className="size-2.5" aria-hidden />
+      )}
+      {label}
+    </span>
+  );
+}
+
+function SetupSteps({ steps }: { steps: string[] }) {
+  return (
+    <ol className="mb-4 space-y-2">
+      {steps.map((step, i) => (
+        <li
+          key={step}
+          className="flex gap-2.5 text-sm text-[var(--desk-text-secondary)]"
+        >
+          <span
+            className="mt-0.5 grid size-5 shrink-0 place-items-center rounded-full border border-[var(--desk-border-strong)] font-mono text-[0.6rem] text-[var(--desk-text-dim)]"
+            aria-hidden
+          >
+            {i + 1}
+          </span>
+          <span className="leading-relaxed">{step}</span>
+        </li>
+      ))}
+    </ol>
+  );
+}
+
+function ChannelSetup({
+  channel,
+  ready,
+  pushAvailable,
+  webPush,
+  telegramConfigured,
+  telegramChatId,
+  setTelegramChatId,
+  webhookUrl,
+  setWebhookUrl,
+  emailConfigured,
+  sessionEmail,
+}: {
+  channel: AlertChannel;
+  ready: { state: ReadyState; label: string };
+  pushAvailable: boolean;
+  webPush: ReturnType<typeof useWebPush>;
+  telegramConfigured: boolean;
+  telegramChatId: string;
+  setTelegramChatId: (v: string) => void;
+  webhookUrl: string;
+  setWebhookUrl: (v: string) => void;
+  emailConfigured: boolean;
+  sessionEmail: string;
+}) {
+  if (channel === "push") {
+    return (
+      <div>
+        <SetupSteps
+          steps={[
+            "Click Enable browser notifications and allow permission when prompted.",
+            "Save the rule — it uses this browser’s push subscription.",
+            "Hit Test on the saved rule; you should get a notification even if this tab is closed.",
+          ]}
+        />
+        {!pushAvailable ? (
+          <StatusCallout
+            tone="blocked"
+            title="Push isn’t available on this deployment"
+            body="The server is missing VAPID keys. Use Telegram, webhook, or email instead — or ask ops to enable Web Push."
+          />
+        ) : webPush.status === "subscribed" ? (
+          <StatusCallout
+            tone="ready"
+            title="This browser is subscribed"
+            body="You’re set. Name the rule, set your filters below, and save."
+          />
+        ) : webPush.status === "denied" ? (
+          <StatusCallout
+            tone="blocked"
+            title="Notification permission denied"
+            body="Open your browser site settings for this origin, allow notifications, then reload and try again."
+          />
+        ) : webPush.status === "unsupported" ? (
+          <StatusCallout
+            tone="blocked"
+            title="This browser doesn’t support Web Push"
+            body="Try Chrome, Edge, or Firefox on desktop — or pick Telegram / webhook / email."
+          />
+        ) : (
+          <Button
+            type="button"
+            onClick={() => void webPush.subscribe()}
+            className="btn-press gap-2 bg-[var(--desk-live)] text-[#121212] hover:brightness-110"
+          >
+            <Bell className="size-3.5" />
+            Enable browser notifications
+          </Button>
+        )}
+      </div>
+    );
+  }
+
+  if (channel === "telegram") {
+    return (
+      <div>
+        <SetupSteps
+          steps={[
+            "Open Telegram and message the Catalyst Intel bot (any text, e.g. /start).",
+            "The bot replies with your numeric chat ID — copy it.",
+            "Paste the chat ID below, save the rule, then hit Test.",
+          ]}
+        />
+        {!telegramConfigured ? (
+          <StatusCallout
+            tone="blocked"
+            title="Telegram bot isn’t configured"
+            body="This deployment is missing TELEGRAM_BOT_TOKEN. Use Push, webhook, or email — or ask ops to wire the bot."
+          />
+        ) : (
+          <label className="flex flex-col gap-1.5">
+            <span className="text-xs font-medium text-[var(--desk-text-secondary)]">
+              Your Telegram chat ID
+            </span>
+            <Input
+              value={telegramChatId}
+              onChange={(e) => setTelegramChatId(e.target.value)}
+              placeholder="e.g. 123456789"
+              aria-label="Telegram chat ID"
+              inputMode="numeric"
+              className="h-10 border-[var(--desk-border-strong)] bg-[var(--desk-overlay-soft)] font-mono text-xs"
+            />
+            <span className="text-[0.7rem] text-[var(--desk-text-dim)]">
+              Message the bot once if you don’t have a chat ID yet — it only
+              replies after you text it.
+            </span>
+          </label>
+        )}
+      </div>
+    );
+  }
+
+  if (channel === "webhook") {
+    return (
+      <div>
+        <SetupSteps
+          steps={[
+            "Create an incoming webhook in Slack, Discord, Zapier, or your own HTTPS endpoint.",
+            "Paste the HTTPS URL below (http and localhost are rejected).",
+            "Save, then Test — we POST a JSON payload for the latest matching catalyst.",
+          ]}
+        />
+        <label className="flex flex-col gap-1.5">
+          <span className="text-xs font-medium text-[var(--desk-text-secondary)]">
+            Webhook URL
+          </span>
+          <Input
+            value={webhookUrl}
+            onChange={(e) => setWebhookUrl(e.target.value)}
+            placeholder="https://hooks.example.com/…"
+            aria-label="Webhook URL"
+            type="url"
+            className="h-10 border-[var(--desk-border-strong)] bg-[var(--desk-overlay-soft)] font-mono text-xs"
+          />
+          <span className="text-[0.7rem] text-[var(--desk-text-dim)]">
+            Always available — no extra vendor keys required.
+          </span>
+        </label>
+      </div>
+    );
+  }
+
+  // email
+  return (
+    <div>
+      <SetupSteps
+        steps={[
+          "Alerts always go to the email on your signed-in account (shown below).",
+          "Save the rule with your impact / session filters.",
+          "Hit Test — check inbox (and spam) for the sample fire.",
+        ]}
+      />
+      {!emailConfigured ? (
+        <StatusCallout
+          tone="blocked"
+          title="Email delivery isn’t configured"
+          body="This deployment is missing the email provider key. Use Push, Telegram, or webhook instead."
+        />
+      ) : !sessionEmail ? (
+        <StatusCallout
+          tone="blocked"
+          title="No email on this account"
+          body="Sign in with an account that has a verified email, then come back."
+        />
+      ) : (
+        <label className="flex flex-col gap-1.5">
+          <span className="text-xs font-medium text-[var(--desk-text-secondary)]">
+            Delivers to
+          </span>
+          <Input
+            value={sessionEmail}
+            readOnly
+            aria-label="Email recipient (signed-in account)"
+            type="email"
+            className="h-10 border-[var(--desk-border-strong)] bg-[var(--desk-overlay-soft)] font-mono text-xs opacity-90"
+          />
+          <span className="inline-flex items-center gap-1.5 text-[0.7rem] text-[var(--desk-live-status)]">
+            <CheckCircle2 className="size-3" aria-hidden />
+            {ready.label} — recipient locked to your account email
+          </span>
+        </label>
+      )}
+    </div>
+  );
+}
+
+function StatusCallout({
+  tone,
+  title,
+  body,
+}: {
+  tone: "ready" | "blocked";
+  title: string;
+  body: string;
+}) {
+  return (
+    <div
+      className={cn(
+        "flex gap-3 rounded-lg border px-3.5 py-3",
+        tone === "ready"
+          ? "border-[color-mix(in_srgb,var(--desk-live-status)_35%,transparent)] bg-[color-mix(in_srgb,var(--desk-live-status)_08%,transparent)]"
+          : "border-[var(--desk-border-strong)] bg-[var(--desk-overlay-soft)]",
+      )}
+    >
+      {tone === "ready" ? (
+        <CheckCircle2
+          className="mt-0.5 size-4 shrink-0 text-[var(--desk-live-status)]"
+          aria-hidden
+        />
+      ) : (
+        <CircleAlert
+          className="mt-0.5 size-4 shrink-0 text-[var(--desk-live)]"
+          aria-hidden
+        />
+      )}
+      <div>
+        <p className="text-sm font-medium text-[var(--desk-text)]">{title}</p>
+        <p className="mt-0.5 text-xs leading-relaxed text-[var(--desk-text-muted)]">
+          {body}
+        </p>
+      </div>
     </div>
   );
 }

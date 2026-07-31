@@ -702,6 +702,47 @@
   .ai-analyzing-dots span:nth-child(3) {
     animation-delay: 0.3s;
   }
+
+  /* Away-desk alert rules — staggered panel / channel / row motion */
+  .alert-panel-enter {
+    animation: page-enter 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  .alert-step-enter {
+    animation: feed-row-in 400ms cubic-bezier(0.22, 1, 0.36, 1) backwards;
+  }
+
+  .alert-channel-card {
+    animation: feed-row-in 380ms cubic-bezier(0.22, 1, 0.36, 1) backwards;
+  }
+
+  .alert-channel-panel {
+    animation: alert-channel-in 320ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+
+  .alert-rule-row {
+    animation: feed-row-in 360ms cubic-bezier(0.22, 1, 0.36, 1) backwards;
+  }
+
+  .alert-range::-webkit-slider-thumb {
+    appearance: none;
+    width: 1rem;
+    height: 1rem;
+    border-radius: 9999px;
+    background: var(--desk-live);
+    border: 2px solid #121212;
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--desk-live) 40%, transparent);
+    cursor: pointer;
+  }
+
+  .alert-range::-moz-range-thumb {
+    width: 1rem;
+    height: 1rem;
+    border-radius: 9999px;
+    background: var(--desk-live);
+    border: 2px solid #121212;
+    cursor: pointer;
+  }
 }
 
 @keyframes page-enter {
@@ -932,6 +973,17 @@
   }
 }
 
+@keyframes alert-channel-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .page-enter,
   .feed-row,
@@ -954,7 +1006,12 @@
   .ai-analysis-reveal,
   .ai-analysis-reveal li,
   .ai-scanline,
-  .ai-analyzing-dots span {
+  .ai-analyzing-dots span,
+  .alert-panel-enter,
+  .alert-step-enter,
+  .alert-channel-card,
+  .alert-channel-panel,
+  .alert-rule-row {
     animation: none !important;
     transition: none !important;
   }
