@@ -68,9 +68,10 @@ export function DashboardWatchlistRail({
     return () => window.clearTimeout(id);
   }, [loadSymbols]);
 
-  useEffect(() => subscribeWatchlistChanged(() => void loadSymbols()), [
-    loadSymbols,
-  ]);
+  useEffect(
+    () => subscribeWatchlistChanged(() => void loadSymbols()),
+    [loadSymbols],
+  );
 
   async function addSymbol(e: React.FormEvent) {
     e.preventDefault();
