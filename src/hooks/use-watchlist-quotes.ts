@@ -10,9 +10,9 @@ export interface WatchlistSymbolQuote {
 
 /**
  * Batch-fetches session quotes (`/api/market/quote`, same endpoint the
- * split panel uses) for a list of symbols, capped concurrency. Shared by
- * the dashboard's Watchlist rail and bottom ticker tape so both reuse one
- * fetch pattern instead of duplicating it.
+ * split panel uses) for a list of symbols, capped concurrency. Used by the
+ * dashboard Watchlist rail (and any other desk surface that needs the same
+ * session quote map).
  */
 export function useWatchlistQuotes(symbols: string[]): {
   quotes: Record<string, WatchlistSymbolQuote>;

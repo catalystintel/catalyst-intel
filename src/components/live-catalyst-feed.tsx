@@ -71,6 +71,10 @@ import {
   formatTimeDate,
 } from "@/lib/format/relative-time";
 import { cn } from "@/lib/utils";
+import {
+  notifyWatchlistChanged,
+  subscribeWatchlistChanged,
+} from "@/lib/watchlist/watchlist-events";
 
 export type { FeedCatalyst };
 
@@ -203,6 +207,23 @@ export function LiveCatalystFeed({
   const knownIds = useRef(new Set(initialCatalysts.map((c) => c.id)));
   const pollErrorRef = useRef<string | null>(null);
 
+  const reloadWatchlistSymbols = useCallback(async () => {
+    try {
+      const wRes = await fetch("/api/watchlist", {
+        credentials: "same-origin",
+        cache: "no-store",
+      });
+      if (!wRes.ok) return;
+      const wData = await wRes.json();
+      const symbols = (wData.symbols ?? []).map(
+        (t: { symbol: string }) => t.symbol,
+      );
+      setWatchlistSymbols(symbols);
+    } catch {
+      // Soft-fail: quiet playbook / Watch actions still usable.
+    }
+  }, []);
+
   useEffect(() => {
     let cancelled = false;
     async function loadPrefs() {
@@ -245,6 +266,11 @@ export function LiveCatalystFeed({
       cancelled = true;
     };
   }, []);
+
+  useEffect(
+    () => subscribeWatchlistChanged(() => void reloadWatchlistSymbols()),
+    [reloadWatchlistSymbols],
+  );
 
   // Restore tape filters from localStorage after mount (avoids SSR/hydration
   // mismatch). Deep-link `?symbol=` wins for the symbol field; other saved
@@ -545,6 +571,7 @@ export function LiveCatalystFeed({
           setWatchlistSymbols((prev) => prev.filter((x) => x !== t));
           return false;
         }
+        notifyWatchlistChanged();
         return true;
       } catch {
         setWatchlistSymbols((prev) => prev.filter((x) => x !== t));

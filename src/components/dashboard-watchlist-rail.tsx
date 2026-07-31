@@ -15,6 +15,10 @@ import { Skeleton } from "@/components/loading-skeleton";
 import { useWatchlistQuotes } from "@/hooks/use-watchlist-quotes";
 import { cn } from "@/lib/utils";
 import { toUserFacingMessage } from "@/lib/errors/user-facing";
+import {
+  notifyWatchlistChanged,
+  subscribeWatchlistChanged,
+} from "@/lib/watchlist/watchlist-events";
 
 /**
  * Compact "WATCHLISTS" rail for the dashboard's right column (below Economic
@@ -32,13 +36,9 @@ import { toUserFacingMessage } from "@/lib/errors/user-facing";
 export function DashboardWatchlistRail({
   focusSymbol,
   onFocusSymbol,
-  onSymbolsChange,
 }: {
   focusSymbol?: string | null;
   onFocusSymbol?: (symbol: string) => void;
-  /** Reports the current symbol list up (e.g. so the dashboard's bottom
-   * ticker tape stays in sync with add/remove here, not just on mount). */
-  onSymbolsChange?: (symbols: string[]) => void;
 }) {
   const [symbols, setSymbols] = useState<{ id: number; symbol: string }[]>([]);
   const { quotes } = useWatchlistQuotes(symbols.map((s) => s.symbol));
@@ -55,22 +55,22 @@ export function DashboardWatchlistRail({
       });
       if (!res.ok) return;
       const data = await res.json();
-      const rows = data.symbols ?? [];
-      setSymbols(rows);
-      onSymbolsChange?.(
-        rows.map((r: { symbol: string }) => r.symbol.toUpperCase()),
-      );
+      setSymbols(data.symbols ?? []);
     } catch {
       // Soft-fail: rail still usable without a preloaded list.
     } finally {
       setLoaded(true);
     }
-  }, [onSymbolsChange]);
+  }, []);
 
   useEffect(() => {
     const id = window.setTimeout(() => void loadSymbols(), 0);
     return () => window.clearTimeout(id);
   }, [loadSymbols]);
+
+  useEffect(() => subscribeWatchlistChanged(() => void loadSymbols()), [
+    loadSymbols,
+  ]);
 
   async function addSymbol(e: React.FormEvent) {
     e.preventDefault();
@@ -88,6 +88,7 @@ export function DashboardWatchlistRail({
       if (!res.ok) throw new Error(data.error ?? "Could not add symbol.");
       setDraft("");
       await loadSymbols();
+      notifyWatchlistChanged();
       onFocusSymbol?.(symbol);
     } catch (err) {
       toast.error(toUserFacingMessage(err, "Could not add symbol."));
@@ -105,6 +106,7 @@ export function DashboardWatchlistRail({
       );
       if (!res.ok) throw new Error("Could not remove symbol.");
       await loadSymbols();
+      notifyWatchlistChanged();
     } catch (err) {
       toast.error(toUserFacingMessage(err, "Could not remove symbol."));
     } finally {
