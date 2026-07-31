@@ -19,6 +19,7 @@ import {
   alertDeliveries,
   alertRules,
   catalysts,
+  pushSubscriptions,
   rawSources,
   watchlistEntries,
 } from "@/db/schema";
@@ -98,6 +99,26 @@ export async function runAlertAutoFire(options: {
     watchlistsByUser.set(row.userId, list);
   }
 
+  // Only fetched for users with at least one push rule — most won't have any.
+  const pushUserIds = [
+    ...new Set(
+      ruleRows.filter((r) => r.channel === "push").map((r) => r.userId),
+    ),
+  ];
+  const subscriptionRows = pushUserIds.length
+    ? await db
+        .select()
+        .from(pushSubscriptions)
+        .where(inArray(pushSubscriptions.userId, pushUserIds))
+        .all()
+    : [];
+  const subscriptionsByUser = new Map<number, typeof subscriptionRows>();
+  for (const row of subscriptionRows) {
+    const list = subscriptionsByUser.get(row.userId) ?? [];
+    list.push(row);
+    subscriptionsByUser.set(row.userId, list);
+  }
+
   const rulesByUser = new Map<number, DeliverableRule[]>();
   for (const r of ruleRows) {
     const rule: DeliverableRule = {
@@ -106,6 +127,7 @@ export async function runAlertAutoFire(options: {
       channel: r.channel,
       webhookUrl: r.webhookUrl,
       emailTo: r.emailTo,
+      telegramChatId: r.telegramChatId,
       conditions: normalizeAlertConditions(r.conditions),
     };
     const list = rulesByUser.get(r.userId) ?? [];
@@ -138,6 +160,13 @@ export async function runAlertAutoFire(options: {
         catalyst: payload,
         rules: candidateRules,
         watchlistSymbols: watchlistsByUser.get(userId) ?? [],
+        pushSubscriptions: subscriptionsByUser.get(userId) ?? [],
+        onDeadPushSubscription: async (endpoint) => {
+          await db
+            .delete(pushSubscriptions)
+            .where(eq(pushSubscriptions.endpoint, endpoint))
+            .run();
+        },
       });
 
       for (const result of results) {

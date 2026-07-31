@@ -78,6 +78,13 @@
       "when": 1785000527929,
       "tag": "0010_shallow_mole_man",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "6",
+      "when": 1785485600108,
+      "tag": "0011_great_mantis",
+      "breakpoints": true
     }
   ]
 }

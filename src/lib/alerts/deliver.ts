@@ -2,6 +2,8 @@ import type { AlertChannel, AlertRuleConditions } from "@/db/schema";
 import { classifySession, sessionMatches } from "@/lib/alerts/session";
 import { validateWebhookUrl } from "@/lib/alerts/webhook-url";
 import { sendResendEmail } from "@/lib/email/resend";
+import { sendWebPush, type PushSubscriptionRecord } from "@/lib/push/web-push";
+import { sendTelegramMessage } from "@/lib/telegram/bot";
 
 export interface AlertCatalystPayload {
   id: number;
@@ -20,6 +22,7 @@ export interface DeliverableRule {
   channel: AlertChannel;
   webhookUrl: string | null;
   emailTo: string | null;
+  telegramChatId: string | null;
   conditions: AlertRuleConditions;
 }
 
@@ -130,9 +133,68 @@ async function deliverEmail(
   return sendResendEmail({ to, subject, text });
 }
 
+async function deliverTelegram(
+  chatId: string,
+  catalyst: AlertCatalystPayload,
+  ruleName: string,
+): Promise<{ ok: boolean; detail: string }> {
+  const proof = catalyst.sourceUrl
+    ? `\nProof (EDGAR): ${catalyst.sourceUrl}`
+    : "";
+  const text = [
+    `🔔 ${ruleName}`,
+    `${catalyst.symbol ?? "—"} · ${catalyst.headline ?? catalyst.title}`,
+    `Category: ${catalyst.eventCategory ?? "—"}`,
+    `Materiality: ${catalyst.impactScore ?? "—"}`,
+    `Filed: ${catalyst.timestamp}`,
+    proof,
+  ]
+    .filter(Boolean)
+    .join("\n");
+
+  return sendTelegramMessage({ chatId, text });
+}
+
+async function deliverPush(
+  subscriptions: PushSubscriptionRecord[],
+  catalyst: AlertCatalystPayload,
+  ruleName: string,
+  onDeadSubscription?: (endpoint: string) => void | Promise<void>,
+): Promise<{ ok: boolean; detail: string }> {
+  if (subscriptions.length === 0) {
+    return {
+      ok: false,
+      detail:
+        "No push subscriptions — enable browser notifications in Settings.",
+    };
+  }
+
+  const payload = {
+    title: `${catalyst.symbol ?? "Catalyst"} · ${ruleName}`,
+    body: catalyst.headline ?? catalyst.title,
+    url: catalyst.sourceUrl ?? undefined,
+  };
+
+  const outcomes = await Promise.all(
+    subscriptions.map(async (sub) => {
+      const result = await sendWebPush(sub, payload);
+      if (result.gone && onDeadSubscription) {
+        await onDeadSubscription(sub.endpoint);
+      }
+      return result;
+    }),
+  );
+
+  const ok = outcomes.some((o) => o.ok);
+  const detail = ok
+    ? `Push delivered to ${outcomes.filter((o) => o.ok).length}/${outcomes.length} device(s)`
+    : (outcomes[0]?.detail ?? "Push failed");
+  return { ok, detail };
+}
+
 /**
- * Evaluates rules against a catalyst and delivers matching email/webhook
- * channels. Push is stubbed (skipped with a clear message).
+ * Evaluates rules against a catalyst and delivers matching email / webhook /
+ * push / Telegram channels.
  */
 export async function deliverAlertRules(options: {
   catalyst: AlertCatalystPayload;
@@ -144,6 +206,10 @@ export async function deliverAlertRules(options: {
    * `watchlistOnly` conditions to match. Omit = treat as empty watchlist.
    */
   watchlistSymbols?: string[];
+  /** Web Push subscriptions for the rules' owner (all rules share one user). */
+  pushSubscriptions?: PushSubscriptionRecord[];
+  /** Lets the caller prune a subscription that the push service reports gone. */
+  onDeadPushSubscription?: (endpoint: string) => void | Promise<void>;
 }): Promise<DeliveryResult[]> {
   const results: DeliveryResult[] = [];
   const watchlistSet = new Set(
@@ -166,12 +232,42 @@ export async function deliverAlertRules(options: {
     }
 
     if (rule.channel === "push") {
+      const delivered = await deliverPush(
+        options.pushSubscriptions ?? [],
+        options.catalyst,
+        rule.name,
+        options.onDeadPushSubscription,
+      );
       results.push({
         ruleId: rule.id,
         channel: "push",
-        ok: true,
-        skipped: true,
-        detail: "Push notifications coming soon (no FCM configured).",
+        ok: delivered.ok,
+        detail: delivered.detail,
+      });
+      continue;
+    }
+
+    if (rule.channel === "telegram") {
+      const chatId = rule.telegramChatId?.trim();
+      if (!chatId) {
+        results.push({
+          ruleId: rule.id,
+          channel: "telegram",
+          ok: false,
+          detail: "Missing Telegram chat id",
+        });
+        continue;
+      }
+      const delivered = await deliverTelegram(
+        chatId,
+        options.catalyst,
+        rule.name,
+      );
+      results.push({
+        ruleId: rule.id,
+        channel: "telegram",
+        ok: delivered.ok,
+        detail: delivered.detail,
       });
       continue;
     }
@@ -223,3 +319,5 @@ export async function deliverAlertRules(options: {
 }
 
 export { isResendConfigured } from "@/lib/email/resend";
+export { isWebPushConfigured, webPushPublicKey } from "@/lib/push/web-push";
+export { isTelegramConfigured } from "@/lib/telegram/bot";
