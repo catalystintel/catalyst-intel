@@ -12,6 +12,20 @@ export function isFinnhubConfigured(): boolean {
   return getFinnhubApiKey() !== null;
 }
 
+/**
+ * Financial Modeling Prep — economic calendar (optional).
+ * Soft-fail when unset. Free keys may 402 on `/stable/economic-calendar`
+ * (premium-gated); treat that as skipped, not a hard outage.
+ */
+export function getFmpApiKey(): string | null {
+  const key = process.env.FMP_API_KEY?.trim();
+  return key || null;
+}
+
+export function isFmpConfigured(): boolean {
+  return getFmpApiKey() !== null;
+}
+
 export function getPolygonApiKey(): string | null {
   const key =
     process.env.POLYGON_API_KEY?.trim() ||

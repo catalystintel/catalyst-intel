@@ -3,6 +3,7 @@ import { clusterRecentCatalysts } from "@/lib/jobs/cluster-events";
 import { purgeStaleCatalysts } from "@/lib/jobs/data-retention";
 import { fetchClinicalTrials } from "@/lib/jobs/fetch-clinicaltrials";
 import { fetchFinnhubCatalysts } from "@/lib/jobs/fetch-finnhub-catalysts";
+import { fetchFmpEconomicCalendar } from "@/lib/jobs/fetch-fmp-economic-calendar";
 import { listLaterSourceStubs } from "@/lib/jobs/fetch-later-stubs";
 import { fetchMacroCalendar } from "@/lib/jobs/fetch-macro-calendar";
 import { fetchNasdaqHalts } from "@/lib/jobs/fetch-nasdaq-halts";
@@ -39,6 +40,7 @@ export {
   activeCatalystSourceIds,
   getCatalystSourceMeta,
   isCatalystSourceFetchEnabled,
+  isCatalystSourceInFetchAll,
   isCatalystSourceId,
   type CatalystSourceId,
   type CatalystSourceMeta,
@@ -166,6 +168,8 @@ async function runSourceInner(
       return fetchOpenFda();
     case "clinicaltrials":
       return fetchClinicalTrials();
+    case "fmp-econ-calendar":
+      return fetchFmpEconomicCalendar();
     default: {
       const _exhaustive: never = id;
       return {
