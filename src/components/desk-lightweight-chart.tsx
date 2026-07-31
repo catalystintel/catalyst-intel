@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type RefObject } from "react";
+import { useEffect, useMemo, useRef, useState, type RefObject } from "react";
 import {
   AreaSeries,
   CandlestickSeries,
@@ -12,6 +12,7 @@ import {
   type UTCTimestamp,
 } from "lightweight-charts";
 import { Maximize2, Minimize2, X } from "lucide-react";
+import { useTheme } from "next-themes";
 
 import {
   CHART_RANGES,
@@ -30,6 +31,51 @@ type CandlesPayload = {
 
 function toUtc(time: number): UTCTimestamp {
   return time as UTCTimestamp;
+}
+
+type ChartTheme = {
+  bg: string;
+  text: string;
+  grid: string;
+  border: string;
+  crosshair: string;
+  up: string;
+  down: string;
+  areaLine: string;
+  areaTop: string;
+  areaBottom: string;
+  marker: string;
+};
+
+function chartTheme(isDark: boolean): ChartTheme {
+  if (isDark) {
+    return {
+      bg: "#0B0F19",
+      text: "#94A3B8",
+      grid: "rgba(148,163,184,0.07)",
+      border: "rgba(148,163,184,0.16)",
+      crosshair: "rgba(96,165,250,0.5)",
+      up: "#22C55E",
+      down: "#EF4444",
+      areaLine: "#60A5FA",
+      areaTop: "rgba(96,165,250,0.28)",
+      areaBottom: "rgba(96,165,250,0.02)",
+      marker: "#F59E0B",
+    };
+  }
+  return {
+    bg: "#FFFFFF",
+    text: "#64748B",
+    grid: "rgba(100,116,139,0.1)",
+    border: "rgba(100,116,139,0.22)",
+    crosshair: "rgba(37,99,235,0.45)",
+    up: "#16A34A",
+    down: "#DC2626",
+    areaLine: "#2563EB",
+    areaTop: "rgba(37,99,235,0.22)",
+    areaBottom: "rgba(37,99,235,0.02)",
+    marker: "#D97706",
+  };
 }
 
 /**
@@ -63,6 +109,9 @@ export function DeskLightweightChart({
   const [payload, setPayload] = useState<CandlesPayload | null>(null);
   const [loading, setLoading] = useState(Boolean(trimmed));
   const [error, setError] = useState<string | null>(null);
+  const { resolvedTheme } = useTheme();
+  const isDark = resolvedTheme !== "light";
+  const theme = useMemo(() => chartTheme(isDark), [isDark]);
 
   useEffect(() => {
     if (!trimmed) return;
@@ -118,6 +167,7 @@ export function DeskLightweightChart({
     hostRef,
     payload,
     eventTimeSec,
+    theme,
     active: Boolean(payload?.candles.length),
   });
 
@@ -125,6 +175,7 @@ export function DeskLightweightChart({
     hostRef: fullHostRef,
     payload,
     eventTimeSec,
+    theme,
     active: fullscreen && Boolean(payload?.candles.length),
   });
 
@@ -132,12 +183,12 @@ export function DeskLightweightChart({
     return (
       <div
         className={cn(
-          "grid min-h-[220px] w-full place-items-center overflow-hidden",
+          "grid min-h-[220px] w-full place-items-center overflow-hidden border-t border-[var(--desk-border)]",
           className,
         )}
       >
         <p className="px-4 text-center font-mono text-xs text-[var(--desk-text-muted)]">
-          Chart unavailable
+          Chart unavailable — no tradable symbol
         </p>
       </div>
     );
@@ -151,46 +202,68 @@ export function DeskLightweightChart({
       ? (change / first.open) * 100
       : null;
   const up = change == null ? null : change === 0 ? null : change > 0;
+  const hasEventMarker =
+    eventTimeSec != null &&
+    Number.isFinite(eventTimeSec) &&
+    payload?.candles.length;
 
   const rangeChips = onRangeChange ? (
     <div
-      className="flex flex-wrap items-center gap-1 border-b border-[var(--desk-border)] bg-[var(--desk-header)] px-2 py-1.5"
+      className="flex flex-wrap items-center gap-0.5 border-b border-[var(--desk-border)] bg-[var(--desk-header)] px-2 py-1.5"
       role="group"
       aria-label="Chart time range"
     >
-      {CHART_RANGES.map((r) => {
-        const active = r.key === range;
-        return (
-          <button
-            key={r.key}
-            type="button"
-            onClick={() => onRangeChange(r.key)}
-            aria-pressed={active}
-            className={cn(
-              "rounded-sm px-2 py-0.5 font-mono text-[0.65rem] tracking-wide uppercase transition-colors",
-              active
-                ? "bg-[var(--desk-link)]/15 text-[var(--desk-link)]"
-                : "text-[var(--desk-text-muted)] hover:bg-[var(--desk-overlay-strong)] hover:text-[var(--desk-text)]",
-            )}
-          >
-            {r.label}
-          </button>
-        );
-      })}
+      <div className="inline-flex flex-wrap items-center gap-0.5 rounded-md border border-[var(--desk-border)] bg-[var(--desk-overlay-soft)] p-0.5">
+        {CHART_RANGES.map((r) => {
+          const active = r.key === range;
+          return (
+            <button
+              key={r.key}
+              type="button"
+              onClick={() => onRangeChange(r.key)}
+              aria-pressed={active}
+              className={cn(
+                "rounded-sm px-2 py-0.5 font-mono text-[0.65rem] tracking-wide uppercase transition-colors",
+                active
+                  ? "bg-[var(--desk-panel)] text-[var(--desk-text)] shadow-[0_1px_2px_rgba(0,0,0,0.12)]"
+                  : "text-[var(--desk-text-muted)] hover:text-[var(--desk-text)]",
+              )}
+            >
+              {r.label}
+            </button>
+          );
+        })}
+      </div>
+      {hasEventMarker ? (
+        <span className="ml-auto inline-flex items-center gap-1.5 font-mono text-[0.62rem] tracking-wide text-[var(--desk-warn-text,#F59E0B)] uppercase">
+          <span
+            aria-hidden
+            className="size-1.5 rounded-full bg-[var(--desk-warn,#F59E0B)]"
+          />
+          Catalyst
+        </span>
+      ) : null}
     </div>
   ) : null;
 
   const header = (
-    <div className="flex items-center justify-between gap-3 border-b border-[var(--desk-border)] bg-[var(--desk-panel)] px-3 py-2">
+    <div className="flex items-center justify-between gap-3 border-b border-[var(--desk-border)] bg-[var(--desk-panel)] px-3 py-2.5">
       <div className="min-w-0">
-        <p className="font-mono text-[0.62rem] tracking-[0.14em] text-[var(--desk-text-dim)] uppercase">
-          Price · {trimmed} · {range}
+        <div className="flex flex-wrap items-center gap-2">
+          <p className="font-mono text-[0.7rem] font-semibold tracking-[0.16em] text-[var(--desk-text)] uppercase">
+            {trimmed}
+          </p>
+          <span className="font-mono text-[0.62rem] tracking-[0.12em] text-[var(--desk-text-dim)] uppercase">
+            {range}
+          </span>
           {payload?.provider === "demo" ? (
-            <span className="ml-2 text-[var(--desk-warn)]">Demo series</span>
+            <span className="rounded-sm border border-[var(--desk-warn-border)] bg-[var(--desk-warn-bg)] px-1.5 py-px font-mono text-[0.58rem] tracking-wide text-[var(--desk-warn-text)] uppercase">
+              Demo
+            </span>
           ) : null}
-        </p>
-        <p className="mt-0.5 flex flex-wrap items-baseline gap-2 font-mono">
-          <span className="text-base font-semibold text-[var(--desk-text)] tabular-nums">
+        </div>
+        <p className="mt-1 flex flex-wrap items-baseline gap-2 font-mono">
+          <span className="text-lg font-semibold text-[var(--desk-text)] tabular-nums">
             {last ? last.close.toFixed(2) : loading ? "…" : "—"}
           </span>
           {change != null && changePct != null ? (
@@ -230,9 +303,10 @@ export function DeskLightweightChart({
     <>
       <div
         className={cn(
-          "relative flex min-h-[220px] w-full flex-col overflow-hidden bg-[var(--desk-bg,#0b0f19)]",
+          "relative flex min-h-[220px] w-full flex-col overflow-hidden border-t border-[var(--desk-border)]",
           className,
         )}
+        style={{ background: theme.bg }}
         data-lw-symbol={trimmed}
         data-lw-range={range}
       >
@@ -240,13 +314,26 @@ export function DeskLightweightChart({
         {rangeChips}
         <div className="relative min-h-0 flex-1">
           {loading ? (
-            <p className="absolute inset-0 grid place-items-center font-mono text-xs text-[var(--desk-text-muted)]">
-              Loading chart…
-            </p>
+            <div
+              className="absolute inset-0 flex flex-col justify-end gap-1.5 px-4 pb-6"
+              aria-busy
+              aria-label="Loading chart"
+            >
+              <div className="h-[55%] animate-pulse rounded-sm bg-[var(--desk-overlay-strong)] opacity-40" />
+              <div className="h-[28%] animate-pulse rounded-sm bg-[var(--desk-overlay-strong)] opacity-25" />
+              <p className="pt-2 text-center font-mono text-[0.65rem] tracking-wide text-[var(--desk-text-dim)] uppercase">
+                Loading {trimmed}…
+              </p>
+            </div>
           ) : null}
           {error && !payload ? (
             <p className="absolute inset-0 grid place-items-center px-4 text-center font-mono text-xs text-[var(--desk-negative)]">
               {error}
+            </p>
+          ) : null}
+          {!loading && !error && payload && payload.candles.length === 0 ? (
+            <p className="absolute inset-0 grid place-items-center px-4 text-center font-mono text-xs text-[var(--desk-text-muted)]">
+              No candles for this range
             </p>
           ) : null}
           <div ref={hostRef} className="h-full min-h-[200px] w-full" />
@@ -262,16 +349,37 @@ export function DeskLightweightChart({
           onClick={() => setFullscreen(false)}
         >
           <div
-            className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-[var(--desk-border-strong)] bg-[var(--desk-bg,#0b0f19)] shadow-[0_24px_80px_rgba(0,0,0,0.55)]"
+            className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-[var(--desk-border-strong)] shadow-[0_24px_80px_rgba(0,0,0,0.55)]"
+            style={{ background: theme.bg }}
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex shrink-0 items-center justify-between gap-3 border-b border-[var(--desk-border)] bg-[var(--desk-header)] px-4 py-2.5">
-              <p className="font-mono text-sm font-semibold tracking-wide text-[var(--desk-text)]">
-                {trimmed}
-                <span className="ml-2 font-normal tracking-[0.12em] text-[var(--desk-text-dim)] uppercase">
-                  Chart
-                </span>
-              </p>
+              <div className="min-w-0">
+                <p className="font-mono text-sm font-semibold tracking-wide text-[var(--desk-text)]">
+                  {trimmed}
+                  <span className="ml-2 font-normal tracking-[0.12em] text-[var(--desk-text-dim)] uppercase">
+                    Chart · {range}
+                  </span>
+                </p>
+                {last ? (
+                  <p className="mt-0.5 font-mono text-xs text-[var(--desk-text-secondary)] tabular-nums">
+                    {last.close.toFixed(2)}
+                    {change != null && changePct != null ? (
+                      <span
+                        className={cn(
+                          "ml-2",
+                          up === true && "text-[var(--desk-positive)]",
+                          up === false && "text-[var(--desk-negative)]",
+                        )}
+                      >
+                        {change > 0 ? "+" : ""}
+                        {change.toFixed(2)} ({changePct > 0 ? "+" : ""}
+                        {changePct.toFixed(2)}%)
+                      </span>
+                    ) : null}
+                  </p>
+                ) : null}
+              </div>
               <button
                 type="button"
                 onClick={() => setFullscreen(false)}
@@ -284,29 +392,40 @@ export function DeskLightweightChart({
             </div>
             {onRangeChange ? (
               <div
-                className="flex flex-wrap items-center gap-1 border-b border-[var(--desk-border)] bg-[var(--desk-header)] px-3 py-1.5"
+                className="flex flex-wrap items-center gap-0.5 border-b border-[var(--desk-border)] bg-[var(--desk-header)] px-3 py-1.5"
                 role="group"
                 aria-label="Chart time range"
               >
-                {CHART_RANGES.map((r) => {
-                  const activeChip = r.key === range;
-                  return (
-                    <button
-                      key={r.key}
-                      type="button"
-                      onClick={() => onRangeChange(r.key)}
-                      aria-pressed={activeChip}
-                      className={cn(
-                        "rounded-sm px-2 py-0.5 font-mono text-[0.65rem] tracking-wide uppercase transition-colors",
-                        activeChip
-                          ? "bg-[var(--desk-link)]/15 text-[var(--desk-link)]"
-                          : "text-[var(--desk-text-muted)] hover:bg-[var(--desk-overlay-strong)] hover:text-[var(--desk-text)]",
-                      )}
-                    >
-                      {r.label}
-                    </button>
-                  );
-                })}
+                <div className="inline-flex flex-wrap items-center gap-0.5 rounded-md border border-[var(--desk-border)] bg-[var(--desk-overlay-soft)] p-0.5">
+                  {CHART_RANGES.map((r) => {
+                    const activeChip = r.key === range;
+                    return (
+                      <button
+                        key={r.key}
+                        type="button"
+                        onClick={() => onRangeChange(r.key)}
+                        aria-pressed={activeChip}
+                        className={cn(
+                          "rounded-sm px-2 py-0.5 font-mono text-[0.65rem] tracking-wide uppercase transition-colors",
+                          activeChip
+                            ? "bg-[var(--desk-panel)] text-[var(--desk-text)] shadow-[0_1px_2px_rgba(0,0,0,0.12)]"
+                            : "text-[var(--desk-text-muted)] hover:text-[var(--desk-text)]",
+                        )}
+                      >
+                        {r.label}
+                      </button>
+                    );
+                  })}
+                </div>
+                {hasEventMarker ? (
+                  <span className="ml-auto inline-flex items-center gap-1.5 font-mono text-[0.62rem] tracking-wide text-[var(--desk-warn-text,#F59E0B)] uppercase">
+                    <span
+                      aria-hidden
+                      className="size-1.5 rounded-full bg-[var(--desk-warn,#F59E0B)]"
+                    />
+                    Catalyst marked
+                  </span>
+                ) : null}
               </div>
             ) : null}
             <div ref={fullHostRef} className="min-h-0 flex-1" />
@@ -321,11 +440,13 @@ function useChartPane({
   hostRef,
   payload,
   eventTimeSec,
+  theme,
   active,
 }: {
   hostRef: RefObject<HTMLDivElement | null>;
   payload: CandlesPayload | null;
   eventTimeSec: number | null;
+  theme: ChartTheme;
   active: boolean;
 }) {
   const chartRef = useRef<IChartApi | null>(null);
@@ -339,27 +460,45 @@ function useChartPane({
     const chart = createChart(el, {
       autoSize: true,
       layout: {
-        background: { type: ColorType.Solid, color: "#0B0F19" },
-        textColor: "#94A3B8",
+        background: { type: ColorType.Solid, color: theme.bg },
+        textColor: theme.text,
         fontFamily:
           'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
         fontSize: 11,
       },
       grid: {
-        vertLines: { color: "rgba(148,163,184,0.08)" },
-        horzLines: { color: "rgba(148,163,184,0.08)" },
+        vertLines: { color: theme.grid },
+        horzLines: { color: theme.grid },
       },
       rightPriceScale: {
-        borderColor: "rgba(148,163,184,0.18)",
+        borderColor: theme.border,
+        scaleMargins: { top: 0.08, bottom: 0.12 },
       },
       timeScale: {
-        borderColor: "rgba(148,163,184,0.18)",
+        borderColor: theme.border,
         timeVisible: payload.range === "1D" || payload.range === "5D",
         secondsVisible: false,
       },
       crosshair: {
-        vertLine: { color: "rgba(59,130,246,0.45)", width: 1 },
-        horzLine: { color: "rgba(59,130,246,0.45)", width: 1 },
+        mode: 1,
+        vertLine: {
+          color: theme.crosshair,
+          width: 1,
+          style: 2,
+          labelBackgroundColor: theme.areaLine,
+        },
+        horzLine: {
+          color: theme.crosshair,
+          width: 1,
+          style: 2,
+          labelBackgroundColor: theme.areaLine,
+        },
+      },
+      handleScroll: { mouseWheel: true, pressedMouseMove: true },
+      handleScale: {
+        axisPressedMouseMove: true,
+        mouseWheel: true,
+        pinch: true,
       },
     });
     chartRef.current = chart;
@@ -369,12 +508,12 @@ function useChartPane({
 
     if (useCandles) {
       series = chart.addSeries(CandlestickSeries, {
-        upColor: "#22C55E",
-        downColor: "#EF4444",
-        borderUpColor: "#22C55E",
-        borderDownColor: "#EF4444",
-        wickUpColor: "#22C55E",
-        wickDownColor: "#EF4444",
+        upColor: theme.up,
+        downColor: theme.down,
+        borderUpColor: theme.up,
+        borderDownColor: theme.down,
+        wickUpColor: theme.up,
+        wickDownColor: theme.down,
       });
       series.setData(
         payload.candles.map((c) => ({
@@ -387,10 +526,11 @@ function useChartPane({
       );
     } else {
       series = chart.addSeries(AreaSeries, {
-        lineColor: "#3B82F6",
-        topColor: "rgba(59,130,246,0.28)",
-        bottomColor: "rgba(59,130,246,0.02)",
+        lineColor: theme.areaLine,
+        topColor: theme.areaTop,
+        bottomColor: theme.areaBottom,
         lineWidth: 2,
+        crosshairMarkerRadius: 4,
       });
       series.setData(
         payload.candles.map((c) => ({
@@ -419,9 +559,9 @@ function useChartPane({
           {
             time: toUtc(nearest),
             position: "aboveBar",
-            color: "#F59E0B",
+            color: theme.marker,
             shape: "arrowDown",
-            text: "EVENT",
+            text: "CATALYST",
           },
         ]);
       }
@@ -433,5 +573,5 @@ function useChartPane({
       chart.remove();
       chartRef.current = null;
     };
-  }, [active, payload, eventTimeSec, hostRef]);
+  }, [active, payload, eventTimeSec, hostRef, theme]);
 }

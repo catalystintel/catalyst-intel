@@ -24,8 +24,10 @@ export interface MacroEventDef {
   /** ET clock for display, e.g. 08:30 */
   timeEt: string;
   title: string;
-  subcategory: "cpi" | "nfp" | "fomc";
+  subcategory: "cpi" | "nfp" | "fomc" | "ppi";
   summary: string;
+  /** Short trader-facing "why this print matters". */
+  whyItMatters: string;
 }
 
 /** BLS Consumer Price Index release days (8:30 ET) — 2026 remainder + early 2027. */
@@ -55,6 +57,18 @@ const NFP_DATES_2026_2027: Array<{ date: string; forMonth: string }> = [
   { date: "2027-03-05", forMonth: "February 2027" },
 ];
 
+/** BLS Producer Price Index — typically day after CPI week; approximate 2026–27. */
+const PPI_DATES_2026_2027: Array<{ date: string; forMonth: string }> = [
+  { date: "2026-08-13", forMonth: "July 2026" },
+  { date: "2026-09-10", forMonth: "August 2026" },
+  { date: "2026-10-16", forMonth: "September 2026" },
+  { date: "2026-11-13", forMonth: "October 2026" },
+  { date: "2026-12-11", forMonth: "November 2026" },
+  { date: "2027-01-14", forMonth: "December 2026" },
+  { date: "2027-02-12", forMonth: "January 2027" },
+  { date: "2027-03-12", forMonth: "February 2027" },
+];
+
 /** FOMC decision days (statement ~14:00 ET) — Fed tentative schedule. */
 const FOMC_DECISION_DATES = [
   "2026-07-29",
@@ -65,6 +79,12 @@ const FOMC_DECISION_DATES = [
   "2027-03-17",
 ];
 
+const WHY: Record<MacroEventDef["subcategory"], string> = {
+  cpi: "Primary inflation print — moves rate odds, USD, and equity risk appetite.",
+  nfp: "Jobs + unemployment — Fed reaction function and growth narrative.",
+  fomc: "Policy decision + statement — highest-impact scheduled US macro event.",
+  ppi: "Pipeline inflation — often foreshadows CPI and sector leadership.",
+};
 function etTimestamp(date: string, timeEt: string): string {
   // Store as noon UTC on the calendar day when time is unknown; otherwise
   // approximate ET→UTC with a fixed -4 offset (EDT). Good enough for feed sort.
@@ -98,6 +118,7 @@ export function buildUpcomingMacroEvents(
       title: formatCpiTitle(row.forMonth),
       subcategory: "cpi",
       summary: `Consumer Price Index release (${row.forMonth} data) · 8:30 AM ET · BLS`,
+      whyItMatters: WHY.cpi,
     });
   }
 
@@ -110,6 +131,20 @@ export function buildUpcomingMacroEvents(
       title: formatJobsReportTitle(row.forMonth),
       subcategory: "nfp",
       summary: `Nonfarm payrolls & unemployment (${row.forMonth}) · 8:30 AM ET · BLS`,
+      whyItMatters: WHY.nfp,
+    });
+  }
+
+  for (const row of PPI_DATES_2026_2027) {
+    if (row.date < today || row.date > endDay) continue;
+    events.push({
+      id: `ppi-${row.date}`,
+      date: row.date,
+      timeEt: "08:30",
+      title: `PPI — ${row.forMonth}`,
+      subcategory: "ppi",
+      summary: `Producer Price Index (${row.forMonth}) · 8:30 AM ET · BLS`,
+      whyItMatters: WHY.ppi,
     });
   }
 
@@ -123,6 +158,7 @@ export function buildUpcomingMacroEvents(
       subcategory: "fomc",
       summary:
         "FOMC statement · ~2:00 PM ET · Federal Reserve (tentative schedule)",
+      whyItMatters: WHY.fomc,
     });
   }
 

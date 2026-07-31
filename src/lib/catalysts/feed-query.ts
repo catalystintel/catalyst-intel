@@ -46,6 +46,7 @@ import {
   isEventCategoryKey,
   type EventCategoryKey,
 } from "@/lib/catalysts/taxonomy";
+import { MATERIAL_EPS_SURPRISE_PCT } from "@/lib/catalysts/earnings-surprise";
 
 export {
   FEED_FORM_FILTERS,
@@ -72,6 +73,11 @@ export interface FeedQueryFilters {
    * CPI·Jobs gate is applied unconditionally in `buildFeedWhere`.
    */
   symbolOnly: boolean;
+  /**
+   * Restrict to earnings with |EPS surprise %| ≥ material threshold.
+   * Uses Finnhub raw_content figures (actual/estimate or explicit %).
+   */
+  earningsSurprisesOnly: boolean;
   /** ISO lower bound; overrides window when set. */
   since: string | null;
   /** Upper bound (now) — excludes future-dated calendar rows. */
@@ -238,6 +244,12 @@ export function parseFeedQueryFromSearchParams(
     symbolOnlyRaw !== "false" &&
     symbolOnlyRaw !== "no";
 
+  const surprisesRaw = (params.get("earningsSurprises") ?? "")
+    .trim()
+    .toLowerCase();
+  const earningsSurprisesOnly =
+    surprisesRaw === "1" || surprisesRaw === "true" || surprisesRaw === "yes";
+
   return {
     q: (params.get("q") ?? "").trim(),
     categories,
@@ -246,6 +258,7 @@ export function parseFeedQueryFromSearchParams(
     sources,
     timeWindow,
     symbolOnly,
+    earningsSurprisesOnly,
     since,
     until: options?.nowIso ?? new Date().toISOString(),
   };
@@ -322,6 +335,43 @@ export function buildFeedWhere(
 
   if (options?.omit !== "sources" && filters.sources.length > 0) {
     parts.push(inArray(rawSources.provider, filters.sources));
+  }
+
+  if (filters.earningsSurprisesOnly) {
+    parts.push(eq(catalysts.eventCategory, "earnings"));
+    // Material EPS surprise from Finnhub raw JSON (calendar or stock/earnings).
+    const thr = MATERIAL_EPS_SURPRISE_PCT;
+    parts.push(sql`(
+      ABS(CAST(json_extract(${rawSources.rawContent}, '$.epsSurprisePercent') AS REAL)) >= ${thr}
+      OR ABS(CAST(json_extract(${rawSources.rawContent}, '$.surprisePercent') AS REAL)) >= ${thr}
+      OR ABS(CAST(json_extract(${rawSources.rawContent}, '$.surprisePct') AS REAL)) >= ${thr}
+      OR (
+        json_extract(${rawSources.rawContent}, '$.epsActual') IS NOT NULL
+        AND json_extract(${rawSources.rawContent}, '$.epsEstimate') IS NOT NULL
+        AND CAST(json_extract(${rawSources.rawContent}, '$.epsEstimate') AS REAL) != 0
+        AND ABS(
+          (
+            CAST(json_extract(${rawSources.rawContent}, '$.epsActual') AS REAL)
+            - CAST(json_extract(${rawSources.rawContent}, '$.epsEstimate') AS REAL)
+          )
+          / ABS(CAST(json_extract(${rawSources.rawContent}, '$.epsEstimate') AS REAL))
+          * 100
+        ) >= ${thr}
+      )
+      OR (
+        json_extract(${rawSources.rawContent}, '$.actual') IS NOT NULL
+        AND json_extract(${rawSources.rawContent}, '$.estimate') IS NOT NULL
+        AND CAST(json_extract(${rawSources.rawContent}, '$.estimate') AS REAL) != 0
+        AND ABS(
+          (
+            CAST(json_extract(${rawSources.rawContent}, '$.actual') AS REAL)
+            - CAST(json_extract(${rawSources.rawContent}, '$.estimate') AS REAL)
+          )
+          / ABS(CAST(json_extract(${rawSources.rawContent}, '$.estimate') AS REAL))
+          * 100
+        ) >= ${thr}
+      )
+    )`);
   }
 
   // Always-on desk rule: no symbolless rows except CPI / Jobs (NFP).

@@ -4,28 +4,45 @@ import { cn } from "@/lib/utils";
 const SOURCE_LABEL: Record<MacroEventDef["subcategory"], string> = {
   cpi: "BLS",
   nfp: "BLS",
+  ppi: "BLS",
   fomc: "Federal Reserve",
 };
 
 const TAG_LABEL: Record<MacroEventDef["subcategory"], string> = {
   cpi: "CPI",
   nfp: "Jobs (NFP)",
+  ppi: "PPI",
   fomc: "FOMC",
 };
 
+function daysUntil(isoDate: string, now = new Date()): number {
+  const target = Date.parse(`${isoDate}T12:00:00.000Z`);
+  if (Number.isNaN(target)) return Number.POSITIVE_INFINITY;
+  const todayUtc = Date.UTC(
+    now.getUTCFullYear(),
+    now.getUTCMonth(),
+    now.getUTCDate(),
+  );
+  return Math.round((target - todayUtc) / 86_400_000);
+}
+
+function countdownLabel(days: number): string {
+  if (days <= 0) return "Today";
+  if (days === 1) return "Tomorrow";
+  return `In ${days}d`;
+}
+
 /**
- * "ECONOMIC CALENDAR" panel — maps to the reference image's Economic
- * Calendar + Economic Data panels, consolidated into one real, functional
- * panel: the desk's own keyless CPI / Jobs (NFP) / FOMC schedule
- * (`buildUpcomingMacroEvents`, same source already ingested into the Live
- * tape as "Macro" catalysts). No separate mock "Economic Data" widget —
- * we only show numbers we actually have.
+ * Desk economic calendar: upcoming CPI / NFP / PPI / FOMC with countdown
+ * and a one-line "why it matters" for the next print.
  */
 export function DashboardEconomicCalendar({
   events,
 }: {
   events: MacroEventDef[];
 }) {
+  const nextId = events[0]?.id ?? null;
+
   return (
     <section className="flex max-h-[42%] min-h-[200px] shrink-0 flex-col overflow-hidden rounded-xl border border-[var(--desk-border)] bg-[var(--desk-panel)]">
       <div className="flex items-center justify-between gap-2 border-b border-[var(--desk-border)] bg-[var(--desk-header)] px-3 py-2.5">
@@ -33,7 +50,7 @@ export function DashboardEconomicCalendar({
           Economic Calendar
         </h2>
         <span className="desk-data tracking-wide text-[var(--desk-text-dim)] uppercase">
-          CPI · NFP · FOMC
+          CPI · NFP · PPI · FOMC
         </span>
       </div>
 
@@ -44,29 +61,55 @@ export function DashboardEconomicCalendar({
           </p>
         ) : (
           <ul className="flex flex-col">
-            {events.map((event) => (
-              <li
-                key={event.id}
-                className="border-b border-[var(--desk-border)] px-3 py-2.5"
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <p className="desk-body leading-snug text-[var(--desk-text-secondary)]">
-                    {event.title}
+            {events.map((event) => {
+              const days = daysUntil(event.date);
+              const isNext = event.id === nextId;
+              return (
+                <li
+                  key={event.id}
+                  className={cn(
+                    "border-b border-[var(--desk-border)] px-3 py-2.5",
+                    isNext && "bg-[var(--desk-overlay-soft)]",
+                  )}
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <p className="desk-body leading-snug text-[var(--desk-text-secondary)]">
+                      {event.title}
+                    </p>
+                    <div className="flex shrink-0 flex-col items-end gap-1">
+                      <span
+                        className={cn(
+                          "desk-data rounded-sm border border-[var(--desk-border-strong)] bg-[var(--desk-overlay-soft)] px-1.5 py-0.5 tracking-[0.08em] text-[var(--desk-text-muted)] uppercase",
+                          isNext &&
+                            "border-[color-mix(in_srgb,var(--desk-live)_35%,transparent)] text-[var(--desk-live)]",
+                        )}
+                      >
+                        {TAG_LABEL[event.subcategory]}
+                      </span>
+                      <span
+                        className={cn(
+                          "font-mono text-[0.62rem] tracking-wide uppercase",
+                          days <= 1
+                            ? "text-[var(--desk-live)]"
+                            : "text-[var(--desk-text-dim)]",
+                        )}
+                      >
+                        {countdownLabel(days)}
+                      </span>
+                    </div>
+                  </div>
+                  <p className="desk-data mt-1 tracking-wide text-[var(--desk-text-dim)]">
+                    {formatEventDate(event.date)} · {formatTimeEt(event.timeEt)}{" "}
+                    ET · {SOURCE_LABEL[event.subcategory]}
                   </p>
-                  <span
-                    className={cn(
-                      "desk-data shrink-0 rounded-sm border border-[var(--desk-border-strong)] bg-[var(--desk-overlay-soft)] px-1.5 py-0.5 tracking-[0.08em] text-[var(--desk-text-muted)] uppercase",
-                    )}
-                  >
-                    {TAG_LABEL[event.subcategory]}
-                  </span>
-                </div>
-                <p className="desk-data mt-1 tracking-wide text-[var(--desk-text-dim)]">
-                  {formatEventDate(event.date)} · {formatTimeEt(event.timeEt)}{" "}
-                  ET · {SOURCE_LABEL[event.subcategory]}
-                </p>
-              </li>
-            ))}
+                  {isNext ? (
+                    <p className="mt-1.5 text-[0.72rem] leading-snug text-[var(--desk-text-muted)]">
+                      {event.whyItMatters}
+                    </p>
+                  ) : null}
+                </li>
+              );
+            })}
           </ul>
         )}
       </div>
@@ -79,6 +122,7 @@ function formatEventDate(isoDate: string): string {
   if (Number.isNaN(d.getTime())) return isoDate;
   return d.toLocaleDateString("en-US", {
     timeZone: "UTC",
+    weekday: "short",
     month: "short",
     day: "numeric",
   });

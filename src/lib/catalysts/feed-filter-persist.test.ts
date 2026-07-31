@@ -71,6 +71,7 @@ describe("feed-filter-persist", () => {
       sourceFilters: ["sec-edgar"],
       timeWindow: "4h",
       symbolOnly: false,
+      earningsSurprisesOnly: true,
     });
     expect(readPersistedFeedFilters()).toEqual({
       symbolQuery: "TSLA",
@@ -81,6 +82,7 @@ describe("feed-filter-persist", () => {
       timeWindow: "4h",
       // Always coerced on read — desk rule is not optional.
       symbolOnly: true,
+      earningsSurprisesOnly: true,
     });
   });
 
@@ -129,6 +131,7 @@ describe("feed-filter-persist", () => {
       sourceFilters: ["sec-edgar"],
       timeWindow: "24h",
       symbolOnly: false,
+      earningsSurprisesOnly: true,
     });
     const params = new URLSearchParams(qs);
     expect(params.get("q")).toBe("AAPL");
@@ -138,6 +141,7 @@ describe("feed-filter-persist", () => {
     expect(params.get("window")).toBe("24h");
     // Always sent — tape gate is not optional.
     expect(params.get("symbolOnly")).toBe("1");
+    expect(params.get("earningsSurprises")).toBe("1");
     // Source facet is local-dev only; vitest runs with NODE_ENV=test.
     expect(params.get("sources")).toBeNull();
   });

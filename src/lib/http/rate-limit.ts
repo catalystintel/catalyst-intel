@@ -82,4 +82,6 @@ export const RATE_LIMITS = {
   alertTest: { limit: 10, windowMs: 60_000 },
   /** Product feedback form (emails the team inbox). */
   feedback: { limit: 8, windowMs: 60_000 },
+  /** Prelogin guest ticker search (cookie + IP). */
+  guestSearch: { limit: 20, windowMs: 60_000 },
 } as const;

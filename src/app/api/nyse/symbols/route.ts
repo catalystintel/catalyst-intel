@@ -61,7 +61,7 @@ export async function GET(request: NextRequest) {
         symbols: [],
         emptyReason: configured
           ? "No NYSE listings yet — an admin should run Finnhub NYSE fetch."
-          : "FINNHUB_API_KEY is not set. NYSE quotes stay empty until configured.",
+          : "Market data listings are not configured yet. Quotes stay empty until an admin enables them.",
       }),
       limitResult,
     );

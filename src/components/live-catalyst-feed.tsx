@@ -266,6 +266,7 @@ export function LiveCatalystFeed({
                 sourceFilters: saved.sourceFilters,
                 timeWindow: saved.timeWindow,
                 symbolOnly: saved.symbolOnly,
+                earningsSurprisesOnly: saved.earningsSurprisesOnly,
                 symbolQuery: urlSymbol,
               })
             : {}),
@@ -975,6 +976,16 @@ function FeedFilters({
           }
           emptyLabel="All forms"
         />
+        <FilterChip
+          active={filterState.earningsSurprisesOnly}
+          onClick={() =>
+            onPatchFilters({
+              earningsSurprisesOnly: !filterState.earningsSurprisesOnly,
+            })
+          }
+        >
+          Earnings surprises
+        </FilterChip>
         {isLocalDevUi() ? (
           <FeedFilterMultiSelect
             label={`Source ${LOCAL_DEV_ONLY_LABEL}`}

@@ -5,6 +5,7 @@ import { ArrowRight, BookOpen, Lock, ShieldCheck, X, Zap } from "lucide-react";
 
 import { FeedPreviewChartGlow } from "@/components/feed-preview-chart-glow";
 import { LandingGoogleCta } from "@/components/landing-google-cta";
+import { LandingGuestSearch } from "@/components/landing-guest-search";
 import { PreLoginChrome } from "@/components/pre-login-chrome";
 import { PreLoginLandingSections } from "@/components/pre-login-landing-sections";
 import { PreloginRisingChart } from "@/components/prelogin-rising-chart";
@@ -184,6 +185,9 @@ export default async function Home({
                 showIcon
                 subtext="Full access during Open Early Access"
               />
+            </div>
+            <div className="mt-5">
+              <LandingGuestSearch />
             </div>
             <div className="mt-3">
               <Link

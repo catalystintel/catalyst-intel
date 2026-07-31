@@ -59,7 +59,7 @@ export async function fetchFinnhubNyse(options?: {
       quoteErrors: 0,
       ranAt,
       message:
-        "FINNHUB_API_KEY is not set. Add it in Vercel / .env.local to enable NYSE listings.",
+        "Finnhub is not configured. Add credentials in Vercel / .env.local to enable NYSE listings.",
     };
   }
 
