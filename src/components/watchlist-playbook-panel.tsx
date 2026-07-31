@@ -13,6 +13,10 @@ import {
 } from "@/lib/jobs/parse-8k-items";
 import { DEFAULT_PLAYBOOK_CATEGORIES } from "@/lib/catalysts/playbook";
 import { parsePortfolioSymbols } from "@/lib/watchlist/parse-portfolio-symbols";
+import {
+  notifyWatchlistChanged,
+  subscribeWatchlistChanged,
+} from "@/lib/watchlist/watchlist-events";
 import { cn } from "@/lib/utils";
 import { toUserFacingMessage } from "@/lib/errors/user-facing";
 
@@ -107,6 +111,8 @@ export function WatchlistPlaybookPanel() {
     return () => window.clearTimeout(id);
   }, [load]);
 
+  useEffect(() => subscribeWatchlistChanged(() => void load()), [load]);
+
   async function addSymbol(e: React.FormEvent) {
     e.preventDefault();
     setSaving(true);
@@ -122,6 +128,7 @@ export function WatchlistPlaybookPanel() {
       if (!res.ok) throw new Error(data.error ?? "Could not add symbol.");
       setDraft("");
       await load();
+      notifyWatchlistChanged();
       toast.success(`${symbol} added to watchlist`);
     } catch (err) {
       toast.error(toUserFacingMessage(err, "Could not add symbol."));
@@ -148,6 +155,7 @@ export function WatchlistPlaybookPanel() {
       if (!res.ok) throw new Error(data.error ?? "Import failed.");
       setPortfolioDraft("");
       await load();
+      notifyWatchlistChanged();
       toast.success(
         `Imported ${data.added ?? 0} symbol${(data.added ?? 0) === 1 ? "" : "s"}${
           data.skipped ? ` · ${data.skipped} already on list` : ""
@@ -185,6 +193,7 @@ export function WatchlistPlaybookPanel() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Could not remove symbol.");
       await load();
+      notifyWatchlistChanged();
       toast.success(`${symbol} removed from watchlist`);
     } catch (err) {
       toast.error(toUserFacingMessage(err, "Could not remove symbol."));
