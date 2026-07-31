@@ -53,6 +53,9 @@ describe("publicReceiptToArticle / category map", () => {
       settled: true,
     });
     expect(article?.article_body).toContain("Session move -12.50%");
+    expect(article?.extracted?.keyFacts?.some((f) => f.label === "Event")).toBe(
+      true,
+    );
     const normalized = articleToNormalized(article!);
     expect(normalized).toMatchObject({
       provider: "pr-wire",
@@ -69,6 +72,11 @@ describe("publicReceiptToArticle / category map", () => {
         status: "settled",
         pctChange: -12.5,
         maxAbs: 12.5,
+      },
+    });
+    expect(normalized?.rawContent).toMatchObject({
+      extracted: {
+        keyFacts: expect.any(Array),
       },
     });
     expect(normalized?.tags).toContain("biotech_catalyst");
@@ -109,6 +117,7 @@ describe("publicReceiptToArticle / category map", () => {
     expect(buildPublicReceiptSummary(article!)).toContain(
       "Session move pending",
     );
+    expect(buildPublicReceiptSummary(article!)).toContain("Karyopharm");
   });
 });
 
