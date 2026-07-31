@@ -1161,7 +1161,7 @@ function CatalystFeedList({
       <div
         role="row"
         className={cn(
-          "desk-caps sticky top-0 z-[2] grid h-10 items-center gap-2 border-b border-[var(--desk-border-strong)] bg-[var(--desk-header)] px-4 font-mono text-[0.62rem] font-medium text-[var(--desk-text-muted)] uppercase shadow-[0_1px_0_rgba(0,0,0,0.35)] sm:gap-3 sm:px-5 lg:gap-4",
+          "feed-sticky-cols desk-caps sticky top-0 z-10 grid h-10 items-center gap-2 border-b border-[var(--desk-border-strong)] px-4 font-mono text-[0.62rem] font-medium text-[var(--desk-text-muted)] uppercase shadow-[0_1px_0_rgba(0,0,0,0.35)] sm:gap-3 sm:px-5 lg:gap-4",
           feedGrid,
         )}
       >
@@ -1189,7 +1189,7 @@ function CatalystFeedList({
       </div>
 
       {pendingNew > 0 ? (
-        <div className="sticky top-10 z-[2] flex justify-center pt-2">
+        <div className="sticky top-10 z-10 flex justify-center pt-2">
           <button
             type="button"
             onClick={scrollToTop}
