@@ -86,9 +86,9 @@
   --sidebar-border: oklch(0.88 0.015 250);
   --sidebar-ring: oklch(0.65 0.08 250);
 
-  /* Mono desk, light: paper-white panels. Gold = LIVE/CTA heritage;
-     blue = interactive; green/red = +/- catalysts only. Opt-in via theme
-     toggle — default is dark navy. */
+  /* Mono desk, light: paper-white panels. Gold = CTA / accent heritage;
+     green LIVE status = session-on cue; blue = interactive; green/red =
+     +/- catalysts only. Opt-in via theme toggle — default is dark navy. */
   --desk-app: #f6f6f4;
   --desk-sidebar: #ffffff;
   --desk-panel: #ffffff;
@@ -103,6 +103,8 @@
   --desk-accent: #3a3a3a;
   --desk-accent-fg: #17181a;
   --desk-live: #9a6b00;
+  /* LIVE pills/dots only — institutional emerald, not +/- catalyst green. */
+  --desk-live-status: #059669;
   --desk-interactive: #2563eb;
   --desk-link: #2563eb;
   /* Decorative-only accent for the landing feed-preview chart backdrop.
@@ -132,8 +134,8 @@
 .dark {
   /* Marketing / global dark: trading-terminal navy + gold CTAs (prelogin).
      Authenticated desk chrome aligns via `.desk-chrome`. Research: keep gold
-     for LIVE/CTA heritage; blue = interactive; green/red = +/- only.
-     Avoid raw Tailwind SaaS (purple washes / generic slate+blue stack). */
+     for CTA heritage; LIVE status = trader green; blue = interactive;
+     green/red = +/- only. Avoid raw Tailwind SaaS (purple washes). */
   --background: #0b0f19;
   --foreground: #f9fafb;
   --card: #111827;
@@ -169,7 +171,7 @@
   --sidebar-ring: #f0c14b;
 
   /* Marketing dark: terminal navy so prelogin and desk feel one product.
-     Gold = LIVE/CTA; blue = interactive/links; dual glows (gold + chart). */
+     Gold = CTA; LIVE status = trader emerald; blue = interactive/links. */
   --desk-app: #0b0f19;
   --desk-sidebar: #080c14;
   --desk-panel: #111827;
@@ -183,6 +185,7 @@
   --desk-accent: #cbd5e1;
   --desk-accent-fg: #e2e8f0;
   --desk-live: #f0c14b;
+  --desk-live-status: #12b76a;
   --desk-interactive: #3b82f6;
   --desk-link: #3b82f6;
   --desk-chart-accent: #3b82f6;
@@ -202,8 +205,8 @@
 
 /*
  * Authenticated desk shell (AppShell): terminal navy matching marketing dark
- * so prelogin → desk is one product. Gold LIVE/CTA; blue interactive;
- * green/red +/-. Only when html has `.dark` (theme toggle).
+ * so prelogin → desk is one product. Gold CTA; LIVE status green; blue
+ * interactive; green/red +/-. Only when html has `.dark` (theme toggle).
  */
 .dark .desk-chrome {
   --background: #0b0f19;
@@ -236,6 +239,7 @@
   --desk-text-secondary: #cbd5e1;
   --desk-text-muted: #94a3b8;
   --desk-text-dim: #64748b;
+  --desk-live-status: #12b76a;
   --desk-interactive: #3b82f6;
   --desk-link: #3b82f6;
   --desk-chart-accent: #3b82f6;
@@ -425,7 +429,8 @@
 
   .live-pulse {
     animation: live-pulse 1.6s ease-in-out infinite;
-    box-shadow: 0 0 0 0 rgba(240, 193, 75, 0.55);
+    box-shadow: 0 0 0 0
+      color-mix(in srgb, var(--desk-live-status) 55%, transparent);
   }
 
   .landing-feed {
@@ -478,6 +483,7 @@
     --desk-text-muted: #94a3b8;
     --desk-text-dim: #64748b;
     --desk-live: #f59e0b;
+    --desk-live-status: #12b76a;
     --desk-interactive: #2563eb;
     --desk-link: #2563eb;
     --desk-chart-accent: #2563eb;
@@ -490,9 +496,9 @@
 
   /*
    * Prelogin / marketing surface (landing, about, login). Scoped so the
-   * authenticated desk keeps its existing navy + gold LIVE language.
-   * Landing palette: #070B14 bg, #111827 cards, #2563EB primary actions,
-   * #F59E0B LIVE/warning only, subtle blue→purple hero glow.
+   * authenticated desk keeps its existing navy + gold CTA language.
+   * Landing palette: #070B14 bg, #111827 cards, #2563EB reserved for CTAs,
+   * #12B76A LIVE status, #F59E0B warn/priority only, soft cool wash.
    */
   .prelogin-surface {
     --background: #070b14;
@@ -534,10 +540,12 @@
     --desk-text-dim: #64748b;
     --desk-accent: #cbd5e1;
     --desk-accent-fg: #e2e8f0;
-    /* LIVE / uncertainty — warning amber, not CTA gold. */
+    /* Warn / high-priority amber — not LIVE session green. */
     --desk-live: #f59e0b;
+    --desk-live-status: #12b76a;
     --desk-interactive: #2563eb;
-    --desk-link: #2563eb;
+    /* Links stay muted steel; saturated blue is for primary CTAs only. */
+    --desk-link: #cbd5e1;
     --landing-primary: #2563eb;
     --landing-primary-hover: #1d4ed8;
     --desk-chart-accent: #2563eb;
@@ -551,13 +559,13 @@
     --desk-overlay-strong: rgba(255, 255, 255, 0.1);
     --desk-grid-line: rgba(255, 255, 255, 0.04);
     --desk-shimmer: rgba(255, 255, 255, 0.1);
-    /* Hero glow: subtle blue → purple, highlights only. */
-    --desk-glow: rgba(37, 99, 235, 0.2);
-    --desk-glow-chart: rgba(124, 58, 237, 0.14);
+    /* Soft cool wash only — purple bloom neutered for trader-fit. */
+    --desk-glow: rgba(37, 99, 235, 0.1);
+    --desk-glow-chart: rgba(148, 163, 184, 0.06);
     color-scheme: dark;
   }
 
-  /* Marketing dual-atmosphere: cool blue wash + soft purple bloom (prelogin). */
+  /* Marketing atmosphere: soft cool wash (prelogin). */
   .marketing-glow-gold {
     background: radial-gradient(
       ellipse 80% 70% at 50% -10%,
@@ -585,7 +593,8 @@
   }
 
   .prelogin-surface .live-pulse {
-    box-shadow: 0 0 0 0 color-mix(in srgb, var(--desk-live) 55%, transparent);
+    box-shadow: 0 0 0 0
+      color-mix(in srgb, var(--desk-live-status) 55%, transparent);
   }
 
   .prelogin-surface .marketing-brand-pulse {
@@ -742,11 +751,13 @@
   0%,
   100% {
     opacity: 1;
-    box-shadow: 0 0 0 0 rgba(240, 193, 75, 0.45);
+    box-shadow: 0 0 0 0
+      color-mix(in srgb, var(--desk-live-status) 45%, transparent);
   }
   50% {
     opacity: 0.75;
-    box-shadow: 0 0 0 6px rgba(240, 193, 75, 0);
+    box-shadow: 0 0 0 6px
+      color-mix(in srgb, var(--desk-live-status) 0%, transparent);
   }
 }
 

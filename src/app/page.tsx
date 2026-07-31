@@ -160,10 +160,10 @@ export default async function Home({
         <div className="relative z-[1] grid gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] lg:items-start lg:gap-10">
           <div className="max-w-2xl">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-[color-mix(in_srgb,var(--desk-live)_35%,transparent)] bg-[color-mix(in_srgb,var(--desk-live)_12%,transparent)] px-2.5 py-1 text-[0.68rem] font-bold tracking-[0.08em] text-[var(--desk-live)]">
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-[color-mix(in_srgb,var(--desk-live-status)_35%,transparent)] bg-[color-mix(in_srgb,var(--desk-live-status)_12%,transparent)] px-2.5 py-1 text-[0.68rem] font-bold tracking-[0.08em] text-[var(--desk-live-status)]">
                 <span
                   aria-hidden
-                  className="live-pulse size-1.5 rounded-full bg-[var(--desk-live)]"
+                  className="live-pulse size-1.5 rounded-full bg-[var(--desk-live-status)]"
                 />
                 LIVE
               </span>
@@ -172,10 +172,7 @@ export default async function Home({
               </span>
             </div>
             <h1 className="marketing-headline mt-5 text-4xl text-balance text-[var(--desk-text)] sm:text-5xl">
-              Real-Time Market-Moving Catalysts.{" "}
-              <span className="text-[var(--landing-primary,#2563eb)]">
-                Trade Smarter, Faster.
-              </span>
+              Real-Time Market-Moving Catalysts. Trade Smarter, Faster.
             </h1>
             <p className="desk-body mt-4 max-w-xl text-pretty text-[var(--desk-text-secondary)] sm:text-base sm:leading-relaxed">
               Instant alerts, AI-powered summaries, and plain-language insights
@@ -191,7 +188,7 @@ export default async function Home({
             <div className="mt-3">
               <Link
                 href="/login"
-                className="inline-flex items-center font-mono text-xs font-semibold text-[var(--landing-primary,#2563eb)] underline-offset-4 hover:underline"
+                className="inline-flex items-center font-mono text-xs font-semibold text-[var(--desk-text-secondary)] underline-offset-4 transition-colors hover:text-[var(--desk-text)] hover:underline"
               >
                 Sign in · No password · Full access
               </Link>
@@ -204,11 +201,18 @@ export default async function Home({
                 >
                   <Icon
                     aria-hidden
-                    className="size-4 shrink-0 text-[var(--landing-primary,#2563eb)]"
+                    className="size-4 shrink-0 text-[var(--desk-text-muted)]"
                     strokeWidth={1.75}
                   />
                   <span className="flex flex-col leading-tight">
-                    <span className="font-mono text-[0.62rem] font-bold tracking-[0.1em] text-[var(--desk-text)] uppercase">
+                    <span
+                      className={cn(
+                        "font-mono text-[0.62rem] font-bold tracking-[0.1em] uppercase",
+                        label === "LIVE"
+                          ? "text-[var(--desk-live-status)]"
+                          : "text-[var(--desk-text)]",
+                      )}
+                    >
                       {label}
                     </span>
                     <span className="text-[0.72rem] text-[var(--desk-text-muted)]">
@@ -228,10 +232,10 @@ export default async function Home({
 
             <div className="relative z-[1] flex items-center justify-between border-b border-[var(--desk-border)] bg-[color:var(--desk-header)]/85 px-4 py-3 backdrop-blur-[1px] sm:px-5">
               <div className="flex min-w-0 items-center gap-3">
-                <span className="inline-flex items-center gap-1.5 rounded-full border border-[color-mix(in_srgb,var(--desk-live)_35%,transparent)] bg-[color-mix(in_srgb,var(--desk-live)_12%,transparent)] px-2.5 py-1 text-[0.68rem] font-bold tracking-[0.08em] text-[var(--desk-live)]">
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-[color-mix(in_srgb,var(--desk-live-status)_35%,transparent)] bg-[color-mix(in_srgb,var(--desk-live-status)_12%,transparent)] px-2.5 py-1 text-[0.68rem] font-bold tracking-[0.08em] text-[var(--desk-live-status)]">
                   <span
                     aria-hidden
-                    className="live-pulse size-1.5 rounded-full bg-[var(--desk-live)]"
+                    className="live-pulse size-1.5 rounded-full bg-[var(--desk-live-status)]"
                   />
                   LIVE
                 </span>
@@ -355,13 +359,13 @@ export default async function Home({
               <span className="inline-flex items-center gap-1.5 font-mono text-[0.68rem] font-medium tracking-[0.04em] text-[var(--desk-text-dim)]">
                 <span
                   aria-hidden
-                  className="live-pulse size-1.5 rounded-full bg-[var(--desk-live)]"
+                  className="live-pulse size-1.5 rounded-full bg-[var(--desk-live-status)]"
                 />
                 Live updates · Auto-refreshing
               </span>
               <Link
                 href="/login"
-                className="inline-flex shrink-0 items-center gap-1 font-mono text-[0.68rem] font-semibold text-[var(--landing-primary,#2563eb)] underline-offset-4 hover:underline"
+                className="inline-flex shrink-0 items-center gap-1 font-mono text-[0.68rem] font-semibold text-[var(--desk-text-secondary)] underline-offset-4 transition-colors hover:text-[var(--desk-text)] hover:underline"
               >
                 View full feed
                 <ArrowRight className="size-3" aria-hidden />

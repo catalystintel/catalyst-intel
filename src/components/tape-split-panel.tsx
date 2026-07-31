@@ -6,7 +6,7 @@ import { BookOpen, XIcon } from "lucide-react";
 import { AiAnalysisPanel } from "@/components/ai-analysis-panel";
 import { CategoryBadge } from "@/components/category-badge";
 import { EdgarProofLink } from "@/components/edgar-proof-link";
-import { TradingViewAdvancedChart } from "@/components/tradingview-advanced-chart";
+import { DeskLightweightChart } from "@/components/desk-lightweight-chart";
 import { Button } from "@/components/ui/button";
 import {
   isAccNoMetadataBlob,
@@ -529,13 +529,18 @@ export function TapeSplitPanel({
         </div>
 
         {tvSymbol ? (
-          <div className="shrink-0 bg-[#0b0d10]">
-            <TradingViewAdvancedChart
+          <div className="shrink-0 bg-[var(--desk-bg,#0b0f19)]">
+            <DeskLightweightChart
               key={tvSymbol}
               symbol={tvSymbol}
               range={chartRange}
               onRangeChange={setChartRange}
-              className="h-[300px] sm:h-[360px]"
+              eventTimeSec={
+                catalyst.timestamp
+                  ? Math.floor(new Date(catalyst.timestamp).getTime() / 1000)
+                  : null
+              }
+              className="h-[300px] sm:h-[380px]"
             />
           </div>
         ) : null}

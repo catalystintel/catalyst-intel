@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   formatEventTime,
+  formatEventTimeParts,
   formatRelativeAge,
   formatTimeDate,
   isWithinWindow,
@@ -47,6 +48,24 @@ describe("formatTimeDate / formatEventTime", () => {
 
   it("returns em dash for invalid ISO", () => {
     expect(formatEventTime("not-a-date")).toBe("—");
+  });
+});
+
+describe("formatEventTimeParts", () => {
+  it("splits clock, zone, and day for multi-line tape cells", () => {
+    expect(
+      formatEventTimeParts("2026-07-20T14:23:00.000Z", {
+        timeZone: "America/New_York",
+      }),
+    ).toEqual({
+      clock: "10:23 AM",
+      zone: "EDT",
+      day: "Jul 20, 2026",
+    });
+  });
+
+  it("returns null for invalid ISO", () => {
+    expect(formatEventTimeParts("not-a-date")).toBeNull();
   });
 });
 

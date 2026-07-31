@@ -4,7 +4,7 @@
  * the live tape the product ships.
  *
  * Purely illustrative: `aria-hidden`, uses `--desk-chart-accent` (landing
- * primary blue). LIVE amber is reserved for status chips, not this texture.
+ * primary blue). LIVE emerald is reserved for status chips, not this texture.
  * Kept low-opacity and masked before row content so it never competes with
  * text contrast.
  */
@@ -35,8 +35,8 @@ export function FeedPreviewChartGlow() {
         WebkitMaskImage: "linear-gradient(to bottom, black, transparent 92%)",
       }}
     >
-      <div className="feed-preview-chart-glow absolute -top-6 right-4 size-28 rounded-full bg-[var(--desk-chart-accent)] opacity-[0.14] blur-2xl sm:right-10" />
-      <div className="absolute -top-8 left-8 size-20 rounded-full bg-[color-mix(in_srgb,#7c3aed_70%,var(--desk-chart-accent))] opacity-[0.08] blur-3xl" />
+      <div className="feed-preview-chart-glow absolute -top-6 right-4 size-28 rounded-full bg-[var(--desk-chart-accent)] opacity-[0.1] blur-2xl sm:right-10" />
+      <div className="absolute -top-8 left-8 size-20 rounded-full bg-[var(--desk-accent)] opacity-[0.05] blur-3xl" />
       <svg
         viewBox="0 0 400 80"
         preserveAspectRatio="none"

@@ -63,7 +63,11 @@ import {
 } from "@/lib/catalysts/feed-form-filters";
 import type { FeedFacets } from "@/lib/catalysts/feed-query-types";
 import { gicsLabel, type GicsSectorKey } from "@/lib/companies/gics-sectors";
-import { formatClockTime, formatTimeDate } from "@/lib/format/relative-time";
+import {
+  formatClockTime,
+  formatEventTimeParts,
+  formatTimeDate,
+} from "@/lib/format/relative-time";
 import { cn } from "@/lib/utils";
 
 export type { FeedCatalyst };
@@ -81,14 +85,16 @@ type Presence = "active" | "blurred" | "hidden";
  * Symbol leads as the row index. No Event / Source primary columns.
  * Time = event occurrence in the viewer's local timezone.
  *
- * Time/Action use fixed tracks so `5:31 PM GMT+3 · Jul 24, 2026` (JetBrains Mono)
- * fits under Time. Desktop Action buttons stay hover/focus/selected-only so
- * the tape stays quiet until the row is engaged.
+ * Time is two lines (`3:58 PM` / `Jul 29, 2026`) so the stamp stays inside
+ * its track; zone stays on the hover title. Actions track is wide enough for
+ * Details + Dismiss + Watch and is clipped (`overflow-hidden` + `max-w-full`)
+ * so buttons cannot paint over Time.
+ * Desktop Action buttons stay hover/focus/selected-only so the tape stays
+ * quiet until the row is engaged.
  */
-// Title is the scan column — keep Time/Actions tight so one-line headlines
-// get maximum width (esp. with the split panel open).
+// Title is the scan column — Time/Actions stay fixed; Title takes the rest.
 const FEED_GRID =
-  "grid-cols-[4.5rem_minmax(0,1fr)] sm:grid-cols-[5rem_minmax(12rem,1fr)_8.75rem] lg:grid-cols-[5rem_minmax(14rem,1fr)_8.5rem_9.25rem]";
+  "grid-cols-[4.5rem_minmax(0,1fr)] sm:grid-cols-[5rem_minmax(12rem,1fr)_7.5rem] lg:grid-cols-[5rem_minmax(12rem,1fr)_7.5rem_16.5rem]";
 /** Denser tape columns while the split panel steals horizontal space. */
 const FEED_GRID_SPLIT =
   "grid-cols-[4.5rem_minmax(0,1fr)] sm:grid-cols-[4.5rem_minmax(10rem,1fr)_7.5rem]";
@@ -1176,9 +1182,9 @@ function CatalystFeedList({
           <button
             type="button"
             onClick={scrollToTop}
-            className="btn-press pointer-events-auto inline-flex items-center gap-1.5 rounded-full border border-[rgba(240,193,75,0.45)] bg-[var(--desk-live)] px-3 py-1 font-mono text-[0.72rem] font-semibold tracking-wide text-[#121212] uppercase shadow-[0_6px_18px_rgba(0,0,0,0.35)]"
+            className="btn-press pointer-events-auto inline-flex items-center gap-1.5 rounded-full border border-[color-mix(in_srgb,var(--desk-live-status)_45%,transparent)] bg-[var(--desk-live-status)] px-3 py-1 font-mono text-[0.72rem] font-semibold tracking-wide text-[#04140c] uppercase shadow-[0_6px_18px_rgba(0,0,0,0.35)]"
           >
-            <span className="live-pulse size-1.5 rounded-full bg-[#121212]" />
+            <span className="live-pulse size-1.5 rounded-full bg-[#04140c]" />
             {pendingNew} new
           </button>
         </div>
@@ -1309,15 +1315,9 @@ function CatalystFeedList({
 
               <div
                 role="cell"
-                className="relative z-[1] hidden min-w-0 sm:block"
+                className="relative z-[2] hidden min-w-0 overflow-hidden pr-1 sm:block"
               >
-                <time
-                  dateTime={catalyst.timestamp}
-                  className="desk-data block truncate font-medium tracking-tight whitespace-nowrap text-[var(--desk-text-muted)]"
-                  title={formatTimeDate(catalyst.timestamp)}
-                >
-                  {formatTimeDate(catalyst.timestamp)}
-                </time>
+                <FeedTimeStamp iso={catalyst.timestamp} />
               </div>
 
               {/* Desktop: actions appear on row hover / focus / selection.
@@ -1325,13 +1325,13 @@ function CatalystFeedList({
               {!splitOpen ? (
                 <div
                   role="cell"
-                  className="relative z-0 hidden min-w-0 justify-end justify-self-end overflow-hidden pl-1 lg:flex"
+                  className="relative z-0 hidden min-w-0 overflow-hidden pl-2 lg:block"
                   onClick={(e) => e.stopPropagation()}
                   onKeyDown={(e) => e.stopPropagation()}
                 >
                   <div
                     className={cn(
-                      "flex w-full min-w-0 flex-nowrap items-center justify-end gap-1.5 transition-opacity duration-100",
+                      "ml-auto flex w-max max-w-full flex-nowrap items-center justify-end gap-1 overflow-hidden transition-opacity duration-100",
                       "opacity-0 group-focus-within:opacity-100 group-hover:opacity-100",
                       selected && "opacity-100",
                     )}
@@ -1384,6 +1384,33 @@ function CatalystFeedList({
         ) : null}
       </div>
     </div>
+  );
+}
+
+/** Two-line local event stamp — clock, then calendar day (zone on title). */
+function FeedTimeStamp({ iso }: { iso: string }) {
+  const parts = formatEventTimeParts(iso);
+  if (!parts) {
+    return (
+      <time
+        dateTime={iso}
+        className="desk-data font-medium tracking-tight text-[var(--desk-text-muted)]"
+      >
+        —
+      </time>
+    );
+  }
+  return (
+    <time
+      dateTime={iso}
+      className="desk-data block min-w-0 font-medium tracking-tight text-[var(--desk-text-muted)]"
+      title={formatTimeDate(iso)}
+    >
+      <span className="block truncate whitespace-nowrap">{parts.clock}</span>
+      <span className="mt-0.5 block truncate text-[0.92em] whitespace-nowrap text-[var(--desk-text-dim)]">
+        {parts.day}
+      </span>
+    </time>
   );
 }
 
@@ -1511,7 +1538,7 @@ function FeedActionButton({
         disabled={disabled}
         onClick={onClick}
         className={cn(
-          "inline-flex items-center gap-1 rounded-sm px-2 py-0.5 font-mono text-[0.65rem] font-semibold tracking-wide uppercase transition-[background-color,border-color,color,filter,opacity] duration-100",
+          "inline-flex shrink-0 items-center gap-1 rounded-sm px-1.5 py-0.5 font-mono text-[0.65rem] font-semibold tracking-wide uppercase transition-[background-color,border-color,color,filter,opacity] duration-100",
           variant === "primary"
             ? "bg-[var(--desk-live)] text-[#121212] hover:brightness-110"
             : "border border-[var(--desk-border-strong)] text-[var(--desk-text-muted)] hover:border-[var(--desk-text-dim)] hover:bg-[var(--desk-overlay-strong)] hover:text-[var(--desk-text)]",
