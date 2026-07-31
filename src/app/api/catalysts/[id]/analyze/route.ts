@@ -8,6 +8,10 @@ import {
   rateLimitExceededResponse,
   withRateLimitHeaders,
 } from "@/lib/http/rate-limit-response";
+import {
+  isSameOriginRequest,
+  sameOriginForbiddenResponse,
+} from "@/lib/http/same-origin";
 import { analyzeCatalystOnDemand } from "@/lib/jobs/llm-triage";
 
 interface RouteContext {
@@ -21,6 +25,10 @@ interface RouteContext {
 export async function POST(request: NextRequest, context: RouteContext) {
   if (!isLibsqlConfigured()) {
     return NextResponse.json({ error: databaseSetupHint() }, { status: 503 });
+  }
+
+  if (!isSameOriginRequest(request)) {
+    return sameOriginForbiddenResponse();
   }
 
   const ip = getClientIp(request);

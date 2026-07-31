@@ -1,6 +1,6 @@
 /**
  * Guest landing search: rate-limited look up of recent catalysts by symbol.
- * Caps free lookups with a signed-count cookie so demos stay honest.
+ * Caps free lookups with an HMAC-signed count cookie so demos stay honest.
  */
 
 import { NextResponse, type NextRequest } from "next/server";
@@ -11,21 +11,20 @@ import { db } from "@/db/client";
 import { catalysts, rawSources } from "@/db/schema";
 import { normalizeSymbol } from "@/lib/alerts/normalize";
 import { getClientIp } from "@/lib/http/client-ip";
+import {
+  GUEST_SEARCH_COOKIE,
+  GUEST_SEARCH_COOKIE_MAX_AGE_SEC,
+  GUEST_SEARCH_LIMIT,
+  readGuestSearchCount,
+  writeGuestSearchCount,
+} from "@/lib/http/guest-search-cookie";
 import { RATE_LIMITS, checkRateLimit } from "@/lib/http/rate-limit";
 import {
   rateLimitExceededResponse,
   withRateLimitHeaders,
 } from "@/lib/http/rate-limit-response";
 
-export const GUEST_SEARCH_LIMIT = 3;
-export const GUEST_SEARCH_COOKIE = "ci.guest-search";
-const COOKIE_MAX_AGE_SEC = 60 * 60 * 24 * 7; // 1 week
-
-function readGuestCount(request: NextRequest): number {
-  const raw = request.cookies.get(GUEST_SEARCH_COOKIE)?.value ?? "0";
-  const n = Number.parseInt(raw, 10);
-  return Number.isFinite(n) && n >= 0 ? n : 0;
-}
+export { GUEST_SEARCH_COOKIE, GUEST_SEARCH_LIMIT };
 
 export async function GET(request: NextRequest) {
   if (!isLibsqlConfigured()) {
@@ -53,7 +52,9 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const used = readGuestCount(request);
+  const used = readGuestSearchCount(
+    request.cookies.get(GUEST_SEARCH_COOKIE)?.value,
+  );
   if (used >= GUEST_SEARCH_LIMIT) {
     return withRateLimitHeaders(
       NextResponse.json(
@@ -110,11 +111,11 @@ export async function GET(request: NextRequest) {
     limitResult,
   );
 
-  response.cookies.set(GUEST_SEARCH_COOKIE, String(used + 1), {
+  response.cookies.set(GUEST_SEARCH_COOKIE, writeGuestSearchCount(used + 1), {
     httpOnly: true,
     sameSite: "lax",
     path: "/",
-    maxAge: COOKIE_MAX_AGE_SEC,
+    maxAge: GUEST_SEARCH_COOKIE_MAX_AGE_SEC,
     secure: process.env.NODE_ENV === "production",
   });
 

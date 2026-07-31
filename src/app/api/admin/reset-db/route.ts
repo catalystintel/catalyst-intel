@@ -8,11 +8,12 @@ import { authorizeAdminFetch, jsonWithAuth } from "@/lib/auth/admin-fetch";
 import { fetchAllCatalystSources } from "@/lib/jobs/fetch-all-sources";
 import { recordIngestionRun } from "@/lib/jobs/record-ingestion-run";
 import { clearIngestData } from "@/lib/ops/clear-ingest-data";
-import { isNonProductionEnv } from "@/lib/ops/non-production-env";
+import { isDbResetAllowed } from "@/lib/ops/non-production-env";
 
 /**
  * Non-production only: clear catalyst ingest tables, apply migrations, and
- * optionally re-run multi-source fetch. Blocked when VERCEL_ENV=production.
+ * optionally re-run multi-source fetch. Requires ALLOW_DB_RESET=true and is
+ * blocked when VERCEL_ENV=production.
  */
 export async function POST(request: NextRequest) {
   const auth = await authorizeAdminFetch(request, "admin-reset-db");
@@ -20,12 +21,12 @@ export async function POST(request: NextRequest) {
     return auth.response;
   }
 
-  if (!isNonProductionEnv()) {
+  if (!isDbResetAllowed()) {
     return jsonWithAuth(
       auth,
       {
         error:
-          "Clear database is disabled in production (VERCEL_ENV=production).",
+          "Clear database requires ALLOW_DB_RESET=true on a non-production environment.",
       },
       { status: 403 },
     );

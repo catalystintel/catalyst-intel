@@ -2,12 +2,34 @@
  * Thin Telegram Bot API client. Free forever, no per-message cost — the
  * closest zero-cost stand-in for SMS. Create a bot via @BotFather on
  * Telegram, paste the token as TELEGRAM_BOT_TOKEN.
+ *
+ * Webhook registration should include `secret_token` so Telegram sends
+ * `X-Telegram-Bot-Api-Secret-Token` on every update (see webhook route).
  */
+
+import { isValidCronSecret } from "@/lib/auth/cron-secret";
 
 export type TelegramSendResult = { ok: boolean; detail: string };
 
 export function isTelegramConfigured(): boolean {
   return Boolean(process.env.TELEGRAM_BOT_TOKEN?.trim());
+}
+
+/**
+ * Shared secret used when registering the Telegram webhook (`secret_token`).
+ * Fail closed when unset — the webhook route rejects all updates.
+ */
+export function getTelegramWebhookSecret(): string | undefined {
+  const secret = process.env.TELEGRAM_WEBHOOK_SECRET?.trim();
+  return secret || undefined;
+}
+
+/**
+ * Verifies Telegram's `X-Telegram-Bot-Api-Secret-Token` header against
+ * `TELEGRAM_WEBHOOK_SECRET` using a timing-safe compare.
+ */
+export function isValidTelegramWebhookSecret(provided: string | null): boolean {
+  return isValidCronSecret(getTelegramWebhookSecret(), provided);
 }
 
 /**

@@ -18,14 +18,22 @@ import {
   rateLimitExceededResponse,
   withRateLimitHeaders,
 } from "@/lib/http/rate-limit-response";
+import {
+  isSameOriginRequest,
+  sameOriginForbiddenResponse,
+} from "@/lib/http/same-origin";
 
 /**
  * Test-fires alert rules against the latest catalyst (or a specific id).
- * Admins can force-fire any user's rules via ?all=1; normal users fire own rules.
+ * Fires only the caller's own rules.
  */
 export async function POST(request: NextRequest) {
   if (!isLibsqlConfigured()) {
     return NextResponse.json({ error: databaseSetupHint() }, { status: 503 });
+  }
+
+  if (!isSameOriginRequest(request)) {
+    return sameOriginForbiddenResponse();
   }
 
   const ip = getClientIp(request);

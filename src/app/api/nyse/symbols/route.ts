@@ -11,6 +11,7 @@ import {
   rateLimitExceededResponse,
   withRateLimitHeaders,
 } from "@/lib/http/rate-limit-response";
+import { escapeLike } from "@/lib/db/escape-like";
 import { isFinnhubConfigured } from "@/lib/jobs/finnhub-env";
 
 /**
@@ -67,6 +68,7 @@ export async function GET(request: NextRequest) {
     );
   }
 
+  const safeQ = escapeLike(q);
   const rows = q
     ? await db
         .select({
@@ -80,9 +82,9 @@ export async function GET(request: NextRequest) {
         .from(nyseListings)
         .where(
           or(
-            like(nyseListings.symbol, `${q}%`),
-            like(nyseListings.displaySymbol, `${q}%`),
-            like(nyseListings.description, `%${q}%`),
+            like(nyseListings.symbol, `${safeQ}%`),
+            like(nyseListings.displaySymbol, `${safeQ}%`),
+            like(nyseListings.description, `%${safeQ}%`),
           ),
         )
         .orderBy(asc(nyseListings.symbol))

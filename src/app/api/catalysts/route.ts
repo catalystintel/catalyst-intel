@@ -97,9 +97,13 @@ export async function GET(request: NextRequest) {
     ? new Date(latestSource.fetchedAt).toISOString()
     : null;
 
-  triggerBackgroundRefetchIfStale(
-    lastIngestedAt ? new Date(lastIngestedAt) : null,
-  );
+  // Background ingest backstop is admin-only — any-user triggers amplified
+  // SEC/vendor load across isolates. Cron remains the primary scheduler.
+  if (user.isAdmin) {
+    triggerBackgroundRefetchIfStale(
+      lastIngestedAt ? new Date(lastIngestedAt) : null,
+    );
+  }
 
   const publicFacets =
     facets == null

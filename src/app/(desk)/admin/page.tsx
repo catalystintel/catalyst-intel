@@ -8,7 +8,7 @@ import { getCurrentAppUser } from "@/lib/auth/current-user";
 import { withDbRetry } from "@/lib/db/with-db-retry";
 import { isFinnhubConfigured } from "@/lib/jobs/finnhub-env";
 
-import { isNonProductionEnv } from "@/lib/ops/non-production-env";
+import { isDbResetAllowed } from "@/lib/ops/non-production-env";
 
 import { FetchTrigger } from "./fetch-trigger";
 import { IngestionAuditSection } from "./ingestion-audit-section";
@@ -55,7 +55,7 @@ export default async function AdminPage() {
   const sourceCount = sourceCountRow?.value ?? 0;
   const nyseCount = nyseCountRow?.value ?? 0;
   const finnhubConfigured = isFinnhubConfigured();
-  const showResetDb = isNonProductionEnv();
+  const showResetDb = isDbResetAllowed();
 
   return (
     <PageEnter className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-6 p-4 sm:p-5">
@@ -147,7 +147,7 @@ export default async function AdminPage() {
         <section className="overflow-hidden rounded-xl border border-[var(--desk-negative)]/40 bg-[var(--desk-panel)]">
           <div className="border-b border-border/60 px-4 py-4 sm:px-5">
             <h2 className="font-mono text-sm tracking-wide text-foreground">
-              Clear database (non-production)
+              Clear database (ALLOW_DB_RESET)
             </h2>
             <p className="mt-1 text-sm text-muted-foreground">
               Hidden when{" "}

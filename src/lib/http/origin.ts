@@ -22,6 +22,74 @@ export function getRequestOrigin(headerList: Headers): string {
   throw new Error("Could not determine request host for OAuth redirect.");
 }
 
+/**
+ * Allowlisted public app origin for OAuth redirects. Prefer configured
+ * `NEXT_PUBLIC_APP_URL`, then Vercel production/URL env — never trust a
+ * bare client-controlled `X-Forwarded-Host` alone when these are set.
+ */
+export function getTrustedAppOrigin(
+  request: Request,
+  env: NodeJS.ProcessEnv = process.env,
+): string {
+  const configured = env.NEXT_PUBLIC_APP_URL?.trim();
+  if (configured) {
+    try {
+      return new URL(configured).origin;
+    } catch {
+      // fall through
+    }
+  }
+
+  const productionHost = env.VERCEL_PROJECT_PRODUCTION_URL?.trim();
+  if (env.VERCEL_ENV === "production" && productionHost) {
+    return `https://${productionHost.replace(/^https?:\/\//, "")}`;
+  }
+
+  const vercelUrl = env.VERCEL_URL?.trim();
+  if (vercelUrl) {
+    return `https://${vercelUrl.replace(/^https?:\/\//, "")}`;
+  }
+
+  return new URL(request.url).origin;
+}
+
+/**
+ * Host used after OAuth exchange. If forwarded host is present, it must
+ * match the trusted app origin (or be local dev); otherwise use trusted.
+ */
+export function resolveOAuthRedirectOrigin(request: Request): string {
+  const trusted = getTrustedAppOrigin(request);
+  const isLocal = process.env.NODE_ENV === "development";
+  if (isLocal) {
+    return new URL(request.url).origin;
+  }
+
+  const forwardedHost = request.headers
+    .get("x-forwarded-host")
+    ?.split(",")[0]
+    ?.trim();
+  if (!forwardedHost) {
+    return trusted;
+  }
+
+  const forwardedOrigin = `https://${forwardedHost}`;
+  try {
+    if (new URL(forwardedOrigin).host === new URL(trusted).host) {
+      return forwardedOrigin;
+    }
+  } catch {
+    // fall through to trusted
+  }
+
+  // Preview deployments: allow the deployment's own VERCEL_URL host.
+  const vercelUrl = process.env.VERCEL_URL?.trim();
+  if (vercelUrl && forwardedHost === vercelUrl.replace(/^https?:\/\//, "")) {
+    return forwardedOrigin;
+  }
+
+  return trusted;
+}
+
 /** Only allow same-app relative paths for post-login redirects. */
 export function safeNextPath(
   next: string | null | undefined,
