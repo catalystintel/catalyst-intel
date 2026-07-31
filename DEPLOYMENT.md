@@ -47,7 +47,7 @@ Three environments, one app:
 | `CRON_INTERVAL_MINUTES`                | No        | Default `1` for `npm run cron`                                                                                                 |
 | `NEXT_PUBLIC_POSTHOG_KEY`              | No        | PostHog Project API key; omit to disable analytics                                                                             |
 | `NEXT_PUBLIC_POSTHOG_HOST`             | No        | Default `https://us.i.posthog.com`                                                                                             |
-| `ADMIN_EMAILS`                         | No        | Comma-separated admin emails; defaults to `zhbar10@gmail.com,omer.nachshon@gmail.com`                                          |
+| `ADMIN_EMAILS`                         | No        | Extra admin emails (comma-separated); always includes `zhbar10@gmail.com`, `omer.nachshon@gmail.com`                           |
 | `FINNHUB_API_KEY`                      | No        | Finnhub: NYSE listings, earnings/FDA calendars, news (soft-fail)                                                               |
 | `FMP_API_KEY`                          | No        | FMP economic calendar (soft-fail; often premium — 402 skipped). Dedicated ~10m cron, not 1-min fetch/all                       |
 | `PR_WIRE_API_KEY` / `PR_WIRE_API_BASE` | No        | Optional. PR wire scrapes a **free public high-impact board** with no key; set these only for the authenticated full firehose. |
@@ -141,7 +141,7 @@ env vars are required today.
 | `LIBSQL_AUTH_TOKEN`                    | Yes         | Turso **staging** DB token                                       |
 | `NEXT_PUBLIC_POSTHOG_KEY`              | Recommended | Same PostHog project is fine for MVP                             |
 | `NEXT_PUBLIC_POSTHOG_HOST`             | Recommended | `https://us.i.posthog.com` or EU host                            |
-| `ADMIN_EMAILS`                         | No          | Override admin allowlist if needed (same defaults as local)      |
+| `ADMIN_EMAILS`                         | No          | Extra admin emails; built-in operators always included           |
 | `CRON_SECRET`                          | Recommended | So you can manually trigger fetch against staging                |
 | `FINNHUB_API_KEY`                      | No          | Enables Finnhub catalysts + NYSE listings (Admin / cron)         |
 | `PR_WIRE_API_KEY` / `PR_WIRE_API_BASE` | No          | Optional full-feed upgrade; public PR wire scrape needs no key   |
@@ -163,7 +163,7 @@ env vars are required today.
 | `LIBSQL_AUTH_TOKEN`                    | Yes         | Turso **production** DB token                                    |
 | `NEXT_PUBLIC_POSTHOG_KEY`              | Recommended | Same PostHog project is fine for MVP                             |
 | `NEXT_PUBLIC_POSTHOG_HOST`             | Recommended | `https://us.i.posthog.com` or EU host                            |
-| `ADMIN_EMAILS`                         | No          | Override admin allowlist if needed (same defaults as local)      |
+| `ADMIN_EMAILS`                         | No          | Extra admin emails; built-in operators always included           |
 | `CRON_SECRET`                          | Yes         | Must match the value configured in cron-job.org                  |
 | `FINNHUB_API_KEY`                      | No          | Enables Finnhub catalysts + NYSE listings (Admin / cron)         |
 | `PR_WIRE_API_KEY` / `PR_WIRE_API_BASE` | No          | Optional full-feed upgrade; public PR wire scrape needs no key   |

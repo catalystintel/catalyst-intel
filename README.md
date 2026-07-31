@@ -65,7 +65,7 @@ cp .env.example .env.local
 | `SEC_EDGAR_USER_AGENT`          | Yes                   | SEC requires a descriptive contact string, e.g. `you@email.com CatalystIntel/0.1`      |
 | `NEXT_PUBLIC_POSTHOG_KEY`       | No                    | PostHog Project API key (`phc_…`). Leave blank to disable analytics                    |
 | `NEXT_PUBLIC_POSTHOG_HOST`      | No                    | Default `https://us.i.posthog.com` (use `https://eu.i.posthog.com` for EU)             |
-| `ADMIN_EMAILS`                  | No                    | Comma-separated admin emails; defaults to `zhbar10@gmail.com,omer.nachshon@gmail.com`  |
+| `ADMIN_EMAILS`                  | No                    | Extra admin emails; always includes `zhbar10@gmail.com`, `omer.nachshon@gmail.com`     |
 | `SUPABASE_SERVICE_ROLE_KEY`     | No                    | Reserved for future admin operations                                                   |
 | `OPENROUTER_API_KEY`            | No                    | On-demand AI analysis (free `:free` models). Or use `OPENROUTER_API_KEYS` (comma pool) |
 
