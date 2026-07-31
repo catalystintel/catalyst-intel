@@ -19,7 +19,10 @@ import { isFinnhubConfigured } from "@/lib/jobs/finnhub-env";
  */
 export async function GET(request: NextRequest) {
   if (!isLibsqlConfigured()) {
-    return NextResponse.json({ error: databaseUnavailableMessage() }, { status: 503 });
+    return NextResponse.json(
+      { error: databaseUnavailableMessage() },
+      { status: 503 },
+    );
   }
 
   const ip = getClientIp(request);

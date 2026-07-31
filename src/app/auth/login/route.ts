@@ -3,7 +3,10 @@ import { createServerClient } from "@supabase/ssr";
 
 import { getRequestOrigin, safeNextPath } from "@/lib/http/origin";
 import { supabaseCookieOptions } from "@/lib/supabase/cookie-options";
-import { isSupabaseConfigured, SUPABASE_UNAVAILABLE_MESSAGE } from "@/lib/supabase/env";
+import {
+  isSupabaseConfigured,
+  SUPABASE_UNAVAILABLE_MESSAGE,
+} from "@/lib/supabase/env";
 
 /**
  * Starts Google OAuth via a Route Handler so PKCE cookies are attached to the

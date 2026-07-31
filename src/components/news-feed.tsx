@@ -132,9 +132,7 @@ export function NewsFeed({ initialHeadlines, initialTotal }: Props) {
       setTotal(data.total);
       setNextCursor(data.nextCursor);
     } catch (err) {
-      toast.error(
-        toUserFacingMessage(err, "Could not load headlines."),
-      );
+      toast.error(toUserFacingMessage(err, "Could not load headlines."));
     } finally {
       setLoading(false);
     }
@@ -183,9 +181,7 @@ export function NewsFeed({ initialHeadlines, initialTotal }: Props) {
       setHeadlines((prev) => [...prev, ...data.headlines]);
       setNextCursor(data.nextCursor);
     } catch (err) {
-      toast.error(
-        toUserFacingMessage(err, "Could not load more headlines."),
-      );
+      toast.error(toUserFacingMessage(err, "Could not load more headlines."));
     } finally {
       setLoadingMore(false);
     }

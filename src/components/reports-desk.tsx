@@ -45,9 +45,7 @@ export function ReportsDesk() {
       if (!res.ok) throw new Error(data.error ?? "Could not load reports.");
       setReports(data.reports ?? []);
     } catch (err) {
-      toast.error(
-        toUserFacingMessage(err, "Could not load reports."),
-      );
+      toast.error(toUserFacingMessage(err, "Could not load reports."));
     } finally {
       setLoading(false);
     }
@@ -70,9 +68,7 @@ export function ReportsDesk() {
       if (!res.ok) throw new Error(data.error ?? "Could not open report.");
       setSelected(data.report as ReportDetail);
     } catch (err) {
-      toast.error(
-        toUserFacingMessage(err, "Could not open report."),
-      );
+      toast.error(toUserFacingMessage(err, "Could not open report."));
     }
   };
 
@@ -100,9 +96,7 @@ export function ReportsDesk() {
         `Saved ${report.itemCount} catalyst${report.itemCount === 1 ? "" : "s"}.`,
       );
     } catch (err) {
-      toast.error(
-        toUserFacingMessage(err, "Could not create report."),
-      );
+      toast.error(toUserFacingMessage(err, "Could not create report."));
     } finally {
       setCreating(false);
     }
@@ -120,9 +114,7 @@ export function ReportsDesk() {
       if (selected?.id === id) setSelected(null);
       toast.success("Report deleted.");
     } catch (err) {
-      toast.error(
-        toUserFacingMessage(err, "Could not delete report."),
-      );
+      toast.error(toUserFacingMessage(err, "Could not delete report."));
     }
   };
 

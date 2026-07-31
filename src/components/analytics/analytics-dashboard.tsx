@@ -48,9 +48,7 @@ export function AnalyticsDashboard() {
       setLastFetchedAt(data.fetchedAt ?? new Date().toISOString());
     } catch (err) {
       if (err instanceof DOMException && err.name === "AbortError") return;
-      toast.error(
-        toUserFacingMessage(err, "Could not load analytics."),
-      );
+      toast.error(toUserFacingMessage(err, "Could not load analytics."));
     } finally {
       setLoading(false);
       if (isManual) setRefreshing(false);

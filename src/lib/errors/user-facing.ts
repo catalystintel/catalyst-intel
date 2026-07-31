@@ -6,12 +6,13 @@
 
 export const USER_FACING = {
   generic: "Something went wrong. Please try again.",
-  unavailable: "This service is temporarily unavailable. Please try again shortly.",
+  unavailable:
+    "This service is temporarily unavailable. Please try again shortly.",
   database:
     "The desk is temporarily unavailable. Please try again in a moment.",
-  databaseQuota:
-    "The desk is temporarily at capacity. Please try again later.",
-  signInUnavailable: "Sign-in is temporarily unavailable. Please try again shortly.",
+  databaseQuota: "The desk is temporarily at capacity. Please try again later.",
+  signInUnavailable:
+    "Sign-in is temporarily unavailable. Please try again shortly.",
   aiUnavailable:
     "AI analysis is not available at the moment. You can try again shortly.",
   pushUnavailable: "Browser push is not available right now.",
@@ -22,7 +23,7 @@ export const USER_FACING = {
 } as const;
 
 const OPS_LEAK_PATTERN =
-  /\b(LIBSQL_|DATABASE_URL|OPENROUTER_|RESEND_|TELEGRAM_BOT|WEB_PUSH_|NEXT_PUBLIC_|SUPABASE_|Vercel|Turso|DEPLOYMENT\.md|npm run |\.env\.local|BLOCKED|SQLITE_|local\.db|file:)\b/i;
+  /\b(LIBSQL_|DATABASE_URL|OPENROUTER_|RESEND_|TELEGRAM_BOT|WEB_PUSH_|NEXT_PUBLIC_|SUPABASE_|Vercel|Turso|DEPLOYMENT\.md|npm run |\.env\.local|BLOCKED|SQLITE_|local\.db|file:)/i;
 
 /**
  * True when a string looks like operator/setup detail that should not be

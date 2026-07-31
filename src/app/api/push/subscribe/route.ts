@@ -19,7 +19,10 @@ import {
  */
 export async function POST(request: NextRequest) {
   if (!isLibsqlConfigured()) {
-    return NextResponse.json({ error: databaseUnavailableMessage() }, { status: 503 });
+    return NextResponse.json(
+      { error: databaseUnavailableMessage() },
+      { status: 503 },
+    );
   }
 
   const ip = getClientIp(request);
@@ -93,7 +96,10 @@ export async function POST(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   if (!isLibsqlConfigured()) {
-    return NextResponse.json({ error: databaseUnavailableMessage() }, { status: 503 });
+    return NextResponse.json(
+      { error: databaseUnavailableMessage() },
+      { status: 503 },
+    );
   }
 
   const user = await getCurrentAppUser();

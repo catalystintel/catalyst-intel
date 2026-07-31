@@ -3,7 +3,10 @@
 import { redirect } from "next/navigation";
 
 import { safeNextPath } from "@/lib/http/origin";
-import { isSupabaseConfigured, SUPABASE_UNAVAILABLE_MESSAGE } from "@/lib/supabase/env";
+import {
+  isSupabaseConfigured,
+  SUPABASE_UNAVAILABLE_MESSAGE,
+} from "@/lib/supabase/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 /**
@@ -14,7 +17,9 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
  */
 export async function signInWithGoogle(formData: FormData) {
   if (!isSupabaseConfigured()) {
-    redirect(`/login?error=${encodeURIComponent(SUPABASE_UNAVAILABLE_MESSAGE)}`);
+    redirect(
+      `/login?error=${encodeURIComponent(SUPABASE_UNAVAILABLE_MESSAGE)}`,
+    );
   }
 
   const next = safeNextPath(formData.get("next") as string | null);
@@ -24,7 +29,9 @@ export async function signInWithGoogle(formData: FormData) {
 /** Clears the current browser session (this device). */
 export async function logout() {
   if (!isSupabaseConfigured()) {
-    redirect(`/login?error=${encodeURIComponent(SUPABASE_UNAVAILABLE_MESSAGE)}`);
+    redirect(
+      `/login?error=${encodeURIComponent(SUPABASE_UNAVAILABLE_MESSAGE)}`,
+    );
   }
 
   const supabase = await createSupabaseServerClient();
@@ -38,7 +45,9 @@ export async function logout() {
  */
 export async function signOutEverywhere() {
   if (!isSupabaseConfigured()) {
-    redirect(`/login?error=${encodeURIComponent(SUPABASE_UNAVAILABLE_MESSAGE)}`);
+    redirect(
+      `/login?error=${encodeURIComponent(SUPABASE_UNAVAILABLE_MESSAGE)}`,
+    );
   }
 
   const supabase = await createSupabaseServerClient();

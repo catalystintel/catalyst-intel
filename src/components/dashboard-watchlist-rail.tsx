@@ -106,9 +106,7 @@ export function DashboardWatchlistRail({
       if (!res.ok) throw new Error("Could not remove symbol.");
       await loadSymbols();
     } catch (err) {
-      toast.error(
-        toUserFacingMessage(err, "Could not remove symbol."),
-      );
+      toast.error(toUserFacingMessage(err, "Could not remove symbol."));
     } finally {
       setSaving(false);
     }

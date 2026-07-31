@@ -187,9 +187,7 @@ export function WatchlistPlaybookPanel() {
       await load();
       toast.success(`${symbol} removed from watchlist`);
     } catch (err) {
-      toast.error(
-        toUserFacingMessage(err, "Could not remove symbol."),
-      );
+      toast.error(toUserFacingMessage(err, "Could not remove symbol."));
     } finally {
       setSaving(false);
     }
@@ -221,9 +219,7 @@ export function WatchlistPlaybookPanel() {
         );
       }
     } catch (err) {
-      toast.error(
-        toUserFacingMessage(err, "Could not save playbook."),
-      );
+      toast.error(toUserFacingMessage(err, "Could not save playbook."));
       await load();
     } finally {
       setSaving(false);

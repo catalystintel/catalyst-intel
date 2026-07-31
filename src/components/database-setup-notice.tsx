@@ -53,8 +53,8 @@ export function DatabaseSetupNotice() {
                 non-empty (a 0-byte file means migrate never applied).
               </li>
               <li>
-                Restart <code className="text-xs">npm run dev</code>, then reload
-                the desk.
+                Restart <code className="text-xs">npm run dev</code>, then
+                reload the desk.
               </li>
             </ol>
           ) : null}

@@ -37,7 +37,10 @@ interface RouteContext {
  */
 export async function GET(request: NextRequest, context: RouteContext) {
   if (!isLibsqlConfigured()) {
-    return NextResponse.json({ error: databaseUnavailableMessage() }, { status: 503 });
+    return NextResponse.json(
+      { error: databaseUnavailableMessage() },
+      { status: 503 },
+    );
   }
 
   const ip = getClientIp(request);

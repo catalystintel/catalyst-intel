@@ -105,8 +105,7 @@ export function CatalystArticleDialog({
         setLoad({
           status: "error",
           catalystId: id,
-          message:
-            toUserFacingMessage(err, "Could not load details."),
+          message: toUserFacingMessage(err, "Could not load details."),
         });
       }
     })();

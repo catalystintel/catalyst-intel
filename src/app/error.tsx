@@ -50,7 +50,7 @@ export default function AppError({
         <button
           type="button"
           onClick={reset}
-          className="text-sm font-medium underline underline-offset-2 mt-4"
+          className="mt-4 text-sm font-medium underline underline-offset-2"
         >
           Try again
         </button>

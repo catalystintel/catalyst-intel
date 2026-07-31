@@ -148,9 +148,7 @@ export function useLiveFeedQuery(
         });
       } catch (err) {
         if (err instanceof DOMException && err.name === "AbortError") return;
-        setPollError(
-          toUserFacingMessage(err, "Could not load catalysts."),
-        );
+        setPollError(toUserFacingMessage(err, "Could not load catalysts."));
       } finally {
         inFlight.current = false;
         setLoading(false);
@@ -166,9 +164,7 @@ export function useLiveFeedQuery(
       await fetchPage({ cursor: nextCursor, replace: false });
     } catch (err) {
       if (!(err instanceof DOMException && err.name === "AbortError")) {
-        setPollError(
-          toUserFacingMessage(err, "Could not load more."),
-        );
+        setPollError(toUserFacingMessage(err, "Could not load more."));
       }
     } finally {
       setLoadingMore(false);

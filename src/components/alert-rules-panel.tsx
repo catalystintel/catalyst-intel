@@ -184,8 +184,8 @@ export function AlertRulesPanel() {
           </h2>
           <p className="mt-1 text-sm text-[var(--desk-text-muted)]">
             Push (browser) is free and works even when this tab is closed —
-            recommended. Telegram and email need delivery to be enabled for
-            this deployment
+            recommended. Telegram and email need delivery to be enabled for this
+            deployment
             {telegramConfigured ? " (Telegram ready)" : ""}
             {emailConfigured ? " (email ready)" : ""}. Webhook always works.
           </p>

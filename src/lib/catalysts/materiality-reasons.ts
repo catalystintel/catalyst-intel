@@ -8,9 +8,7 @@ import {
   CATEGORY_LABELS,
   type EventCategoryKey,
 } from "@/lib/catalysts/taxonomy";
-import {
-  materialityFromScore,
-} from "@/lib/catalysts/materiality";
+import { materialityFromScore } from "@/lib/catalysts/materiality";
 
 export function normalizeMaterialityReasons(value: unknown): string[] {
   if (!Array.isArray(value)) return [];
@@ -34,8 +32,5 @@ export function resolveMaterialityReasons(options: {
   const m = materialityFromScore(options.score, options.category);
   const category = options.category;
   const label = category ? CATEGORY_LABELS[category] : "Other";
-  return [
-    `${label} event`,
-    `${m.label} materiality (${m.score}/100)`,
-  ];
+  return [`${label} event`, `${m.label} materiality (${m.score}/100)`];
 }

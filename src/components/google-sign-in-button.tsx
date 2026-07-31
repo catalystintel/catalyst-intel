@@ -51,9 +51,7 @@ export function GoogleSignInButton({
           window.location.assign(fallbackHref);
         }
       } catch (err) {
-        setError(
-          toUserFacingMessage(err, "Could not start Google sign-in."),
-        );
+        setError(toUserFacingMessage(err, "Could not start Google sign-in."));
         window.location.assign(fallbackHref);
       }
     });

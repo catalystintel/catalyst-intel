@@ -243,7 +243,7 @@ export function CatalystDetailDrawer({
                   </p>
                 ) : (
                   <p className="mt-1.5 text-sm text-[var(--desk-text-muted)]">
-                  No session-move context for this event yet.
+                    No session-move context for this event yet.
                   </p>
                 )}
               </div>

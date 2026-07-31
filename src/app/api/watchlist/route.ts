@@ -17,7 +17,10 @@ import { parsePortfolioSymbols } from "@/lib/watchlist/parse-portfolio-symbols";
 async function requireUser(request: NextRequest) {
   if (!isLibsqlConfigured()) {
     return {
-      error: NextResponse.json({ error: databaseUnavailableMessage() }, { status: 503 }),
+      error: NextResponse.json(
+        { error: databaseUnavailableMessage() },
+        { status: 503 },
+      ),
     };
   }
 
