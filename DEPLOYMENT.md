@@ -53,6 +53,7 @@ Three environments, one app:
 | `NEXT_PUBLIC_POSTHOG_HOST`             | No        | Default `https://us.i.posthog.com`                                                                                             |
 | `ADMIN_EMAILS`                         | No        | Extra admin emails (comma-separated); always includes `zhbar10@gmail.com`, `omer.nachshon@gmail.com`                           |
 | `FINNHUB_API_KEY`                      | No        | Finnhub: NYSE listings, earnings/FDA calendars, news (soft-fail)                                                               |
+| `FMP_API_KEY`                          | No        | FMP economic calendar (soft-fail; often premium — 402 skipped). Dedicated ~10m cron, not 1-min fetch/all                       |
 | `PR_WIRE_API_KEY` / `PR_WIRE_API_BASE` | No        | Optional. PR wire scrapes a **free public high-impact board** with no key; set these only for the authenticated full firehose. |
 | `POLYGON_API_KEY`                      | No        | Polygon/Massive news + historical_impact enrichment (soft-fail; free tier ~5 req/min, no same-day aggs)                        |
 | `MASSIVE_API_KEY`                      | No        | Alias for `POLYGON_API_KEY`                                                                                                    |
@@ -94,6 +95,15 @@ so iOS Safari does not lose the verifier the way a Server Action `redirect()` so
 `ADMIN_EMAILS` (or the built-in defaults). The local `users.role` column is synced as a cache
 and is **not** the source of truth — do not rely on `npm run make-admin` alone. Manual fetch
 via `/admin` uses the same allowlist; cron-job.org uses `x-cron-secret`.
+
+**Preview / staging access (admin-only):** every Vercel Preview deployment
+(`VERCEL_ENV=preview`) — including the stable `dev` staging host and PR preview
+URLs — requires an allowlisted admin session. Non-admins are sent to `/login`
+with a clear error; OAuth for non-admins is signed out immediately on callback.
+Exempt: `/login`, `/auth/*`, `GET /api/health`, `/api/admin/*` (cron/admin
+self-auth), and `/api/telegram/webhook`. Production (`main`) stays open to
+normal signed-in users. Report share links (`/reports/s/[token]`) also require
+a signed-in session (no anonymous token fetch).
 
 ## Multi-source fetch order
 
