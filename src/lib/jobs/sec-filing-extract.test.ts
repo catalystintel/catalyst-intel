@@ -91,6 +91,26 @@ describe("extractFromFilingText", () => {
     expect(extract.eventKind).toBe("13d");
     expect(extract.keyFacts.some((f) => f.label === "Ownership")).toBe(true);
   });
+
+  it("extracts 8-K Item reason into title instead of bare 8-K", () => {
+    const extract = extractFromFilingText({
+      formType: "8-K",
+      text: [
+        "UNITED STATES SECURITIES AND EXCHANGE COMMISSION",
+        "Item 5.02 Departure of Directors or Certain Officers; Election of Directors.",
+        "On July 20, 2026, Jane Smith resigned as Chief Executive Officer of the Company.",
+        "Item 9.01 Financial Statements and Exhibits.",
+      ].join("\n"),
+      ticker: "ACME",
+      companyName: "Acme Corp",
+    });
+    expect(extract.eventKind).toBe("8k");
+    expect(extract.titleOverride).toMatch(/Acme Corp - .+Change/i);
+    expect(extract.headlineOverride).toMatch(/Officer|Director|Executive/i);
+    expect(extract.investorSummary).toMatch(/disclosed/i);
+    expect(extract.investorSummary).not.toMatch(/filed an 8-K/i);
+    expect(extract.parsedItems?.some((i) => i.code === "5.02")).toBe(true);
+  });
 });
 
 describe("filingTextFromHtml / pickPrimaryDocumentUrl", () => {

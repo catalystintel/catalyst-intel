@@ -24,6 +24,6 @@ describe("plainEnglishForSecForm", () => {
 describe("shortSecFormLabel", () => {
   it("returns short labels", () => {
     expect(shortSecFormLabel("424B3")).toMatch(/Pricing supplement/i);
-    expect(shortSecFormLabel("8-K")).toMatch(/8-K/);
+    expect(shortSecFormLabel("8-K")).toMatch(/Current report/i);
   });
 });

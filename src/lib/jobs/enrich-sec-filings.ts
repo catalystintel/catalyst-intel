@@ -13,7 +13,10 @@ import {
   pickPrimaryDocumentUrl,
   type SecFilingExtract,
 } from "@/lib/jobs/sec-filing-extract";
+import { selectPrimaryItem, type ParsedItem } from "@/lib/jobs/parse-8k-items";
 import { type SecFetchMode, fetchSecUrl } from "@/lib/jobs/sec-edgar-http";
+import type { EventCategoryKey } from "@/lib/catalysts/taxonomy";
+import { isEventCategoryKey } from "@/lib/catalysts/taxonomy";
 
 function formNeedsDocEnrich(formType: string): boolean {
   const f = formType.trim().toUpperCase();
@@ -42,6 +45,36 @@ function applyExtract(
   if (extract.headlineOverride?.trim()) {
     item.headline = extract.headlineOverride.trim();
   }
+
+  const parsed = (extract.parsedItems ?? [])
+    .map((entry): ParsedItem | null => {
+      if (
+        typeof entry?.code === "string" &&
+        typeof entry?.label === "string" &&
+        typeof entry?.category === "string" &&
+        isEventCategoryKey(entry.category)
+      ) {
+        return {
+          code: entry.code,
+          label: entry.label,
+          category: entry.category as EventCategoryKey,
+        };
+      }
+      return null;
+    })
+    .filter((x): x is ParsedItem => x !== null);
+
+  if (parsed.length > 0) {
+    item.itemCodes = parsed;
+    const primary = selectPrimaryItem(parsed);
+    if (primary) {
+      item.eventCategory = primary.category;
+      if (/^8-?K/i.test(item.type)) {
+        item.subcategory = "8k";
+      }
+    }
+  }
+
   if (extract.completeness === "full") {
     item.confidence = Math.max(item.confidence ?? 0, 88);
   } else if (extract.completeness === "partial") {
@@ -203,7 +236,7 @@ export function sanitizeSecAtomSummaries(items: NormalizedCatalyst[]): void {
               : i.label || `Item ${i.code}`,
           )
           .join(", ");
-        item.summary = `${subject} filed an ${item.type} covering ${item.headline || "current report events"}. The filing highlights ${itemsLabel}. This is a current SEC disclosure traders watch for material company news.`;
+        item.summary = `${subject} disclosed ${item.headline || "a material event"} in a current report. The filing highlights ${itemsLabel}. This is a current SEC disclosure traders watch for material company news.`;
       }
       continue;
     }
@@ -336,6 +369,9 @@ export async function backfillSecFilingExtractsFromDb(options: {
         headline: item.headline,
         summary: item.summary,
         confidence: item.confidence,
+        itemCodes: item.itemCodes ?? null,
+        eventCategory: item.eventCategory,
+        subcategory: item.subcategory,
       })
       .where(eq(catalysts.id, row.catalystId))
       .run();
