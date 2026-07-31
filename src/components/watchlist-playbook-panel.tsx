@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { Plus, Trash2 } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Plus, Trash2, Upload } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,7 @@ import {
   type EventCategoryKey,
 } from "@/lib/jobs/parse-8k-items";
 import { DEFAULT_PLAYBOOK_CATEGORIES } from "@/lib/catalysts/playbook";
+import { parsePortfolioSymbols } from "@/lib/watchlist/parse-portfolio-symbols";
 import { cn } from "@/lib/utils";
 
 const ALL_CATEGORIES = Object.keys(CATEGORY_LABELS) as EventCategoryKey[];
@@ -23,12 +24,14 @@ export function WatchlistPlaybookPanel() {
   );
   const [quietMode, setQuietMode] = useState(false);
   const [draft, setDraft] = useState("");
+  const [portfolioDraft, setPortfolioDraft] = useState("");
   const [saving, setSaving] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const [nyseBySymbol, setNyseBySymbol] = useState<
     Record<string, { lastPrice: string | null; description: string | null }>
   >({});
   const [nyseNote, setNyseNote] = useState<string | null>(null);
+  const fileRef = useRef<HTMLInputElement | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -76,7 +79,10 @@ export function WatchlistPlaybookPanel() {
         setNyseBySymbol(map);
         setNyseNote(
           nData.emptyReason
-            ? String(nData.emptyReason)
+            ? String(nData.emptyReason).replace(
+                /FINNHUB_API_KEY|POLYGON_API_KEY|RESEND_API_KEY/gi,
+                "market data",
+              )
             : nData.total
               ? `${nData.total.toLocaleString()} NYSE listings loaded`
               : null,
@@ -121,6 +127,51 @@ export function WatchlistPlaybookPanel() {
     } finally {
       setSaving(false);
     }
+  }
+
+  async function importPortfolio(raw: string, { enableQuiet = true } = {}) {
+    const { symbols: parsed } = parsePortfolioSymbols(raw, 100);
+    if (parsed.length === 0) {
+      toast.error("No valid symbols found in that paste / file.");
+      return;
+    }
+    setSaving(true);
+    try {
+      const res = await fetch("/api/watchlist", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ symbols: parsed }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Import failed.");
+      setPortfolioDraft("");
+      await load();
+      toast.success(
+        `Imported ${data.added ?? 0} symbol${(data.added ?? 0) === 1 ? "" : "s"}${
+          data.skipped ? ` · ${data.skipped} already on list` : ""
+        }`,
+      );
+      if (enableQuiet && !quietMode) {
+        await savePlaybook(categories, true, { notify: true });
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Import failed.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function onPortfolioSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    await importPortfolio(portfolioDraft);
+  }
+
+  async function onPortfolioFile(file: File | null) {
+    if (!file) return;
+    const text = await file.text();
+    await importPortfolio(text);
+    if (fileRef.current) fileRef.current.value = "";
   }
 
   async function removeSymbol(symbol: string) {
@@ -227,6 +278,57 @@ export function WatchlistPlaybookPanel() {
               Add
             </Button>
           </form>
+
+          <form
+            onSubmit={onPortfolioSubmit}
+            className="flex flex-col gap-2 rounded-lg border border-dashed border-[var(--desk-border-strong)] bg-[var(--desk-overlay-soft)] p-3"
+          >
+            <p className="text-sm font-medium text-[var(--desk-text)]">
+              Import portfolio
+            </p>
+            <p className="text-xs text-[var(--desk-text-muted)]">
+              Paste tickers or upload a CSV (first column = symbol). Focuses the
+              Live tape via Quiet playbook — no broker sync.
+            </p>
+            <textarea
+              value={portfolioDraft}
+              onChange={(e) => setPortfolioDraft(e.target.value)}
+              placeholder={"AAPL\nMSFT, NVDA\nGOOGL"}
+              rows={3}
+              aria-label="Paste portfolio symbols"
+              className="w-full resize-y rounded-md border border-[var(--desk-border-strong)] bg-[var(--desk-panel)] px-2.5 py-2 font-mono text-xs text-[var(--desk-text)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--desk-link)]/40"
+            />
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                type="submit"
+                disabled={saving || !portfolioDraft.trim()}
+                variant="outline"
+                className="btn-press h-9 border-[var(--desk-border-strong)]"
+              >
+                Import paste
+              </Button>
+              <Button
+                type="button"
+                disabled={saving}
+                variant="outline"
+                className="btn-press h-9 gap-1.5 border-[var(--desk-border-strong)]"
+                onClick={() => fileRef.current?.click()}
+              >
+                <Upload className="size-3.5" />
+                Upload CSV
+              </Button>
+              <input
+                ref={fileRef}
+                type="file"
+                accept=".csv,.txt,text/csv,text/plain"
+                className="hidden"
+                onChange={(e) =>
+                  void onPortfolioFile(e.target.files?.[0] ?? null)
+                }
+              />
+            </div>
+          </form>
+
           {nyseNote ? (
             <p className="font-mono text-[0.7rem] text-[var(--desk-text-dim)]">
               {nyseNote}

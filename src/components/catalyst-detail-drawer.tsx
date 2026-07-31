@@ -243,7 +243,7 @@ export function CatalystDetailDrawer({
                   </p>
                 ) : (
                   <p className="mt-1.5 text-sm text-[var(--desk-text-muted)]">
-                    No price enrichment yet. Set POLYGON_API_KEY to enable
+                    No price enrichment yet. Market data is not configured for
                     session-move context.
                   </p>
                 )}

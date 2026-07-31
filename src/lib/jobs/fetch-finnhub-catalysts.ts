@@ -6,6 +6,10 @@ import {
   formatPriceTargetTitle,
   resolveDisplayCompanyName,
 } from "@/lib/catalysts/catalyst-titles";
+import {
+  epsSurprisePctFrom,
+  MATERIAL_EPS_SURPRISE_PCT,
+} from "@/lib/catalysts/earnings-surprise";
 import { categorizeNewsHeadline } from "@/lib/catalysts/news-category";
 import {
   formatSeekingAlphaTitle,
@@ -159,12 +163,15 @@ export function earningsToNormalized(
   const displayName = resolveDisplayCompanyName(companyName, symbol);
   const quarter = earningsQuarterLabel(row.quarter, row.date);
   const displayTitle = formatEarningsReportTitle(quarter, displayName);
+  const surprisePct = epsSurprisePctFrom(row.epsActual, row.epsEstimate);
+  const rawContent =
+    surprisePct != null ? { ...row, epsSurprisePercent: surprisePct } : row;
 
   return {
     provider: "finnhub",
     externalId,
     url: `https://finnhub.io/quote/${symbol}`,
-    rawContent: row,
+    rawContent,
     symbol: symbol,
     companyName: displayName,
     type: "Earnings",
@@ -174,14 +181,27 @@ export function earningsToNormalized(
     subcategory: hour === "bmo" || hour === "amc" ? hour : "earnings_calendar",
     timestamp: new Date(`${row.date}T12:00:00.000Z`).toISOString(),
     summary: [
-      row.epsEstimate != null ? `EPS est ${row.epsEstimate}` : null,
+      row.epsActual != null ? `EPS ${row.epsActual}` : null,
+      row.epsEstimate != null ? `est ${row.epsEstimate}` : null,
+      surprisePct != null
+        ? `surprise ${surprisePct > 0 ? "+" : ""}${surprisePct.toFixed(1)}%`
+        : null,
       row.revenueEstimate != null ? `Rev est ${row.revenueEstimate}` : null,
       hour !== "unknown" ? hour.toUpperCase() : null,
     ]
       .filter(Boolean)
       .join(" · "),
     confidence: 70,
-    tags: ["finnhub", "earnings", hour, quarter],
+    tags: [
+      "finnhub",
+      "earnings",
+      hour,
+      quarter,
+      ...(surprisePct != null &&
+      Math.abs(surprisePct) >= MATERIAL_EPS_SURPRISE_PCT
+        ? (["earnings_surprise"] as const)
+        : []),
+    ],
   };
 }
 
