@@ -92,6 +92,7 @@ export function AlertRulesPanel() {
 
   const [name, setName] = useState("AH/PM bombs");
   const [channel, setChannel] = useState<AlertChannel>("push");
+  const [channelSeeded, setChannelSeeded] = useState(false);
   const [webhookUrl, setWebhookUrl] = useState("");
   const [sessionEmail, setSessionEmail] = useState("");
   const [telegramChatId, setTelegramChatId] = useState("");
@@ -130,6 +131,26 @@ export function AlertRulesPanel() {
     return () => window.clearTimeout(id);
   }, [load]);
 
+  // Land on a channel that can actually work on this deployment.
+  useEffect(() => {
+    if (!loaded || channelSeeded) return;
+    const id = window.setTimeout(() => {
+      if (pushAvailable) setChannel("push");
+      else if (telegramConfigured) setChannel("telegram");
+      else if (emailConfigured && sessionEmail) setChannel("email");
+      else setChannel("webhook");
+      setChannelSeeded(true);
+    }, 0);
+    return () => window.clearTimeout(id);
+  }, [
+    loaded,
+    channelSeeded,
+    pushAvailable,
+    telegramConfigured,
+    emailConfigured,
+    sessionEmail,
+  ]);
+
   function channelReady(ch: AlertChannel): {
     state: ReadyState;
     label: string;
@@ -137,23 +158,23 @@ export function AlertRulesPanel() {
     switch (ch) {
       case "push":
         if (!pushAvailable)
-          return { state: "blocked", label: "Not on this deploy" };
+          return { state: "blocked", label: "Unavailable here" };
         if (webPush.status === "subscribed")
           return { state: "ready", label: "Browser ready" };
         if (webPush.status === "denied")
           return { state: "blocked", label: "Permission denied" };
         if (webPush.status === "unsupported")
           return { state: "blocked", label: "Unsupported browser" };
-        return { state: "action", label: "Enable notifications" };
+        return { state: "action", label: "Enable first" };
       case "telegram":
         if (!telegramConfigured)
-          return { state: "blocked", label: "Bot not configured" };
+          return { state: "blocked", label: "Unavailable here" };
         return { state: "ready", label: "Bot ready" };
       case "webhook":
         return { state: "ready", label: "Always available" };
       case "email":
         if (!emailConfigured)
-          return { state: "blocked", label: "Email not configured" };
+          return { state: "blocked", label: "Unavailable here" };
         if (!sessionEmail)
           return { state: "blocked", label: "No account email" };
         return { state: "ready", label: "Delivery ready" };
@@ -751,6 +772,33 @@ function ChannelSetup({
   sessionEmail: string;
 }) {
   if (channel === "push") {
+    if (!pushAvailable) {
+      return (
+        <StatusCallout
+          tone="blocked"
+          title="Push isn’t available on this deployment"
+          body="The server is missing VAPID keys. Pick Webhook (always works), or ask ops to enable Web Push — then you’ll enable browser notifications here in one click."
+        />
+      );
+    }
+    if (webPush.status === "denied") {
+      return (
+        <StatusCallout
+          tone="blocked"
+          title="Notification permission denied"
+          body="Open your browser site settings for this origin, allow notifications, then reload and try again."
+        />
+      );
+    }
+    if (webPush.status === "unsupported") {
+      return (
+        <StatusCallout
+          tone="blocked"
+          title="This browser doesn’t support Web Push"
+          body="Try Chrome, Edge, or Firefox on desktop — or pick Telegram / webhook / email."
+        />
+      );
+    }
     return (
       <div>
         <SetupSteps
@@ -760,29 +808,11 @@ function ChannelSetup({
             "Hit Test on the saved rule; you should get a notification even if this tab is closed.",
           ]}
         />
-        {!pushAvailable ? (
-          <StatusCallout
-            tone="blocked"
-            title="Push isn’t available on this deployment"
-            body="The server is missing VAPID keys. Use Telegram, webhook, or email instead — or ask ops to enable Web Push."
-          />
-        ) : webPush.status === "subscribed" ? (
+        {webPush.status === "subscribed" ? (
           <StatusCallout
             tone="ready"
             title="This browser is subscribed"
             body="You’re set. Name the rule, set your filters below, and save."
-          />
-        ) : webPush.status === "denied" ? (
-          <StatusCallout
-            tone="blocked"
-            title="Notification permission denied"
-            body="Open your browser site settings for this origin, allow notifications, then reload and try again."
-          />
-        ) : webPush.status === "unsupported" ? (
-          <StatusCallout
-            tone="blocked"
-            title="This browser doesn’t support Web Push"
-            body="Try Chrome, Edge, or Firefox on desktop — or pick Telegram / webhook / email."
           />
         ) : (
           <Button
@@ -799,6 +829,15 @@ function ChannelSetup({
   }
 
   if (channel === "telegram") {
+    if (!telegramConfigured) {
+      return (
+        <StatusCallout
+          tone="blocked"
+          title="Telegram bot isn’t configured"
+          body="This deployment is missing TELEGRAM_BOT_TOKEN. Use Webhook now, or ask ops to wire the bot. Once live: message the bot → copy your chat ID → paste it here → Save & Test."
+        />
+      );
+    }
     return (
       <div>
         <SetupSteps
@@ -808,31 +847,23 @@ function ChannelSetup({
             "Paste the chat ID below, save the rule, then hit Test.",
           ]}
         />
-        {!telegramConfigured ? (
-          <StatusCallout
-            tone="blocked"
-            title="Telegram bot isn’t configured"
-            body="This deployment is missing TELEGRAM_BOT_TOKEN. Use Push, webhook, or email — or ask ops to wire the bot."
+        <label className="flex flex-col gap-1.5">
+          <span className="text-xs font-medium text-[var(--desk-text-secondary)]">
+            Your Telegram chat ID
+          </span>
+          <Input
+            value={telegramChatId}
+            onChange={(e) => setTelegramChatId(e.target.value)}
+            placeholder="e.g. 123456789"
+            aria-label="Telegram chat ID"
+            inputMode="numeric"
+            className="h-10 border-[var(--desk-border-strong)] bg-[var(--desk-overlay-soft)] font-mono text-xs"
           />
-        ) : (
-          <label className="flex flex-col gap-1.5">
-            <span className="text-xs font-medium text-[var(--desk-text-secondary)]">
-              Your Telegram chat ID
-            </span>
-            <Input
-              value={telegramChatId}
-              onChange={(e) => setTelegramChatId(e.target.value)}
-              placeholder="e.g. 123456789"
-              aria-label="Telegram chat ID"
-              inputMode="numeric"
-              className="h-10 border-[var(--desk-border-strong)] bg-[var(--desk-overlay-soft)] font-mono text-xs"
-            />
-            <span className="text-[0.7rem] text-[var(--desk-text-dim)]">
-              Message the bot once if you don’t have a chat ID yet — it only
-              replies after you text it.
-            </span>
-          </label>
-        )}
+          <span className="text-[0.7rem] text-[var(--desk-text-dim)]">
+            Message the bot once if you don’t have a chat ID yet — it only
+            replies after you text it.
+          </span>
+        </label>
       </div>
     );
   }
@@ -868,6 +899,24 @@ function ChannelSetup({
   }
 
   // email
+  if (!emailConfigured) {
+    return (
+      <StatusCallout
+        tone="blocked"
+        title="Email delivery isn’t configured"
+        body="This deployment is missing the email provider key. Use Webhook (always works) or Push/Telegram when those are enabled."
+      />
+    );
+  }
+  if (!sessionEmail) {
+    return (
+      <StatusCallout
+        tone="blocked"
+        title="No email on this account"
+        body="Sign in with an account that has a verified email, then come back."
+      />
+    );
+  }
   return (
     <div>
       <SetupSteps
@@ -877,36 +926,22 @@ function ChannelSetup({
           "Hit Test — check inbox (and spam) for the sample fire.",
         ]}
       />
-      {!emailConfigured ? (
-        <StatusCallout
-          tone="blocked"
-          title="Email delivery isn’t configured"
-          body="This deployment is missing the email provider key. Use Push, Telegram, or webhook instead."
+      <label className="flex flex-col gap-1.5">
+        <span className="text-xs font-medium text-[var(--desk-text-secondary)]">
+          Delivers to
+        </span>
+        <Input
+          value={sessionEmail}
+          readOnly
+          aria-label="Email recipient (signed-in account)"
+          type="email"
+          className="h-10 border-[var(--desk-border-strong)] bg-[var(--desk-overlay-soft)] font-mono text-xs opacity-90"
         />
-      ) : !sessionEmail ? (
-        <StatusCallout
-          tone="blocked"
-          title="No email on this account"
-          body="Sign in with an account that has a verified email, then come back."
-        />
-      ) : (
-        <label className="flex flex-col gap-1.5">
-          <span className="text-xs font-medium text-[var(--desk-text-secondary)]">
-            Delivers to
-          </span>
-          <Input
-            value={sessionEmail}
-            readOnly
-            aria-label="Email recipient (signed-in account)"
-            type="email"
-            className="h-10 border-[var(--desk-border-strong)] bg-[var(--desk-overlay-soft)] font-mono text-xs opacity-90"
-          />
-          <span className="inline-flex items-center gap-1.5 text-[0.7rem] text-[var(--desk-live-status)]">
-            <CheckCircle2 className="size-3" aria-hidden />
-            {ready.label} — recipient locked to your account email
-          </span>
-        </label>
-      )}
+        <span className="inline-flex items-center gap-1.5 text-[0.7rem] text-[var(--desk-live-status)]">
+          <CheckCircle2 className="size-3" aria-hidden />
+          {ready.label} — recipient locked to your account email
+        </span>
+      </label>
     </div>
   );
 }
