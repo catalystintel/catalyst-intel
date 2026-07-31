@@ -10,6 +10,7 @@ export const CATALYST_SOURCE_IDS = [
   "sec-edgar",
   "nasdaq-halts",
   "macro-calendar",
+  "pr-wire",
   "finnhub",
   "openfda",
   "clinicaltrials",
@@ -33,6 +34,11 @@ export interface CatalystSourceMeta {
   /** Short operator-facing description of what this source contributes */
   contributes: string;
   keyEnv?: string;
+  /**
+   * When false, orchestrator + per-source admin fetch soft-skip (code kept).
+   * Default true when omitted.
+   */
+  fetchEnabled?: boolean;
 }
 
 /** Must→Should catalog — order matches CATALYST_SOURCE_IDS. */
@@ -62,11 +68,20 @@ export const CATALYST_SOURCE_CATALOG: readonly CatalystSourceMeta[] = [
     priority: "must",
     phase: "A",
     contributes:
-      "CPI / NFP / FOMC dates for day traders (keyless; embedded BLS + Fed schedule)",
+      "CPI / NFP / PPI / FOMC dates for day traders (keyless; embedded BLS + Fed schedule)",
+  },
+  {
+    id: "pr-wire",
+    order: 4,
+    label: "PR wire",
+    priority: "must",
+    phase: "B",
+    contributes:
+      "Press releases from major PR wires (keyless public high-impact board by default; ~60m delay, score≥70, ~5-day lookback). Blends score/direction/event_type/theme and settled session moves. Optional authenticated full feed when credentials set.",
   },
   {
     id: "finnhub",
-    order: 4,
+    order: 5,
     label: "Finnhub",
     priority: "should",
     phase: "B",
@@ -76,7 +91,7 @@ export const CATALYST_SOURCE_CATALOG: readonly CatalystSourceMeta[] = [
   },
   {
     id: "openfda",
-    order: 5,
+    order: 6,
     label: "openFDA",
     priority: "must",
     phase: "A",
@@ -85,31 +100,35 @@ export const CATALYST_SOURCE_CATALOG: readonly CatalystSourceMeta[] = [
   },
   {
     id: "clinicaltrials",
-    order: 6,
+    order: 7,
     label: "ClinicalTrials.gov",
     priority: "must",
     phase: "A",
+    // Paused: CT.gov API refreshes ~daily (hours of lag) — not act-faster.
+    fetchEnabled: false,
     contributes:
-      "Material trial status changes (completed/terminated/suspended/withdrawn) with symbol (keyless; recruiting noise dropped)",
+      "PAUSED — not fetched (daily API refresh ≈ hours lag). Code kept. Material trial status changes when re-enabled.",
   },
   {
     id: "polygon-news",
-    order: 7,
+    order: 8,
     label: "Polygon news",
     priority: "should",
     phase: "C",
+    // Paused: /v2/reference/news is ~hourly, not real-time Benzinga wire.
+    fetchEnabled: false,
     contributes:
-      "Benzinga/wire + catalyst-classified articles only via Polygon/Massive (needs POLYGON_API_KEY). Generic news dropped.",
+      "PAUSED — not fetched (Ticker News ≈ hourly; not RT Benzinga). Code kept. Re-enable only with real-time news entitlement.",
     keyEnv: "POLYGON_API_KEY",
   },
   {
     id: "polygon-prices",
-    order: 8,
+    order: 9,
     label: "Polygon prices",
     priority: "should",
     phase: "C",
     contributes:
-      "historical_impact + session_context enrichment from daily aggs (after news; free tier ~5 req/min)",
+      "historical_impact + session_context enrichment from daily aggs (free tier ~5 req/min)",
     keyEnv: "POLYGON_API_KEY",
   },
 ] as const;
@@ -124,9 +143,9 @@ export interface FetchPhaseDef {
 
 /**
  * Runtime phases for fetchAllCatalystSources:
- * - A: keyless Must sources in parallel
- * - B: optional-key Should sources (Finnhub)
- * - C: Polygon news then prices (sequential; shared free-tier budget)
+ * - A: keyless Must sources in parallel (openFDA kept; CT.gov paused)
+ * - B: PR wire + Finnhub
+ * - C: Polygon prices only (polygon-news paused — hourly, not RT)
  *
  * Form4API was removed — SEC EDGAR Form 4 (+ ownership XML) covers insiders.
  */
@@ -135,25 +154,19 @@ export const FETCH_PHASES: readonly FetchPhaseDef[] = [
     id: "A",
     label: "Keyless (parallel)",
     mode: "parallel",
-    sources: [
-      "sec-edgar",
-      "nasdaq-halts",
-      "macro-calendar",
-      "openfda",
-      "clinicaltrials",
-    ],
+    sources: ["sec-edgar", "nasdaq-halts", "macro-calendar", "openfda"],
   },
   {
     id: "B",
-    label: "Optional keys (parallel)",
+    label: "Keyed wire + calendars (parallel)",
     mode: "parallel",
-    sources: ["finnhub"],
+    sources: ["pr-wire", "finnhub"],
   },
   {
     id: "C",
-    label: "Polygon (sequential)",
+    label: "Polygon prices",
     mode: "sequential",
-    sources: ["polygon-news", "polygon-prices"],
+    sources: ["polygon-prices"],
   },
 ] as const;
 
@@ -165,4 +178,15 @@ export function getCatalystSourceMeta(
   id: CatalystSourceId,
 ): CatalystSourceMeta | undefined {
   return CATALYST_SOURCE_CATALOG.find((s) => s.id === id);
+}
+
+/** False when catalog marks the source paused (`fetchEnabled: false`). */
+export function isCatalystSourceFetchEnabled(id: CatalystSourceId): boolean {
+  const meta = getCatalystSourceMeta(id);
+  return meta?.fetchEnabled !== false;
+}
+
+/** Sources that still run in cron / Fetch all (paused ids excluded). */
+export function activeCatalystSourceIds(): CatalystSourceId[] {
+  return CATALYST_SOURCE_IDS.filter((id) => isCatalystSourceFetchEnabled(id));
 }

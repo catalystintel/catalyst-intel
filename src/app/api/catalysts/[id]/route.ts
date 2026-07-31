@@ -10,6 +10,7 @@ import {
   extractFilingProofMeta,
   resolveArticleSummary,
 } from "@/lib/catalysts/article-content";
+import { extractArticleThumbUrl } from "@/lib/catalysts/article-funnel";
 import {
   isEarningsCatalyst,
   resolveArticleDetailCards,
@@ -207,6 +208,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
         detailCards,
         enrichment,
         filingProofMeta: extractFilingProofMeta(row.rawContent),
+        thumbUrl: extractArticleThumbUrl(row.rawContent),
       },
     }),
     limitResult,

@@ -196,6 +196,15 @@ export function extractArticleBody(input: {
     case "polygon":
       fromRaw = stringField(raw, "description", "summary", "title");
       break;
+    case "pr-wire":
+      fromRaw = stringField(
+        raw,
+        "article_body",
+        "description",
+        "summary",
+        "title",
+      );
+      break;
     case "finnhub": {
       const numLabel = (key: string, label: string): string | null => {
         const v = raw?.[key];
@@ -466,6 +475,8 @@ function providerContextSentence(
       return "Exchange trading-halt events can pause liquidity until trading resumes.";
     case "polygon":
       return "This is market news coverage; open the original article for the full write-up.";
+    case "pr-wire":
+      return "This is a company press release from a major PR wire.";
     case "finnhub":
       if (category === "earnings") {
         return "This is a scheduled earnings calendar entry with estimate or actual figures when available.";
@@ -529,6 +540,11 @@ function rawDetailSentence(
     }
     case "polygon": {
       const desc = stringField(raw, "description", "summary");
+      if (!desc || desc.length < 40) return null;
+      return extractiveSummary(desc, { maxSentences: 2, maxChars: 280 });
+    }
+    case "pr-wire": {
+      const desc = stringField(raw, "article_body", "description", "summary");
       if (!desc || desc.length < 40) return null;
       return extractiveSummary(desc, { maxSentences: 2, maxChars: 280 });
     }

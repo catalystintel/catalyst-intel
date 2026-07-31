@@ -66,6 +66,7 @@ const PROVIDER_DISPLAY: Record<string, Omit<SourceDisplay, "meta">> = {
   "sec-edgar": { name: "SEC EDGAR", initial: "S", tone: "sec" },
   "nasdaq-halts": { name: "Nasdaq Halts", initial: "N", tone: "generic" },
   "macro-calendar": { name: "Macro", initial: "M", tone: "generic" },
+  "pr-wire": { name: "PR Wire", initial: "W", tone: "wire" },
   finnhub: { name: "Finnhub", initial: "F", tone: "generic" },
   polygon: { name: "Polygon", initial: "P", tone: "generic" },
   openfda: { name: "openFDA", initial: "O", tone: "generic" },
@@ -76,8 +77,17 @@ const PROVIDER_DISPLAY: Record<string, Omit<SourceDisplay, "meta">> = {
 /**
  * Maps a catalyst's provider / filing type into a display name for muted meta.
  * Polygon rows with Benzinga Wire tagging surface as Wire (not generic Polygon).
+ * PR-wire rows always surface as PR Wire (never the upstream aggregator brand).
  */
 export function sourceDisplay(c: FeedCatalyst): SourceDisplay {
+  if (c.sourceProvider === "pr-wire" || c.subcategory === "pr_wire") {
+    const meta =
+      [c.type?.trim() || "Wire", c.symbol?.trim()]
+        .filter(Boolean)
+        .join(" · ") || "Wire";
+    return { name: "PR Wire", meta, initial: "W", tone: "wire" };
+  }
+
   const isWire =
     c.sourceProvider === "polygon" &&
     (/wire/i.test(c.type ?? "") ||
@@ -133,6 +143,8 @@ const SOURCE_DISPLAY_NAMES = [
   ...Object.values(PROVIDER_DISPLAY).map((p) => p.name),
   "Benzinga",
   "Benzinga Wire",
+  "PR Wire",
+  "RTPR",
   "SEC",
   "EDGAR",
   "Massive",
@@ -154,6 +166,8 @@ const SOURCE_NAME_RE = new RegExp(
     "EDGAR",
     "Finnhub",
     "Benzinga(?:\\s+Wire)?",
+    "PR\\s*Wire",
+    "RTPR",
     "openFDA",
     "Polygon",
     "Massive",

@@ -98,11 +98,17 @@ export function evaluateCatalystQuality(
   const symbol = item.symbol?.trim() || null;
 
   // Generic firehose news with no catalyst classification.
+  // PR-wire press releases are intentional Must ingest even when the headline
+  // classifier cannot map a finer category — keep them on the tape.
   if (category === "news") {
-    return {
-      decision: "drop",
-      reason: "Generic news firehose — no catalyst classification",
-    };
+    if (provider === "pr-wire" || subcategory === "pr_wire") {
+      // keep
+    } else {
+      return {
+        decision: "drop",
+        reason: "Generic news firehose — no catalyst classification",
+      };
+    }
   }
 
   // Disclosure-only without a higher-signal item (Reg FD / other / exhibits).
