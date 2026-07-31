@@ -2,9 +2,10 @@
  * Admin panel access is gated by verified Supabase session email
  * (Google OAuth JWT), not by a client-side flag or a manually promoted DB role.
  *
- * Override via comma-separated `ADMIN_EMAILS` env var. In production
- * (`NODE_ENV=production`) an empty/unset list fails closed — no defaults.
- * Local/dev keeps hard-coded operator defaults for convenience.
+ * Agreed operators in `DEFAULT_ADMIN_EMAILS` are always allowlisted. Optional
+ * `ADMIN_EMAILS` (comma-separated) adds more addresses on top — it cannot
+ * remove the built-in operators, so a missing/mis-set Vercel env cannot lock
+ * them out of `/admin`.
  */
 const DEFAULT_ADMIN_EMAILS = [
   "zhbar10@gmail.com",
@@ -19,15 +20,12 @@ function parseAdminEmails(raw: string): string[] {
 }
 
 export function getAdminEmails(): string[] {
+  const defaults = DEFAULT_ADMIN_EMAILS.map((email) => email.toLowerCase());
   const fromEnv = process.env.ADMIN_EMAILS?.trim();
-  if (fromEnv) {
-    return parseAdminEmails(fromEnv);
+  if (!fromEnv) {
+    return defaults;
   }
-  // Fail closed in production / preview builds (NODE_ENV=production on Vercel).
-  if (process.env.NODE_ENV === "production") {
-    return [];
-  }
-  return DEFAULT_ADMIN_EMAILS.map((email) => email.toLowerCase());
+  return Array.from(new Set([...defaults, ...parseAdminEmails(fromEnv)]));
 }
 
 export function isAdminEmail(email: string | null | undefined): boolean {
