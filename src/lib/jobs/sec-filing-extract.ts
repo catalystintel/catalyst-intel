@@ -4,6 +4,18 @@
  * titles, WIIM-ready summaries, and keyFacts for split view.
  */
 
+import {
+  earningsDateForQuarterInference,
+  earningsQuarterLabel,
+  formatEarningsReportTitle,
+  formatSec8kItemTitle,
+} from "@/lib/catalysts/catalyst-titles";
+import {
+  extractItems,
+  selectPrimaryItem,
+  type ParsedItem,
+} from "@/lib/jobs/parse-8k-items";
+
 export type SecExtractCompleteness = "full" | "partial" | "thin";
 
 export interface SecKeyFact {
@@ -22,6 +34,12 @@ export interface SecFilingExtract {
   /** Optional tighter tape title when extract finds material numbers/actors. */
   titleOverride?: string | null;
   headlineOverride?: string | null;
+  /** 8-K Item codes parsed from primary-doc text (when Atom summary lacked them). */
+  parsedItems?: Array<{
+    code: string;
+    label: string;
+    category: string;
+  }> | null;
   sourceDoc?: string | null;
 }
 
@@ -206,6 +224,37 @@ export function resolveEdgarDocumentHref(
   if (h.startsWith("/")) return `https://www.sec.gov${h}`;
   const base = baseUrl.replace(/\/[^/]*$/, "/");
   return `${base}${h.replace(/^\.\//, "")}`;
+}
+
+/** Recover Item codes from enrich labels like "5.02 Officer / Director Change". */
+function itemsFromItemLabels(
+  labels: string[] | null | undefined,
+): ParsedItem[] {
+  if (!labels?.length) return [];
+  const codes: string[] = [];
+  for (const label of labels) {
+    const trimmed = label.trim();
+    const match = trimmed.match(/^(\d+\.\d+)\b/);
+    if (match) codes.push(`Item ${match[1]}`);
+  }
+  if (codes.length === 0) return extractItems(labels.join(" "));
+  return extractItems(codes.join(" "));
+}
+
+function mergeParsedItems(
+  primary: ParsedItem[],
+  secondary: ParsedItem[],
+): ParsedItem[] {
+  if (primary.length === 0) return secondary;
+  if (secondary.length === 0) return primary;
+  const seen = new Set(primary.map((i) => i.code));
+  const out = [...primary];
+  for (const item of secondary) {
+    if (seen.has(item.code)) continue;
+    seen.add(item.code);
+    out.push(item);
+  }
+  return out;
 }
 
 function subjectLabel(input: {
@@ -408,12 +457,55 @@ export function extractFromFilingText(input: {
 
   // --- 8-K ---
   if (/^8-?K/i.test(form)) {
-    const items = (input.itemLabels ?? []).filter(Boolean).slice(0, 3);
-    const itemBit = items.length > 0 ? ` Highlights: ${items.join("; ")}.` : "";
+    const fromText = extractItems(text);
+    const fromLabels = itemsFromItemLabels(input.itemLabels);
+    const items = mergeParsedItems(fromText, fromLabels);
+    const primary = selectPrimaryItem(items);
+    const itemBit =
+      items.length > 0
+        ? ` Highlights: ${items
+            .slice(0, 3)
+            .map((i) => i.label)
+            .join("; ")}.`
+        : "";
     const peek = bodySnippets[0];
+    const reason = primary?.label ?? "a material event";
     const investorSummary = peek
-      ? `${subject} filed an 8-K.${itemBit} ${peek}`
-      : `${subject} filed an 8-K current report.${itemBit} Open Details for exhibit text — this is a material disclosure traders screen in real time.`;
+      ? `${subject} disclosed ${reason} in a current report.${itemBit} ${peek}`
+      : `${subject} disclosed ${reason} in a current SEC report.${itemBit} Open Details for exhibit text — this is a material disclosure traders screen in real time.`;
+
+    let titleOverride: string | null = null;
+    let headlineOverride: string | null = null;
+    if (primary) {
+      if (primary.code === "2.02") {
+        const quarter = earningsQuarterLabel(
+          null,
+          earningsDateForQuarterInference({
+            summary: text.slice(0, 2000),
+            timestamp: null,
+          }),
+        );
+        titleOverride = formatEarningsReportTitle(
+          quarter,
+          input.companyName || input.ticker,
+        );
+        headlineOverride = titleOverride;
+      } else {
+        titleOverride = formatSec8kItemTitle(
+          primary.label,
+          input.companyName || input.ticker,
+          { content: text },
+        );
+        headlineOverride = primary.label;
+      }
+    } else {
+      titleOverride = formatSec8kItemTitle(
+        "Current report",
+        input.companyName || input.ticker,
+      );
+      headlineOverride = "Current report";
+    }
+
     return {
       eventKind: "8k",
       completeness: peek || items.length > 0 ? "partial" : "thin",
@@ -421,11 +513,28 @@ export function extractFromFilingText(input: {
       bodySnippets,
       keyFacts: [
         { label: "Form", value: form },
-        ...(items.length ? [{ label: "Items", value: items.join(" · ") }] : []),
+        ...(items.length
+          ? [
+              {
+                label: "Items",
+                value: items
+                  .slice(0, 4)
+                  .map((i) => `${i.code} ${i.label}`)
+                  .join(" · "),
+              },
+            ]
+          : []),
         ...keyFacts,
       ],
-      titleOverride: null,
-      headlineOverride: null,
+      titleOverride,
+      headlineOverride,
+      parsedItems: items.length
+        ? items.map((i) => ({
+            code: i.code,
+            label: i.label,
+            category: i.category,
+          }))
+        : null,
       sourceDoc: input.sourceDoc ?? null,
     };
   }

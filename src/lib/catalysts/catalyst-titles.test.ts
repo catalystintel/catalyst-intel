@@ -227,7 +227,7 @@ describe("formatSec8kItemTitle / formatForm4InsiderTitle", () => {
       "Acme Corp - Change of Control",
     );
     expect(formatSec8kItemTitle(null, null)).toBe(
-      "Unknown company - 8-K Event",
+      "Unknown company - Current Report",
     );
   });
 
