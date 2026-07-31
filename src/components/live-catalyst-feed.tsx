@@ -6,10 +6,12 @@ import {
   useMemo,
   useRef,
   useState,
+  type MutableRefObject,
   type ReactNode,
 } from "react";
 import { createPortal } from "react-dom";
 import {
+  ArrowUp,
   BookOpen,
   ChevronDown,
   ListFilter,
@@ -194,6 +196,8 @@ export function LiveCatalystFeed({
   const [prefsLoaded, setPrefsLoaded] = useState(false);
   const [manualRefreshing, setManualRefreshing] = useState(false);
   const [articleId, setArticleId] = useState<number | null>(null);
+  const [pendingNew, setPendingNew] = useState(0);
+  const jumpToLatestRef = useRef<(() => void) | null>(null);
   const skipFilterAnimRef = useRef(true);
   const skipFlashRef = useRef(false);
   const knownIds = useRef(new Set(initialCatalysts.map((c) => c.id)));
@@ -686,6 +690,18 @@ export function LiveCatalystFeed({
               Refreshed: {refreshedLabel}
             </span>
           ) : null}
+          {pendingNew > 0 ? (
+            <button
+              type="button"
+              onClick={() => jumpToLatestRef.current?.()}
+              aria-label={`Jump to ${pendingNew} new catalysts`}
+              title="Jump to newest catalysts"
+              className="btn-press inline-flex h-[34px] items-center gap-1.5 rounded-lg border border-[color-mix(in_srgb,var(--desk-live-status)_50%,transparent)] bg-[var(--desk-live-status)] px-2.5 font-mono text-[0.72rem] font-semibold tracking-wide text-[#04140c] uppercase transition-opacity hover:opacity-90"
+            >
+              <ArrowUp className="size-3.5" aria-hidden />
+              {pendingNew} new
+            </button>
+          ) : null}
           <button
             type="button"
             aria-label="Refresh"
@@ -792,6 +808,8 @@ export function LiveCatalystFeed({
               hasMore={Boolean(nextCursor)}
               loadingMore={loadingMore}
               onLoadMore={loadMore}
+              onPendingNewChange={setPendingNew}
+              jumpToLatestRef={jumpToLatestRef}
             />
           )}
         </div>
@@ -1048,6 +1066,8 @@ function CatalystFeedList({
   hasMore = false,
   loadingMore = false,
   onLoadMore,
+  onPendingNewChange,
+  jumpToLatestRef,
 }: {
   catalysts: FeedCatalyst[];
   flashIds: Set<number>;
@@ -1068,6 +1088,10 @@ function CatalystFeedList({
   hasMore?: boolean;
   loadingMore?: boolean;
   onLoadMore?: () => void;
+  /** Report how many new rows arrived while the user was scrolled down. */
+  onPendingNewChange?: (count: number) => void;
+  /** Parent toolbar registers jump-to-latest via this ref. */
+  jumpToLatestRef?: MutableRefObject<(() => void) | null>;
 }) {
   const feedGrid = splitOpen ? FEED_GRID_SPLIT : FEED_GRID;
   const listRef = useRef<HTMLDivElement | null>(null);
@@ -1090,15 +1114,20 @@ function CatalystFeedList({
     row.scrollIntoView({ block: "nearest", inline: "nearest" });
   }, [restoreScrollToSelected, selectedId, catalysts]);
 
-  // "N new" pill: when the user has scrolled down, newly-arrived rows land
-  // at the top of the tape (out of view) and their `.row-flash` never gets
-  // seen. Tracking id membership across renders (independent of the
-  // flash/dismiss bookkeeping above, which is about individual rows, not
-  // "how many arrived while I wasn't looking") lets a single scroll-to-top
-  // affordance surface them instead.
+  // "N new" affordance: when the user has scrolled down, newly-arrived rows
+  // land at the top of the tape (out of view). Count them here and report to
+  // the parent toolbar (next to Refresh) — click scrolls back to newest.
   const [atTop, setAtTop] = useState(true);
   const [pendingNew, setPendingNew] = useState(0);
   const knownListIds = useRef<Set<number>>(new Set(catalysts.map((c) => c.id)));
+
+  useEffect(() => {
+    onPendingNewChange?.(pendingNew);
+  }, [pendingNew, onPendingNewChange]);
+
+  useEffect(() => {
+    return () => onPendingNewChange?.(0);
+  }, [onPendingNewChange]);
 
   // Warm the first visible details routes so a click often skips cold SSR.
   useEffect(() => {
@@ -1131,6 +1160,14 @@ function CatalystFeedList({
     listRef.current?.scrollTo({ top: 0, behavior: "smooth" });
     setPendingNew(0);
   }, []);
+
+  useEffect(() => {
+    if (!jumpToLatestRef) return;
+    jumpToLatestRef.current = scrollToTop;
+    return () => {
+      jumpToLatestRef.current = null;
+    };
+  }, [jumpToLatestRef, scrollToTop]);
 
   useEffect(() => {
     if (!hasMore || !onLoadMore) return;
@@ -1187,19 +1224,6 @@ function CatalystFeedList({
           </div>
         ) : null}
       </div>
-
-      {pendingNew > 0 ? (
-        <div className="sticky top-10 z-10 flex justify-center pt-2">
-          <button
-            type="button"
-            onClick={scrollToTop}
-            className="btn-press pointer-events-auto inline-flex items-center gap-1.5 rounded-full border border-[color-mix(in_srgb,var(--desk-live-status)_45%,transparent)] bg-[var(--desk-live-status)] px-3 py-1 font-mono text-[0.72rem] font-semibold tracking-wide text-[#04140c] uppercase shadow-[0_6px_18px_rgba(0,0,0,0.35)]"
-          >
-            <span className="live-pulse size-1.5 rounded-full bg-[#04140c]" />
-            {pendingNew} new
-          </button>
-        </div>
-      ) : null}
 
       <div className="flex flex-col">
         {catalysts.map((catalyst, index) => {
