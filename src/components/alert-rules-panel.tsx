@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SkeletonCard } from "@/components/loading-skeleton";
 import type { AlertChannel, AlertRuleConditions } from "@/db/schema";
+import { useWebPush } from "@/hooks/use-web-push";
 import { cn } from "@/lib/utils";
 
 interface AlertRuleRow {
@@ -17,6 +18,7 @@ interface AlertRuleRow {
   enabled: boolean;
   webhookUrl: string | null;
   emailTo: string | null;
+  telegramChatId: string | null;
   conditions: AlertRuleConditions;
   createdAt: string;
 }
@@ -24,15 +26,21 @@ interface AlertRuleRow {
 export function AlertRulesPanel() {
   const [rules, setRules] = useState<AlertRuleRow[]>([]);
   const [emailConfigured, setEmailConfigured] = useState(false);
+  const [pushAvailable, setPushAvailable] = useState(false);
+  const [pushPublicKey, setPushPublicKey] = useState<string | null>(null);
+  const [telegramConfigured, setTelegramConfigured] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const [saving, setSaving] = useState(false);
 
   const [name, setName] = useState("AH/PM bombs");
-  const [channel, setChannel] = useState<AlertChannel>("webhook");
+  const [channel, setChannel] = useState<AlertChannel>("push");
   const [webhookUrl, setWebhookUrl] = useState("");
   const [emailTo, setEmailTo] = useState("");
+  const [telegramChatId, setTelegramChatId] = useState("");
   const [minImpact, setMinImpact] = useState("70");
   const [sessionsAhPm, setSessionsAhPm] = useState(true);
+
+  const webPush = useWebPush(pushPublicKey);
 
   const load = useCallback(async () => {
     try {
@@ -44,6 +52,9 @@ export function AlertRulesPanel() {
       if (!res.ok) throw new Error(data.error ?? "Could not load rules.");
       setRules(data.rules ?? []);
       setEmailConfigured(Boolean(data.emailConfigured));
+      setPushAvailable(Boolean(data.pushAvailable));
+      setPushPublicKey(data.pushPublicKey ?? null);
+      setTelegramConfigured(Boolean(data.telegramConfigured));
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Load failed.");
     } finally {
@@ -75,6 +86,7 @@ export function AlertRulesPanel() {
           channel,
           webhookUrl: channel === "webhook" ? webhookUrl : undefined,
           emailTo: channel === "email" ? emailTo : undefined,
+          telegramChatId: channel === "telegram" ? telegramChatId : undefined,
           conditions,
         }),
       });
@@ -160,12 +172,16 @@ export function AlertRulesPanel() {
             New alert rule
           </h2>
           <p className="mt-1 text-sm text-[var(--desk-text-muted)]">
-            Webhook always works. Email needs the outbound mail provider
-            configured
+            Push (browser) is free and works even when this tab is closed —
+            recommended. Telegram needs{" "}
+            <code className="font-mono text-[0.75rem]">TELEGRAM_BOT_TOKEN</code>{" "}
+            {telegramConfigured ? "(configured)" : "(not set)"}. Webhook always
+            works. Email needs{" "}
+            <code className="font-mono text-[0.75rem]">RESEND_API_KEY</code>
             {emailConfigured
-              ? " (ready)"
-              : " (not set — email delivery will fail)"}
-            . Push is coming soon.
+              ? " (configured)"
+              : " (not set — will fail on send)"}
+            .
           </p>
         </div>
         <form
@@ -186,9 +202,10 @@ export function AlertRulesPanel() {
               aria-label="Channel"
               className="h-9 rounded-md border border-[var(--desk-border-strong)] bg-[var(--desk-overlay-soft)] px-2 font-mono text-xs text-[var(--desk-text)]"
             >
+              <option value="push">Push (browser, free)</option>
+              <option value="telegram">Telegram</option>
               <option value="webhook">Webhook</option>
               <option value="email">Email</option>
-              <option value="push">Push (coming soon)</option>
             </select>
             <Input
               value={minImpact}
@@ -225,11 +242,52 @@ export function AlertRulesPanel() {
               className="h-9 border-[var(--desk-border-strong)] bg-[var(--desk-overlay-soft)] font-mono text-xs"
             />
           ) : null}
+          {channel === "telegram" ? (
+            <div className="flex flex-col gap-1.5">
+              <Input
+                value={telegramChatId}
+                onChange={(e) => setTelegramChatId(e.target.value)}
+                placeholder="Chat ID (message the bot to get yours)"
+                aria-label="Telegram chat ID"
+                className="h-9 border-[var(--desk-border-strong)] bg-[var(--desk-overlay-soft)] font-mono text-xs"
+              />
+              <p className="font-mono text-[0.7rem] text-[var(--desk-text-dim)]">
+                Message the bot once (any text) — it replies with your chat ID
+                to paste here.
+              </p>
+            </div>
+          ) : null}
           {channel === "push" ? (
-            <p className="font-mono text-xs text-[var(--desk-text-dim)]">
-              Push notifications are stubbed — rules can be saved but will not
-              deliver until FCM is wired.
-            </p>
+            <div className="flex items-center gap-2">
+              {!pushAvailable ? (
+                <p className="font-mono text-xs text-[var(--desk-text-dim)]">
+                  Server missing WEB_PUSH_VAPID keys — push will fail to send.
+                </p>
+              ) : webPush.status === "subscribed" ? (
+                <p className="font-mono text-xs text-[var(--desk-live)]">
+                  This browser is subscribed to push.
+                </p>
+              ) : webPush.status === "denied" ? (
+                <p className="font-mono text-xs text-destructive">
+                  Notification permission denied — enable it in browser
+                  settings.
+                </p>
+              ) : webPush.status === "unsupported" ? (
+                <p className="font-mono text-xs text-[var(--desk-text-dim)]">
+                  This browser doesn&apos;t support push notifications.
+                </p>
+              ) : (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => void webPush.subscribe()}
+                  className="font-mono text-xs"
+                >
+                  Enable browser notifications
+                </Button>
+              )}
+            </div>
           ) : null}
           <Button
             type="submit"
@@ -278,7 +336,9 @@ export function AlertRulesPanel() {
                       ? rule.webhookUrl
                       : rule.channel === "email"
                         ? rule.emailTo
-                        : "Push · coming soon"}
+                        : rule.channel === "telegram"
+                          ? `Chat ${rule.telegramChatId ?? "—"}`
+                          : "This browser's push subscriptions"}
                     {" · "}
                     min {rule.conditions.minImpact ?? 0}
                     {rule.conditions.sessions?.length

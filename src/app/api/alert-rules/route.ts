@@ -5,7 +5,12 @@ import { databaseSetupHint, isLibsqlConfigured } from "@/db/env";
 import { db } from "@/db/client";
 import { alertRules, type AlertChannel } from "@/db/schema";
 import { getCurrentAppUser } from "@/lib/auth/current-user";
-import { isResendConfigured } from "@/lib/alerts/deliver";
+import {
+  isResendConfigured,
+  isTelegramConfigured,
+  isWebPushConfigured,
+  webPushPublicKey,
+} from "@/lib/alerts/deliver";
 import { normalizeAlertConditions } from "@/lib/alerts/normalize";
 import { validateWebhookUrl } from "@/lib/alerts/webhook-url";
 import { getClientIp } from "@/lib/http/client-ip";
@@ -15,7 +20,12 @@ import {
   withRateLimitHeaders,
 } from "@/lib/http/rate-limit-response";
 
-const CHANNELS = new Set<AlertChannel>(["email", "webhook", "push"]);
+const CHANNELS = new Set<AlertChannel>([
+  "email",
+  "webhook",
+  "push",
+  "telegram",
+]);
 
 async function requireUser(request: NextRequest) {
   if (!isLibsqlConfigured()) {
@@ -54,6 +64,7 @@ function serializeRule(row: typeof alertRules.$inferSelect) {
     enabled: Boolean(row.enabled),
     webhookUrl: row.webhookUrl,
     emailTo: row.emailTo,
+    telegramChatId: row.telegramChatId,
     conditions: normalizeAlertConditions(row.conditions),
     createdAt: row.createdAt,
   };
@@ -78,7 +89,9 @@ export async function GET(request: NextRequest) {
     NextResponse.json({
       rules: rows.map(serializeRule),
       emailConfigured: isResendConfigured(),
-      pushAvailable: false,
+      pushAvailable: isWebPushConfigured(),
+      pushPublicKey: webPushPublicKey(),
+      telegramConfigured: isTelegramConfigured(),
     }),
     limitResult,
   );
@@ -118,7 +131,7 @@ export async function POST(request: NextRequest) {
   if (!channel) {
     return withRateLimitHeaders(
       NextResponse.json(
-        { error: "channel must be email, webhook, or push." },
+        { error: "channel must be email, webhook, push, or telegram." },
         { status: 400 },
       ),
       limitResult,
@@ -132,6 +145,10 @@ export async function POST(request: NextRequest) {
   const emailTo =
     typeof raw.emailTo === "string" && raw.emailTo.trim()
       ? raw.emailTo.trim()
+      : null;
+  const telegramChatId =
+    typeof raw.telegramChatId === "string" && raw.telegramChatId.trim()
+      ? raw.telegramChatId.trim()
       : null;
   const conditions = normalizeAlertConditions(raw.conditions);
   const enabled = raw.enabled === undefined ? true : Boolean(raw.enabled);
@@ -165,6 +182,15 @@ export async function POST(request: NextRequest) {
       limitResult,
     );
   }
+  if (channel === "telegram" && !telegramChatId) {
+    return withRateLimitHeaders(
+      NextResponse.json(
+        { error: "telegramChatId is required for Telegram rules." },
+        { status: 400 },
+      ),
+      limitResult,
+    );
+  }
 
   const row = await db
     .insert(alertRules)
@@ -175,6 +201,7 @@ export async function POST(request: NextRequest) {
       enabled,
       webhookUrl: channel === "webhook" ? safeWebhookUrl : null,
       emailTo: channel === "email" ? emailTo : null,
+      telegramChatId: channel === "telegram" ? telegramChatId : null,
       conditions,
     })
     .returning()

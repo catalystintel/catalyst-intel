@@ -3,7 +3,12 @@ import { desc, eq } from "drizzle-orm";
 
 import { databaseSetupHint, isLibsqlConfigured } from "@/db/env";
 import { db } from "@/db/client";
-import { alertRules, catalysts, rawSources } from "@/db/schema";
+import {
+  alertRules,
+  catalysts,
+  pushSubscriptions,
+  rawSources,
+} from "@/db/schema";
 import { getCurrentAppUser } from "@/lib/auth/current-user";
 import { deliverAlertRules, type DeliverableRule } from "@/lib/alerts/deliver";
 import { normalizeAlertConditions } from "@/lib/alerts/normalize";
@@ -136,13 +141,29 @@ export async function POST(request: NextRequest) {
       channel: r.channel,
       webhookUrl: r.webhookUrl,
       emailTo: r.emailTo,
+      telegramChatId: r.telegramChatId,
       conditions: normalizeAlertConditions(r.conditions),
     }));
+
+  const userPushSubscriptions = deliverable.some((r) => r.channel === "push")
+    ? await db
+        .select()
+        .from(pushSubscriptions)
+        .where(eq(pushSubscriptions.userId, user.id))
+        .all()
+    : [];
 
   const results = await deliverAlertRules({
     catalyst: catalystRow,
     rules: deliverable,
     force,
+    pushSubscriptions: userPushSubscriptions,
+    onDeadPushSubscription: async (endpoint) => {
+      await db
+        .delete(pushSubscriptions)
+        .where(eq(pushSubscriptions.endpoint, endpoint))
+        .run();
+    },
   });
 
   return withRateLimitHeaders(

@@ -20,8 +20,8 @@ export default async function AlertsPage() {
           Alert rules
         </h1>
         <p className="mt-1 max-w-xl text-sm text-[var(--desk-text-muted)]">
-          Webhook and email rules for AH/PM bombs. Use Test to fire against the
-          latest catalyst. Push is stubbed until FCM lands.
+          Push, Telegram, webhook, and email rules for AH/PM bombs. Use Test to
+          fire against the latest catalyst.
         </p>
       </div>
       <AlertRulesPanel />

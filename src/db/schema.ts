@@ -183,7 +183,7 @@ export const playbookSettings = sqliteTable("playbook_settings", {
     .default(sql`(current_timestamp)`),
 });
 
-export type AlertChannel = "email" | "webhook" | "push";
+export type AlertChannel = "email" | "webhook" | "push" | "telegram";
 
 export interface AlertRuleConditions {
   /** Empty / omitted = any category. */
@@ -213,18 +213,40 @@ export const dismissedCatalysts = sqliteTable("dismissed_catalysts", {
     .default(sql`(current_timestamp)`),
 });
 
-/** User-defined delivery rules (email / webhook MVP; push stubbed). */
+/** User-defined delivery rules (email / webhook / push / Telegram). */
 export const alertRules = sqliteTable("alert_rules", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   userId: integer("user_id")
     .notNull()
     .references(() => users.id),
   name: text("name").notNull(),
-  channel: text("channel", { enum: ["email", "webhook", "push"] }).notNull(),
+  channel: text("channel", {
+    enum: ["email", "webhook", "push", "telegram"],
+  }).notNull(),
   enabled: integer("enabled", { mode: "boolean" }).notNull().default(true),
   webhookUrl: text("webhook_url"),
   emailTo: text("email_to"),
+  // Telegram chat id the user gets by messaging the bot; see lib/telegram.
+  telegramChatId: text("telegram_chat_id"),
   conditions: text("conditions", { mode: "json" }).notNull(),
+  createdAt: text("created_at")
+    .notNull()
+    .default(sql`(current_timestamp)`),
+});
+
+/**
+ * Browser Web Push subscriptions (one row per browser/device a user has
+ * granted notification permission on). Free — no FCM/APNs account needed,
+ * delivers even when the tab/browser is closed. See lib/push.
+ */
+export const pushSubscriptions = sqliteTable("push_subscriptions", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: integer("user_id")
+    .notNull()
+    .references(() => users.id),
+  endpoint: text("endpoint").notNull().unique(),
+  p256dh: text("p256dh").notNull(),
+  auth: text("auth").notNull(),
   createdAt: text("created_at")
     .notNull()
     .default(sql`(current_timestamp)`),
@@ -286,7 +308,9 @@ export const alertDeliveries = sqliteTable("alert_deliveries", {
   catalystId: integer("catalyst_id")
     .notNull()
     .references(() => catalysts.id),
-  channel: text("channel", { enum: ["email", "webhook", "push"] }).notNull(),
+  channel: text("channel", {
+    enum: ["email", "webhook", "push", "telegram"],
+  }).notNull(),
   status: text("status", { enum: ["sent", "failed", "skipped"] }).notNull(),
   detail: text("detail"),
   createdAt: text("created_at")
