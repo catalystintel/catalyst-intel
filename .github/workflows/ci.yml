@@ -9,7 +9,8 @@ name: CI
 #
 # After a green push to `dev`/`main`, the `deploy` job ships via Vercel CLI
 # (team token) so commits are not stuck on Vercel git-author Blocked deploys.
-# The unblock cron remains a backup healer — see vercel-unblock-redeploy.yml.
+# Post-main CD heal (+ 10-min cron backup) lives in vercel-unblock-redeploy.yml
+# — not in this workflow's verify jobs.
 on:
   push:
     branches: [main, dev]

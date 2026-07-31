@@ -1,16 +1,22 @@
 name: Unblock Omer Vercel deploys
 
-# When Vercel marks a git deployment BLOCKED (unverified author / seat) or
-# ERROR for access / GitHub App / permission issues on commits by
-# omer.nachshon, redeploy with the team VERCEL_TOKEN so `main` (production)
-# and `dev` (staging preview) keep shipping.
+# CD heal for Omer / access-blocked Vercel deploys (not part of CI verify).
+#
+# After a green CI run on `main` (tests + CLI deploy finished), wait 1 minute
+# then attempt to heal any leftover BLOCKED / access-failed Production deploy.
+# Schedule remains a backup poller; workflow_dispatch is for manual runs.
 #
 # Fallback chain (see scripts/vercel-unblock-redeploy.mjs):
 #   API same-sha redeploy → API latest-commit → API gitSource tip → CLI file upload
 #
-# Schedule only runs from the repo default branch (`main`). Keep this file on
-# both `dev` and `main` so promote carries it; once on `main`, the cron is live.
+# Schedule / workflow_run only run from the repo default branch (`main`). Keep
+# this file on both `dev` and `main` so promote carries it.
 on:
+  # CD: after CI completes on main (includes the deploy job).
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+    branches: [main]
   schedule:
     - cron: "*/10 * * * *"
   workflow_dispatch: {}
@@ -18,14 +24,27 @@ on:
 jobs:
   unblock:
     runs-on: ubuntu-latest
+    # Schedule + manual always run. Post-CI only on successful main CD.
+    if: >
+      github.event_name != 'workflow_run' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.head_branch == 'main')
     steps:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
+          # For post-CI runs, check out the merged main tip that just deployed.
+          ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
 
       - uses: actions/setup-node@v7
         with:
           node-version: "24"
+
+      - name: Wait 1 minute after deploy (post-main CD)
+        if: github.event_name == 'workflow_run'
+        run: |
+          echo "CI/CD on main succeeded (deploy included). Waiting 60s before heal…"
+          sleep 60
 
       - name: Install Vercel CLI (CLI fallback deploy)
         run: npm install -g vercel@56
