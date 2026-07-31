@@ -9,6 +9,7 @@ import {
   CATALYST_SOURCE_IDS,
   FETCH_PHASES,
 } from "@/lib/jobs/catalyst-sources";
+import { scrubEnvNamesFromMessage } from "@/lib/errors/user-facing";
 
 interface SourceResult {
   source: string;
@@ -228,7 +229,9 @@ export function FetchTrigger() {
                     {" · "}
                     {s.status}
                     {" · "}+{s.inserted}/skip{s.skipped}/err{s.errors}
-                    {s.message ? ` — ${s.message}` : ""}
+                    {s.message
+                      ? ` — ${scrubEnvNamesFromMessage(s.message)}`
+                      : ""}
                   </li>
                 );
               })}
@@ -251,7 +254,11 @@ export function FetchTrigger() {
                 disabled={loading || sourceLoading !== null}
                 variant="outline"
                 className="btn-press border-[var(--desk-border-strong)] bg-transparent font-mono text-xs text-[var(--desk-text)] hover:bg-[var(--desk-overlay-strong)]"
-                title={meta?.contributes}
+                title={
+                  meta?.contributes
+                    ? scrubEnvNamesFromMessage(meta.contributes)
+                    : undefined
+                }
               >
                 {sourceLoading === source
                   ? "…"

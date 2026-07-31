@@ -172,7 +172,7 @@ export default async function AdminPage() {
             </p>
           </div>
           <dl className="grid grid-cols-2 gap-x-8 gap-y-1 font-mono text-xs">
-            <dt className="text-muted-foreground">API key</dt>
+            <dt className="text-muted-foreground">Credential</dt>
             <dd className="text-right text-foreground/90">
               {finnhubConfigured ? "Set" : "Missing"}
             </dd>
@@ -184,9 +184,10 @@ export default async function AdminPage() {
         </div>
         {!finnhubConfigured ? (
           <p className="px-4 py-4 text-sm text-[var(--desk-text-muted)] sm:px-5">
-            Finnhub is not configured in this environment. Add the Finnhub
-            credential in Vercel / .env.local, then run Fetch NYSE listings.
-            Watchlist stays usable without it (empty price enrichment).
+            Finnhub is not configured in this environment. Add Finnhub
+            credentials in the hosting environment, then run Fetch NYSE
+            listings. Watchlist stays usable without it (empty price
+            enrichment).
           </p>
         ) : null}
       </section>

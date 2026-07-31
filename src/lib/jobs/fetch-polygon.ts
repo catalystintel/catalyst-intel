@@ -256,7 +256,7 @@ export async function fetchPolygonNews(): Promise<SourceFetchResult> {
   if (!apiKey) {
     return skippedSourceResult(
       "polygon-news",
-      "POLYGON_API_KEY is not set. Add it to enable Benzinga/Polygon news ingest.",
+      "Polygon is not configured. Add credentials to enable Benzinga/Polygon news ingest.",
     );
   }
 
@@ -371,7 +371,7 @@ export async function enrichHistoricalImpact(options?: {
   if (!apiKey) {
     return skippedSourceResult(
       "polygon-prices",
-      "POLYGON_API_KEY is not set. Add it to enable historical_impact enrichment.",
+      "Polygon is not configured. Add credentials to enable historical impact enrichment.",
     );
   }
 

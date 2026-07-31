@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   USER_FACING,
   looksLikeOpsMessage,
+  scrubEnvNamesFromMessage,
   toUserFacingMessage,
 } from "./user-facing";
 
@@ -11,11 +12,30 @@ describe("looksLikeOpsMessage", () => {
     expect(looksLikeOpsMessage("Set LIBSQL_URL in Vercel")).toBe(true);
     expect(looksLikeOpsMessage("Run npm run db:migrate")).toBe(true);
     expect(looksLikeOpsMessage("Turso BLOCKED")).toBe(true);
+    expect(
+      looksLikeOpsMessage("FINNHUB_API_KEY is not set. Add it to enable…"),
+    ).toBe(true);
+    expect(looksLikeOpsMessage("needs POLYGON_API_KEY")).toBe(true);
   });
 
   it("allows polished product copy", () => {
     expect(looksLikeOpsMessage("Could not add AAPL to watchlist")).toBe(false);
     expect(looksLikeOpsMessage(USER_FACING.database)).toBe(false);
+    expect(
+      looksLikeOpsMessage(
+        "Finnhub is not configured. Add credentials to enable NYSE listings.",
+      ),
+    ).toBe(false);
+  });
+});
+
+describe("scrubEnvNamesFromMessage", () => {
+  it("replaces vendor env token names with credentials", () => {
+    expect(
+      scrubEnvNamesFromMessage(
+        "Add FINNHUB_API_KEY or POLYGON_API_KEY in hosting",
+      ),
+    ).toBe("Add credentials or credentials in hosting");
   });
 });
 
@@ -34,6 +54,14 @@ describe("toUserFacingMessage", () => {
         "Turso database quota exceeded (BLOCKED): SQL reads are blocked…",
       ),
     ).toBe(USER_FACING.databaseQuota);
+  });
+
+  it("maps raw vendor API key soft-skips", () => {
+    expect(
+      toUserFacingMessage(
+        "FINNHUB_API_KEY is not set. Add it to enable Finnhub earnings…",
+      ),
+    ).toBe(USER_FACING.generic);
   });
 
   it("passes through safe product errors", () => {

@@ -4,7 +4,7 @@
 
 - [x] Improve the article chart (bottom split-view) — more professional Lightweight Charts UX
 - [x] Improve the dark-mode icon
-- [ ] Remove / soften source API key names in product UI
+- [x] Remove / soften source API key names in product UI
 - [x] Earnings surprises filter — material |EPS surprise %| on Live tape
 - [x] Landing Search — 2–3 free ticker lookups + sign-in CTA
 - [x] Economic calendar deepened — countdown, why-it-matters, PPI added (no paid econ API)
