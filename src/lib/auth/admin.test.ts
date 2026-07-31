@@ -15,7 +15,7 @@ describe("admin allowlist", () => {
     process.env.NODE_ENV = originalNodeEnv;
   });
 
-  it("defaults to the two allowlisted operators outside production", () => {
+  it("defaults to the two allowlisted operators when ADMIN_EMAILS is unset", () => {
     delete process.env.ADMIN_EMAILS;
     process.env.NODE_ENV = "development";
     expect(getAdminEmails()).toEqual([
@@ -29,18 +29,28 @@ describe("admin allowlist", () => {
     expect(adminRoleForEmail("stranger@example.com")).toBe("user");
   });
 
-  it("fails closed in production when ADMIN_EMAILS is unset", () => {
+  it("keeps operator defaults in production when ADMIN_EMAILS is unset", () => {
     delete process.env.ADMIN_EMAILS;
     process.env.NODE_ENV = "production";
-    expect(getAdminEmails()).toEqual([]);
-    expect(isAdminEmail("zhbar10@gmail.com")).toBe(false);
+    expect(getAdminEmails()).toEqual([
+      "zhbar10@gmail.com",
+      "omer.nachshon@gmail.com",
+    ]);
+    expect(isAdminEmail("omer.nachshon@gmail.com")).toBe(true);
+    expect(isAdminEmail("zhbar10@gmail.com")).toBe(true);
   });
 
-  it("honors ADMIN_EMAILS overrides", () => {
+  it("merges ADMIN_EMAILS extras onto the operator defaults", () => {
     process.env.ADMIN_EMAILS = " ops@example.com , other@example.com ";
-    expect(getAdminEmails()).toEqual(["ops@example.com", "other@example.com"]);
+    expect(getAdminEmails()).toEqual([
+      "zhbar10@gmail.com",
+      "omer.nachshon@gmail.com",
+      "ops@example.com",
+      "other@example.com",
+    ]);
     expect(isAdminEmail("ops@example.com")).toBe(true);
-    expect(isAdminEmail("zhbar10@gmail.com")).toBe(false);
+    expect(isAdminEmail("zhbar10@gmail.com")).toBe(true);
+    expect(isAdminEmail("omer.nachshon@gmail.com")).toBe(true);
   });
 
   it("rejects empty / missing emails", () => {
