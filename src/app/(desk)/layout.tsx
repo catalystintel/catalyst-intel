@@ -13,6 +13,10 @@ import {
   isTursoQuotaBlockedError,
   normalizeDbError,
 } from "@/lib/errors/classify-db-error";
+import {
+  canAccessPreviewDeployment,
+  isPreviewDeployment,
+} from "@/lib/ops/preview-access";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 
@@ -61,6 +65,11 @@ export default async function DeskLayout({
 
   if (!user) {
     redirect("/login");
+  }
+
+  // Hard gate (middleware is optimistic): Preview / staging is admin-only.
+  if (isPreviewDeployment() && !canAccessPreviewDeployment(user.email)) {
+    redirect("/login?error=preview_admin_only");
   }
 
   return (

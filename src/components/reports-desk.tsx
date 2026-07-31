@@ -139,7 +139,8 @@ export function ReportsDesk() {
         </h1>
         <p className="mt-1 max-w-xl text-sm text-[var(--desk-text-muted)]">
           Freeze a snapshot of catalysts you&apos;re tracking — share a stable
-          link without the live tape moving underneath.
+          link with other signed-in teammates without the live tape moving
+          underneath.
         </p>
       </div>
 

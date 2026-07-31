@@ -12,6 +12,7 @@ import { PreloginRisingChart } from "@/components/prelogin-rising-chart";
 import { cn } from "@/lib/utils";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
+import { isAdminEmail } from "@/lib/auth/admin";
 
 /** Quick-glance trust row under the hero CTA. */
 const HERO_STATS = [
@@ -137,17 +138,19 @@ export default async function Home({
   searchParams: Promise<{ preview?: string }>;
 }) {
   const { preview } = await searchParams;
-  // Dev/owner convenience: `?preview=1` outside production lets a signed-in
-  // owner reload `/` to check landing-page design changes without signing out.
-  const isPreviewBypass =
-    process.env.NODE_ENV !== "production" && preview === "1";
 
-  if (isSupabaseConfigured() && !isPreviewBypass) {
+  if (isSupabaseConfigured()) {
     const supabase = await createSupabaseServerClient();
     const {
       data: { user },
     } = await supabase.auth.getUser();
-    if (user) {
+    // Local/owner convenience: `?preview=1` outside production lets an
+    // allowlisted admin reload `/` to check landing design without signing out.
+    const isPreviewBypass =
+      process.env.NODE_ENV !== "production" &&
+      preview === "1" &&
+      isAdminEmail(user?.email);
+    if (user && !isPreviewBypass) {
       redirect("/catalyst-feed");
     }
   }

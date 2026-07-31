@@ -3,12 +3,17 @@ import { eq } from "drizzle-orm";
 
 import { db } from "@/db/client";
 import { savedReports } from "@/db/schema";
+import { getCurrentAppUser } from "@/lib/auth/current-user";
 import { getClientIp } from "@/lib/http/client-ip";
 import { RATE_LIMITS, checkRateLimit } from "@/lib/http/rate-limit";
 import {
   rateLimitExceededResponse,
   withRateLimitHeaders,
 } from "@/lib/http/rate-limit-response";
+import {
+  canAccessPreviewDeployment,
+  isPreviewDeployment,
+} from "@/lib/ops/preview-access";
 import type {
   ReportDetail,
   ReportScope,
@@ -17,7 +22,10 @@ import type {
   ReportWindow,
 } from "@/lib/reports/types";
 
-/** Public endpoint — no auth required, rate-limited by IP. */
+/**
+ * Share-link endpoint — requires a signed-in session (desk layout already
+ * gates the page). On Vercel Preview, allowlisted admins only.
+ */
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ token: string }> },
@@ -28,6 +36,23 @@ export async function GET(
     ...RATE_LIMITS.analyticsRead,
   });
   if (!limitResult.ok) return rateLimitExceededResponse(limitResult);
+
+  const user = await getCurrentAppUser();
+  if (!user) {
+    return withRateLimitHeaders(
+      NextResponse.json({ error: "Not authenticated." }, { status: 401 }),
+      limitResult,
+    );
+  }
+  if (isPreviewDeployment() && !canAccessPreviewDeployment(user.email)) {
+    return withRateLimitHeaders(
+      NextResponse.json(
+        { error: "Preview deployments are admin-only." },
+        { status: 403 },
+      ),
+      limitResult,
+    );
+  }
 
   const { token } = await params;
   if (!token || typeof token !== "string" || token.length > 64) {
