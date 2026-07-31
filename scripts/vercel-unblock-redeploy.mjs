@@ -162,6 +162,93 @@ export function hasNewerHealthyForBranch(deployments, branch, afterMs) {
 export const hasNewerNonBlockedForSha = hasNewerHealthyForSha;
 
 /**
+ * @param {{ meta?: Record<string, unknown> }} deployment
+ * @param {string} sha
+ */
+export function matchDeploymentSha(deployment, sha) {
+  if (!sha) return false;
+  const got = String(deployment.meta?.githubCommitSha ?? "");
+  if (!got) return false;
+  return got === sha || got.startsWith(sha) || sha.startsWith(got);
+}
+
+/**
+ * Classify whether Vercel has decided on a git deploy for this SHA yet.
+ * Used instead of a blind sleep after push to main.
+ *
+ * @param {Array<{ readyState?: string, state?: string, meta?: Record<string, unknown>, target?: string | null }>} deployments
+ * @param {string} sha
+ * @returns {"absent" | "needs-heal" | "healthy" | "pending"}
+ */
+export function classifyWaitForSha(deployments, sha) {
+  const forSha = deployments.filter((d) => matchDeploymentSha(d, sha));
+  if (forSha.length === 0) return "absent";
+  if (forSha.some((d) => needsAutoRedeploy(d))) return "needs-heal";
+  const healthy = new Set([
+    "READY",
+    "BUILDING",
+    "QUEUED",
+    "INITIALIZING",
+    "UPLOADING",
+  ]);
+  if (forSha.some((d) => healthy.has(String(d.readyState ?? d.state ?? "")))) {
+    return "healthy";
+  }
+  return "pending";
+}
+
+/**
+ * Poll Vercel deployments until this SHA is BLOCKED/ERROR (heal) or healthy,
+ * or until timeout. Avoids a fixed 60s sleep after main push.
+ *
+ * @param {{ token: string, teamId: string, projectId: string }} cfg
+ * @param {string} sha
+ * @param {{
+ *   timeoutMs?: number,
+ *   intervalMs?: number,
+ *   list?: (cfg: { token: string, teamId: string, projectId: string }) => Promise<Array<Record<string, unknown>>>,
+ *   sleep?: (ms: number) => Promise<void>,
+ * }} [opts]
+ */
+export async function waitForShaDeployOutcome(cfg, sha, opts = {}) {
+  const timeoutMs = opts.timeoutMs ?? 90_000;
+  const intervalMs = opts.intervalMs ?? 2_500;
+  const list = opts.list ?? listRecentDeployments;
+  const sleep =
+    opts.sleep ?? ((ms) => new Promise((resolve) => setTimeout(resolve, ms)));
+
+  const started = Date.now();
+  /** @type {Array<Record<string, unknown>>} */
+  let deployments = [];
+  /** @type {ReturnType<typeof classifyWaitForSha> | "timeout"} */
+  let outcome = "absent";
+
+  while (Date.now() - started < timeoutMs) {
+    deployments = await list(cfg);
+    outcome = classifyWaitForSha(deployments, sha);
+    if (outcome === "needs-heal" || outcome === "healthy") {
+      return {
+        outcome,
+        waitedMs: Date.now() - started,
+        deployments,
+      };
+    }
+    const remaining = timeoutMs - (Date.now() - started);
+    if (remaining <= 0) break;
+    await sleep(Math.min(intervalMs, remaining));
+  }
+
+  deployments = await list(cfg);
+  outcome = classifyWaitForSha(deployments, sha);
+  return {
+    outcome:
+      outcome === "absent" || outcome === "pending" ? "timeout" : outcome,
+    waitedMs: Date.now() - started,
+    deployments,
+  };
+}
+
+/**
  * @param {string} apiPath
  * @param {string} token
  * @param {string} [teamId]
@@ -522,13 +609,34 @@ async function main() {
     process.exit(0);
   }
 
-  const out = await runUnblock({
+  const cfg = {
     token,
     teamId,
     projectId,
     projectName,
     allowCli,
-  });
+  };
+
+  // After a main push, poll Vercel for this SHA instead of sleeping blindly.
+  const waitSha = stripSecret(process.env.VERCEL_UNBLOCK_WAIT_SHA);
+  if (waitSha) {
+    const timeoutMs = Number(process.env.VERCEL_UNBLOCK_WAIT_MS || 90_000);
+    const intervalMs = Number(
+      process.env.VERCEL_UNBLOCK_WAIT_INTERVAL_MS || 2_500,
+    );
+    console.log(
+      `Polling Vercel for deploy decision on ${waitSha.slice(0, 8)}… (timeout ${timeoutMs}ms)`,
+    );
+    const waited = await waitForShaDeployOutcome(cfg, waitSha, {
+      timeoutMs: Number.isFinite(timeoutMs) ? timeoutMs : 90_000,
+      intervalMs: Number.isFinite(intervalMs) ? intervalMs : 2_500,
+    });
+    console.log(
+      `Wait done: outcome=${waited.outcome} waitedMs=${waited.waitedMs}`,
+    );
+  }
+
+  const out = await runUnblock(cfg);
   console.log(JSON.stringify(out, null, 2));
 }
 
