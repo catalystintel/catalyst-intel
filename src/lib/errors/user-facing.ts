@@ -36,9 +36,7 @@ const SOURCE_KEY_ENV_PATTERN =
  * shown verbatim on trader surfaces.
  */
 export function looksLikeOpsMessage(message: string): boolean {
-  return (
-    OPS_LEAK_PATTERN.test(message) || SOURCE_KEY_ENV_PATTERN.test(message)
-  );
+  return OPS_LEAK_PATTERN.test(message) || SOURCE_KEY_ENV_PATTERN.test(message);
 }
 
 /**
