@@ -29,9 +29,11 @@ Three environments, one app:
 - **Vercel Git integration** (`vercel.json`): still may deploy on push to `dev` /
   `main` (and matching feature-branch globs). Treat it as secondary; CI deploy
   is authoritative for staging/production tip.
-- **Backup — Unblock Omer cron** (`.github/workflows/vercel-unblock-redeploy.yml`):
-  polls every 10 minutes and heals blocked/failed Omer deploys if anything slips
-  past CI deploy (see below).
+- **Backup — Unblock Omer CD heal** (`.github/workflows/vercel-unblock-redeploy.yml`):
+  independent of CI (not gated on green checks). On every push to `main`, waits
+  **1 minute** (so Vercel can create a Blocked git deploy first), then heals
+  blocked/failed Omer deploys. Also polls every 10 minutes + manual
+  `workflow_dispatch`.
 - **Scheduled ETL (production):** [cron-job.org](https://cron-job.org) POSTs
   `/api/admin/fetch/all` every **1 minute** with `x-cron-secret`. See "Production scheduler"
   below for setup and the in-app self-healing backstop.
@@ -205,9 +207,15 @@ deploys should not stall staging or production.
   owner seat is linked), or
 - GitHub App / private-repo / permission / unauthorized access rejects the push
 
-The always-on workflow `.github/workflows/vercel-unblock-redeploy.yml` polls
-every **10 minutes** (and on **Actions → Unblock Omer Vercel deploys → Run
-workflow**) and heals **`main` → Production** and **`dev` → Preview**
+The always-on workflow `.github/workflows/vercel-unblock-redeploy.yml` is
+**not part of CI**. It runs on:
+
+1. **Every push to `main`** — waits **60s** (so Vercel git integration can
+   Block first), then heals
+2. **Every 10 minutes** (cron backup)
+3. **Manual** — Actions → Unblock Omer Vercel deploys → Run workflow
+
+It heals **`main` → Production** and **`dev` → Preview**
 (`catalyst-intel-git-dev-zhbar10s-projects.vercel.app`) if a blocked git deploy
 was left behind.
 
@@ -251,11 +259,11 @@ gh secret set VERCEL_PROJECT_ID --body "prj_bzkyprBR2Hl8TbqadquO1z0L23On"
 ```
 
 If those secrets are missing, CI deploy and the unblock job each log a warning
-and exit 0 (same soft-fail pattern as `migrate.yml`). The unblock **schedule
-only runs from the default branch (`main`)** — that workflow must be on `main`
-for the cron to be live; until then use **workflow_dispatch**. CI deploy runs
-from whichever branch was pushed (`dev` or `main`) once the workflow file is
-on that branch.
+and exit 0 (same soft-fail pattern as `migrate.yml`). Unblock **`push` +
+`schedule` only fire from the default branch (`main`)** — that workflow must
+be on `main` for post-push heal / cron to be live; until then use
+**workflow_dispatch**. CI deploy runs from whichever branch was pushed (`dev`
+or `main`) once the workflow file is on that branch.
 
 Manual one-off (local, with env set):
 
@@ -266,8 +274,10 @@ VERCEL_TOKEN=… VERCEL_ORG_ID=… VERCEL_PROJECT_ID=… node scripts/vercel-unb
 **Optional Cursor Automation (complement, not required):** you can add a
 scheduled Cursor agent that every ~15 minutes runs
 `node scripts/vercel-unblock-redeploy.mjs` with the same three env vars. CI
-CLI deploy is primary; the GitHub unblock Action is the always-on backup; a
-Cursor Automation is only useful if Actions secrets are unset.
+deploy is primary for shipping the tip; the GitHub unblock Action (main push
+
+- cron) is the independent Block heal; a Cursor Automation is only useful if
+  Actions secrets are unset.
 
 ---
 
