@@ -11,7 +11,7 @@ import { isFinnhubConfigured } from "@/lib/jobs/finnhub-env";
 import { isNonProductionEnv } from "@/lib/ops/non-production-env";
 
 import { FetchTrigger } from "./fetch-trigger";
-import { IngestionRunsPanel } from "./ingestion-runs-panel";
+import { IngestionAuditSection } from "./ingestion-audit-section";
 import { MigrateTrigger } from "./migrate-trigger";
 import { ResetDbTrigger } from "./reset-db-trigger";
 import { WhatsNewPanel } from "./whats-new-panel";
@@ -125,21 +125,6 @@ export default async function AdminPage() {
       </section>
 
       <section className="overflow-hidden rounded-xl border border-[var(--desk-border)] bg-[var(--desk-panel)]">
-        <div className="border-b border-border/60 px-4 py-4 sm:px-5">
-          <h2 className="font-mono text-sm tracking-wide text-foreground">
-            Ingestion run audit
-          </h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Last multi-source orchestrator runs (cron + Admin). 20 rows per
-            page; scroll for more. Expand a row for per-source results.
-          </p>
-        </div>
-        <div className="px-4 py-4 sm:px-5">
-          <IngestionRunsPanel />
-        </div>
-      </section>
-
-      <section className="overflow-hidden rounded-xl border border-[var(--desk-border)] bg-[var(--desk-panel)]">
         <div className="flex flex-wrap items-start justify-between gap-4 border-b border-border/60 px-4 py-4 sm:px-5">
           <div>
             <h2 className="font-mono text-sm tracking-wide text-foreground">
@@ -205,6 +190,8 @@ export default async function AdminPage() {
           </p>
         ) : null}
       </section>
+
+      <IngestionAuditSection />
     </PageEnter>
   );
 }
