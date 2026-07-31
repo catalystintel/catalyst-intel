@@ -216,8 +216,9 @@ export function AlertRulesPanel() {
                 aria-label="Channel"
                 className={cn(
                   "inline-flex h-9 min-w-[12.5rem] items-center justify-between gap-2 rounded-md border border-[var(--desk-border-strong)] bg-[var(--desk-overlay-soft)] px-2.5 font-mono text-xs text-[var(--desk-text)]",
-                  "outline-none transition-colors hover:bg-[var(--desk-overlay-strong)]",
+                  "transition-colors outline-none hover:bg-[var(--desk-overlay-strong)]",
                   "focus-visible:border-[var(--desk-text-dim)] focus-visible:ring-1 focus-visible:ring-[var(--desk-border-strong)]",
+                  "data-popup-open:border-[var(--desk-text-dim)] data-popup-open:bg-[var(--desk-overlay-strong)]",
                 )}
               >
                 <span className="truncate">
@@ -229,8 +230,12 @@ export function AlertRulesPanel() {
               <DropdownMenuContent
                 align="start"
                 side="bottom"
-                sideOffset={4}
-                className="min-w-[12.5rem] border-[var(--desk-border)] bg-[var(--desk-panel)] p-1 text-[var(--desk-text)] shadow-md"
+                sideOffset={6}
+                positionMethod="fixed"
+                className={cn(
+                  "min-w-[12.5rem] rounded-md border border-[var(--desk-border-strong)] bg-[var(--desk-panel)] p-1",
+                  "text-[var(--desk-text)] shadow-lg ring-0",
+                )}
               >
                 <DropdownMenuRadioGroup
                   value={channel}
@@ -249,7 +254,11 @@ export function AlertRulesPanel() {
                     <DropdownMenuRadioItem
                       key={opt.value}
                       value={opt.value}
-                      className="font-mono text-xs text-[var(--desk-text-secondary)] focus:bg-[var(--desk-overlay-strong)] focus:text-[var(--desk-text)]"
+                      className={cn(
+                        "rounded-sm font-mono text-xs text-[var(--desk-text-secondary)]",
+                        "focus:bg-[var(--desk-overlay-strong)] focus:text-[var(--desk-text)]",
+                        "data-checked:text-[var(--desk-text)]",
+                      )}
                     >
                       {opt.label}
                     </DropdownMenuRadioItem>
