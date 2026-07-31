@@ -2,14 +2,14 @@
 
 ## Shipped in POC (feat/ceo-featureslist-poc)
 
-- [x] Improve the article chart (bottom split-view) — more professional Lightweight Charts UX
-- [x] Improve the dark-mode icon
-- [x] Remove / soften source API key names in product UI
-- [x] Earnings surprises filter — material |EPS surprise %| on Live tape
-- [x] Landing Search — 2–3 free ticker lookups + sign-in CTA
-- [x] Economic calendar deepened — countdown, why-it-matters, PPI added (no paid econ API)
-- [x] Portfolio focus via CSV / paste → watchlist + Quiet playbook (not broker sync)
-- [x] Prelogin upward stock chart — already present
+- [] Improve the article chart (bottom split-view) — more professional Lightweight Charts UX
+- [] Improve the dark-mode icon
+- [] Remove / soften source API key names in product UI
+- [] Earnings surprises filter — material |EPS surprise %| on Live tape
+- [] Landing Search — 2–3 free ticker lookups + sign-in CTA
+- [] Economic calendar deepened — countdown, why-it-matters, PPI added (no paid econ API)
+- [] Portfolio focus via CSV / paste → watchlist + Quiet playbook (not broker sync)
+- [] Prelogin upward stock chart — already present
 
 ## Deferred (post-POC)
 
