@@ -26,10 +26,10 @@ export function AppSidebar({
   onCollapseToggle,
 }: AppSidebarProps) {
   const items = getPrimaryNav(isAdmin);
-  const workspace = items.filter(
-    (i) => i.key !== "admin" && i.key !== "profile",
-  );
-  const system = items.filter((i) => i.key === "profile" || i.key === "admin");
+  // Workspace = everyone. System = admin console only (settings are in the
+  // account menu, so non-admins never see a System section).
+  const workspace = items.filter((i) => !i.adminOnly);
+  const system = items.filter((i) => i.adminOnly);
 
   return (
     <nav
