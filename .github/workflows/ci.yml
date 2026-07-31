@@ -1,13 +1,15 @@
 name: CI
 
-# CI/CD only runs for the two branches that matter: `dev` (staging) and
-# `main` (production) - see .cursor/rules/git-branching-workflow.mdc and
-# DEPLOYMENT.md. PRs into `dev` also run this so feature branches are
-# checked (format, lint, unit tests, build/type-check - covering both the
+# CI/CD for the two branches that matter: `dev` (staging) and `main`
+# (production) - see .cursor/rules/git-branching-workflow.mdc and
+# DEPLOYMENT.md. PRs into `dev` also run the verify job so feature branches
+# are checked (format, lint, unit tests, build/type-check - covering both the
 # frontend pages and backend API routes/lib code, since this is a single
-# Next.js app) before merging. This workflow only verifies the code - it does
-# not deploy. Deployment on push to `dev`/`main` is handled separately by
-# Vercel's own GitHub integration (see vercel.json and DEPLOYMENT.md).
+# Next.js app) before merging.
+#
+# After a green push to `dev`/`main`, the `deploy` job ships via Vercel CLI
+# (team token) so commits are not stuck on Vercel git-author Blocked deploys.
+# The unblock cron remains a backup healer — see vercel-unblock-redeploy.yml.
 on:
   push:
     branches: [main, dev]
@@ -50,3 +52,53 @@ jobs:
       # SQLite file before it ever reaches staging/production - see DEPLOYMENT.md.
       - name: Build (migrations + type-check for frontend + backend)
         run: npm run build
+
+  deploy:
+    needs: test-and-build
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+
+      - name: Install Vercel CLI
+        run: npm install -g vercel@56
+
+      - name: Deploy to Vercel (CLI / team token)
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+          # Stable staging host for the `dev` branch (same as DEPLOYMENT.md /
+          # unblock workflow). CLI previews do not auto-get the git-dev alias.
+          STAGING_ALIAS: catalyst-intel-git-dev-zhbar10s-projects.vercel.app
+        run: |
+          if [ -z "$VERCEL_TOKEN" ]; then
+            echo "::warning::VERCEL_TOKEN not set — skipping CI Vercel deploy. See DEPLOYMENT.md."
+            exit 0
+          fi
+          if [ -z "$VERCEL_ORG_ID" ] || [ -z "$VERCEL_PROJECT_ID" ]; then
+            echo "::warning::VERCEL_ORG_ID / VERCEL_PROJECT_ID not set — skipping CI Vercel deploy. See DEPLOYMENT.md."
+            exit 0
+          fi
+
+          if [ "${{ github.ref_name }}" = "main" ]; then
+            echo "Deploying production from main…"
+            vercel deploy --prod --yes --scope "$VERCEL_ORG_ID"
+            exit 0
+          fi
+
+          echo "Deploying preview/staging from dev…"
+          OUT=$(vercel deploy --yes --scope "$VERCEL_ORG_ID")
+          echo "$OUT"
+          DEPLOY_URL=$(printf '%s\n' "$OUT" | grep -oE 'https://[^[:space:]]+\.vercel\.app' | tail -n1)
+          if [ -z "$DEPLOY_URL" ]; then
+            echo "::error::Could not parse Vercel deployment URL from CLI output"
+            exit 1
+          fi
+          echo "Preview URL: $DEPLOY_URL"
+          echo "Aliasing to staging: $STAGING_ALIAS"
+          vercel alias set "$DEPLOY_URL" "$STAGING_ALIAS" --scope "$VERCEL_ORG_ID"

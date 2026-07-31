@@ -16,8 +16,19 @@ Three environments, one app:
   - push to `dev` or `main`
   - pull requests **targeting `dev`**
     (This is a single Next.js app - tests cover both frontend pages and backend API/lib code.)
-- **Vercel CD** (`vercel.json`): deploys **only** on push to `dev` (staging) and `main`
-  (production). Feature branches do **not** get Vercel deploys.
+- **Primary CD — CI Vercel deploy** (same `ci.yml`, `deploy` job after a green
+  `test-and-build`): on push to `main` runs `vercel deploy --prod`; on push to
+  `dev` runs `vercel deploy` (preview) and aliases to the stable staging host
+  `catalyst-intel-git-dev-zhbar10s-projects.vercel.app`. Uses repo secrets
+  `VERCEL_TOKEN` / `VERCEL_ORG_ID` / `VERCEL_PROJECT_ID` (soft-skip with
+  `::warning::` if unset — same pattern as the unblock workflow). This is the
+  reliable path when Vercel’s git-author checks would **Block** a deploy.
+- **Vercel Git integration** (`vercel.json`): still may deploy on push to `dev` /
+  `main` (and matching feature-branch globs). Treat it as secondary; CI CLI
+  deploy is authoritative for staging/production tip.
+- **Backup — Unblock Omer cron** (`.github/workflows/vercel-unblock-redeploy.yml`):
+  polls every 10 minutes and heals blocked/failed Omer deploys if anything slips
+  past CI deploy (see below).
 - **Scheduled ETL (production):** [cron-job.org](https://cron-job.org) POSTs
   `/api/admin/fetch/all` every **1 minute** with `x-cron-secret`. See "Production scheduler"
   below for setup and the in-app self-healing backstop.
@@ -179,7 +190,11 @@ gh secret set STAGING_LIBSQL_AUTH_TOKEN --body "<same value as Vercel Preview LI
 
 ### Auto-heal Omer / access-blocked Vercel deploys (GitHub Actions)
 
-Vercel can **Block** or **fail** a git-triggered deploy when:
+**Primary path:** after CI is green, `ci.yml`’s `deploy` job already ships
+`dev`/`main` via the Vercel CLI with the team token, so author **Blocked**
+git deploys should not stall staging or production.
+
+**Backup:** Vercel can still **Block** or **fail** a git-triggered deploy when:
 
 - the commit author is not a recognized team member (common for
   `omer.nachshon` / `OmerNachshon` / `omer.nachshon@…` while only the Vercel
@@ -189,7 +204,8 @@ Vercel can **Block** or **fail** a git-triggered deploy when:
 The always-on workflow `.github/workflows/vercel-unblock-redeploy.yml` polls
 every **10 minutes** (and on **Actions → Unblock Omer Vercel deploys → Run
 workflow**) and heals **`main` → Production** and **`dev` → Preview**
-(`catalyst-intel-git-dev-zhbar10s-projects.vercel.app`).
+(`catalyst-intel-git-dev-zhbar10s-projects.vercel.app`) if a blocked git deploy
+was left behind.
 
 **Author match rules** (case-insensitive): commit author name, login, email, or
 actor matching `omer.nachshon`, `Omer Nachshon`, `OmerNachshon`, or `nachshon`.
@@ -215,7 +231,8 @@ deploy when git integration rejects the author):
 Idempotent: skips if a newer healthy (`READY` / building) deploy already exists
 for the same commit SHA or the same branch after the failure.
 
-**Required GitHub Actions secrets** (repo → Settings → Secrets and variables → Actions):
+**Required GitHub Actions secrets** (shared by CI `deploy` and the unblock
+cron — repo → Settings → Secrets and variables → Actions):
 
 | Secret              | Notes                                                                                                   |
 | ------------------- | ------------------------------------------------------------------------------------------------------- |
@@ -229,10 +246,12 @@ gh secret set VERCEL_ORG_ID --body "team_IvSJt6AmTC91h24fmVeLHfDI"
 gh secret set VERCEL_PROJECT_ID --body "prj_bzkyprBR2Hl8TbqadquO1z0L23On"
 ```
 
-If those secrets are missing, the job logs a warning and exits 0 (same soft-fail
-pattern as `migrate.yml`). The **schedule only runs from the default branch
-(`main`)** — this workflow must be on `main` for the cron to be live; until then
-use **workflow_dispatch**.
+If those secrets are missing, CI deploy and the unblock job each log a warning
+and exit 0 (same soft-fail pattern as `migrate.yml`). The unblock **schedule
+only runs from the default branch (`main`)** — that workflow must be on `main`
+for the cron to be live; until then use **workflow_dispatch**. CI deploy runs
+from whichever branch was pushed (`dev` or `main`) once the workflow file is
+on that branch.
 
 Manual one-off (local, with env set):
 
@@ -242,9 +261,9 @@ VERCEL_TOKEN=… VERCEL_ORG_ID=… VERCEL_PROJECT_ID=… node scripts/vercel-unb
 
 **Optional Cursor Automation (complement, not required):** you can add a
 scheduled Cursor agent that every ~15 minutes runs
-`node scripts/vercel-unblock-redeploy.mjs` with the same three env vars. The
-committed GitHub Action is the primary always-on mechanism; a Cursor Automation
-is only useful as a backup if Actions secrets are unset.
+`node scripts/vercel-unblock-redeploy.mjs` with the same three env vars. CI
+CLI deploy is primary; the GitHub unblock Action is the always-on backup; a
+Cursor Automation is only useful if Actions secrets are unset.
 
 ---
 
@@ -311,8 +330,8 @@ node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 
 ### 3. Verify
 
-1. Push / merge into `dev` → Vercel staging deploy + GitHub Actions CI.
-2. Promote `dev` → `main` (only when you ask) → Vercel production deploy + CI.
+1. Push / merge into `dev` → GitHub Actions CI (verify + CLI staging deploy).
+2. Promote `dev` → `main` (only when you ask) → GitHub Actions CI (verify + CLI production deploy).
 3. Confirm cron-job.org (or `/admin` → **Fetch all sources now**) returns HTTP 200 against
    production.
 4. Sign in with Google on the live URL using an allowlisted admin email (or set
