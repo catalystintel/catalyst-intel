@@ -12,6 +12,7 @@ import {
   rateLimitExceededResponse,
   withRateLimitHeaders,
 } from "@/lib/http/rate-limit-response";
+import { parsePortfolioSymbols } from "@/lib/watchlist/parse-portfolio-symbols";
 
 async function requireUser(request: NextRequest) {
   if (!isLibsqlConfigured()) {
@@ -89,6 +90,55 @@ export async function POST(request: NextRequest) {
     typeof body === "object" && body !== null && "symbol" in body
       ? String((body as { symbol: unknown }).symbol)
       : "";
+  const symbolsRaw =
+    typeof body === "object" &&
+    body !== null &&
+    "symbols" in body &&
+    Array.isArray((body as { symbols: unknown }).symbols)
+      ? ((body as { symbols: unknown[] }).symbols as unknown[])
+      : null;
+
+  // Bulk import: { symbols: string[] }
+  if (symbolsRaw) {
+    const joined = symbolsRaw.map((s) => String(s)).join("\n");
+    const { symbols } = parsePortfolioSymbols(joined, 100);
+    if (symbols.length === 0) {
+      return withRateLimitHeaders(
+        NextResponse.json(
+          { error: "No valid symbols to import." },
+          { status: 400 },
+        ),
+        limitResult,
+      );
+    }
+
+    const existing = await db
+      .select({ symbol: watchlistEntries.symbol })
+      .from(watchlistEntries)
+      .where(eq(watchlistEntries.userId, user.id))
+      .all();
+    const have = new Set(existing.map((r) => r.symbol));
+    let added = 0;
+    let skipped = 0;
+    for (const symbol of symbols) {
+      if (have.has(symbol)) {
+        skipped += 1;
+        continue;
+      }
+      await db
+        .insert(watchlistEntries)
+        .values({ userId: user.id, symbol })
+        .run();
+      have.add(symbol);
+      added += 1;
+    }
+
+    return withRateLimitHeaders(
+      NextResponse.json({ added, skipped, total: have.size }),
+      limitResult,
+    );
+  }
+
   const symbol = normalizeSymbol(symbolRaw);
   if (!symbol) {
     return withRateLimitHeaders(
