@@ -23,7 +23,7 @@ import {
 } from "@/lib/catalysts/article-funnel";
 import type { ArticleEnrichment } from "@/lib/catalysts/enrich-article";
 import { formatMarketCapMillions } from "@/lib/catalysts/enrich-article-format";
-import { isLocalDevUi, LOCAL_DEV_ONLY_LABEL } from "@/lib/dev/local-dev-ui";
+import { isLocalDevUi } from "@/lib/dev/local-dev-ui";
 import { formatRelativeAge, formatTimeDate } from "@/lib/format/relative-time";
 import { CATEGORY_LABELS } from "@/lib/jobs/parse-8k-items";
 import { feedHref } from "@/lib/nav/feed-href";
@@ -350,7 +350,7 @@ export function CatalystArticleView({
           </h2>
           {isLocalDevUi() ? (
             <span className="font-mono text-[0.6rem] tracking-wide text-[var(--desk-text-dim)] uppercase">
-              {bodySourceLabel(bodySource)} {LOCAL_DEV_ONLY_LABEL}
+              {bodySourceLabel(bodySource)}
             </span>
           ) : null}
         </div>
@@ -567,12 +567,11 @@ export function CatalystArticleView({
               tabular
             />
           </dl>
-          <p className="font-mono text-[0.6rem] tracking-wide text-[var(--desk-text-dim)] uppercase">
-            Via {enrichment.quote.provider}
-            {enrichment.quote.asOf
-              ? ` · ${formatRelativeAge(enrichment.quote.asOf)}`
-              : ""}
-          </p>
+          {enrichment.quote.asOf ? (
+            <p className="font-mono text-[0.6rem] tracking-wide text-[var(--desk-text-dim)] uppercase">
+              As of {formatRelativeAge(enrichment.quote.asOf)}
+            </p>
+          ) : null}
         </section>
       ) : null}
     </article>
@@ -728,7 +727,7 @@ function FilingProofMetaLine({ meta }: { meta: FilingProofMeta }) {
   if (parts.length === 0) return null;
   return (
     <p className="font-mono text-[0.6rem] tracking-wide text-[var(--desk-text-dim)] uppercase">
-      Filing proof · {parts.join(" · ")} {LOCAL_DEV_ONLY_LABEL}
+      {parts.join(" · ")}
     </p>
   );
 }

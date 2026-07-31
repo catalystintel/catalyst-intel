@@ -54,7 +54,7 @@ function AnalysisBody({ analysis }: { analysis: TriageResult }) {
           )}
         >
           {LEAN_LABEL[analysis.lean]}
-          {analysis.uncertain ? " · thin filing" : ""}
+          {analysis.uncertain ? " · limited text" : ""}
         </span>
       </div>
       <ul className="flex list-none flex-col gap-1.5 pl-0">

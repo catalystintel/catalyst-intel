@@ -103,7 +103,28 @@ describe("titleLine", () => {
           items: [],
         }),
       ),
-    ).toBe("NVIDIA Corp — 8-K filing");
+    ).toBe("NVIDIA Corp - Current Report");
+  });
+
+  it("uses Item reason titles instead of bare 8-K filing chrome", () => {
+    expect(
+      titleLine(
+        base({
+          headline: null,
+          eventCategory: "management",
+          title: "Acme Corp — 8-K filing",
+          companyName: "Acme Corp",
+          symbol: "ACME",
+          items: [
+            {
+              code: "5.02",
+              label: "Officer / Director Change",
+              category: "management",
+            },
+          ],
+        }),
+      ),
+    ).toMatch(/Acme Corp - .+Change/);
   });
 
   it("rewrites Results of Operations blurbs to Company - Earnings Report Qn", () => {
@@ -551,6 +572,25 @@ describe("eventLabel", () => {
     expect(eventLabel(base({ subcategory: "halt_resumed" }))).toBe(
       "Halt resumed",
     );
+  });
+
+  it("shows 8-K Item reason instead of bare 8k", () => {
+    expect(
+      eventLabel(
+        base({
+          subcategory: "8k",
+          eventCategory: "management",
+          headline: "Officer / Director Change",
+          items: [
+            {
+              code: "5.02",
+              label: "Officer / Director Change",
+              category: "management",
+            },
+          ],
+        }),
+      ),
+    ).toBe("Officer / Director Change");
   });
 
   it("maps known subcategories to readable labels", () => {

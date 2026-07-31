@@ -9,6 +9,7 @@ import {
   formatProspectusOfferingTitle,
   formatSchedule13DTitle,
   formatSchedule13GTitle,
+  formatSec8kItemTitle,
   formatShelfRegistrationTitle,
 } from "@/lib/catalysts/catalyst-titles";
 import { classifySecFormType } from "@/lib/jobs/parse-8k-items";
@@ -188,7 +189,8 @@ export function masterRowToNormalized(
   } else if (formMeta.subcategory === "13g") {
     title = formatSchedule13GTitle(companyName);
   } else if (/^8-?K/i.test(formType)) {
-    title = `${companyName} — ${formType} filing`;
+    // Reason comes from primary-doc enrich; until then use Current Report (not bare 8-K).
+    title = formatSec8kItemTitle("Current report", companyName);
   }
 
   const link = indexUrlForMasterRow(row);

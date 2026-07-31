@@ -163,7 +163,7 @@ export function PreLoginLandingSections() {
           Coverage across the catalysts traders track
         </h2>
         <p className="desk-body mt-3 max-w-xl text-pretty text-[var(--desk-text-muted)] sm:text-base">
-          Events are ingested from SEC EDGAR and market data feeds, then
+          Events arrive from SEC filings and market data feeds, then get
           categorized on arrival so the tape is filterable from the first
           second.
         </p>

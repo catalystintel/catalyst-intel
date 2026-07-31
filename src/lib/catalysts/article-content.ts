@@ -193,6 +193,9 @@ export function extractArticleBody(input: {
     case "macro-calendar":
       fromRaw = stringField(raw, "summary", "title");
       break;
+    case "fmp-econ-calendar":
+      fromRaw = stringField(raw, "event", "summary", "title");
+      break;
     case "polygon":
       fromRaw = stringField(raw, "description", "summary", "title");
       break;
@@ -744,6 +747,8 @@ export function originalSourceLabel(provider?: string | null): string {
       return "Original article";
     case "macro-calendar":
       return "Official release calendar";
+    case "fmp-econ-calendar":
+      return "Economic calendar source";
     case "finnhub":
       return "Original on source";
     case "openfda":

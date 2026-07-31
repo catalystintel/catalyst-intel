@@ -23,6 +23,7 @@ import {
 } from "@/lib/catalysts/catalyst-titles";
 import {
   classifySecFormType,
+  extractSecItemBlurb,
   parseFilingSummary,
   selectPrimaryItem,
 } from "@/lib/jobs/parse-8k-items";
@@ -259,6 +260,16 @@ function entryToNormalized(
       title = formatSec8kItemTitle(primary.label, companyName, {
         content: summaryText,
       });
+    }
+  } else if (is8k) {
+    // Never leave a bare "8-K filing" title — prefer Item blurb, else Current Report.
+    const blurb = extractSecItemBlurb(summaryText, null, 110);
+    if (blurb) {
+      title = `${companyName} - ${blurb}`;
+      if (!itemCodes?.length) headline = blurb;
+    } else {
+      title = formatSec8kItemTitle("Current report", companyName);
+      headline = "Current report";
     }
   } else if (isForm4) {
     title = formatForm4InsiderTitle("transaction", companyName);

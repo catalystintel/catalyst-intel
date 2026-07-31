@@ -24,6 +24,7 @@ const PROVIDER_RANK: Record<string, number> = {
   "sec-edgar": 100,
   "nasdaq-halts": 95,
   "macro-calendar": 90,
+  "fmp-econ-calendar": 92,
   openfda: 85,
   clinicaltrials: 80,
   finnhub: 60,

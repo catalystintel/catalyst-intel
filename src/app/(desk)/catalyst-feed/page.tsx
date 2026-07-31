@@ -11,7 +11,7 @@ import {
   type FeedQueryFilters,
 } from "@/lib/catalysts/feed-query";
 import { withDbRetry } from "@/lib/db/with-db-retry";
-import { buildUpcomingMacroEvents } from "@/lib/jobs/fetch-macro-calendar";
+import { loadDeskMacroEvents } from "@/lib/jobs/desk-macro-events";
 import { parseFeedCatalystId } from "@/lib/nav/feed-href";
 
 function ssrFeedFilters(nowIso: string): FeedQueryFilters {
@@ -49,9 +49,9 @@ export default async function CatalystFeedPage({
   const recentCatalysts = await withDbRetry(() =>
     queryFeedPage(ssrFeedFilters(new Date().toISOString()), { limit: 200 }),
   );
-  // Keyless BLS/Fed schedule — same source already ingested as "Macro"
-  // catalysts; pure/sync, no DB round-trip needed for the calendar panel.
-  const macroEvents = buildUpcomingMacroEvents();
+  // Prefer FMP-ingested core prints when dedicated cron has run; else
+  // keyless embedded BLS/Fed schedule (same as macro-calendar ingest).
+  const macroEvents = await loadDeskMacroEvents();
 
   return (
     <PageEnter className="flex min-h-0 flex-1 flex-col p-4 sm:p-5">

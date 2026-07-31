@@ -52,7 +52,7 @@ describe("sendTelegramMessage", () => {
     delete process.env.TELEGRAM_BOT_TOKEN;
     const result = await sendTelegramMessage({ chatId: "1", text: "hi" });
     expect(result.ok).toBe(false);
-    expect(result.detail.toLowerCase()).toContain("telegram_bot_token");
+    expect(result.detail.toLowerCase()).toContain("not available");
   });
 
   it("fails when chat id is missing", async () => {

@@ -35,8 +35,13 @@ export function isTursoQuotaBlockedError(err: unknown): boolean {
  * serializing server errors to the client `error.tsx`, so the classified
  * keywords must live in `Error.message` itself.
  */
+/**
+ * Stable classifier keywords (`BLOCKED`, quota) must stay in the message so
+ * `error.tsx` can still classify after Next strips `.cause`. Copy stays
+ * trader-safe — no Turso/docs/ops links.
+ */
 export const TURSO_QUOTA_BLOCKED_MESSAGE =
-  "Turso database quota exceeded (BLOCKED): SQL reads are blocked until you upgrade your Turso plan or the monthly quota resets. See https://docs.turso.tech/help/usage-and-billing and DEPLOYMENT.md.";
+  "Database quota exceeded (BLOCKED): SQL reads are blocked until capacity is restored.";
 
 export function normalizeDbError(err: unknown): Error {
   if (isTursoQuotaBlockedError(err)) {

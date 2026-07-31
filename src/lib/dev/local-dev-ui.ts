@@ -9,6 +9,3 @@
 export function isLocalDevUi(): boolean {
   return process.env.NODE_ENV === "development";
 }
-
-/** Short badge copy for local-only controls in the desk UI. */
-export const LOCAL_DEV_ONLY_LABEL = "(only in dev)";

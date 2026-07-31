@@ -7,7 +7,9 @@ import {
   getDevBypassEmail,
   isDevAuthBypassEnabled,
 } from "@/lib/auth/dev-bypass";
+import { isLocalDevUi } from "@/lib/dev/local-dev-ui";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
+import { toUserFacingMessage, USER_FACING } from "@/lib/errors/user-facing";
 import { cn } from "@/lib/utils";
 
 /**
@@ -24,6 +26,10 @@ export default async function LoginPage({
   const configured = isSupabaseConfigured();
   const devBypass = isDevAuthBypassEnabled();
   const destination = next ?? "/catalyst-feed";
+  const showOpsSetup = isLocalDevUi();
+  const safeError = error
+    ? toUserFacingMessage(error, USER_FACING.signInUnavailable)
+    : null;
 
   return (
     <PreLoginChrome variant="auth" glowClassName="h-[55vh]">
@@ -57,7 +63,7 @@ export default async function LoginPage({
                 <div className="flex flex-col gap-3 rounded-md border border-amber-400/40 bg-amber-400/10 p-3">
                   <div className="text-sm">
                     <p className="font-medium text-amber-800 dark:text-amber-200">
-                      Dev auth bypass is on
+                      Local sign-in ready
                     </p>
                     <p className="mt-1 font-mono text-xs break-all text-amber-800/80 dark:text-amber-200/80">
                       {getDevBypassEmail()}
@@ -67,26 +73,18 @@ export default async function LoginPage({
                     href={destination}
                     className={cn(buttonVariants(), "btn-press w-full")}
                   >
-                    Enter as dev user
+                    Continue to desk
                   </Link>
                 </div>
               ) : null}
 
               {!configured ? (
                 <div className="border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
-                  <p className="font-medium">Supabase Auth is not configured</p>
+                  <p className="font-medium">Sign-in unavailable</p>
                   <p className="mt-1 text-destructive/90">
-                    Put your real project URL and anon key in{" "}
-                    <code className="text-xs">.env.local</code>, enable Google
-                    under Authentication → Providers, add{" "}
-                    <code className="text-xs">
-                      http://localhost:3000/auth/callback
-                    </code>{" "}
-                    and{" "}
-                    <code className="text-xs">
-                      https://catalyst-intel.vercel.app/auth/callback
-                    </code>{" "}
-                    to Redirect URLs, then restart the dev server.
+                    {showOpsSetup
+                      ? "Put your real project URL and anon key in .env.local, enable Google under Authentication → Providers, add the localhost and production callback URLs to Redirect URLs, then restart the dev server."
+                      : USER_FACING.signInUnavailable}
                   </p>
                 </div>
               ) : null}
@@ -94,8 +92,8 @@ export default async function LoginPage({
               {message ? (
                 <p className="text-sm text-muted-foreground">{message}</p>
               ) : null}
-              {error ? (
-                <p className="text-sm text-destructive">{error}</p>
+              {safeError ? (
+                <p className="text-sm text-destructive">{safeError}</p>
               ) : null}
 
               <GoogleSignInButton next={destination} configured={configured} />

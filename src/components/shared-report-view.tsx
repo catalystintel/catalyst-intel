@@ -8,6 +8,7 @@ import { MaterialityBadge } from "@/components/materiality-badge";
 import { SkeletonCard } from "@/components/loading-skeleton";
 import type { ReportDetail } from "@/lib/reports/types";
 import { formatEventTime, formatRelativeAge } from "@/lib/format/relative-time";
+import { toUserFacingMessage } from "@/lib/errors/user-facing";
 
 export function SharedReportView({ token }: { token: string }) {
   const [report, setReport] = useState<ReportDetail | null>(null);
@@ -22,6 +23,7 @@ export function SharedReportView({ token }: { token: string }) {
         const res = await fetch(
           `/api/reports/share/${encodeURIComponent(token)}`,
           {
+            credentials: "same-origin",
             cache: "no-store",
             signal: controller.signal,
           },
@@ -31,7 +33,7 @@ export function SharedReportView({ token }: { token: string }) {
         setReport(data.report as ReportDetail);
       } catch (err) {
         if (err instanceof DOMException && err.name === "AbortError") return;
-        setError(err instanceof Error ? err.message : "Report not found.");
+        setError(toUserFacingMessage(err, "Report not found."));
       } finally {
         setLoading(false);
       }

@@ -111,7 +111,7 @@ describe("parseFilingSummary", () => {
     expect(parsed).toEqual({
       items: [],
       primaryCategory: "other",
-      headline: "Filing",
+      headline: "Current report",
     });
   });
 });

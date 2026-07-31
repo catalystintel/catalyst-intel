@@ -28,7 +28,7 @@ export async function sendResendEmail(options: {
   if (!apiKey) {
     return {
       ok: false,
-      detail: "RESEND_API_KEY not configured — email delivery skipped.",
+      detail: "Email delivery is not available right now.",
     };
   }
 

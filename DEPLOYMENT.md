@@ -49,6 +49,7 @@ Three environments, one app:
 | `NEXT_PUBLIC_POSTHOG_HOST`             | No        | Default `https://us.i.posthog.com`                                                                                             |
 | `ADMIN_EMAILS`                         | No        | Comma-separated admin emails; defaults to `zhbar10@gmail.com,omer.nachshon@gmail.com`                                          |
 | `FINNHUB_API_KEY`                      | No        | Finnhub: NYSE listings, earnings/FDA calendars, news (soft-fail)                                                               |
+| `FMP_API_KEY`                          | No        | FMP economic calendar (soft-fail; often premium — 402 skipped). Dedicated ~10m cron, not 1-min fetch/all                       |
 | `PR_WIRE_API_KEY` / `PR_WIRE_API_BASE` | No        | Optional. PR wire scrapes a **free public high-impact board** with no key; set these only for the authenticated full firehose. |
 | `POLYGON_API_KEY`                      | No        | Polygon/Massive news + historical_impact enrichment (soft-fail; free tier ~5 req/min, no same-day aggs)                        |
 | `MASSIVE_API_KEY`                      | No        | Alias for `POLYGON_API_KEY`                                                                                                    |
@@ -90,6 +91,15 @@ so iOS Safari does not lose the verifier the way a Server Action `redirect()` so
 `ADMIN_EMAILS` (or the built-in defaults). The local `users.role` column is synced as a cache
 and is **not** the source of truth — do not rely on `npm run make-admin` alone. Manual fetch
 via `/admin` uses the same allowlist; cron-job.org uses `x-cron-secret`.
+
+**Preview / staging access (admin-only):** every Vercel Preview deployment
+(`VERCEL_ENV=preview`) — including the stable `dev` staging host and PR preview
+URLs — requires an allowlisted admin session. Non-admins are sent to `/login`
+with a clear error; OAuth for non-admins is signed out immediately on callback.
+Exempt: `/login`, `/auth/*`, `GET /api/health`, `/api/admin/*` (cron/admin
+self-auth), and `/api/telegram/webhook`. Production (`main`) stays open to
+normal signed-in users. Report share links (`/reports/s/[token]`) also require
+a signed-in session (no anonymous token fetch).
 
 ## Multi-source fetch order
 
@@ -353,18 +363,19 @@ node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 After **Fetch all sources now** (or a successful cron-job.org run), the admin per-source
 breakdown and `raw_sources.provider` counts should include:
 
-| Provider         | Expected status                     | Notes                                                                                                                                                                                                                                                           |
-| ---------------- | ----------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `sec-edgar`      | `ok` (Form 4 via Atom `type=4`)     | Needs `SEC_EDGAR_USER_AGENT`                                                                                                                                                                                                                                    |
-| `nasdaq-halts`   | `ok`                                | No key                                                                                                                                                                                                                                                          |
-| `macro-calendar` | `ok` (CPI / NFP / FOMC)             | No key; embedded BLS + Fed schedule                                                                                                                                                                                                                             |
-| `openfda`        | `ok` (recent AP submissions only)   | No key; dates inside 30-day retention                                                                                                                                                                                                                           |
-| `clinicaltrials` | `skipped` (paused)                  | Not fetched — daily lag; code kept (`fetchEnabled: false`)                                                                                                                                                                                                      |
-| `pr-wire`        | always runs (keyless public board)  | Free public impact scrape by default (newest-first; ~60m delay; upstream score≥70 floor). No article URLs on free receipts — Details uses structured extract. Optional auth full feed + `/a/{id}` body scrape via env. Label **PR Wire**; favored on duplicates |
-| `finnhub`        | `skipped` without `FINNHUB_API_KEY` | Soft-fail OK                                                                                                                                                                                                                                                    |
-| `polygon-news`   | `skipped` (paused)                  | Not fetched — hourly ticker news; code kept                                                                                                                                                                                                                     |
-| `polygon-prices` | `skipped` without `POLYGON_API_KEY` | Soft-fail OK. Free tier: ~5 REST req/min; same-day aggs often 403 timeframe                                                                                                                                                                                     |
-| `form4api`       | `skipped` without `FORM4_API_KEY`   | EDGAR Form 4 still works via `sec-edgar`                                                                                                                                                                                                                        |
+| Provider            | Expected status                     | Notes                                                                                                                                                                                                                                                           |
+| ------------------- | ----------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `sec-edgar`         | `ok` (Form 4 via Atom `type=4`)     | Needs `SEC_EDGAR_USER_AGENT`                                                                                                                                                                                                                                    |
+| `nasdaq-halts`      | `ok`                                | No key                                                                                                                                                                                                                                                          |
+| `macro-calendar`    | `ok` (CPI / NFP / FOMC)             | No key; embedded BLS + Fed schedule                                                                                                                                                                                                                             |
+| `fmp-econ-calendar` | `ok` / `skipped`                    | Needs `FMP_API_KEY`; dedicated ~10m cron (not 1-min fetch/all). Soft-skip on 402. Desk rail prefers FMP when rows exist.                                                                                                                                        |
+| `openfda`           | `ok` (recent AP submissions only)   | No key; dates inside 30-day retention                                                                                                                                                                                                                           |
+| `clinicaltrials`    | `skipped` (paused)                  | Not fetched — daily lag; code kept (`fetchEnabled: false`)                                                                                                                                                                                                      |
+| `pr-wire`           | always runs (keyless public board)  | Free public impact scrape by default (newest-first; ~60m delay; upstream score≥70 floor). No article URLs on free receipts — Details uses structured extract. Optional auth full feed + `/a/{id}` body scrape via env. Label **PR Wire**; favored on duplicates |
+| `finnhub`           | `skipped` without `FINNHUB_API_KEY` | Soft-fail OK                                                                                                                                                                                                                                                    |
+| `polygon-news`      | `skipped` (paused)                  | Not fetched — hourly ticker news; code kept                                                                                                                                                                                                                     |
+| `polygon-prices`    | `skipped` without `POLYGON_API_KEY` | Soft-fail OK. Free tier: ~5 REST req/min; same-day aggs often 403 timeframe                                                                                                                                                                                     |
+| `form4api`          | `skipped` without `FORM4_API_KEY`   | EDGAR Form 4 still works via `sec-edgar`                                                                                                                                                                                                                        |
 
 On `/catalyst-feed`, Source column should show **SEC EDGAR**, **Nasdaq Halts**, **Macro**, **PR Wire**, **openFDA**,
 and/or **ClinicalTrials** (not only SEC).
@@ -464,6 +475,13 @@ with header `x-cron-secret: <CRON_SECRET>` every **1 minute** (`* * * * *`).
 
 Vercel Hobby allows one cron/day only; external cron-job.org gives reliable 1-min cadence without
 Vercel Pro. See [ARCHITECTURE.md](ARCHITECTURE.md).
+
+**Optional FMP economic calendar (every 10 minutes):** add a second cron-job.org job that POSTs
+`/api/admin/fetch/fmp-econ-calendar` with the same `x-cron-secret` on `*/10 * * * *`. Requires
+`FMP_API_KEY` on Vercel. Kept off the 1-min `fetch/all` path so a free-tier key (~250/day) lasts.
+Local: `npm run cron:fmp-econ`. Soft-skips when the key is missing or FMP returns HTTP 402
+(econ calendar often premium-gated). Desk calendar prefers FMP rows when present; otherwise the
+embedded keyless schedule.
 
 Polygon free-tier (~5 REST req/min) will still hit **429** under a 1-min full orchestrator. The
 app holds per-vendor `last_fetched_at` on rate-limit so the **next** tick widens the news window

@@ -32,14 +32,11 @@ export async function GET() {
       status: "ok",
       checkedAt,
     });
-  } catch (error) {
-    const detail =
-      error instanceof Error ? error.message.slice(0, 120) : "db_unreachable";
+  } catch {
     return NextResponse.json(
       {
         ok: false,
         status: "db_unreachable",
-        detail,
         checkedAt,
       },
       { status: 503 },

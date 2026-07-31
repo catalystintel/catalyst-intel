@@ -21,7 +21,7 @@
 ## Deferred (post-POC)
 
 - [ ] Buy/Sell buttons in articles — connect to a trading platform (broker OAuth / compliance)
-- [ ] Paid “Economics Trading API” — desk calendar is enough for POC
+- [ ] Paid “Economics Trading API” — prefer FMP econ calendar (`FMP_API_KEY` + dedicated ~10m cron); desk embedded calendar remains fallback
 - [ ] WhatsApp integration — email/webhook alerts cover notify-me for now
 - [ ] Full trading-platform portfolio sync — CSV/paste is the POC substitute
 - [ ] Auto-generate article images when vendor has none (optional polish)

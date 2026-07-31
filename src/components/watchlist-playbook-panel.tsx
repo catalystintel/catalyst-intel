@@ -14,6 +14,7 @@ import {
 import { DEFAULT_PLAYBOOK_CATEGORIES } from "@/lib/catalysts/playbook";
 import { parsePortfolioSymbols } from "@/lib/watchlist/parse-portfolio-symbols";
 import { cn } from "@/lib/utils";
+import { toUserFacingMessage } from "@/lib/errors/user-facing";
 
 const ALL_CATEGORIES = Object.keys(CATEGORY_LABELS) as EventCategoryKey[];
 
@@ -91,7 +92,7 @@ export function WatchlistPlaybookPanel() {
         setNyseNote(null);
       }
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Load failed.");
+      toast.error(toUserFacingMessage(err, "Load failed."));
     } finally {
       setLoaded(true);
     }
@@ -123,7 +124,7 @@ export function WatchlistPlaybookPanel() {
       await load();
       toast.success(`${symbol} added to watchlist`);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Could not add symbol.");
+      toast.error(toUserFacingMessage(err, "Could not add symbol."));
     } finally {
       setSaving(false);
     }
@@ -156,7 +157,7 @@ export function WatchlistPlaybookPanel() {
         await savePlaybook(categories, true, { notify: true });
       }
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Import failed.");
+      toast.error(toUserFacingMessage(err, "Import failed."));
     } finally {
       setSaving(false);
     }
@@ -186,9 +187,7 @@ export function WatchlistPlaybookPanel() {
       await load();
       toast.success(`${symbol} removed from watchlist`);
     } catch (err) {
-      toast.error(
-        err instanceof Error ? err.message : "Could not remove symbol.",
-      );
+      toast.error(toUserFacingMessage(err, "Could not remove symbol."));
     } finally {
       setSaving(false);
     }
@@ -220,9 +219,7 @@ export function WatchlistPlaybookPanel() {
         );
       }
     } catch (err) {
-      toast.error(
-        err instanceof Error ? err.message : "Could not save playbook.",
-      );
+      toast.error(toUserFacingMessage(err, "Could not save playbook."));
       await load();
     } finally {
       setSaving(false);

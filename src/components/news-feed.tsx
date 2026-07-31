@@ -18,6 +18,7 @@ import {
   type EventCategoryKey,
 } from "@/lib/catalysts/taxonomy";
 import { cn } from "@/lib/utils";
+import { toUserFacingMessage } from "@/lib/errors/user-facing";
 
 const NEWS_CATEGORIES: EventCategoryKey[] = [
   "earnings",
@@ -131,9 +132,7 @@ export function NewsFeed({ initialHeadlines, initialTotal }: Props) {
       setTotal(data.total);
       setNextCursor(data.nextCursor);
     } catch (err) {
-      toast.error(
-        err instanceof Error ? err.message : "Could not load headlines.",
-      );
+      toast.error(toUserFacingMessage(err, "Could not load headlines."));
     } finally {
       setLoading(false);
     }
@@ -182,9 +181,7 @@ export function NewsFeed({ initialHeadlines, initialTotal }: Props) {
       setHeadlines((prev) => [...prev, ...data.headlines]);
       setNextCursor(data.nextCursor);
     } catch (err) {
-      toast.error(
-        err instanceof Error ? err.message : "Could not load more headlines.",
-      );
+      toast.error(toUserFacingMessage(err, "Could not load more headlines."));
     } finally {
       setLoadingMore(false);
     }
