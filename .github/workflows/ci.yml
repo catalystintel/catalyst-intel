@@ -10,7 +10,7 @@ name: CI
 # After a green push to `dev`/`main`, the `deploy` job ships via Vercel CLI
 # (team token) so commits are not stuck on Vercel git-author Blocked deploys.
 # Omer/access-block heal is intentionally separate (vercel-unblock-redeploy.yml:
-# push to main + 1m wait + 10-min cron) so a red CI deploy never skips the heal.
+# push to main + API poll + 10-min cron) so a red CI deploy never skips the heal.
 on:
   push:
     branches: [main, dev]

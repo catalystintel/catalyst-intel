@@ -1,10 +1,13 @@
 import { describe, expect, it } from "vitest";
 import {
+  classifyWaitForSha,
   hasNewerHealthyForSha,
   isAccessRelatedFailure,
   isOmerAuthor,
+  matchDeploymentSha,
   needsAutoRedeploy,
   resolveBranchTarget,
+  waitForShaDeployOutcome,
 } from "./vercel-unblock-redeploy.mjs";
 
 describe("isOmerAuthor", () => {
@@ -155,5 +158,113 @@ describe("hasNewerHealthyForSha", () => {
     ];
     expect(hasNewerHealthyForSha(deployments, "abc", 1000)).toBe(true);
     expect(hasNewerHealthyForSha(deployments, "abc", 2000)).toBe(false);
+  });
+});
+
+describe("matchDeploymentSha / classifyWaitForSha", () => {
+  it("matches full or prefix SHAs", () => {
+    expect(
+      matchDeploymentSha(
+        { meta: { githubCommitSha: "abcdef123456" } },
+        "abcdef123456",
+      ),
+    ).toBe(true);
+    expect(
+      matchDeploymentSha(
+        { meta: { githubCommitSha: "abcdef123456" } },
+        "abcdef",
+      ),
+    ).toBe(true);
+    expect(
+      matchDeploymentSha(
+        { meta: { githubCommitSha: "abcdef" } },
+        "abcdef123456",
+      ),
+    ).toBe(true);
+    expect(
+      matchDeploymentSha({ meta: { githubCommitSha: "ffffff" } }, "abcdef"),
+    ).toBe(false);
+  });
+
+  it("classifies absent / needs-heal / healthy", () => {
+    expect(classifyWaitForSha([], "abc")).toBe("absent");
+    expect(
+      classifyWaitForSha(
+        [
+          {
+            readyState: "BLOCKED",
+            target: "production",
+            meta: {
+              githubCommitSha: "abc",
+              githubCommitAuthorLogin: "OmerNachshon",
+            },
+          },
+        ],
+        "abc",
+      ),
+    ).toBe("needs-heal");
+    expect(
+      classifyWaitForSha(
+        [
+          {
+            readyState: "BUILDING",
+            target: "production",
+            meta: { githubCommitSha: "abc" },
+          },
+        ],
+        "abc",
+      ),
+    ).toBe("healthy");
+  });
+});
+
+describe("waitForShaDeployOutcome", () => {
+  it("returns early when a blocked deploy appears", async function () {
+    let calls = 0;
+    const list = async () => {
+      calls += 1;
+      if (calls < 2) return [];
+      return [
+        {
+          readyState: "BLOCKED",
+          target: "production",
+          meta: {
+            githubCommitSha: "deadbeef",
+            githubCommitAuthorLogin: "OmerNachshon",
+          },
+        },
+      ];
+    };
+    const slept = [];
+    const out = await waitForShaDeployOutcome(
+      { token: "t", teamId: "team", projectId: "prj" },
+      "deadbeef",
+      {
+        timeoutMs: 10_000,
+        intervalMs: 10,
+        list,
+        sleep: async (ms) => {
+          slept.push(ms);
+        },
+      },
+    );
+    expect(out.outcome).toBe("needs-heal");
+    expect(calls).toBe(2);
+    expect(slept.length).toBe(1);
+    expect(out.waitedMs).toBeGreaterThanOrEqual(0);
+  });
+
+  it("times out when the SHA never appears", async function () {
+    const out = await waitForShaDeployOutcome(
+      { token: "t", teamId: "team", projectId: "prj" },
+      "missing",
+      {
+        timeoutMs: 25,
+        intervalMs: 10,
+        list: async () => [],
+        sleep: async () => {},
+      },
+    );
+    expect(out.outcome).toBe("timeout");
   });
 });
