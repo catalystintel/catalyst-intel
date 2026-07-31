@@ -15,21 +15,34 @@ import {
   sanitizePrWireText,
 } from "@/lib/jobs/sanitize-pr-wire";
 import { getPrWireApiBase, getPrWireApiKey } from "@/lib/jobs/vendor-env";
+import { getVendorFetchState } from "@/lib/jobs/vendor-fetch-state";
 
 /**
  * Public (keyless) scrape origin for the delayed high-impact wire board.
  * Server-only; never surfaced in product UI or persisted raw rows.
+ *
+ * Free board constraints (verified against live API):
+ * - `min_score` is hard-fixed at 70 upstream (query params cannot lower it).
+ * - ~60 minute delay (`delay_minutes`).
+ * - Receipt rows have **no** article permalink / body — only scored metadata.
+ * - Full `/a/{id}` bodies require the authenticated feed (`PR_WIRE_API_*`).
  */
 const PUBLIC_WIRE_ORIGIN = "https://api.rtpr.io";
 
-/** Steady-state page size for optional authenticated full feed. */
-const AUTH_FEED_LIMIT = 20;
+/** Authenticated firehose page size (API max 500). */
+const AUTH_FEED_PAGE_LIMIT = 100;
+/** Max authenticated pages per tick (newest-first cursor). */
+const AUTH_FEED_MAX_PAGES = 5;
 
 /**
- * Public board retains ~a few recent UTC days (~20–35 high-impact receipts/day).
- * Look back enough to fill a ~100-event catch-up without inventing history.
+ * Walk UTC days from today backward until this many consecutive empty days.
+ * Prefer newest data; do not pin a fixed “N days ago” window.
  */
-const PUBLIC_LOOKBACK_DAYS = 5;
+const PUBLIC_EMPTY_DAY_STOP = 2;
+/** Safety cap so a broken upstream cannot loop forever. */
+const PUBLIC_MAX_LOOKBACK_DAYS = 7;
+/** Overlap behind watermark so delayed board updates are not missed. */
+const PUBLIC_WATERMARK_OVERLAP_MS = 3 * 60 * 60 * 1000;
 
 export class PrWireHttpError extends Error {
   readonly status: number;
@@ -76,6 +89,15 @@ export interface PrWireArticle {
   realizedMovePct?: number | null;
   realizedMaxAbs?: number | null;
   settled?: boolean | null;
+  /**
+   * Structured extract for Details/split when body is receipt-synthesized
+   * (free board) or after scraping an authenticated `/a/{id}` page.
+   */
+  extracted?: {
+    investorSummary?: string;
+    keyFacts?: { label: string; value: string }[];
+    bodySnippets?: string[];
+  } | null;
 }
 
 /** Public high-impact receipt row (keyless board). */
@@ -181,10 +203,14 @@ export function buildPublicReceiptSummary(input: {
   eventLabel?: string | null;
   theme?: string | null;
   impactScore?: number | null;
+  direction?: string | null;
   realizedMovePct?: number | null;
   settled?: boolean | null;
+  title?: string | null;
 }): string {
   const parts: string[] = [];
+  const title = input.title?.trim();
+  if (title) parts.push(title);
   const label = input.eventLabel?.trim();
   if (label) parts.push(label);
   const theme = humanizeWireSlug(input.theme);
@@ -192,6 +218,8 @@ export function buildPublicReceiptSummary(input: {
   if (typeof input.impactScore === "number") {
     parts.push(`Impact score ${input.impactScore}`);
   }
+  const direction = input.direction?.trim();
+  if (direction) parts.push(`${direction} lean`);
   if (
     input.settled &&
     typeof input.realizedMovePct === "number" &&
@@ -205,6 +233,66 @@ export function buildPublicReceiptSummary(input: {
     parts.push("Session move pending");
   }
   return parts.join(" · ");
+}
+
+/** Structured extract for split/details when the free board has no article body. */
+export function buildPublicReceiptExtract(input: {
+  eventLabel?: string | null;
+  theme?: string | null;
+  impactScore?: number | null;
+  direction?: string | null;
+  tier?: string | null;
+  realizedMovePct?: number | null;
+  realizedMaxAbs?: number | null;
+  settled?: boolean | null;
+  title?: string | null;
+}): {
+  investorSummary: string;
+  keyFacts: { label: string; value: string }[];
+  bodySnippets: string[];
+} {
+  const keyFacts: { label: string; value: string }[] = [];
+  const label = input.eventLabel?.trim();
+  if (label) keyFacts.push({ label: "Event", value: label });
+  const theme = humanizeWireSlug(input.theme);
+  if (theme) keyFacts.push({ label: "Theme", value: theme });
+  if (typeof input.impactScore === "number") {
+    keyFacts.push({ label: "Impact score", value: String(input.impactScore) });
+  }
+  if (input.tier?.trim()) {
+    keyFacts.push({ label: "Tier", value: input.tier.trim() });
+  }
+  if (input.direction?.trim()) {
+    keyFacts.push({ label: "Lean", value: input.direction.trim() });
+  }
+  if (
+    input.settled &&
+    typeof input.realizedMovePct === "number" &&
+    Number.isFinite(input.realizedMovePct)
+  ) {
+    const sign = input.realizedMovePct > 0 ? "+" : "";
+    keyFacts.push({
+      label: "Session move",
+      value: `${sign}${input.realizedMovePct.toFixed(2)}%`,
+    });
+  } else if (input.settled === false) {
+    keyFacts.push({ label: "Session move", value: "Pending" });
+  }
+  if (
+    typeof input.realizedMaxAbs === "number" &&
+    Number.isFinite(input.realizedMaxAbs)
+  ) {
+    keyFacts.push({
+      label: "Max |move|",
+      value: `${input.realizedMaxAbs.toFixed(2)}%`,
+    });
+  }
+
+  const investorSummary = buildPublicReceiptSummary(input);
+  const bodySnippets = keyFacts
+    .slice(0, 6)
+    .map((f) => `${f.label}: ${f.value}`);
+  return { investorSummary, keyFacts, bodySnippets };
 }
 
 /** Map settled public-board move into desk historicalImpact JSON. */
@@ -272,6 +360,19 @@ export function publicReceiptToArticle(
   const settled = typeof receipt.settled === "boolean" ? receipt.settled : null;
   const theme = receipt.theme?.trim() || null;
   const eventLabel = receipt.event_label?.trim() || null;
+  const direction = receipt.direction?.trim() || null;
+  const tier = receipt.tier?.trim() || null;
+  const extractInput = {
+    eventLabel,
+    theme,
+    impactScore,
+    direction,
+    tier,
+    realizedMovePct,
+    realizedMaxAbs,
+    settled,
+    title,
+  };
   return {
     id: `${ticker}|${scoredAt}|${title}`,
     ticker,
@@ -281,21 +382,16 @@ export function publicReceiptToArticle(
     created: scoredAt,
     article_published_at: scoredAt,
     impactScore,
-    sentiment: mapPublicDirection(receipt.direction),
+    sentiment: mapPublicDirection(direction),
     eventType: receipt.event_type ?? null,
     eventLabel,
     theme,
-    tier: receipt.tier?.trim() || null,
+    tier,
     realizedMovePct,
     realizedMaxAbs,
     settled,
-    article_body: buildPublicReceiptSummary({
-      eventLabel,
-      theme,
-      impactScore,
-      realizedMovePct,
-      settled,
-    }),
+    article_body: buildPublicReceiptSummary(extractInput),
+    extracted: buildPublicReceiptExtract(extractInput),
   };
 }
 
@@ -368,6 +464,22 @@ export function articleToNormalized(
   }
   if (typeof article.realizedMaxAbs === "number") {
     rawContent.realizedMaxAbs = article.realizedMaxAbs;
+  }
+  if (article.extracted) {
+    rawContent.extracted = {
+      investorSummary: sanitizePrWireText(article.extracted.investorSummary),
+      keyFacts: (article.extracted.keyFacts ?? [])
+        .map((f) => ({
+          label: sanitizePrWireText(f.label) ?? "",
+          value: sanitizePrWireText(f.value) ?? "",
+        }))
+        .filter((f) => f.label && f.value)
+        .slice(0, 8),
+      bodySnippets: (article.extracted.bodySnippets ?? [])
+        .map((s) => sanitizePrWireText(s))
+        .filter((s): s is string => Boolean(s))
+        .slice(0, 8),
+    };
   }
 
   const confidence =
@@ -442,33 +554,47 @@ async function fetchJson(
 
 /**
  * Keyless public board — delayed high-impact press receipts (no API key).
- * Pulls several recent UTC days so catch-up can reach ~100 events.
+ * Walks UTC days from today backward (newest first) until consecutive empty
+ * days. Optional watermark keeps steady-state ticks focused on recent scores.
  */
 export async function fetchPublicImpactReceipts(options?: {
   now?: Date;
-  /** Max receipts to return after merging lookback days (default 100). */
+  /** Max receipts after merge/sort (default 500 — board is sparse). */
   limit?: number;
-  lookbackDays?: number;
+  /** Max UTC days to walk backward from today (default PUBLIC_MAX_LOOKBACK_DAYS). */
+  maxLookbackDays?: number;
+  /** ISO watermark — keep receipts at/after watermark − overlap. */
+  sinceIso?: string | null;
 }): Promise<PrWireArticle[]> {
   const now = options?.now ?? new Date();
-  const maxTotal = Math.min(200, Math.max(1, options?.limit ?? 100));
-  const lookback = Math.min(
-    14,
-    Math.max(1, options?.lookbackDays ?? PUBLIC_LOOKBACK_DAYS),
+  const maxTotal = Math.min(500, Math.max(1, options?.limit ?? 500));
+  const maxDays = Math.min(
+    PUBLIC_MAX_LOOKBACK_DAYS,
+    Math.max(1, options?.maxLookbackDays ?? PUBLIC_MAX_LOOKBACK_DAYS),
   );
-  const days = Array.from({ length: lookback }, (_, i) =>
-    utcDayString(new Date(now.getTime() - i * 86_400_000)),
-  );
-  const byKey = new Map<string, PrWireArticle>();
+  const sinceMs = options?.sinceIso ? Date.parse(options.sinceIso) : NaN;
+  const floorMs = Number.isFinite(sinceMs)
+    ? sinceMs - PUBLIC_WATERMARK_OVERLAP_MS
+    : null;
 
-  for (const day of days) {
-    // Board returns ≤~40/day today; request up to 100 per day.
+  const byKey = new Map<string, PrWireArticle>();
+  let emptyStreak = 0;
+
+  for (let i = 0; i < maxDays; i++) {
+    const day = utcDayString(new Date(now.getTime() - i * 86_400_000));
     const url = `${PUBLIC_WIRE_ORIGIN}/public/impact-receipts?day=${encodeURIComponent(day)}&limit=100`;
     const payload = await fetchJson(url, {
       pathLabel: "public-receipts",
     });
     const root = asRecord(payload);
     const list = Array.isArray(root?.receipts) ? root.receipts : [];
+    if (list.length === 0) {
+      emptyStreak++;
+      if (emptyStreak >= PUBLIC_EMPTY_DAY_STOP && byKey.size > 0) break;
+      continue;
+    }
+    emptyStreak = 0;
+
     for (const item of list) {
       const rec = asRecord(item);
       if (!rec) continue;
@@ -487,6 +613,12 @@ export async function fetchPublicImpactReceipts(options?: {
         settled: typeof rec.settled === "boolean" ? rec.settled : null,
       });
       if (!article?.id) continue;
+      if (floorMs !== null) {
+        const ts =
+          Date.parse(article.article_published_at || article.created || "") ||
+          0;
+        if (ts < floorMs) continue;
+      }
       byKey.set(article.id, article);
     }
   }
@@ -500,6 +632,10 @@ export async function fetchPublicImpactReceipts(options?: {
     .slice(0, maxTotal);
 }
 
+/**
+ * Follow an authenticated `/a/{id}` (or HTML) permalink and pull the full
+ * article body for Details. Brand/host traces are stripped at normalize time.
+ */
 async function hydrateArticleFromUrl(
   articleUrl: string,
   apiKey: string,
@@ -526,24 +662,40 @@ async function hydrateArticleFromUrl(
     const root = asRecord(data);
     const nested = asRecord(root?.data) ?? asRecord(root?.article) ?? root;
     if (!nested) return null;
+    const articleBody =
+      stringField(nested, "article_body", "body", "content") ?? undefined;
+    const title = stringField(nested, "title") ?? undefined;
     return {
       id: stringField(nested, "id") ?? undefined,
       ticker: stringField(nested, "ticker") ?? undefined,
       tickers: Array.isArray(nested.tickers)
         ? nested.tickers.filter((t): t is string => typeof t === "string")
         : undefined,
-      title: stringField(nested, "title") ?? undefined,
+      title,
       author: stringField(nested, "author") ?? undefined,
       created:
         stringField(nested, "created", "article_published_at") ?? undefined,
       article_published_at:
         stringField(nested, "article_published_at", "created") ?? undefined,
-      article_body:
-        stringField(nested, "article_body", "body", "content") ?? undefined,
+      article_body: articleBody,
       exchange: stringField(nested, "exchange") ?? undefined,
       article_url: articleUrl,
       image_url:
         stringField(nested, "image_url", "imageUrl", "thumbnail") ?? undefined,
+      extracted: articleBody
+        ? {
+            investorSummary:
+              articleBody.length > 420
+                ? `${articleBody.slice(0, 417).trim()}…`
+                : articleBody,
+            bodySnippets: articleBody
+              .split(/(?<=[.!?])\s+/)
+              .map((s) => s.trim())
+              .filter((s) => s.length >= 40)
+              .slice(0, 6),
+            keyFacts: title ? [{ label: "Headline", value: title }] : undefined,
+          }
+        : null,
     };
   }
 
@@ -551,17 +703,28 @@ async function hydrateArticleFromUrl(
   const titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i);
   const title = titleMatch?.[1]?.replace(/\s*\|\s*.*$/, "").trim();
   if (!title) return null;
+  const plain = html
+    .replace(/<script[\s\S]*?<\/script>/gi, " ")
+    .replace(/<style[\s\S]*?<\/style>/gi, " ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 16_000);
   return {
     id: prWireArticleId({ article_url: articleUrl }) ?? undefined,
     title,
-    article_body: html
-      .replace(/<script[\s\S]*?<\/script>/gi, " ")
-      .replace(/<style[\s\S]*?<\/style>/gi, " ")
-      .replace(/<[^>]+>/g, " ")
-      .replace(/\s+/g, " ")
-      .trim()
-      .slice(0, 8000),
+    article_body: plain,
     article_url: articleUrl,
+    extracted: {
+      investorSummary:
+        plain.length > 420 ? `${plain.slice(0, 417).trim()}…` : plain,
+      bodySnippets: plain
+        .split(/(?<=[.!?])\s+/)
+        .map((s) => s.trim())
+        .filter((s) => s.length >= 40)
+        .slice(0, 6),
+      keyFacts: [{ label: "Headline", value: title }],
+    },
   };
 }
 
@@ -611,54 +774,128 @@ function parseFeedRefs(payload: unknown): PrWireFeedRef[] {
 
 /**
  * Optional authenticated full firehose when PR_WIRE_API_KEY + BASE are set.
- * Free path does not use this.
+ * Newest-first cursor pages; each `/a/{id}` permalink is scraped for Details body.
+ * Free path does not use this — public receipts have no article URLs.
  */
 async function fetchAuthenticatedArticles(
   baseUrl: string,
   apiKey: string,
-  limit: number,
+  options?: { maxArticles?: number },
 ): Promise<PrWireArticle[]> {
+  const maxArticles = Math.min(
+    500,
+    Math.max(
+      1,
+      options?.maxArticles ?? AUTH_FEED_PAGE_LIMIT * AUTH_FEED_MAX_PAGES,
+    ),
+  );
+
+  // Prefer body-free feed + hydrate (recommended RTPR surface).
   try {
-    const fullPayload = await fetchJson(`${baseUrl}/articles?limit=${limit}`, {
-      apiKey,
-      pathLabel: "/articles",
-    });
-    return parseFullArticlesPayload(fullPayload);
+    const hydrated: PrWireArticle[] = [];
+    let nextToken: string | null = null;
+    for (let page = 0; page < AUTH_FEED_MAX_PAGES; page++) {
+      const qs = new URLSearchParams({
+        limit: String(AUTH_FEED_PAGE_LIMIT),
+      });
+      if (nextToken) qs.set("next_token", nextToken);
+      const feedPayload = await fetchJson(
+        `${baseUrl}/feed/articles?${qs.toString()}`,
+        { apiKey, pathLabel: "/feed/articles" },
+      );
+      const refs = parseFeedRefs(feedPayload);
+      const root = asRecord(feedPayload);
+      nextToken =
+        typeof root?.next_token === "string" && root.next_token.trim()
+          ? root.next_token.trim()
+          : null;
+
+      for (const ref of refs) {
+        if (!ref.article_url) continue;
+        if (hydrated.length >= maxArticles) break;
+        try {
+          const full = await hydrateArticleFromUrl(ref.article_url, apiKey);
+          if (!full) continue;
+          hydrated.push({
+            ...full,
+            ticker: full.ticker ?? ref.ticker,
+            article_published_at:
+              full.article_published_at ?? ref.article_published_at,
+            // Ephemeral — used for hydrate id only; never persisted as url.
+            article_url: ref.article_url,
+          });
+        } catch (hydrateError) {
+          if (isPrWireRateLimitError(hydrateError)) throw hydrateError;
+        }
+      }
+
+      if (hydrated.length >= maxArticles || !nextToken || refs.length === 0) {
+        break;
+      }
+    }
+    if (hydrated.length > 0) return hydrated;
   } catch (error) {
     if (!(error instanceof PrWireHttpError) || error.status !== 404) {
       throw error;
     }
-    const feedPayload = await fetchJson(
-      `${baseUrl}/feed/articles?limit=${limit}`,
-      { apiKey, pathLabel: "/feed/articles" },
-    );
-    const refs = parseFeedRefs(feedPayload).slice(0, limit);
-    const hydrated: PrWireArticle[] = [];
-    for (const ref of refs) {
-      if (!ref.article_url) continue;
-      try {
-        const full = await hydrateArticleFromUrl(ref.article_url, apiKey);
-        if (!full) continue;
-        hydrated.push({
-          ...full,
-          ticker: full.ticker ?? ref.ticker,
-          article_published_at:
-            full.article_published_at ?? ref.article_published_at,
-          article_url: ref.article_url,
-        });
-      } catch (hydrateError) {
-        if (isPrWireRateLimitError(hydrateError)) throw hydrateError;
-      }
-    }
-    return hydrated;
   }
+
+  // Legacy full-payload /articles (may already include bodies).
+  const fullPayload = await fetchJson(
+    `${baseUrl}/articles?limit=${Math.min(500, maxArticles)}`,
+    {
+      apiKey,
+      pathLabel: "/articles",
+    },
+  );
+  const articles = parseFullArticlesPayload(fullPayload);
+  const out: PrWireArticle[] = [];
+  for (const article of articles.slice(0, maxArticles)) {
+    if (article.article_body?.trim()) {
+      out.push({
+        ...article,
+        extracted: {
+          investorSummary:
+            article.article_body.length > 420
+              ? `${article.article_body.slice(0, 417).trim()}…`
+              : article.article_body,
+          bodySnippets: article.article_body
+            .split(/(?<=[.!?])\s+/)
+            .map((s) => s.trim())
+            .filter((s) => s.length >= 40)
+            .slice(0, 6),
+        },
+      });
+      continue;
+    }
+    if (!article.article_url) {
+      out.push(article);
+      continue;
+    }
+    try {
+      const full = await hydrateArticleFromUrl(article.article_url, apiKey);
+      out.push({
+        ...article,
+        ...full,
+        ticker: full?.ticker ?? article.ticker,
+        article_published_at:
+          full?.article_published_at ?? article.article_published_at,
+      });
+    } catch (hydrateError) {
+      if (isPrWireRateLimitError(hydrateError)) throw hydrateError;
+      out.push(article);
+    }
+  }
+  return out;
 }
 
 /**
  * Fetch PR-wire catalysts.
  *
- * Default (no key): scrape the public delayed high-impact receipt board
- * (keyless). Optional env credentials unlock the authenticated full feed.
+ * Default (no key): newest-first scrape of the public delayed impact board
+ * (keyless; upstream floor score≥70; no article URLs). Optional env
+ * credentials unlock the authenticated firehose + `/a/{id}` body scrape for
+ * Details.
  */
 export async function fetchPrWire(options?: {
   limit?: number;
@@ -673,14 +910,14 @@ export async function fetchPrWire(options?: {
 
     if (authEnabled && apiKey && baseUrl) {
       mode = "auth";
-      articles = await fetchAuthenticatedArticles(
-        baseUrl,
-        apiKey,
-        Math.min(100, Math.max(1, options?.limit ?? AUTH_FEED_LIMIT)),
-      );
+      articles = await fetchAuthenticatedArticles(baseUrl, apiKey, {
+        maxArticles: Math.min(500, Math.max(1, options?.limit ?? 200)),
+      });
     } else {
+      const state = await getVendorFetchState("pr-wire");
       articles = await fetchPublicImpactReceipts({
-        limit: options?.limit ?? 100,
+        limit: options?.limit ?? 500,
+        sinceIso: state?.lastFetchedAt ?? null,
       });
     }
 
@@ -696,8 +933,8 @@ export async function fetchPrWire(options?: {
       ...sourceResult,
       message:
         mode === "public"
-          ? `Public high-impact wire board · ${normalized.length} receipts (delayed).`
-          : undefined,
+          ? `Public impact board · ${normalized.length} newest receipts (delayed · score≥70 upstream).`
+          : `Authenticated wire · ${normalized.length} articles (detail pages scraped).`,
     };
   } catch (error) {
     if (isPrWireRateLimitError(error)) {

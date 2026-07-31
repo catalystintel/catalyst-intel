@@ -77,7 +77,7 @@ export const CATALYST_SOURCE_CATALOG: readonly CatalystSourceMeta[] = [
     priority: "must",
     phase: "B",
     contributes:
-      "Press releases from major PR wires (keyless public high-impact board by default; ~60m delay, score≥70, ~5-day lookback). Blends score/direction/event_type/theme and settled session moves. Optional authenticated full feed when credentials set.",
+      "Press releases from major PR wires. Keyless public impact board by default (newest-first; ~60m delay; upstream score≥70 floor — cannot lower on free API; no article URLs). Structured extract for Details. Optional PR_WIRE_API_* unlocks authenticated firehose + /a/{id} body scrape (all scores).",
   },
   {
     id: "finnhub",
