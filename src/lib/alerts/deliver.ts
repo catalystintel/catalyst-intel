@@ -1,6 +1,6 @@
 import type { AlertChannel, AlertRuleConditions } from "@/db/schema";
 import { classifySession, sessionMatches } from "@/lib/alerts/session";
-import { validateWebhookUrl } from "@/lib/alerts/webhook-url";
+import { assertWebhookUrlSafeForFetch } from "@/lib/alerts/webhook-url";
 import { sendResendEmail } from "@/lib/email/resend";
 import { sendWebPush, type PushSubscriptionRecord } from "@/lib/push/web-push";
 import { sendTelegramMessage } from "@/lib/telegram/bot";
@@ -83,7 +83,7 @@ async function deliverWebhook(
   url: string,
   body: unknown,
 ): Promise<{ ok: boolean; detail: string }> {
-  const validated = validateWebhookUrl(url);
+  const validated = await assertWebhookUrlSafeForFetch(url);
   if (!validated.ok) {
     return { ok: false, detail: validated.reason };
   }

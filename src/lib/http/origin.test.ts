@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { getRequestOrigin, safeNextPath } from "./origin";
+import {
+  getRequestOrigin,
+  getTrustedAppOrigin,
+  resolveOAuthRedirectOrigin,
+  safeNextPath,
+} from "./origin";
 
 describe("getRequestOrigin", () => {
   it("prefers x-forwarded-host over Origin (mobile / proxy safe)", () => {
@@ -25,6 +30,36 @@ describe("getRequestOrigin", () => {
   it("falls back to Origin when no host headers exist", () => {
     const headers = new Headers({ origin: "http://localhost:3000" });
     expect(getRequestOrigin(headers)).toBe("http://localhost:3000");
+  });
+});
+
+describe("getTrustedAppOrigin", () => {
+  it("prefers NEXT_PUBLIC_APP_URL", () => {
+    const request = new Request("https://ignored.example/auth/callback");
+    expect(
+      getTrustedAppOrigin(request, {
+        NEXT_PUBLIC_APP_URL: "https://app.example",
+      }),
+    ).toBe("https://app.example");
+  });
+});
+
+describe("resolveOAuthRedirectOrigin", () => {
+  it("rejects a mismatched forwarded host in favor of trusted origin", () => {
+    const previous = process.env.NEXT_PUBLIC_APP_URL;
+    const previousNode = process.env.NODE_ENV;
+    process.env.NEXT_PUBLIC_APP_URL = "https://app.example";
+    process.env.NODE_ENV = "production";
+    try {
+      const request = new Request("https://app.example/auth/callback", {
+        headers: { "x-forwarded-host": "evil.example" },
+      });
+      expect(resolveOAuthRedirectOrigin(request)).toBe("https://app.example");
+    } finally {
+      if (previous === undefined) delete process.env.NEXT_PUBLIC_APP_URL;
+      else process.env.NEXT_PUBLIC_APP_URL = previous;
+      process.env.NODE_ENV = previousNode;
+    }
   });
 });
 

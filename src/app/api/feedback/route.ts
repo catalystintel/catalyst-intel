@@ -17,6 +17,10 @@ import {
   rateLimitExceededResponse,
   withRateLimitHeaders,
 } from "@/lib/http/rate-limit-response";
+import {
+  isSameOriginRequest,
+  sameOriginForbiddenResponse,
+} from "@/lib/http/same-origin";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -31,6 +35,10 @@ function categoryLabel(category: FeedbackCategory): string {
  * Auth is optional — signed-in users are attributed; guests must supply email.
  */
 export async function POST(request: NextRequest) {
+  if (!isSameOriginRequest(request)) {
+    return sameOriginForbiddenResponse();
+  }
+
   const ip = getClientIp(request);
   const limitResult = checkRateLimit({
     key: `feedback:${ip}`,

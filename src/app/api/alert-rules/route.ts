@@ -19,6 +19,10 @@ import {
   rateLimitExceededResponse,
   withRateLimitHeaders,
 } from "@/lib/http/rate-limit-response";
+import {
+  isSameOriginRequest,
+  sameOriginForbiddenResponse,
+} from "@/lib/http/same-origin";
 
 const CHANNELS = new Set<AlertChannel>([
   "email",
@@ -27,7 +31,10 @@ const CHANNELS = new Set<AlertChannel>([
   "telegram",
 ]);
 
-async function requireUser(request: NextRequest) {
+async function requireUser(
+  request: NextRequest,
+  options?: { mutate?: boolean },
+) {
   if (!isLibsqlConfigured()) {
     return {
       error: NextResponse.json(
@@ -35,6 +42,10 @@ async function requireUser(request: NextRequest) {
         { status: 503 },
       ),
     };
+  }
+
+  if (options?.mutate && !isSameOriginRequest(request)) {
+    return { error: sameOriginForbiddenResponse() };
   }
 
   const ip = getClientIp(request);
@@ -92,6 +103,7 @@ export async function GET(request: NextRequest) {
     NextResponse.json({
       rules: rows.map(serializeRule),
       emailConfigured: isResendConfigured(),
+      sessionEmail: user.email,
       pushAvailable: isWebPushConfigured(),
       pushPublicKey: webPushPublicKey(),
       telegramConfigured: isTelegramConfigured(),
@@ -101,7 +113,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const auth = await requireUser(request);
+  const auth = await requireUser(request, { mutate: true });
   if ("error" in auth && auth.error) return auth.error;
   const { user, limitResult } = auth as {
     user: NonNullable<(typeof auth)["user"]>;
@@ -145,10 +157,6 @@ export async function POST(request: NextRequest) {
     typeof raw.webhookUrl === "string" && raw.webhookUrl.trim()
       ? raw.webhookUrl.trim()
       : null;
-  const emailTo =
-    typeof raw.emailTo === "string" && raw.emailTo.trim()
-      ? raw.emailTo.trim()
-      : null;
   const telegramChatId =
     typeof raw.telegramChatId === "string" && raw.telegramChatId.trim()
       ? raw.telegramChatId.trim()
@@ -176,10 +184,12 @@ export async function POST(request: NextRequest) {
     }
     safeWebhookUrl = validated.url;
   }
+  // Email alerts always go to the signed-in user's verified session email.
+  const emailTo = channel === "email" ? user.email : null;
   if (channel === "email" && !emailTo) {
     return withRateLimitHeaders(
       NextResponse.json(
-        { error: "emailTo is required for email rules." },
+        { error: "Signed-in email is required for email rules." },
         { status: 400 },
       ),
       limitResult,
@@ -203,7 +213,7 @@ export async function POST(request: NextRequest) {
       channel,
       enabled,
       webhookUrl: channel === "webhook" ? safeWebhookUrl : null,
-      emailTo: channel === "email" ? emailTo : null,
+      emailTo,
       telegramChatId: channel === "telegram" ? telegramChatId : null,
       conditions,
     })
@@ -217,7 +227,7 @@ export async function POST(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
-  const auth = await requireUser(request);
+  const auth = await requireUser(request, { mutate: true });
   if ("error" in auth && auth.error) return auth.error;
   const { user, limitResult } = auth as {
     user: NonNullable<(typeof auth)["user"]>;

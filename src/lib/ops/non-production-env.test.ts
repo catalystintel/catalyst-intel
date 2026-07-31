@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { isNonProductionEnv } from "./non-production-env";
+import { isDbResetAllowed, isNonProductionEnv } from "./non-production-env";
 
 describe("isNonProductionEnv", () => {
   it("allows local (unset VERCEL_ENV)", () => {
@@ -13,5 +13,28 @@ describe("isNonProductionEnv", () => {
 
   it("blocks production", () => {
     expect(isNonProductionEnv({ VERCEL_ENV: "production" })).toBe(false);
+  });
+});
+
+describe("isDbResetAllowed", () => {
+  it("requires ALLOW_DB_RESET even locally", () => {
+    expect(isDbResetAllowed({})).toBe(false);
+    expect(isDbResetAllowed({ ALLOW_DB_RESET: "true" })).toBe(true);
+  });
+
+  it("blocks production even with ALLOW_DB_RESET", () => {
+    expect(
+      isDbResetAllowed({
+        VERCEL_ENV: "production",
+        ALLOW_DB_RESET: "true",
+      }),
+    ).toBe(false);
+  });
+
+  it("allows preview only when explicitly enabled", () => {
+    expect(isDbResetAllowed({ VERCEL_ENV: "preview" })).toBe(false);
+    expect(
+      isDbResetAllowed({ VERCEL_ENV: "preview", ALLOW_DB_RESET: "true" }),
+    ).toBe(true);
   });
 });

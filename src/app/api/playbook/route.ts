@@ -15,8 +15,15 @@ import {
   rateLimitExceededResponse,
   withRateLimitHeaders,
 } from "@/lib/http/rate-limit-response";
+import {
+  isSameOriginRequest,
+  sameOriginForbiddenResponse,
+} from "@/lib/http/same-origin";
 
-async function requireUser(request: NextRequest) {
+async function requireUser(
+  request: NextRequest,
+  options?: { mutate?: boolean },
+) {
   if (!isLibsqlConfigured()) {
     return {
       error: NextResponse.json(
@@ -24,6 +31,10 @@ async function requireUser(request: NextRequest) {
         { status: 503 },
       ),
     };
+  }
+
+  if (options?.mutate && !isSameOriginRequest(request)) {
+    return { error: sameOriginForbiddenResponse() };
   }
 
   const ip = getClientIp(request);
@@ -84,7 +95,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function PUT(request: NextRequest) {
-  const auth = await requireUser(request);
+  const auth = await requireUser(request, { mutate: true });
   if ("error" in auth && auth.error) return auth.error;
   const { user, limitResult } = auth as {
     user: NonNullable<(typeof auth)["user"]>;
