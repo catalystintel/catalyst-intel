@@ -97,10 +97,7 @@ export function FeedbackDialog({
         onOpenChange(next);
       }}
     >
-      <DialogContent
-        className="z-[70] sm:max-w-md"
-        overlayClassName="z-[60]"
-      >
+      <DialogContent className="z-[70] sm:max-w-md" overlayClassName="z-[60]">
         <DialogHeader>
           <DialogTitle>Send feedback</DialogTitle>
           <DialogDescription>
