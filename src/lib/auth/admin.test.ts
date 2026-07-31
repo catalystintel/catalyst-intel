@@ -3,18 +3,21 @@ import { afterEach, describe, expect, it } from "vitest";
 import { adminRoleForEmail, getAdminEmails, isAdminEmail } from "./admin";
 
 describe("admin allowlist", () => {
-  const original = process.env.ADMIN_EMAILS;
+  const originalEmails = process.env.ADMIN_EMAILS;
+  const originalNodeEnv = process.env.NODE_ENV;
 
   afterEach(() => {
-    if (original === undefined) {
+    if (originalEmails === undefined) {
       delete process.env.ADMIN_EMAILS;
     } else {
-      process.env.ADMIN_EMAILS = original;
+      process.env.ADMIN_EMAILS = originalEmails;
     }
+    process.env.NODE_ENV = originalNodeEnv;
   });
 
-  it("defaults to the two allowlisted operators", () => {
+  it("defaults to the two allowlisted operators outside production", () => {
     delete process.env.ADMIN_EMAILS;
+    process.env.NODE_ENV = "development";
     expect(getAdminEmails()).toEqual([
       "zhbar10@gmail.com",
       "omer.nachshon@gmail.com",
@@ -24,6 +27,13 @@ describe("admin allowlist", () => {
     expect(isAdminEmail("stranger@example.com")).toBe(false);
     expect(adminRoleForEmail("omer.nachshon@gmail.com")).toBe("admin");
     expect(adminRoleForEmail("stranger@example.com")).toBe("user");
+  });
+
+  it("fails closed in production when ADMIN_EMAILS is unset", () => {
+    delete process.env.ADMIN_EMAILS;
+    process.env.NODE_ENV = "production";
+    expect(getAdminEmails()).toEqual([]);
+    expect(isAdminEmail("zhbar10@gmail.com")).toBe(false);
   });
 
   it("honors ADMIN_EMAILS overrides", () => {

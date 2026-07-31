@@ -11,6 +11,10 @@ import {
   withRateLimitHeaders,
 } from "@/lib/http/rate-limit-response";
 import {
+  isSameOriginRequest,
+  sameOriginForbiddenResponse,
+} from "@/lib/http/same-origin";
+import {
   buildReportSnapshot,
   createShareToken,
   defaultReportTitle,
@@ -68,6 +72,10 @@ export async function POST(request: NextRequest) {
   const user = await getCurrentAppUser();
   if (!user) {
     return NextResponse.json({ error: "Not authenticated." }, { status: 401 });
+  }
+
+  if (!isSameOriginRequest(request)) {
+    return sameOriginForbiddenResponse();
   }
 
   const ip = getClientIp(request);

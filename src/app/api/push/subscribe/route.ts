@@ -11,6 +11,10 @@ import {
   rateLimitExceededResponse,
   withRateLimitHeaders,
 } from "@/lib/http/rate-limit-response";
+import {
+  isSameOriginRequest,
+  sameOriginForbiddenResponse,
+} from "@/lib/http/same-origin";
 
 /**
  * Saves/removes a browser Web Push subscription (see lib/push/web-push).
@@ -23,6 +27,10 @@ export async function POST(request: NextRequest) {
       { error: databaseUnavailableMessage() },
       { status: 503 },
     );
+  }
+
+  if (!isSameOriginRequest(request)) {
+    return sameOriginForbiddenResponse();
   }
 
   const ip = getClientIp(request);
@@ -73,15 +81,24 @@ export async function POST(request: NextRequest) {
   }
 
   const existing = await db
-    .select({ id: pushSubscriptions.id })
+    .select({ id: pushSubscriptions.id, userId: pushSubscriptions.userId })
     .from(pushSubscriptions)
     .where(eq(pushSubscriptions.endpoint, endpoint))
     .get();
 
   if (existing) {
+    if (existing.userId !== user.id) {
+      return withRateLimitHeaders(
+        NextResponse.json(
+          { error: "Push endpoint is already registered to another account." },
+          { status: 409 },
+        ),
+        limitResult,
+      );
+    }
     await db
       .update(pushSubscriptions)
-      .set({ userId: user.id, p256dh, auth })
+      .set({ p256dh, auth })
       .where(eq(pushSubscriptions.id, existing.id))
       .run();
   } else {
@@ -100,6 +117,10 @@ export async function DELETE(request: NextRequest) {
       { error: databaseUnavailableMessage() },
       { status: 503 },
     );
+  }
+
+  if (!isSameOriginRequest(request)) {
+    return sameOriginForbiddenResponse();
   }
 
   const user = await getCurrentAppUser();

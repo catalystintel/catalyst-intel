@@ -5,6 +5,7 @@ import { databaseSetupHint, isLibsqlConfigured } from "@/db/env";
 import { db } from "@/db/client";
 import { ingestionRuns } from "@/db/schema";
 import { getCurrentAppUser } from "@/lib/auth/current-user";
+import { escapeLike } from "@/lib/db/escape-like";
 import { withDbRetry } from "@/lib/db/with-db-retry";
 import { getClientIp } from "@/lib/http/client-ip";
 import { RATE_LIMITS, checkRateLimit } from "@/lib/http/rate-limit";
@@ -147,8 +148,4 @@ function parseTrigger(value: string | null): IngestionRunTrigger | null {
 function parseStatus(value: string | null): IngestionRunStatus | null {
   if (value === "ok" || value === "partial" || value === "failed") return value;
   return null;
-}
-
-function escapeLike(value: string): string {
-  return value.replace(/[\\%_]/g, (ch) => `\\${ch}`);
 }

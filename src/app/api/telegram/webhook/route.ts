@@ -1,18 +1,29 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-import { sendTelegramMessage } from "@/lib/telegram/bot";
+import {
+  isValidTelegramWebhookSecret,
+  sendTelegramMessage,
+} from "@/lib/telegram/bot";
 
 /**
  * Telegram webhook target. Register once (after deploying, HTTPS required)
- * with:
+ * with a secret_token that matches TELEGRAM_WEBHOOK_SECRET:
  *
- *   curl "https://api.telegram.org/bot<TOKEN>/setWebhook?url=https://<your-domain>/api/telegram/webhook"
+ *   curl -X POST "https://api.telegram.org/bot<TOKEN>/setWebhook" \
+ *     -H "Content-Type: application/json" \
+ *     -d '{"url":"https://<your-domain>/api/telegram/webhook","secret_token":"<TELEGRAM_WEBHOOK_SECRET>"}'
  *
  * When a user messages the bot (e.g. /start), we reply with their chat_id so
  * they can paste it into an alert rule — no account linking required for
- * this MVP. Always returns 200 so Telegram doesn't retry/disable the hook.
+ * this MVP. Always returns 200 for authenticated updates so Telegram doesn't
+ * retry/disable the hook; unauthenticated requests get 401.
  */
 export async function POST(request: NextRequest) {
+  const provided = request.headers.get("x-telegram-bot-api-secret-token");
+  if (!isValidTelegramWebhookSecret(provided)) {
+    return NextResponse.json({ ok: false }, { status: 401 });
+  }
+
   let body: unknown;
   try {
     body = await request.json();

@@ -1,12 +1,22 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { isTelegramConfigured, sendTelegramMessage } from "./bot";
+import {
+  isTelegramConfigured,
+  isValidTelegramWebhookSecret,
+  sendTelegramMessage,
+} from "./bot";
 
 const originalToken = process.env.TELEGRAM_BOT_TOKEN;
+const originalWebhookSecret = process.env.TELEGRAM_WEBHOOK_SECRET;
 
 afterEach(() => {
   if (originalToken === undefined) delete process.env.TELEGRAM_BOT_TOKEN;
   else process.env.TELEGRAM_BOT_TOKEN = originalToken;
+  if (originalWebhookSecret === undefined) {
+    delete process.env.TELEGRAM_WEBHOOK_SECRET;
+  } else {
+    process.env.TELEGRAM_WEBHOOK_SECRET = originalWebhookSecret;
+  }
   vi.restoreAllMocks();
 });
 
@@ -16,6 +26,20 @@ describe("isTelegramConfigured", () => {
     expect(isTelegramConfigured()).toBe(false);
     process.env.TELEGRAM_BOT_TOKEN = "123:abc";
     expect(isTelegramConfigured()).toBe(true);
+  });
+});
+
+describe("isValidTelegramWebhookSecret", () => {
+  it("fails closed when secret is unset", () => {
+    delete process.env.TELEGRAM_WEBHOOK_SECRET;
+    expect(isValidTelegramWebhookSecret("anything")).toBe(false);
+    expect(isValidTelegramWebhookSecret(null)).toBe(false);
+  });
+
+  it("accepts a matching secret token", () => {
+    process.env.TELEGRAM_WEBHOOK_SECRET = "hook-secret";
+    expect(isValidTelegramWebhookSecret("hook-secret")).toBe(true);
+    expect(isValidTelegramWebhookSecret("wrong")).toBe(false);
   });
 });
 

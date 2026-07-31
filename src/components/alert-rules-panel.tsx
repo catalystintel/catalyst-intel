@@ -50,7 +50,7 @@ export function AlertRulesPanel() {
   const [name, setName] = useState("AH/PM bombs");
   const [channel, setChannel] = useState<AlertChannel>("push");
   const [webhookUrl, setWebhookUrl] = useState("");
-  const [emailTo, setEmailTo] = useState("");
+  const [sessionEmail, setSessionEmail] = useState("");
   const [telegramChatId, setTelegramChatId] = useState("");
   const [minImpact, setMinImpact] = useState("70");
   const [sessionsAhPm, setSessionsAhPm] = useState(true);
@@ -67,6 +67,9 @@ export function AlertRulesPanel() {
       if (!res.ok) throw new Error(data.error ?? "Could not load rules.");
       setRules(data.rules ?? []);
       setEmailConfigured(Boolean(data.emailConfigured));
+      setSessionEmail(
+        typeof data.sessionEmail === "string" ? data.sessionEmail : "",
+      );
       setPushAvailable(Boolean(data.pushAvailable));
       setPushPublicKey(data.pushPublicKey ?? null);
       setTelegramConfigured(Boolean(data.telegramConfigured));
@@ -100,7 +103,6 @@ export function AlertRulesPanel() {
           name,
           channel,
           webhookUrl: channel === "webhook" ? webhookUrl : undefined,
-          emailTo: channel === "email" ? emailTo : undefined,
           telegramChatId: channel === "telegram" ? telegramChatId : undefined,
           conditions,
         }),
@@ -285,10 +287,10 @@ export function AlertRulesPanel() {
           ) : null}
           {channel === "email" ? (
             <Input
-              value={emailTo}
-              onChange={(e) => setEmailTo(e.target.value)}
-              placeholder="you@example.com"
-              aria-label="Email recipient"
+              value={sessionEmail}
+              readOnly
+              placeholder="Signed-in email"
+              aria-label="Email recipient (signed-in account)"
               type="email"
               className="h-9 border-[var(--desk-border-strong)] bg-[var(--desk-overlay-soft)] font-mono text-xs"
             />
