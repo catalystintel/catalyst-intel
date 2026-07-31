@@ -1,13 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import {
-  ChevronRight,
-  Minus,
-  Plus,
-  TrendingDown,
-  TrendingUp,
-} from "lucide-react";
+import { Minus, Plus, TrendingDown, TrendingUp } from "lucide-react";
 import { toast } from "sonner";
 
 import { Input } from "@/components/ui/input";
@@ -184,11 +178,10 @@ export function DashboardWatchlistRail({
                     <button
                       type="button"
                       onClick={() => onFocusSymbol?.(t.symbol)}
-                      className="flex min-w-0 flex-1 items-center gap-1.5 text-left"
+                      className="min-w-0 flex-1 truncate text-left"
                       title={`Focus ${t.symbol}`}
                     >
-                      <ChevronRight className="size-3 shrink-0 text-[var(--desk-text-dim)]" />
-                      <span className="desk-data truncate font-semibold tracking-tight text-[var(--desk-text)]">
+                      <span className="desk-data font-semibold tracking-tight text-[var(--desk-text)]">
                         {t.symbol}
                       </span>
                     </button>
