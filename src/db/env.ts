@@ -91,15 +91,25 @@ export function databaseSetupMode(): "local" | "remote" {
   return "local";
 }
 
+/** Ops-only detail for local setup notices and admin tooling — never toast. */
 export const LIBSQL_SETUP_HINT =
   "Database is not configured for this environment. On Vercel, set LIBSQL_URL and LIBSQL_AUTH_TOKEN to a Turso database (see DEPLOYMENT.md), run migrations, and redeploy.";
 
+/** Ops-only detail for local setup notices — never toast. */
 export const LOCAL_DB_SETUP_HINT =
   "Local SQLite is missing, empty, or not writable. Run npm run db:migrate, then fully restart npm run dev (stop every Next process first — recreating local.db while Next is running often leaves SQLITE_READONLY).";
 
-/** Environment-aware message for API 503 bodies and setup UI. */
+/**
+ * Ops-oriented hint (admin fetch / local setup UI). Prefer
+ * `databaseUnavailableMessage()` for trader-facing API `error` bodies.
+ */
 export function databaseSetupHint(): string {
   return databaseSetupMode() === "local"
     ? LOCAL_DB_SETUP_HINT
     : LIBSQL_SETUP_HINT;
+}
+
+/** Trader-safe 503 copy when the DB is missing or unreachable. */
+export function databaseUnavailableMessage(): string {
+  return "The desk is temporarily unavailable. Please try again in a moment.";
 }

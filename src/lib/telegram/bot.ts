@@ -23,7 +23,7 @@ export async function sendTelegramMessage(options: {
   if (!token) {
     return {
       ok: false,
-      detail: "TELEGRAM_BOT_TOKEN not configured — Telegram delivery skipped.",
+      detail: "Telegram delivery is not available right now.",
     };
   }
 

@@ -16,6 +16,7 @@ import { Input } from "@/components/ui/input";
 import { SkeletonCard } from "@/components/loading-skeleton";
 import type { AlertChannel, AlertRuleConditions } from "@/db/schema";
 import { useWebPush } from "@/hooks/use-web-push";
+import { toUserFacingMessage } from "@/lib/errors/user-facing";
 import { cn } from "@/lib/utils";
 
 const ALERT_CHANNEL_OPTIONS: { value: AlertChannel; label: string }[] = [
@@ -70,7 +71,7 @@ export function AlertRulesPanel() {
       setPushPublicKey(data.pushPublicKey ?? null);
       setTelegramConfigured(Boolean(data.telegramConfigured));
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Load failed.");
+      toast.error(toUserFacingMessage(err, "Load failed."));
     } finally {
       setLoaded(true);
     }
@@ -110,9 +111,7 @@ export function AlertRulesPanel() {
       await load();
       toast.success(`Rule "${name}" saved`);
     } catch (err) {
-      toast.error(
-        err instanceof Error ? err.message : "Could not create rule.",
-      );
+      toast.error(toUserFacingMessage(err, "Could not create rule."));
     } finally {
       setSaving(false);
     }
@@ -130,9 +129,7 @@ export function AlertRulesPanel() {
       await load();
       toast.success(`Rule "${name}" deleted`);
     } catch (err) {
-      toast.error(
-        err instanceof Error ? err.message : "Could not delete rule.",
-      );
+      toast.error(toUserFacingMessage(err, "Could not delete rule."));
     } finally {
       setSaving(false);
     }
@@ -152,7 +149,7 @@ export function AlertRulesPanel() {
       const lines = (data.results ?? [])
         .map(
           (r: { channel: string; ok: boolean; detail: string }) =>
-            `${r.channel}: ${r.ok ? "ok" : "fail"} — ${r.detail}`,
+            `${r.channel}: ${r.ok ? "ok" : "fail"} — ${toUserFacingMessage(r.detail, r.ok ? "Delivered." : "Delivery failed.")}`,
         )
         .join("; ");
       const results: { ok: boolean }[] = data.results ?? [];
@@ -163,7 +160,7 @@ export function AlertRulesPanel() {
         toast.error(lines || "Test completed with failures.");
       }
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Test fire failed.");
+      toast.error(toUserFacingMessage(err, "Test fire failed."));
     } finally {
       setSaving(false);
     }
@@ -187,15 +184,10 @@ export function AlertRulesPanel() {
           </h2>
           <p className="mt-1 text-sm text-[var(--desk-text-muted)]">
             Push (browser) is free and works even when this tab is closed —
-            recommended. Telegram needs{" "}
-            <code className="font-mono text-[0.75rem]">TELEGRAM_BOT_TOKEN</code>{" "}
-            {telegramConfigured ? "(configured)" : "(not set)"}. Webhook always
-            works. Email needs{" "}
-            <code className="font-mono text-[0.75rem]">RESEND_API_KEY</code>
-            {emailConfigured
-              ? " (configured)"
-              : " (not set — will fail on send)"}
-            .
+            recommended. Telegram and email need delivery to be enabled for
+            this deployment
+            {telegramConfigured ? " (Telegram ready)" : ""}
+            {emailConfigured ? " (email ready)" : ""}. Webhook always works.
           </p>
         </div>
         <form
@@ -320,7 +312,7 @@ export function AlertRulesPanel() {
             <div className="flex items-center gap-2">
               {!pushAvailable ? (
                 <p className="font-mono text-xs text-[var(--desk-text-dim)]">
-                  Server missing WEB_PUSH_VAPID keys — push will fail to send.
+                  Push notifications aren&apos;t available on this deployment.
                 </p>
               ) : webPush.status === "subscribed" ? (
                 <p className="font-mono text-xs text-[var(--desk-live)]">

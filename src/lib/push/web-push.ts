@@ -54,7 +54,7 @@ export async function sendWebPush(
   if (!ensureConfigured()) {
     return {
       ok: false,
-      detail: "WEB_PUSH_VAPID_PUBLIC_KEY/PRIVATE_KEY not configured.",
+      detail: "Browser push is not available right now.",
     };
   }
 

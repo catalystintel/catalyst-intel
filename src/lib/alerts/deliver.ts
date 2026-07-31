@@ -116,7 +116,7 @@ async function deliverEmail(
 ): Promise<{ ok: boolean; detail: string }> {
   const subject = `[Catalyst] ${catalyst.symbol ?? "—"} · ${catalyst.headline ?? catalyst.title}`;
   const proof = catalyst.sourceUrl
-    ? `\nProof (EDGAR): ${catalyst.sourceUrl}`
+    ? `\nFiling: ${catalyst.sourceUrl}`
     : "";
   const text = [
     `Rule: ${ruleName}`,
@@ -139,7 +139,7 @@ async function deliverTelegram(
   ruleName: string,
 ): Promise<{ ok: boolean; detail: string }> {
   const proof = catalyst.sourceUrl
-    ? `\nProof (EDGAR): ${catalyst.sourceUrl}`
+    ? `\nFiling: ${catalyst.sourceUrl}`
     : "";
   const text = [
     `🔔 ${ruleName}`,

@@ -18,6 +18,7 @@ import {
 } from "@/lib/reports/types";
 import { formatEventTime, formatRelativeAge } from "@/lib/format/relative-time";
 import { cn } from "@/lib/utils";
+import { toUserFacingMessage } from "@/lib/errors/user-facing";
 
 export function ReportsDesk() {
   const [reports, setReports] = useState<ReportSummary[]>([]);
@@ -45,7 +46,7 @@ export function ReportsDesk() {
       setReports(data.reports ?? []);
     } catch (err) {
       toast.error(
-        err instanceof Error ? err.message : "Could not load reports.",
+        toUserFacingMessage(err, "Could not load reports."),
       );
     } finally {
       setLoading(false);
@@ -70,7 +71,7 @@ export function ReportsDesk() {
       setSelected(data.report as ReportDetail);
     } catch (err) {
       toast.error(
-        err instanceof Error ? err.message : "Could not open report.",
+        toUserFacingMessage(err, "Could not open report."),
       );
     }
   };
@@ -100,7 +101,7 @@ export function ReportsDesk() {
       );
     } catch (err) {
       toast.error(
-        err instanceof Error ? err.message : "Could not create report.",
+        toUserFacingMessage(err, "Could not create report."),
       );
     } finally {
       setCreating(false);
@@ -120,7 +121,7 @@ export function ReportsDesk() {
       toast.success("Report deleted.");
     } catch (err) {
       toast.error(
-        err instanceof Error ? err.message : "Could not delete report.",
+        toUserFacingMessage(err, "Could not delete report."),
       );
     }
   };

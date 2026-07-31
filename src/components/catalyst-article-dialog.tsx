@@ -24,6 +24,7 @@ import {
 } from "@/lib/catalysts/article-funnel";
 import { titleLine } from "@/lib/catalysts/feed-display";
 import { cn } from "@/lib/utils";
+import { toUserFacingMessage } from "@/lib/errors/user-facing";
 
 type ArticlePayload = {
   summary: string;
@@ -105,7 +106,7 @@ export function CatalystArticleDialog({
           status: "error",
           catalystId: id,
           message:
-            err instanceof Error ? err.message : "Could not load details.",
+            toUserFacingMessage(err, "Could not load details."),
         });
       }
     })();

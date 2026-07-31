@@ -31,26 +31,26 @@ export default function AppError({
       <div className="w-full max-w-lg rounded-lg border border-border p-6 text-sm">
         <h1 className="text-base font-semibold tracking-tight">
           {dbErrorKind === "not-configured"
-            ? "Database not configured"
+            ? "Desk unavailable"
             : dbErrorKind === "quota"
-              ? "Database quota exceeded"
+              ? "Desk temporarily at capacity"
               : dbErrorKind === "transient"
-                ? "Database temporarily unreachable"
+                ? "Temporarily unreachable"
                 : "Something went wrong"}
         </h1>
         <p className="mt-2 text-muted-foreground">
           {dbErrorKind === "not-configured"
-            ? "This deployment needs a hosted Turso database. Set LIBSQL_URL and LIBSQL_AUTH_TOKEN in Vercel, migrate, and redeploy (see DEPLOYMENT.md)."
+            ? "The desk can\u2019t reach its database right now. Please try again shortly."
             : dbErrorKind === "quota"
-              ? "Turso has blocked SQL reads because this database hit its plan limits (BLOCKED). Upgrade the Turso plan (or wait for the monthly quota to reset), then reload. Reloading alone will not help."
+              ? "We can\u2019t load catalysts right now because the database has hit its plan limits. Please try again later."
               : dbErrorKind === "transient"
-                ? "This looks like a brief connection hiccup to the database, not a configuration problem. Please try again in a moment."
-                : "An unexpected error occurred. Try again, and if it keeps happening check Vercel logs / PostHog exceptions."}
+                ? "This looks like a brief connection hiccup. Please try again in a moment."
+                : "An unexpected error occurred. Please try again."}
         </p>
         <button
           type="button"
           onClick={reset}
-          className="mt-4 text-sm font-medium underline underline-offset-2"
+          className="text-sm font-medium underline underline-offset-2 mt-4"
         >
           Try again
         </button>

@@ -10,7 +10,6 @@ import {
 } from "@/lib/catalysts/taxonomy";
 import {
   materialityFromScore,
-  scoreFromCategory,
 } from "@/lib/catalysts/materiality";
 
 export function normalizeMaterialityReasons(value: unknown): string[] {
@@ -35,9 +34,8 @@ export function resolveMaterialityReasons(options: {
   const m = materialityFromScore(options.score, options.category);
   const category = options.category;
   const label = category ? CATEGORY_LABELS[category] : "Other";
-  const base = scoreFromCategory(category);
   return [
-    `${label} (base ${base})`,
-    `Tier: ${m.label} at ${m.score}/100 (rule-based)`,
+    `${label} event`,
+    `${m.label} materiality (${m.score}/100)`,
   ];
 }

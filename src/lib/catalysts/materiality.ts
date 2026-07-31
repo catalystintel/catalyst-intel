@@ -93,7 +93,7 @@ export function computeMateriality(input: MaterialityInput): MaterialityResult {
   const category = input.eventCategory ?? "other";
   const base = scoreFromCategory(category);
   const reasons: string[] = [
-    `${CATEGORY_LABELS[category] ?? "Other"} (base ${base})`,
+    `${CATEGORY_LABELS[category] ?? "Other"} event`,
   ];
   let score = base;
 

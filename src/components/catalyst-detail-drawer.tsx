@@ -243,8 +243,7 @@ export function CatalystDetailDrawer({
                   </p>
                 ) : (
                   <p className="mt-1.5 text-sm text-[var(--desk-text-muted)]">
-                    No price enrichment yet. Market data is not configured for
-                    session-move context.
+                  No session-move context for this event yet.
                   </p>
                 )}
               </div>

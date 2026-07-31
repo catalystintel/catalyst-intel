@@ -21,6 +21,7 @@ import {
 } from "@/lib/market/chart-range";
 import type { DeskCandle } from "@/lib/market/fetch-candles";
 import { cn } from "@/lib/utils";
+import { toUserFacingMessage } from "@/lib/errors/user-facing";
 
 type CandlesPayload = {
   symbol: string;
@@ -134,7 +135,7 @@ export function DeskLightweightChart({
           if (!cancelled) setPayload(json);
         } catch (err) {
           if (!cancelled) {
-            setError(err instanceof Error ? err.message : "Chart failed");
+            setError(toUserFacingMessage(err, "Chart failed"));
             setPayload(null);
           }
         } finally {
@@ -258,7 +259,7 @@ export function DeskLightweightChart({
           </span>
           {payload?.provider === "demo" ? (
             <span className="rounded-sm border border-[var(--desk-warn-border)] bg-[var(--desk-warn-bg)] px-1.5 py-px font-mono text-[0.58rem] tracking-wide text-[var(--desk-warn-text)] uppercase">
-              Demo
+              Sample
             </span>
           ) : null}
         </div>
