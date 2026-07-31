@@ -30,10 +30,10 @@ Three environments, one app:
   `main` (and matching feature-branch globs). Treat it as secondary; CI deploy
   is authoritative for staging/production tip.
 - **Backup — Unblock Omer CD heal** (`.github/workflows/vercel-unblock-redeploy.yml`):
-  independent of CI (not gated on green checks). On every push to `main`, waits
-  **1 minute** (so Vercel can create a Blocked git deploy first), then heals
-  blocked/failed Omer deploys. Also polls every 10 minutes + manual
-  `workflow_dispatch`.
+  independent of CI (not gated on green checks). On every push to `main`,
+  **polls the Vercel deployments API** for that commit SHA until it is
+  BLOCKED/ERROR (or healthy) — no blind sleep — then heals. Also polls every
+  10 minutes + manual `workflow_dispatch`.
 - **Scheduled ETL (production):** [cron-job.org](https://cron-job.org) POSTs
   `/api/admin/fetch/all` every **1 minute** with `x-cron-secret`. See "Production scheduler"
   below for setup and the in-app self-healing backstop.
@@ -210,8 +210,9 @@ deploys should not stall staging or production.
 The always-on workflow `.github/workflows/vercel-unblock-redeploy.yml` is
 **not part of CI**. It runs on:
 
-1. **Every push to `main`** — waits **60s** (so Vercel git integration can
-   Block first), then heals
+1. **Every push to `main`** — polls `GET /v6/deployments` for this commit SHA
+   (~2.5s interval, 90s cap) until Vercel shows BLOCKED/ERROR (heal) or a
+   healthy/building deploy, then runs the heal script
 2. **Every 10 minutes** (cron backup)
 3. **Manual** — Actions → Unblock Omer Vercel deploys → Run workflow
 

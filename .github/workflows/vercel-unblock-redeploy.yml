@@ -4,8 +4,9 @@ name: Unblock Omer Vercel deploys
 # Keep this out of ci.yml: it races Vercel's git integration (which may block
 # before or after CI finishes), and must run even when CI deploy fails.
 #
-# On every push to `main`, wait 1 minute (so Vercel can create a Blocked
-# deploy first), then heal leftover BLOCKED / access-failed Production deploys.
+# On every push to `main`, poll the Vercel deployments API for this SHA until
+# it is BLOCKED/ERROR (heal) or healthy — no blind 60s sleep. Then heal any
+# leftover BLOCKED / access-failed Production deploys.
 # Schedule remains a backup poller; workflow_dispatch is for manual runs.
 #
 # Fallback chain (see scripts/vercel-unblock-redeploy.mjs):
@@ -32,12 +33,6 @@ jobs:
         with:
           node-version: "24"
 
-      - name: Wait 1 minute after main push (let Vercel block first)
-        if: github.event_name == 'push'
-        run: |
-          echo "main pushed. Waiting 60s for Vercel git deploy to land (or Block)…"
-          sleep 60
-
       - name: Install Vercel CLI (CLI fallback deploy)
         run: npm install -g vercel@56
 
@@ -48,4 +43,7 @@ jobs:
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
           VERCEL_PROJECT_NAME: catalyst-intel
           VERCEL_UNBLOCK_ALLOW_CLI: "1"
+          # Push only: poll Vercel for this commit instead of sleeping.
+          VERCEL_UNBLOCK_WAIT_SHA: ${{ github.event_name == 'push' && github.sha || '' }}
+          VERCEL_UNBLOCK_WAIT_MS: "90000"
         run: node scripts/vercel-unblock-redeploy.mjs
