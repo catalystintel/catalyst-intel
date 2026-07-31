@@ -186,18 +186,21 @@ async function polygonOhlc(
 
 /**
  * OHLC for the desk Lightweight Charts blotter.
- * Prefers Finnhub → Polygon → deterministic demo (so the UI always has a pane).
+ * Prefers Finnhub → Polygon. Demo candles are opt-in only (tests / offline
+ * demos) — never the default, or we paint a fake +N% move as if it were the
+ * ticker (see PFSA SAMPLE chart bug).
  */
 export async function fetchDeskCandles(options: {
   symbol: string;
   range: ChartRangeKey;
   now?: Date;
+  /** When true, synthesize OHLC if vendors miss. Default false. */
   allowDemo?: boolean;
 }): Promise<DeskCandleSeries> {
   const symbol = options.symbol.trim().toUpperCase();
   const range = options.range;
   const now = options.now ?? new Date();
-  const allowDemo = options.allowDemo !== false;
+  const allowDemo = options.allowDemo === true;
 
   if (!symbol) {
     return {

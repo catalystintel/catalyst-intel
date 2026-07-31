@@ -195,9 +195,12 @@ export function DeskLightweightChart({
     );
   }
 
+  const isDemo = payload?.provider === "demo";
   const last = payload?.candles[payload.candles.length - 1];
   const first = payload?.candles[0];
-  const change = last && first ? last.close - first.open : null;
+  // Never surface demo OHLC as a real session % — traders read the big green
+  // number first and miss the Sample chip.
+  const change = !isDemo && last && first ? last.close - first.open : null;
   const changePct =
     change != null && first && first.open !== 0
       ? (change / first.open) * 100
@@ -257,30 +260,38 @@ export function DeskLightweightChart({
           <span className="font-mono text-[0.62rem] tracking-[0.12em] text-[var(--desk-text-dim)] uppercase">
             {range}
           </span>
-          {payload?.provider === "demo" ? (
+          {isDemo ? (
             <span className="rounded-sm border border-[var(--desk-warn-border)] bg-[var(--desk-warn-bg)] px-1.5 py-px font-mono text-[0.58rem] tracking-wide text-[var(--desk-warn-text)] uppercase">
               Sample
             </span>
           ) : null}
         </div>
         <p className="mt-1 flex flex-wrap items-baseline gap-2 font-mono">
-          <span className="text-lg font-semibold text-[var(--desk-text)] tabular-nums">
-            {last ? last.close.toFixed(2) : loading ? "…" : "—"}
-          </span>
-          {change != null && changePct != null ? (
-            <span
-              className={cn(
-                "text-xs tabular-nums",
-                up === true && "text-[var(--desk-positive)]",
-                up === false && "text-[var(--desk-negative)]",
-                up == null && "text-[var(--desk-text-muted)]",
-              )}
-            >
-              {change > 0 ? "+" : ""}
-              {change.toFixed(2)} ({changePct > 0 ? "+" : ""}
-              {changePct.toFixed(2)}%)
+          {isDemo ? (
+            <span className="text-xs text-[var(--desk-warn-text)]">
+              Placeholder series — not live market data
             </span>
-          ) : null}
+          ) : (
+            <>
+              <span className="text-lg font-semibold text-[var(--desk-text)] tabular-nums">
+                {last ? last.close.toFixed(2) : loading ? "…" : "—"}
+              </span>
+              {change != null && changePct != null ? (
+                <span
+                  className={cn(
+                    "text-xs tabular-nums",
+                    up === true && "text-[var(--desk-positive)]",
+                    up === false && "text-[var(--desk-negative)]",
+                    up == null && "text-[var(--desk-text-muted)]",
+                  )}
+                >
+                  {change > 0 ? "+" : ""}
+                  {change.toFixed(2)} ({changePct > 0 ? "+" : ""}
+                  {changePct.toFixed(2)}%)
+                </span>
+              ) : null}
+            </>
+          )}
         </p>
       </div>
       {allowFullscreen ? (

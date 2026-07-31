@@ -51,9 +51,12 @@ export async function GET(request: NextRequest) {
     );
   }
 
+  // Never synthesize demo OHLC for the live desk — fake candles look like
+  // real % moves (SAMPLE badge is easy to miss next to a big green +N%).
   const series = await fetchDeskCandles({
     symbol: raw,
     range: rangeRaw,
+    allowDemo: false,
   });
 
   return withRateLimitHeaders(
