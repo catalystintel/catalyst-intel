@@ -3,7 +3,6 @@
 import { useState } from "react";
 
 import { DashboardEconomicCalendar } from "@/components/dashboard-economic-calendar";
-import { DashboardTickerTape } from "@/components/dashboard-ticker-tape";
 import { DashboardWatchlistRail } from "@/components/dashboard-watchlist-rail";
 import {
   LiveCatalystFeed,
@@ -37,10 +36,6 @@ export function DeskDashboardGrid({
   const [focusSymbol, setFocusSymbol] = useState<string | null>(
     initialSymbolFilter?.trim().toUpperCase() || null,
   );
-  // Kept in sync by the Watchlist rail's own load/add/remove calls (see
-  // `onSymbolsChange`) so the bottom ticker tape reacts immediately instead
-  // of only reflecting the watchlist as of first mount.
-  const [watchlistSymbols, setWatchlistSymbols] = useState<string[]>([]);
 
   return (
     <div className="desk-dashboard flex min-h-0 flex-1 flex-col gap-3">
@@ -58,13 +53,8 @@ export function DeskDashboardGrid({
           <DashboardWatchlistRail
             focusSymbol={focusSymbol}
             onFocusSymbol={setFocusSymbol}
-            onSymbolsChange={setWatchlistSymbols}
           />
         </div>
-      </div>
-
-      <div className="hidden xl:block">
-        <DashboardTickerTape symbols={watchlistSymbols} />
       </div>
     </div>
   );
