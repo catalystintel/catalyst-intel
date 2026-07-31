@@ -145,16 +145,20 @@ export async function openRouterChatCompletion(options: {
   }
 
   if (lastMessage?.toLowerCase().includes("unavailable for free")) {
-    lastFailure = `Free model unavailable (${model}). Set OPENROUTER_MODEL to a current free slug (e.g. openai/gpt-oss-20b:free).`;
+    lastFailure =
+      "AI analysis is not available at the moment. You can try again shortly.";
   } else if (sawRateLimit) {
     lastFailure =
-      "OpenRouter free-tier rate limit hit. Try again in a minute, or add more keys via OPENROUTER_API_KEYS.";
+      "AI analysis is rate-limited right now. Try again in a minute.";
   } else if (lastStatus === 401 || lastStatus === 403) {
-    lastFailure = "OpenRouter rejected the API key.";
+    lastFailure =
+      "AI analysis is not available at the moment. You can try again shortly.";
   } else if (lastMessage) {
-    lastFailure = lastMessage;
+    lastFailure =
+      "AI analysis is not available at the moment. You can try again shortly.";
   } else {
-    lastFailure = "OpenRouter request failed.";
+    lastFailure =
+      "AI analysis is not available at the moment. You can try again shortly.";
   }
 
   return null;

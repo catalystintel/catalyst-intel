@@ -20,6 +20,7 @@ import {
   type FeedFilterState,
 } from "@/lib/catalysts/feed-filter-persist";
 import type { FeedFacets } from "@/lib/catalysts/feed-query-types";
+import { toUserFacingMessage } from "@/lib/errors/user-facing";
 
 const SEARCH_DEBOUNCE_MS = 280;
 const FEED_PAGE_SIZE = 75;
@@ -147,9 +148,7 @@ export function useLiveFeedQuery(
         });
       } catch (err) {
         if (err instanceof DOMException && err.name === "AbortError") return;
-        setPollError(
-          err instanceof Error ? err.message : "Could not load catalysts.",
-        );
+        setPollError(toUserFacingMessage(err, "Could not load catalysts."));
       } finally {
         inFlight.current = false;
         setLoading(false);
@@ -165,9 +164,7 @@ export function useLiveFeedQuery(
       await fetchPage({ cursor: nextCursor, replace: false });
     } catch (err) {
       if (!(err instanceof DOMException && err.name === "AbortError")) {
-        setPollError(
-          err instanceof Error ? err.message : "Could not load more.",
-        );
+        setPollError(toUserFacingMessage(err, "Could not load more."));
       }
     } finally {
       setLoadingMore(false);

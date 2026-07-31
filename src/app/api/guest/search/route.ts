@@ -6,7 +6,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { and, desc, eq, like, or, sql } from "drizzle-orm";
 
-import { databaseSetupHint, isLibsqlConfigured } from "@/db/env";
+import { databaseUnavailableMessage, isLibsqlConfigured } from "@/db/env";
 import { db } from "@/db/client";
 import { catalysts, rawSources } from "@/db/schema";
 import { normalizeSymbol } from "@/lib/alerts/normalize";
@@ -29,7 +29,10 @@ function readGuestCount(request: NextRequest): number {
 
 export async function GET(request: NextRequest) {
   if (!isLibsqlConfigured()) {
-    return NextResponse.json({ error: databaseSetupHint() }, { status: 503 });
+    return NextResponse.json(
+      { error: databaseUnavailableMessage() },
+      { status: 503 },
+    );
   }
 
   const ip = getClientIp(request);

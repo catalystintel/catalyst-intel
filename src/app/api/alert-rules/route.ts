@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { and, desc, eq } from "drizzle-orm";
 
-import { databaseSetupHint, isLibsqlConfigured } from "@/db/env";
+import { databaseUnavailableMessage, isLibsqlConfigured } from "@/db/env";
 import { db } from "@/db/client";
 import { alertRules, type AlertChannel } from "@/db/schema";
 import { getCurrentAppUser } from "@/lib/auth/current-user";
@@ -30,7 +30,10 @@ const CHANNELS = new Set<AlertChannel>([
 async function requireUser(request: NextRequest) {
   if (!isLibsqlConfigured()) {
     return {
-      error: NextResponse.json({ error: databaseSetupHint() }, { status: 503 }),
+      error: NextResponse.json(
+        { error: databaseUnavailableMessage() },
+        { status: 503 },
+      ),
     };
   }
 

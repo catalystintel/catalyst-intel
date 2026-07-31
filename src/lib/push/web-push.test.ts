@@ -50,7 +50,7 @@ describe("sendWebPush", () => {
       body: "b",
     });
     expect(result.ok).toBe(false);
-    expect(result.detail).toContain("WEB_PUSH_VAPID");
+    expect(result.detail.toLowerCase()).toContain("not available");
   });
 
   it("sends via web-push and reports success", async () => {

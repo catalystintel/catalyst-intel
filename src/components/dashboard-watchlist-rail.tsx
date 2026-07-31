@@ -14,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/loading-skeleton";
 import { useWatchlistQuotes } from "@/hooks/use-watchlist-quotes";
 import { cn } from "@/lib/utils";
+import { toUserFacingMessage } from "@/lib/errors/user-facing";
 
 /**
  * Compact "WATCHLISTS" rail for the dashboard's right column (below Economic
@@ -89,7 +90,7 @@ export function DashboardWatchlistRail({
       await loadSymbols();
       onFocusSymbol?.(symbol);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Could not add symbol.");
+      toast.error(toUserFacingMessage(err, "Could not add symbol."));
     } finally {
       setSaving(false);
     }
@@ -105,9 +106,7 @@ export function DashboardWatchlistRail({
       if (!res.ok) throw new Error("Could not remove symbol.");
       await loadSymbols();
     } catch (err) {
-      toast.error(
-        err instanceof Error ? err.message : "Could not remove symbol.",
-      );
+      toast.error(toUserFacingMessage(err, "Could not remove symbol."));
     } finally {
       setSaving(false);
     }

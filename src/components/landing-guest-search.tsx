@@ -7,6 +7,7 @@ import { Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { toUserFacingMessage } from "@/lib/errors/user-facing";
 
 type GuestHit = {
   id: number;
@@ -61,7 +62,7 @@ export function LandingGuestSearch({ className }: { className?: string }) {
       setRemaining(typeof data.remaining === "number" ? data.remaining : null);
       if ((data.remaining ?? 1) <= 0) setLimitHit(true);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Search failed.");
+      setError(toUserFacingMessage(err, "Search failed."));
     } finally {
       setLoading(false);
     }

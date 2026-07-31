@@ -15,6 +15,7 @@ import {
   type AnalyticsWindow,
 } from "@/lib/catalysts/analytics-window";
 import { cn } from "@/lib/utils";
+import { toUserFacingMessage } from "@/lib/errors/user-facing";
 
 const REFRESH_MS = 60_000;
 
@@ -47,9 +48,7 @@ export function AnalyticsDashboard() {
       setLastFetchedAt(data.fetchedAt ?? new Date().toISOString());
     } catch (err) {
       if (err instanceof DOMException && err.name === "AbortError") return;
-      toast.error(
-        err instanceof Error ? err.message : "Could not load analytics.",
-      );
+      toast.error(toUserFacingMessage(err, "Could not load analytics."));
     } finally {
       setLoading(false);
       if (isManual) setRefreshing(false);

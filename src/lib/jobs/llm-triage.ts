@@ -211,7 +211,7 @@ export async function analyzeCatalystOnDemand(
       ok: false,
       status: 503,
       error:
-        "AI analysis is not configured. Set OPENROUTER_API_KEY (or OPENROUTER_API_KEYS) in the environment.",
+        "AI analysis is not available at the moment. You can try again shortly.",
     };
   }
 
