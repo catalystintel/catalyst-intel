@@ -174,6 +174,75 @@ gh secret set STAGING_LIBSQL_URL --body "<same value as Vercel Preview LIBSQL_UR
 gh secret set STAGING_LIBSQL_AUTH_TOKEN --body "<same value as Vercel Preview LIBSQL_AUTH_TOKEN>"
 ```
 
+### Auto-heal Omer / access-blocked Vercel deploys (GitHub Actions)
+
+Vercel can **Block** or **fail** a git-triggered deploy when:
+
+- the commit author is not a recognized team member (common for
+  `omer.nachshon` / `OmerNachshon` / `omer.nachshon@…` while only the Vercel
+  owner seat is linked), or
+- GitHub App / private-repo / permission / unauthorized access rejects the push
+
+The always-on workflow `.github/workflows/vercel-unblock-redeploy.yml` polls
+every **10 minutes** (and on **Actions → Unblock Omer Vercel deploys → Run
+workflow**) and heals **`main` → Production** and **`dev` → Preview**
+(`catalyst-intel-git-dev-zhbar10s-projects.vercel.app`).
+
+**Author match rules** (case-insensitive): commit author name, login, email, or
+actor matching `omer.nachshon`, `Omer Nachshon`, `OmerNachshon`, or `nachshon`.
+
+**What triggers a heal**
+
+| State     | Condition                                                       |
+| --------- | --------------------------------------------------------------- |
+| `BLOCKED` | Author matches Omer **or** access/seat wording                  |
+| `ERROR`   | Author matches Omer (access wording preferred but not required) |
+
+Only `main` / Production and `dev` Preview are healed (feature branches ignored).
+
+**Redeploy fallback chain** (team `VERCEL_TOKEN` — this is how CI “allows” the
+deploy when git integration rejects the author):
+
+1. API redeploy same SHA (token owner approves the blocked commit)
+2. API redeploy with `withLatestCommit` (branch tip)
+3. API create from `gitSource` branch tip
+4. **CLI file-upload** `vercel deploy` from checked-out tip (bypasses git-author
+   / GitHub App seat checks when API paths still fail)
+
+Idempotent: skips if a newer healthy (`READY` / building) deploy already exists
+for the same commit SHA or the same branch after the failure.
+
+**Required GitHub Actions secrets** (repo → Settings → Secrets and variables → Actions):
+
+| Secret              | Notes                                                                                                   |
+| ------------------- | ------------------------------------------------------------------------------------------------------- |
+| `VERCEL_TOKEN`      | Create at [vercel.com/account/tokens](https://vercel.com/account/tokens) (team-owner token recommended) |
+| `VERCEL_ORG_ID`     | Team id from `.vercel/project.json` → `orgId` (`team_IvSJt6AmTC91h24fmVeLHfDI`)                         |
+| `VERCEL_PROJECT_ID` | Project id from `.vercel/project.json` → `projectId` (`prj_bzkyprBR2Hl8TbqadquO1z0L23On`)               |
+
+```bash
+gh secret set VERCEL_TOKEN --body "<token from vercel.com/account/tokens>"
+gh secret set VERCEL_ORG_ID --body "team_IvSJt6AmTC91h24fmVeLHfDI"
+gh secret set VERCEL_PROJECT_ID --body "prj_bzkyprBR2Hl8TbqadquO1z0L23On"
+```
+
+If those secrets are missing, the job logs a warning and exits 0 (same soft-fail
+pattern as `migrate.yml`). The **schedule only runs from the default branch
+(`main`)** — this workflow must be on `main` for the cron to be live; until then
+use **workflow_dispatch**.
+
+Manual one-off (local, with env set):
+
+```bash
+VERCEL_TOKEN=… VERCEL_ORG_ID=… VERCEL_PROJECT_ID=… node scripts/vercel-unblock-redeploy.mjs
+```
+
+**Optional Cursor Automation (complement, not required):** you can add a
+scheduled Cursor agent that every ~15 minutes runs
+`node scripts/vercel-unblock-redeploy.mjs` with the same three env vars. The
+committed GitHub Action is the primary always-on mechanism; a Cursor Automation
+is only useful as a backup if Actions secrets are unset.
+
 ---
 
 ## One-time cloud setup (when you're ready to go live)
