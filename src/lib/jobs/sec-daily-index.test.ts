@@ -128,6 +128,8 @@ describe("masterRowToNormalized", () => {
     });
     expect(item?.tags).toContain("daily-index");
     expect(item?.url).toContain("0001001250-26-000033-index.htm");
+    expect(item?.title).toMatch(/Current Report/i);
+    expect(item?.title).not.toMatch(/8-K filing/i);
   });
 
   it("returns null for non-configured forms", () => {

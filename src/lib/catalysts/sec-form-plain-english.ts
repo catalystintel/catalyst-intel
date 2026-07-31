@@ -16,7 +16,7 @@ export function plainEnglishForSecForm(
     return "This is a shelf registration — the company is setting up permission to sell securities later, not necessarily selling them all today.";
   }
   if (/^8-?K/i.test(f)) {
-    return "This is a current report — the company is disclosing a material event (earnings, deal, leadership, etc.) to the SEC.";
+    return "This is a current report — the company is disclosing a material event (earnings, deal, leadership, bankruptcy, etc.) between periodic filings.";
   }
   if (/^4(\/A)?$/i.test(f) || f === "4") {
     return "This is an insider ownership report (Form 4) — officers/directors/large holders reporting buys, sells, or awards.";
@@ -40,7 +40,7 @@ export function shortSecFormLabel(
   const f = (formType ?? "").trim().toUpperCase();
   if (/^424B/i.test(f)) return "Pricing supplement / structured offering";
   if (/^S-3/i.test(f)) return "Shelf registration";
-  if (/^8-?K/i.test(f)) return "Current report (8-K)";
+  if (/^8-?K/i.test(f)) return "Current report";
   if (/^4(\/A)?$/i.test(f) || f === "4") return "Insider transaction (Form 4)";
   if (/^425/i.test(f)) return "Merger communication";
   if (/13D/i.test(f)) return "Active ownership (13D)";

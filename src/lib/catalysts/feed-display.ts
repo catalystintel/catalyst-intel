@@ -3,6 +3,7 @@ import {
   extractSecItemBlurb,
   isSecCatalogHeadline,
   SEC_ITEM_HEADLINE_LABELS,
+  selectPrimaryItem,
   type EventCategoryKey,
 } from "@/lib/jobs/parse-8k-items";
 import { benzingaPanelForCategory } from "@/lib/catalysts/benzinga-analogs";
@@ -248,6 +249,7 @@ const GENERIC_EVENT_HEADLINES = new Set([
   "shelf registration (s-3)",
   "merger / acquisition (425)",
   "8-k filing",
+  "current report",
   "filing",
   "earnings calendar",
   "fda catalyst",
@@ -692,10 +694,12 @@ function sec8kDisplayTitle(c: FeedCatalyst): string | null {
 
   const subject = tapeSubject(c) ?? c.companyName ?? c.symbol;
   const primary =
+    selectPrimaryItem(c.items) ??
     c.items.find((i) => {
       const h = normalizeDisplayText(c.headline ?? "").toLowerCase();
       return h && i.label.toLowerCase() === h;
-    }) ?? c.items[0];
+    }) ??
+    null;
 
   if (primary?.label && !/^earnings\s*\/\s*results$/i.test(primary.label)) {
     return formatSec8kItemTitle(primary.label, subject, {
@@ -710,7 +714,35 @@ function sec8kDisplayTitle(c: FeedCatalyst): string | null {
     });
   }
 
+  // Bare "… 8-K filing" / "Filing" / empty reason → Current Report (or Item blurb).
+  const title = normalizeDisplayText(c.title ?? "");
+  if (
+    !headline ||
+    isGenericBare8kHeadline(headline) ||
+    /(?:8-?K).*filing$/i.test(title)
+  ) {
+    const blurb =
+      extractSecItemBlurb(c.summary, null, 110) ||
+      extractSecItemBlurb(c.summary, c.items[0]?.code ?? null, 110);
+    if (blurb && subject) {
+      return `${subject} - ${blurb}`;
+    }
+    return formatSec8kItemTitle("Current report", subject);
+  }
+
   return null;
+}
+
+function isGenericBare8kHeadline(text: string): boolean {
+  const t = text.replace(/\s+/g, " ").trim().toLowerCase();
+  return (
+    !t ||
+    t === "filing" ||
+    t === "8-k filing" ||
+    t === "8k filing" ||
+    t === "current report" ||
+    /^(?:form\s*)?8-?k(?:\s*filing)?$/i.test(t)
+  );
 }
 
 /** S-3 / 424B / 425 / 13D / 13G → ground-rule offering / ownership titles. */
@@ -1035,16 +1067,21 @@ export function titleLine(
     subject &&
     /(?:8-?K|Form\s*4|S-3|424B|425|SC\s*13).*filing$/i.test(cleaned)
   ) {
-    if (c.items[0]?.label) {
-      return formatSec8kItemTitle(c.items[0].label, subject, {
+    const primary = selectPrimaryItem(c.items) ?? c.items[0] ?? null;
+    if (primary?.label) {
+      return formatSec8kItemTitle(primary.label, subject, {
         content: officerChangeContent(c),
       });
     }
     const event =
-      (c.items[0] &&
-        extractSecItemBlurb(c.summary, c.items[0].code, maxBlurbChars)) ||
+      (primary &&
+        extractSecItemBlurb(c.summary, primary.code, maxBlurbChars)) ||
+      extractSecItemBlurb(c.summary, null, maxBlurbChars) ||
       null;
-    if (event) return `${subject} — ${event}`;
+    if (event) return `${subject} - ${event}`;
+    if (/(?:8-?K).*filing$/i.test(cleaned)) {
+      return formatSec8kItemTitle("Current report", subject);
+    }
     return cleaned;
   }
 
@@ -1101,6 +1138,30 @@ const SUBCATEGORY_LABELS: Record<string, string> = {
 export function eventLabel(c: FeedCatalyst): string {
   const sub = c.subcategory?.trim();
   if (sub && SUBCATEGORY_LABELS[sub]) return SUBCATEGORY_LABELS[sub];
+
+  // 8-K rows: show the Item reason (or category), never bare "8k" / "8-K".
+  const is8k =
+    sub === "8k" ||
+    /(?:8-?K|8k)/i.test(c.type ?? "") ||
+    (c.sourceProvider === "sec-edgar" && sub === "8k");
+  if (is8k || sub === "8k") {
+    const primary = selectPrimaryItem(c.items);
+    if (primary?.label) {
+      return titleCaseEventLabel(primary.label) || primary.label;
+    }
+    const headline = normalizeDisplayText(c.headline ?? "");
+    if (headline && !isGenericBare8kHeadline(headline)) {
+      if (isSecCatalogHeadline(headline)) {
+        return titleCaseEventLabel(headline) || headline;
+      }
+      return headline;
+    }
+    if (c.eventCategory && c.eventCategory in CATEGORY_LABELS) {
+      return CATEGORY_LABELS[c.eventCategory as EventCategoryKey];
+    }
+    return "Current report";
+  }
+
   if (sub) return sub.replace(/_/g, " ");
   if (c.type?.trim()) return c.type.trim();
   if (c.eventCategory && c.eventCategory in CATEGORY_LABELS) {

@@ -316,7 +316,7 @@ export function formatSec8kItemTitle(
   const narrative = NARRATIVE_8K_BY_LABEL[key];
   if (narrative) return narrative(companyName, options);
 
-  const label = titleCaseEventLabel(itemLabel) || "8-K Event";
+  const label = titleCaseEventLabel(itemLabel) || "Current Report";
   return `${resolveDisplayCompanyName(companyName)} - ${label}`;
 }
 

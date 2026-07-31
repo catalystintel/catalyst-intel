@@ -207,7 +207,7 @@ export function parseFilingSummary(summary: string): ParsedFiling {
   const primary = selectPrimaryItem(items);
 
   if (!primary) {
-    return { items, primaryCategory: "other", headline: "Filing" };
+    return { items, primaryCategory: "other", headline: "Current report" };
   }
 
   return {
@@ -271,7 +271,7 @@ export function classifySecFormType(formType: string): {
   if (form.startsWith("8-K")) {
     return {
       category: "disclosure",
-      headline: "8-K filing",
+      headline: "Current report",
       subcategory: "8k",
       tags: ["8k", "bz:sec_filings"],
     };
