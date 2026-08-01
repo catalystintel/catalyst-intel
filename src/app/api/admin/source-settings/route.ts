@@ -3,11 +3,8 @@ import { NextResponse, type NextRequest } from "next/server";
 import { databaseUnavailableMessage, isLibsqlConfigured } from "@/db/env";
 import { getCurrentAppUser } from "@/lib/auth/current-user";
 import {
-  feedSourceCatalogEntries,
   loadSourceSettingsForUser,
-  normalizeEnabledSources,
   normalizeShowSourceLabels,
-  upsertEnabledSourcesForUser,
   upsertShowSourceLabelsForUser,
 } from "@/lib/catalysts/user-source-settings";
 import { getClientIp } from "@/lib/http/client-ip";
@@ -20,15 +17,6 @@ import {
   isSameOriginRequest,
   sameOriginForbiddenResponse,
 } from "@/lib/http/same-origin";
-
-function catalogPayload() {
-  return feedSourceCatalogEntries().map((s) => ({
-    id: s.id,
-    label: s.label,
-    contributes: s.contributes,
-    fetchEnabled: s.fetchEnabled !== false,
-  }));
-}
 
 async function requireAdmin(
   request: NextRequest,
@@ -90,10 +78,8 @@ export async function GET(request: NextRequest) {
 
   return withRateLimitHeaders(
     NextResponse.json({
-      enabledSources: settings.enabledSources,
       showSourceLabels: settings.showSourceLabels,
       persisted: settings.persisted,
-      catalog: catalogPayload(),
     }),
     limitResult,
   );
@@ -122,42 +108,25 @@ export async function PUT(request: NextRequest) {
       ? (body as Record<string, unknown>)
       : {};
 
-  const hasEnabled = "enabledSources" in raw;
-  const hasShowLabels = "showSourceLabels" in raw;
-  if (!hasEnabled && !hasShowLabels) {
+  if (!("showSourceLabels" in raw)) {
     return withRateLimitHeaders(
       NextResponse.json(
-        {
-          error:
-            "Provide enabledSources and/or showSourceLabels in the request body.",
-        },
+        { error: "Provide showSourceLabels in the request body." },
         { status: 400 },
       ),
       limitResult,
     );
   }
 
-  if (hasEnabled) {
-    await upsertEnabledSourcesForUser(
-      user.id,
-      normalizeEnabledSources(raw.enabledSources),
-    );
-  }
-  if (hasShowLabels) {
-    await upsertShowSourceLabelsForUser(
-      user.id,
-      normalizeShowSourceLabels(raw.showSourceLabels),
-    );
-  }
-
-  const settings = await loadSourceSettingsForUser(user.id);
+  const showSourceLabels = await upsertShowSourceLabelsForUser(
+    user.id,
+    normalizeShowSourceLabels(raw.showSourceLabels),
+  );
 
   return withRateLimitHeaders(
     NextResponse.json({
-      enabledSources: settings.enabledSources,
-      showSourceLabels: settings.showSourceLabels,
+      showSourceLabels,
       persisted: true,
-      catalog: catalogPayload(),
     }),
     limitResult,
   );

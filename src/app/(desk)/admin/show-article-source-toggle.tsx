@@ -96,8 +96,8 @@ export function ShowArticleSourceToggle() {
           </p>
           <p className="mt-0.5 text-xs leading-snug text-[var(--desk-text-muted)]">
             When on, each Catalyst Feed row (and split / details) shows the
-            vendor name — e.g. SEC EDGAR, Finnhub, PR Wire. Personal to your
-            desk view only.
+            vendor name — e.g. SEC EDGAR, Finnhub, PR Wire. Does not hide or
+            filter any rows. Personal to your desk view only.
           </p>
           {saving ? (
             <p className="mt-2 font-mono text-[0.65rem] text-[var(--desk-text-dim)]">
