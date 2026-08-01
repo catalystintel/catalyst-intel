@@ -63,7 +63,7 @@ export default function RootLayout({
           attribute="class"
           defaultTheme="dark"
           enableSystem={false}
-          storageKey="ci.theme"
+          storageKey="ci.theme.v2"
         >
           <PostHogProvider>{children}</PostHogProvider>
         </ThemeProvider>

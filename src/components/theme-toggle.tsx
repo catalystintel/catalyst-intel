@@ -29,8 +29,8 @@ function useHasMounted() {
 
 /**
  * Light/dark switch for the Settings page. Persisted via next-themes to
- * localStorage (`ci.theme` - see theme-provider.tsx) and applied instantly
- * by toggling `.dark` on `<html>` (see globals.css `@custom-variant dark`).
+ * localStorage (`ci.theme.v2` - see layout ThemeProvider) and applied
+ * instantly by toggling `.dark` / `.light` on `<html>`.
  */
 export function ThemeToggle() {
   const { theme, setTheme } = useTheme();

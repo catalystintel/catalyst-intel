@@ -51,91 +51,86 @@
 }
 
 :root {
-  --background: oklch(0.98 0.01 250);
-  --foreground: oklch(0.18 0.02 250);
-  --card: oklch(1 0.005 250);
-  --card-foreground: oklch(0.18 0.02 250);
-  --popover: oklch(1 0.005 250);
-  --popover-foreground: oklch(0.18 0.02 250);
-  --primary: oklch(0.72 0.15 75);
-  --primary-foreground: oklch(0.18 0.02 80);
-  --secondary: oklch(0.94 0.015 250);
-  --secondary-foreground: oklch(0.25 0.02 250);
-  --muted: oklch(0.94 0.01 250);
-  --muted-foreground: oklch(0.45 0.02 250);
-  --accent: oklch(0.93 0.03 250);
-  --accent-foreground: oklch(0.22 0.03 250);
-  --destructive: oklch(0.55 0.2 25);
-  --border: oklch(0.88 0.015 250);
-  --input: oklch(0.88 0.015 250);
-  --ring: oklch(0.65 0.08 250);
-  --steel: oklch(0.55 0.08 250);
-  --steel-foreground: oklch(0.35 0.06 250);
-  --chart-1: oklch(0.72 0.15 75);
-  --chart-2: oklch(0.55 0.08 250);
-  --chart-3: oklch(0.45 0.04 250);
-  --chart-4: oklch(0.35 0.03 250);
-  --chart-5: oklch(0.28 0.02 250);
+  /* Dark is the product default (SSR + next-themes). Light is opt-in via
+     `.light` when the user toggles Appearance. Trading-terminal navy + gold
+     CTAs; LIVE status = trader green; blue = interactive; green/red = +/-
+     only. Avoid raw Tailwind SaaS purple washes. */
+  --background: #0b0f19;
+  --foreground: #f9fafb;
+  --card: #111827;
+  --card-foreground: #f9fafb;
+  --popover: #111827;
+  --popover-foreground: #f9fafb;
+  --primary: #f0c14b;
+  --primary-foreground: #121212;
+  --secondary: #0f1522;
+  --secondary-foreground: #f9fafb;
+  --muted: #0f1522;
+  --muted-foreground: #94a3b8;
+  --accent: #151c2c;
+  --accent-foreground: #f9fafb;
+  --destructive: #ef4444;
+  --border: #1e293b;
+  --input: #0f1522;
+  --ring: #f0c14b;
+  --steel: #cbd5e1;
+  --steel-foreground: #e2e8f0;
+  --chart-1: #f0c14b;
+  --chart-2: #3b82f6;
+  --chart-3: #94a3b8;
+  --chart-4: #64748b;
+  --chart-5: #334155;
   --radius: 0.375rem;
-  --sidebar: oklch(0.97 0.01 250);
-  --sidebar-foreground: oklch(0.18 0.02 250);
-  --sidebar-primary: oklch(0.55 0.08 250);
-  --sidebar-primary-foreground: oklch(0.98 0.01 250);
-  --sidebar-accent: oklch(0.94 0.015 250);
-  --sidebar-accent-foreground: oklch(0.25 0.02 250);
-  --sidebar-border: oklch(0.88 0.015 250);
-  --sidebar-ring: oklch(0.65 0.08 250);
+  --sidebar: #080c14;
+  --sidebar-foreground: #f9fafb;
+  --sidebar-primary: #f0c14b;
+  --sidebar-primary-foreground: #121212;
+  --sidebar-accent: #0f1522;
+  --sidebar-accent-foreground: #f9fafb;
+  --sidebar-border: #1e293b;
+  --sidebar-ring: #f0c14b;
 
-  /* Mono desk, light: paper-white panels. Gold = CTA / accent heritage;
-     green LIVE status = session-on cue; blue = interactive; green/red =
-     +/- catalysts only. Opt-in via theme toggle — default is dark navy. */
-  --desk-app: #f6f6f4;
-  --desk-sidebar: #ffffff;
-  --desk-panel: #ffffff;
-  --desk-header: #ffffff;
-  --desk-border: #e6e6e3;
-  --desk-border-strong: #d3d3cf;
-  --desk-text: #17181a;
-  /* Muted steps stay readable on paper-white (aim ~4.5:1+ for body/meta). */
-  --desk-text-secondary: #3a3b3e;
-  --desk-text-muted: #56575c;
-  --desk-text-dim: #6a6b70;
-  --desk-accent: #3a3a3a;
-  --desk-accent-fg: #17181a;
-  --desk-live: #9a6b00;
-  /* LIVE pills/dots only — institutional emerald, not +/- catalyst green. */
-  --desk-live-status: #059669;
-  --desk-interactive: #2563eb;
-  --desk-link: #2563eb;
-  /* Decorative-only accent for the landing feed-preview chart backdrop.
-     Never used for text/actions — those stay on --desk-live gold. */
+  --desk-app: #0b0f19;
+  --desk-sidebar: #080c14;
+  --desk-panel: #111827;
+  --desk-header: #0e1420;
+  --desk-border: #1e293b;
+  --desk-border-strong: #334155;
+  --desk-text: #f9fafb;
+  --desk-text-secondary: #cbd5e1;
+  --desk-text-muted: #94a3b8;
+  --desk-text-dim: #64748b;
+  --desk-accent: #cbd5e1;
+  --desk-accent-fg: #e2e8f0;
+  --desk-live: #f0c14b;
+  --desk-live-status: #12b76a;
+  --desk-interactive: #3b82f6;
+  --desk-link: #3b82f6;
   --desk-chart-accent: #3b82f6;
-  --desk-positive: #16a34a;
-  --desk-negative: #dc2626;
-  /* Stale-ingest / generic warn: amber (distinct from LIVE gold). */
-  --desk-warn-bg: rgba(245, 158, 11, 0.18);
-  --desk-warn-border: rgba(217, 119, 6, 0.45);
-  --desk-warn-text: #b45309;
-  --desk-nav-active: rgba(0, 0, 0, 0.05);
-  --desk-overlay-soft: rgba(0, 0, 0, 0.035);
-  --desk-overlay-strong: rgba(0, 0, 0, 0.07);
-  --desk-grid-line: rgba(0, 0, 0, 0.045);
-  --desk-shimmer: rgba(0, 0, 0, 0.06);
-  --desk-glow: rgba(0, 0, 0, 0.05);
-  --desk-glow-chart: rgba(59, 130, 246, 0.06);
+  --desk-positive: #22c55e;
+  --desk-negative: #ef4444;
+  --desk-warn-bg: rgba(245, 158, 11, 0.14);
+  --desk-warn-border: rgba(245, 158, 11, 0.4);
+  --desk-warn-text: #f59e0b;
+  --desk-nav-active: rgba(255, 255, 255, 0.07);
+  --desk-overlay-soft: rgba(255, 255, 255, 0.05);
+  --desk-overlay-strong: rgba(255, 255, 255, 0.1);
+  --desk-grid-line: rgba(255, 255, 255, 0.04);
+  --desk-shimmer: rgba(255, 255, 255, 0.1);
+  --desk-glow: rgba(240, 193, 75, 0.11);
+  --desk-glow-chart: rgba(59, 130, 246, 0.1);
 
   /* Desk type scale — dense trading UI. Marketing heroes stay larger. */
   --desk-type-heading: 1.5rem; /* 24px */
   --desk-type-card-title: 1rem; /* 16px */
   --desk-type-body: 0.875rem; /* 14px */
   --desk-type-data: 0.8125rem; /* 13px */
+  color-scheme: dark;
 }
 
+/* Keep `.dark` in sync with `:root` so next-themes class toggles and any
+   nested `.dark` surfaces (e.g. prelogin) resolve the same navy palette. */
 .dark {
-  /* Marketing / global dark: trading-terminal navy + gold CTAs (prelogin).
-     Authenticated desk chrome aligns via `.desk-chrome`. Research: keep gold
-     for CTA heritage; LIVE status = trader green; blue = interactive;
-     green/red = +/- only. Avoid raw Tailwind SaaS (purple washes). */
   --background: #0b0f19;
   --foreground: #f9fafb;
   --card: #111827;
@@ -170,8 +165,6 @@
   --sidebar-border: #1e293b;
   --sidebar-ring: #f0c14b;
 
-  /* Marketing dark: terminal navy so prelogin and desk feel one product.
-     Gold = CTA; LIVE status = trader emerald; blue = interactive/links. */
   --desk-app: #0b0f19;
   --desk-sidebar: #080c14;
   --desk-panel: #111827;
@@ -201,14 +194,84 @@
   --desk-shimmer: rgba(255, 255, 255, 0.1);
   --desk-glow: rgba(240, 193, 75, 0.11);
   --desk-glow-chart: rgba(59, 130, 246, 0.1);
+  color-scheme: dark;
+}
+
+/* Opt-in light theme (Appearance toggle). Paper-white panels; gold CTA
+   heritage; green LIVE; blue interactive; green/red +/- only. */
+.light {
+  --background: oklch(0.98 0.01 250);
+  --foreground: oklch(0.18 0.02 250);
+  --card: oklch(1 0.005 250);
+  --card-foreground: oklch(0.18 0.02 250);
+  --popover: oklch(1 0.005 250);
+  --popover-foreground: oklch(0.18 0.02 250);
+  --primary: oklch(0.72 0.15 75);
+  --primary-foreground: oklch(0.18 0.02 80);
+  --secondary: oklch(0.94 0.015 250);
+  --secondary-foreground: oklch(0.25 0.02 250);
+  --muted: oklch(0.94 0.01 250);
+  --muted-foreground: oklch(0.45 0.02 250);
+  --accent: oklch(0.93 0.03 250);
+  --accent-foreground: oklch(0.22 0.03 250);
+  --destructive: oklch(0.55 0.2 25);
+  --border: oklch(0.88 0.015 250);
+  --input: oklch(0.88 0.015 250);
+  --ring: oklch(0.65 0.08 250);
+  --steel: oklch(0.55 0.08 250);
+  --steel-foreground: oklch(0.35 0.06 250);
+  --chart-1: oklch(0.72 0.15 75);
+  --chart-2: oklch(0.55 0.08 250);
+  --chart-3: oklch(0.45 0.04 250);
+  --chart-4: oklch(0.35 0.03 250);
+  --chart-5: oklch(0.28 0.02 250);
+  --sidebar: oklch(0.97 0.01 250);
+  --sidebar-foreground: oklch(0.18 0.02 250);
+  --sidebar-primary: oklch(0.55 0.08 250);
+  --sidebar-primary-foreground: oklch(0.98 0.01 250);
+  --sidebar-accent: oklch(0.94 0.015 250);
+  --sidebar-accent-foreground: oklch(0.25 0.02 250);
+  --sidebar-border: oklch(0.88 0.015 250);
+  --sidebar-ring: oklch(0.65 0.08 250);
+
+  --desk-app: #f6f6f4;
+  --desk-sidebar: #ffffff;
+  --desk-panel: #ffffff;
+  --desk-header: #ffffff;
+  --desk-border: #e6e6e3;
+  --desk-border-strong: #d3d3cf;
+  --desk-text: #17181a;
+  --desk-text-secondary: #3a3b3e;
+  --desk-text-muted: #56575c;
+  --desk-text-dim: #6a6b70;
+  --desk-accent: #3a3a3a;
+  --desk-accent-fg: #17181a;
+  --desk-live: #9a6b00;
+  --desk-live-status: #059669;
+  --desk-interactive: #2563eb;
+  --desk-link: #2563eb;
+  --desk-chart-accent: #3b82f6;
+  --desk-positive: #16a34a;
+  --desk-negative: #dc2626;
+  --desk-warn-bg: rgba(245, 158, 11, 0.18);
+  --desk-warn-border: rgba(217, 119, 6, 0.45);
+  --desk-warn-text: #b45309;
+  --desk-nav-active: rgba(0, 0, 0, 0.05);
+  --desk-overlay-soft: rgba(0, 0, 0, 0.035);
+  --desk-overlay-strong: rgba(0, 0, 0, 0.07);
+  --desk-grid-line: rgba(0, 0, 0, 0.045);
+  --desk-shimmer: rgba(0, 0, 0, 0.06);
+  --desk-glow: rgba(0, 0, 0, 0.05);
+  --desk-glow-chart: rgba(59, 130, 246, 0.06);
+  color-scheme: light;
 }
 
 /*
  * Authenticated desk shell (AppShell): terminal navy matching marketing dark
  * so prelogin → desk is one product. Gold CTA; LIVE status green; blue
- * interactive; green/red +/-. Only when html has `.dark` (theme toggle).
+ * interactive; green/red +/-.
  */
-.dark .desk-chrome {
+.desk-chrome {
   --background: #0b0f19;
   --foreground: #f9fafb;
   --card: #111827;
@@ -250,6 +313,50 @@
   --desk-grid-line: rgba(255, 255, 255, 0.03);
   --desk-nav-active: rgba(255, 255, 255, 0.07);
   color-scheme: dark;
+}
+
+.light .desk-chrome {
+  --background: oklch(0.98 0.01 250);
+  --foreground: oklch(0.18 0.02 250);
+  --card: oklch(1 0.005 250);
+  --card-foreground: oklch(0.18 0.02 250);
+  --popover: oklch(1 0.005 250);
+  --popover-foreground: oklch(0.18 0.02 250);
+  --secondary: oklch(0.94 0.015 250);
+  --secondary-foreground: oklch(0.25 0.02 250);
+  --muted: oklch(0.94 0.01 250);
+  --muted-foreground: oklch(0.45 0.02 250);
+  --accent: oklch(0.93 0.03 250);
+  --accent-foreground: oklch(0.22 0.03 250);
+  --border: oklch(0.88 0.015 250);
+  --input: oklch(0.88 0.015 250);
+  --sidebar: oklch(0.97 0.01 250);
+  --sidebar-foreground: oklch(0.18 0.02 250);
+  --sidebar-accent: oklch(0.94 0.015 250);
+  --sidebar-accent-foreground: oklch(0.25 0.02 250);
+  --sidebar-border: oklch(0.88 0.015 250);
+
+  --desk-app: #f6f6f4;
+  --desk-sidebar: #ffffff;
+  --desk-panel: #ffffff;
+  --desk-header: #ffffff;
+  --desk-border: #e6e6e3;
+  --desk-border-strong: #d3d3cf;
+  --desk-text: #17181a;
+  --desk-text-secondary: #3a3b3e;
+  --desk-text-muted: #56575c;
+  --desk-text-dim: #6a6b70;
+  --desk-live-status: #059669;
+  --desk-interactive: #2563eb;
+  --desk-link: #2563eb;
+  --desk-chart-accent: #3b82f6;
+  --desk-positive: #16a34a;
+  --desk-negative: #dc2626;
+  --desk-overlay-soft: rgba(0, 0, 0, 0.035);
+  --desk-overlay-strong: rgba(0, 0, 0, 0.07);
+  --desk-grid-line: rgba(0, 0, 0, 0.045);
+  --desk-nav-active: rgba(0, 0, 0, 0.05);
+  color-scheme: light;
 }
 
 @layer base {
@@ -622,7 +729,7 @@
 
   /* Authenticated `/catalyst-feed` dashboard grid — fills the navy desk
      chrome from `.desk-chrome`. Token overrides live on the shell so sidebar
-     / header / feed share one palette; light theme uses `:root` desk tokens. */
+     / header / feed share one palette; light theme uses `.light` desk tokens. */
   .desk-dashboard {
     background-color: var(--desk-app);
   }
