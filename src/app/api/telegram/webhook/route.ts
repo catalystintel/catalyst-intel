@@ -41,10 +41,17 @@ export async function POST(request: NextRequest) {
     await sendTelegramMessage({
       chatId: String(chatId),
       text: [
-        "Catalyst Intel bot connected.",
-        `Your chat ID: ${chatId}`,
+        "Catalyst Intel",
         "",
-        "Paste that chat ID into a Telegram alert rule at /alerts to start receiving fires here.",
+        "This chat is linked for catalyst alerts.",
+        `Chat ID: ${chatId}`,
+        "",
+        "Next steps:",
+        "1. Open Alerts in Catalyst Intel",
+        "2. Choose Telegram and paste this chat ID",
+        "3. Save the rule, then tap Test to confirm delivery",
+        "",
+        "You will receive a calm, scannable message for each matching catalyst — symbol, impact, session, and a link back to the desk.",
       ].join("\n"),
     });
   }
