@@ -193,7 +193,6 @@ export function earningsToNormalized(
       .join(" · "),
     confidence: 70,
     tags: [
-      "finnhub",
       "earnings",
       hour,
       quarter,
@@ -244,7 +243,7 @@ export function fdaToNormalized(row: FdaRow): NormalizedCatalyst | null {
     timestamp: new Date(`${date}T12:00:00.000Z`).toISOString(),
     summary: [row.indication, row.status].filter(Boolean).join(" · ") || null,
     confidence: 65,
-    tags: ["finnhub", "fda", "regulatory", ...(isApproval ? ["approval"] : [])],
+    tags: ["fda", "regulatory", ...(isApproval ? ["approval"] : [])],
   };
 }
 
@@ -285,13 +284,7 @@ export function recommendationToNormalized(
     timestamp: new Date(`${period}T12:00:00.000Z`).toISOString(),
     summary: `${stance} · ${period} · SB ${strongBuy} / Buy ${buy} / Hold ${hold} / Sell ${sell} / SS ${strongSell}`,
     confidence: 60,
-    tags: [
-      "finnhub",
-      "analyst",
-      "ratings",
-      "recommendation",
-      "bz:analyst_ratings",
-    ],
+    tags: ["analyst", "ratings", "recommendation", "bz:analyst_ratings"],
   };
 }
 
@@ -345,7 +338,7 @@ export function priceTargetToNormalized(
       .filter(Boolean)
       .join(" · "),
     confidence: 58,
-    tags: ["finnhub", "analyst", "price_target", "bz:analyst_ratings"],
+    tags: ["analyst", "price_target", "bz:analyst_ratings"],
   };
 }
 
@@ -388,18 +381,26 @@ export function companyNewsToNormalized(
     provider: "finnhub",
     externalId: `finnhub:news:${id}`,
     url: row.url ?? null,
-    rawContent: row,
+    rawContent: {
+      id: row.id ?? null,
+      headline,
+      summary,
+      datetime: row.datetime ?? null,
+      related: row.related ?? null,
+      category: row.category ?? null,
+      // Omit vendor `source` / publisher origin from persisted raw.
+    },
     symbol: symbol,
     companyName: symbol,
     type: "Company News",
     title,
-    headline: source,
+    headline: null,
     eventCategory: classified.eventCategory,
     subcategory: classified.subcategory,
     timestamp: ts,
     summary,
     confidence: 62,
-    tags: ["finnhub", "news", ...classified.tags, ...(symbol ? [symbol] : [])],
+    tags: ["news", ...classified.tags, ...(symbol ? [symbol] : [])],
   };
 }
 
@@ -445,7 +446,7 @@ export function ipoToNormalized(row: IpoRow): NormalizedCatalyst | null {
         .filter(Boolean)
         .join(" · ") || null,
     confidence: 60,
-    tags: ["finnhub", "ipo", "capital"],
+    tags: ["ipo", "capital"],
   };
 }
 

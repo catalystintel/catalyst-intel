@@ -180,7 +180,7 @@ describe("companyNewsToNormalized", () => {
     });
     expect(item).toMatchObject({
       provider: "finnhub",
-      headline: "SeekingAlpha",
+      headline: null,
       title: "Johnson & Johnson - Upgraded to Hold",
       eventCategory: "analyst",
       subcategory: "upgrade",

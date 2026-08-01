@@ -65,21 +65,28 @@ describe("publicReceiptToArticle / category map", () => {
       eventCategory: "capital",
       subcategory: "financing_offering",
       url: null,
-      headline: "PR Wire",
+      type: "Press Release",
+      headline: "financing / offering",
       confidence: 88,
-      historicalImpact: {
-        provider: "pr-wire",
-        status: "settled",
-        pctChange: -12.5,
-        maxAbs: 12.5,
-      },
     });
+    expect(normalized?.historicalImpact).toMatchObject({
+      status: "settled",
+      pctChange: -12.5,
+      maxAbs: 12.5,
+    });
+    expect(
+      (normalized?.historicalImpact as Record<string, unknown> | null)
+        ?.provider,
+    ).toBeUndefined();
     expect(normalized?.rawContent).toMatchObject({
       extracted: {
         keyFacts: expect.any(Array),
       },
     });
+    expect(normalized?.rawContent).not.toHaveProperty("publisherName");
+    expect(normalized?.rawContent).not.toHaveProperty("wireSource");
     expect(normalized?.tags).toContain("biotech_catalyst");
+    expect(normalized?.tags).not.toContain("wire");
     expect(containsBlockedWireTrace(JSON.stringify(normalized))).toBe(false);
   });
 
@@ -122,8 +129,8 @@ describe("publicReceiptToArticle / category map", () => {
 });
 
 describe("prWirePublisherLabel", () => {
-  it("keeps real wire houses", () => {
-    expect(prWirePublisherLabel("Business Wire")).toBe("Business Wire");
-    expect(prWirePublisherLabel(null)).toBe("PR Wire");
+  it("never returns a wire-house or product source byline", () => {
+    expect(prWirePublisherLabel("Business Wire")).toBeNull();
+    expect(prWirePublisherLabel(null)).toBeNull();
   });
 });

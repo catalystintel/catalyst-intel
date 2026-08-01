@@ -7,7 +7,6 @@ import { toast } from "sonner";
 import { CategoryBadge } from "@/components/category-badge";
 import { SkeletonCard } from "@/components/loading-skeleton";
 import type { NewsHeadline } from "@/lib/catalysts/news-feed-query";
-import { newsSourceLabel } from "@/lib/catalysts/news-source-label";
 import {
   FEED_TIME_WINDOWS,
   type FeedTimeWindow,
@@ -271,10 +270,9 @@ export function NewsFeed({ initialHeadlines, initialTotal }: Props) {
       </div>
 
       <div className="min-h-0 flex-1 overflow-hidden rounded-md border border-[var(--desk-border)] bg-[var(--desk-panel)]">
-        <div className="hidden grid-cols-[4.5rem_minmax(0,1fr)_8rem_2.5rem_7rem_5rem] gap-3 border-b border-[var(--desk-border)] px-4 py-2 font-mono text-[0.6rem] tracking-[0.1em] text-[var(--desk-text-dim)] uppercase sm:grid">
+        <div className="hidden grid-cols-[4.5rem_minmax(0,1fr)_2.5rem_7rem_5rem] gap-3 border-b border-[var(--desk-border)] px-4 py-2 font-mono text-[0.6rem] tracking-[0.1em] text-[var(--desk-text-dim)] uppercase sm:grid">
           <span>Symbol</span>
           <span>Headline</span>
-          <span>Source</span>
           <span>Lean</span>
           <span>Category</span>
           <span className="text-right">Time</span>
@@ -332,7 +330,7 @@ function HeadlineRow({
     <li>
       <Link
         href={`/catalyst-feed/catalyst/${h.id}`}
-        className="grid grid-cols-[4rem_minmax(0,1fr)_3rem] items-start gap-2 px-3 py-2.5 transition-colors hover:bg-[var(--desk-overlay-soft)] sm:grid-cols-[4.5rem_minmax(0,1fr)_8rem_2.5rem_7rem_5rem] sm:gap-3 sm:px-4"
+        className="grid grid-cols-[4rem_minmax(0,1fr)_3rem] items-start gap-2 px-3 py-2.5 transition-colors hover:bg-[var(--desk-overlay-soft)] sm:grid-cols-[4.5rem_minmax(0,1fr)_2.5rem_7rem_5rem] sm:gap-3 sm:px-4"
       >
         <span className="font-mono text-[0.8rem] font-semibold text-[var(--desk-text)]">
           {h.symbol ?? <span className="text-[var(--desk-text-dim)]">—</span>}
@@ -344,14 +342,7 @@ function HeadlineRow({
           </span>
           <span className="mt-0.5 flex flex-wrap items-center gap-1.5 sm:hidden">
             {h.eventCategory && <CategoryBadge category={h.eventCategory} />}
-            <span className="font-mono text-[0.65rem] text-[var(--desk-text-dim)]">
-              {newsSourceLabel(h)}
-            </span>
           </span>
-        </span>
-
-        <span className="hidden truncate font-mono text-[0.68rem] text-[var(--desk-text-muted)] sm:block">
-          {newsSourceLabel(h)}
         </span>
 
         <span className="hidden sm:flex sm:items-start sm:pt-0.5">

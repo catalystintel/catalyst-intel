@@ -27,6 +27,7 @@ import {
   rateLimitExceededResponse,
   withRateLimitHeaders,
 } from "@/lib/http/rate-limit-response";
+import { toPublicFeedCatalyst } from "@/lib/catalysts/public-catalyst";
 import { isLocalDevUi } from "@/lib/dev/local-dev-ui";
 import { fetchAllCatalystSources } from "@/lib/jobs/fetch-all-sources";
 import {
@@ -124,7 +125,8 @@ export async function GET(request: NextRequest) {
 
   return withRateLimitHeaders(
     NextResponse.json({
-      catalysts: rows,
+      // Client-safe shape only — no rawContent / vendor origins in network JSON.
+      catalysts: rows.map(toPublicFeedCatalyst),
       fetchedAt: new Date().toISOString(),
       lastIngestedAt,
       window: filters.timeWindow,

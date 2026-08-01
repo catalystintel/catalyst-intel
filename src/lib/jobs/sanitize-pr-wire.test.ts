@@ -17,15 +17,25 @@ describe("sanitizePrWireText", () => {
     expect(cleaned && containsBlockedWireTrace(cleaned)).toBe(false);
   });
 
+  it("strips wire-house brands from body text", () => {
+    const cleaned = sanitizePrWireText(
+      "AUBURN HILLS /PRNewswire/ -- Company announced a deal. Business Wire also covered it.",
+    );
+    expect(cleaned).not.toMatch(/PRNewswire|Business Wire/i);
+    expect(cleaned).toMatch(/Company announced/);
+  });
+
   it("returns null for empty after sanitize", () => {
     expect(sanitizePrWireText("RTPR")).toBeNull();
   });
 });
 
 describe("sanitizePrWirePublisher", () => {
-  it("maps aggregator brand to PR Wire", () => {
-    expect(sanitizePrWirePublisher("RTPR")).toBe("PR Wire");
-    expect(sanitizePrWirePublisher("Business Wire")).toBe("Business Wire");
+  it("never returns a wire-house or aggregator byline", () => {
+    expect(sanitizePrWirePublisher("RTPR")).toBeNull();
+    expect(sanitizePrWirePublisher("Business Wire")).toBeNull();
+    expect(sanitizePrWirePublisher("PR Newswire")).toBeNull();
+    expect(sanitizePrWirePublisher("PR Wire")).toBeNull();
   });
 });
 

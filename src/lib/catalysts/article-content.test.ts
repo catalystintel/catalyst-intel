@@ -296,9 +296,9 @@ describe("synthesizeReadableSummary", () => {
 });
 
 describe("originalSourceLabel", () => {
-  it("labels SEC distinctly from generic news", () => {
-    expect(originalSourceLabel("sec-edgar")).toBe("Original on SEC EDGAR");
+  it("uses generic proof labels without vendor brands", () => {
+    expect(originalSourceLabel("sec-edgar")).toBe("Original filing");
     expect(originalSourceLabel("polygon")).toBe("Original article");
-    expect(originalSourceLabel(null)).toBe("View original source");
+    expect(originalSourceLabel(null)).toBe("View original");
   });
 });

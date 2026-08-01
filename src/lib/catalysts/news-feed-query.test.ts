@@ -8,8 +8,13 @@ import {
 } from "./news-feed-query";
 
 describe("news-feed-query", () => {
-  it("recognizes the three news type labels", () => {
-    expect(NEWS_FEED_TYPES).toEqual(["Company News", "Wire", "Market News"]);
+  it("recognizes news type labels including press releases", () => {
+    expect(NEWS_FEED_TYPES).toEqual([
+      "Company News",
+      "Wire",
+      "Press Release",
+      "Market News",
+    ]);
   });
 
   it("builds a non-null identity SQL fragment", () => {
@@ -51,11 +56,11 @@ describe("news-feed-query", () => {
       id: 1,
       symbol: "AAPL",
       companyName: "Apple",
-      type: "Wire",
+      type: "Press Release",
       title: "Apple beats estimates",
       headline: "Benzinga Wire",
       eventCategory: "earnings",
-      subcategory: "earnings_news",
+      subcategory: "benzinga_wire",
       timestamp: "2026-07-25T12:00:00.000Z",
       summary: "Beat",
       impactScore: 70,
@@ -67,11 +72,20 @@ describe("news-feed-query", () => {
     expect(row.eventCategory).toBe("earnings");
     expect(row.sentiment).toBe("bullish");
     expect(row.symbol).toBe("AAPL");
+    expect(row.headline).toBeNull();
+    expect(row.subcategory).toBe("press_release");
+    // Production payloads omit vendor origin fields.
+    expect(row.sourceProvider).toBeNull();
+    expect(row.sourceUrl).toBeNull();
+    expect(row.externalId).toBeNull();
 
     const bad = toNewsHeadline({
       ...row,
       eventCategory: "not-a-category",
       sentiment: "mixed",
+      sourceProvider: "polygon",
+      sourceUrl: "https://example.com",
+      externalId: "polygon:news:1",
     });
     expect(bad.eventCategory).toBeNull();
     expect(bad.sentiment).toBeNull();
