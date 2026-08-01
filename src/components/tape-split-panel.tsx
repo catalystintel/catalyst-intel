@@ -341,7 +341,7 @@ export function TapeSplitPanel({
                     ) : (
                       <>
                         {change.text}
-                        <span className="ml-1.5 text-[0.7rem] tracking-wide text-[var(--desk-text-dim)] uppercase">
+                        <span className="ml-1.5 text-[0.7rem] tracking-wide text-[var(--desk-text-dim)]">
                           {changeLabel}
                         </span>
                       </>

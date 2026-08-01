@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  CHART_RANGES,
+  chartRangeDef,
   chartRangeWindow,
   finnhubResolutionForRange,
   isChartRangeKey,
@@ -19,6 +21,21 @@ describe("chart-range", () => {
     expect(isChartRangeKey("30m")).toBe(true);
     expect(isChartRangeKey("1H")).toBe(true);
     expect(isChartRangeKey("2Y")).toBe(false);
+  });
+
+  it("uses professional display labels without collapsing minute/month keys", () => {
+    expect(chartRangeDef("1m").label).toBe("1 Min");
+    expect(chartRangeDef("5m").label).toBe("5 Min");
+    expect(chartRangeDef("10m").label).toBe("10 Min");
+    expect(chartRangeDef("30m").label).toBe("30 Min");
+    expect(chartRangeDef("1H").label).toBe("1H");
+    expect(chartRangeDef("1M").label).toBe("1 Mo");
+    expect(chartRangeDef("3M").label).toBe("3 Mo");
+    expect(chartRangeDef("6M").label).toBe("6 Mo");
+    // Chip labels must not equal ambiguous bare "1M" for both units.
+    const labels = CHART_RANGES.map((r) => r.label);
+    expect(labels.filter((l) => l === "1M")).toHaveLength(0);
+    expect(new Set(labels).size).toBe(labels.length);
   });
 
   it("parses range params without collapsing 1m into 1M", () => {

@@ -45,30 +45,32 @@ export type ChartRangeDef = {
 
 export const CHART_RANGES: readonly ChartRangeDef[] = [
   // Short windows use 1-minute bars so catalyst reaction is readable.
+  // Display labels stay distinct from keys: minutes use "Min", months "Mo"
+  // (keys remain `1m` vs `1M` for API case-sensitivity).
   {
     key: "1m",
-    label: "1m",
+    label: "1 Min",
     interval: "1",
     lookbackDays: null,
     lookbackMinutes: 1,
   },
   {
     key: "5m",
-    label: "5m",
+    label: "5 Min",
     interval: "1",
     lookbackDays: null,
     lookbackMinutes: 5,
   },
   {
     key: "10m",
-    label: "10m",
+    label: "10 Min",
     interval: "1",
     lookbackDays: null,
     lookbackMinutes: 10,
   },
   {
     key: "30m",
-    label: "30m",
+    label: "30 Min",
     interval: "1",
     lookbackDays: null,
     lookbackMinutes: 30,
@@ -98,21 +100,21 @@ export const CHART_RANGES: readonly ChartRangeDef[] = [
   },
   {
     key: "1M",
-    label: "1M",
+    label: "1 Mo",
     interval: "D",
     lookbackDays: 31,
     lookbackMinutes: null,
   },
   {
     key: "3M",
-    label: "3M",
+    label: "3 Mo",
     interval: "D",
     lookbackDays: 93,
     lookbackMinutes: null,
   },
   {
     key: "6M",
-    label: "6M",
+    label: "6 Mo",
     interval: "D",
     lookbackDays: 186,
     lookbackMinutes: null,
