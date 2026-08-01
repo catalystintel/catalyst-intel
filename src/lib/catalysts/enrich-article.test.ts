@@ -151,26 +151,35 @@ describe("fetchArticleEnrichment", () => {
     finnhubKey.mockReturnValue("fh-test");
     polygonKey.mockReturnValue(null);
     const fetchMock = fetch as unknown as ReturnType<typeof vi.fn>;
-    fetchMock.mockResolvedValue(
-      Response.json({
-        c: 10,
-        d: 0,
-        dp: 0,
-        h: 10,
-        l: 10,
-        o: 10,
-        pc: 10,
-        t: 1,
-      }),
-    );
+    fetchMock.mockImplementation(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes("/stock/profile2")) {
+        return Response.json({ name: "NVIDIA", symbol: "NVDA" });
+      }
+      if (url.includes("/company-news")) {
+        return Response.json([]);
+      }
+      if (url.includes("/quote")) {
+        return Response.json({
+          c: 10,
+          d: 0,
+          dp: 0,
+          h: 10,
+          l: 10,
+          o: 10,
+          pc: 10,
+          t: 1,
+        });
+      }
+      return new Response("not found", { status: 404 });
+    });
 
     await fetchArticleEnrichment({ symbol: "NVDA" });
     await fetchArticleEnrichment({ symbol: "NVDA" });
 
-    // profile + news + quote once each (3), not doubled
+    // profile + news + quote once each (3), not doubled — Yahoo not hit
     expect(fetchMock).toHaveBeenCalledTimes(3);
   });
-
   it("falls back to Polygon news and prev quote without Finnhub", async () => {
     finnhubKey.mockReturnValue(null);
     polygonKey.mockReturnValue("poly-test");
@@ -190,9 +199,24 @@ describe("fetchArticleEnrichment", () => {
             ],
           });
         }
-        if (url.includes("/prev")) {
+        if (url.includes("/range/1/day/")) {
           return Response.json({
-            results: [{ o: 100, c: 105, h: 106, l: 99, t: 1_720_000_000_000 }],
+            results: [
+              {
+                o: 98,
+                c: 100,
+                h: 101,
+                l: 97,
+                t: 1_720_000_000_000,
+              },
+              {
+                o: 100,
+                c: 105,
+                h: 106,
+                l: 99,
+                t: 1_720_086_400_000,
+              },
+            ],
           });
         }
         return new Response("not found", { status: 404 });

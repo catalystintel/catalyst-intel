@@ -49,8 +49,13 @@ function formatPrice(n: number | null | undefined): string {
 function formatChange(
   change: number | null | undefined,
   pct: number | null | undefined,
+  opts?: { maxAbsPct?: number },
 ): { text: string; up: boolean | null } {
   if (change == null || pct == null) return { text: "—", up: null };
+  const maxAbs = opts?.maxAbsPct;
+  if (maxAbs != null && Math.abs(pct) > maxAbs) {
+    return { text: "—", up: null };
+  }
   const sign = change > 0 ? "+" : "";
   return {
     text: `${sign}${change.toFixed(2)} (${sign}${pct.toFixed(2)}%)`,
@@ -262,6 +267,8 @@ export function TapeSplitPanel({
   const change = formatChange(
     useRangeMove ? rangePerf?.change : market?.quote?.change,
     useRangeMove ? rangePerf?.changePercent : market?.quote?.changePercent,
+    // Session (1D) moves of hundreds of % are almost always bad vendor data.
+    useRangeMove ? undefined : { maxAbsPct: 200 },
   );
   const changeLabel = chartRangeDef(chartRange).label;
 
@@ -528,11 +535,12 @@ export function TapeSplitPanel({
           </dl>
         </div>
 
-        {tvSymbol ? (
+        {symbol ? (
           <div className="shrink-0 bg-[var(--desk-bg,#0b0f19)]">
             <DeskLightweightChart
-              key={tvSymbol}
-              symbol={tvSymbol}
+              key={symbol}
+              symbol={symbol}
+              displaySymbol={tvSymbol}
               range={chartRange}
               onRangeChange={setChartRange}
               eventTimeSec={

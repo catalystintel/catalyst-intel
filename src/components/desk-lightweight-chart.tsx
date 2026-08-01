@@ -26,7 +26,7 @@ import { toUserFacingMessage } from "@/lib/errors/user-facing";
 type CandlesPayload = {
   symbol: string;
   range: ChartRangeKey;
-  provider: "finnhub" | "polygon" | "demo";
+  provider: "finnhub" | "polygon" | "yahoo" | "demo" | null;
   candles: DeskCandle[];
 };
 
@@ -89,13 +89,17 @@ function chartTheme(isDark: boolean): ChartTheme {
  */
 export function DeskLightweightChart({
   symbol,
+  displaySymbol,
   className,
   allowFullscreen = true,
   range = DEFAULT_CHART_RANGE,
   onRangeChange,
   eventTimeSec = null,
 }: {
+  /** Bare vendor ticker used for `/api/market/candles` (never `EXCHANGE:SYM`). */
   symbol: string;
+  /** Optional TradingView-style label shown in the header. */
+  displaySymbol?: string | null;
   className?: string;
   allowFullscreen?: boolean;
   range?: ChartRangeKey;
@@ -104,6 +108,7 @@ export function DeskLightweightChart({
   eventTimeSec?: number | null;
 }) {
   const trimmed = symbol.trim().toUpperCase();
+  const label = (displaySymbol?.trim() || trimmed).toUpperCase();
   const hostRef = useRef<HTMLDivElement | null>(null);
   const fullHostRef = useRef<HTMLDivElement | null>(null);
   const [fullscreen, setFullscreen] = useState(false);
@@ -195,7 +200,8 @@ export function DeskLightweightChart({
     );
   }
 
-  const isDemo = payload?.provider === "demo";
+  const isDemo =
+    payload?.provider === "demo" && (payload.candles?.length ?? 0) > 0;
   const last = payload?.candles[payload.candles.length - 1];
   const first = payload?.candles[0];
   // Never surface demo OHLC as a real session % — traders read the big green
@@ -205,7 +211,12 @@ export function DeskLightweightChart({
     change != null && first && first.open !== 0
       ? (change / first.open) * 100
       : null;
-  const up = change == null ? null : change === 0 ? null : change > 0;
+  // Hide absurd chart % (bad vendor bars / unadjusted reverse splits).
+  const safeChangePct =
+    changePct != null && Math.abs(changePct) <= 200 ? changePct : null;
+  const safeChange = safeChangePct != null ? change : null;
+  const up =
+    safeChange == null ? null : safeChange === 0 ? null : safeChange > 0;
   const hasEventMarker =
     eventTimeSec != null &&
     Number.isFinite(eventTimeSec) &&
@@ -255,7 +266,7 @@ export function DeskLightweightChart({
       <div className="min-w-0">
         <div className="flex flex-wrap items-center gap-2">
           <p className="font-mono text-[0.7rem] font-semibold tracking-[0.16em] text-[var(--desk-text)] uppercase">
-            {trimmed}
+            {label}
           </p>
           <span className="font-mono text-[0.62rem] tracking-[0.12em] text-[var(--desk-text-dim)] uppercase">
             {range}
@@ -276,7 +287,7 @@ export function DeskLightweightChart({
               <span className="text-lg font-semibold text-[var(--desk-text)] tabular-nums">
                 {last ? last.close.toFixed(2) : loading ? "…" : "—"}
               </span>
-              {change != null && changePct != null ? (
+              {safeChange != null && safeChangePct != null ? (
                 <span
                   className={cn(
                     "text-xs tabular-nums",
@@ -285,9 +296,9 @@ export function DeskLightweightChart({
                     up == null && "text-[var(--desk-text-muted)]",
                   )}
                 >
-                  {change > 0 ? "+" : ""}
-                  {change.toFixed(2)} ({changePct > 0 ? "+" : ""}
-                  {changePct.toFixed(2)}%)
+                  {safeChange > 0 ? "+" : ""}
+                  {safeChange.toFixed(2)} ({safeChangePct > 0 ? "+" : ""}
+                  {safeChangePct.toFixed(2)}%)
                 </span>
               ) : null}
             </>
@@ -320,6 +331,7 @@ export function DeskLightweightChart({
         )}
         style={{ background: theme.bg }}
         data-lw-symbol={trimmed}
+        data-lw-label={label}
         data-lw-range={range}
       >
         {header}
@@ -368,7 +380,7 @@ export function DeskLightweightChart({
             <div className="flex shrink-0 items-center justify-between gap-3 border-b border-[var(--desk-border)] bg-[var(--desk-header)] px-4 py-2.5">
               <div className="min-w-0">
                 <p className="font-mono text-sm font-semibold tracking-wide text-[var(--desk-text)]">
-                  {trimmed}
+                  {label}
                   <span className="ml-2 font-normal tracking-[0.12em] text-[var(--desk-text-dim)] uppercase">
                     Chart · {range}
                   </span>
@@ -376,7 +388,7 @@ export function DeskLightweightChart({
                 {last ? (
                   <p className="mt-0.5 font-mono text-xs text-[var(--desk-text-secondary)] tabular-nums">
                     {last.close.toFixed(2)}
-                    {change != null && changePct != null ? (
+                    {safeChange != null && safeChangePct != null ? (
                       <span
                         className={cn(
                           "ml-2",
@@ -384,9 +396,9 @@ export function DeskLightweightChart({
                           up === false && "text-[var(--desk-negative)]",
                         )}
                       >
-                        {change > 0 ? "+" : ""}
-                        {change.toFixed(2)} ({changePct > 0 ? "+" : ""}
-                        {changePct.toFixed(2)}%)
+                        {safeChange > 0 ? "+" : ""}
+                        {safeChange.toFixed(2)} ({safeChangePct > 0 ? "+" : ""}
+                        {safeChangePct.toFixed(2)}%)
                       </span>
                     ) : null}
                   </p>

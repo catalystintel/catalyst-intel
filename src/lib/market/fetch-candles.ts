@@ -6,6 +6,8 @@ import {
   type ChartRangeKey,
 } from "@/lib/market/chart-range";
 import { getFinnhubApiKey, getPolygonApiKey } from "@/lib/jobs/vendor-env";
+import { toVendorBareSymbol } from "@/lib/market/vendor-symbol";
+import { fetchYahooCandles } from "@/lib/market/yahoo-market";
 
 const FINNHUB_BASE = "https://finnhub.io/api/v1";
 const POLYGON_BASE = "https://api.polygon.io";
@@ -23,11 +25,28 @@ export type DeskCandleSeries = {
   symbol: string;
   range: ChartRangeKey;
   candles: DeskCandle[];
-  provider: "finnhub" | "polygon" | "demo";
+  provider: "finnhub" | "polygon" | "yahoo" | "demo" | null;
 };
 
 function finite(n: unknown): n is number {
   return typeof n === "number" && Number.isFinite(n);
+}
+
+/**
+ * 1D fetches a multi-day window so weekends still hit a cash session — keep
+ * only the newest UTC trading day so chart % stays a session move, not 5D.
+ */
+export function keepLastSessionCandles(
+  candles: DeskCandle[],
+  range: ChartRangeKey,
+): DeskCandle[] {
+  if (range !== "1D" || candles.length === 0) return candles;
+  const last = candles[candles.length - 1]!;
+  const day = new Date(last.time * 1000).toISOString().slice(0, 10);
+  const filtered = candles.filter(
+    (c) => new Date(c.time * 1000).toISOString().slice(0, 10) === day,
+  );
+  return filtered.length > 0 ? filtered : candles;
 }
 
 /**
@@ -186,9 +205,11 @@ async function polygonOhlc(
 
 /**
  * OHLC for the desk Lightweight Charts blotter.
- * Prefers Finnhub → Polygon. Demo candles are opt-in only (tests / offline
- * demos) — never the default, or we paint a fake +N% move as if it were the
- * ticker (see PFSA SAMPLE chart bug).
+ * Prefers Finnhub → Polygon → Yahoo (keyless). Demo candles are opt-in only
+ * (tests / offline demos) — never the default, or we paint a fake +N% move
+ * as if it were the ticker (see PFSA SAMPLE chart bug).
+ *
+ * Always strip TradingView `EXCHANGE:` prefixes before vendor calls.
  */
 export async function fetchDeskCandles(options: {
   symbol: string;
@@ -197,7 +218,7 @@ export async function fetchDeskCandles(options: {
   /** When true, synthesize OHLC if vendors miss. Default false. */
   allowDemo?: boolean;
 }): Promise<DeskCandleSeries> {
-  const symbol = options.symbol.trim().toUpperCase();
+  const symbol = toVendorBareSymbol(options.symbol);
   const range = options.range;
   const now = options.now ?? new Date();
   const allowDemo = options.allowDemo === true;
@@ -207,7 +228,7 @@ export async function fetchDeskCandles(options: {
       symbol: "",
       range,
       candles: allowDemo ? buildDemoCandles(range, now) : [],
-      provider: "demo",
+      provider: allowDemo ? "demo" : null,
     };
   }
 
@@ -215,7 +236,12 @@ export async function fetchDeskCandles(options: {
   if (finnhubKey) {
     const candles = await finnhubOhlc(symbol, finnhubKey, range, now);
     if (candles) {
-      return { symbol, range, candles, provider: "finnhub" };
+      return {
+        symbol,
+        range,
+        candles: keepLastSessionCandles(candles, range),
+        provider: "finnhub",
+      };
     }
   }
 
@@ -223,14 +249,38 @@ export async function fetchDeskCandles(options: {
   if (polygonKey) {
     const candles = await polygonOhlc(symbol, polygonKey, range, now);
     if (candles) {
-      return { symbol, range, candles, provider: "polygon" };
+      return {
+        symbol,
+        range,
+        candles: keepLastSessionCandles(candles, range),
+        provider: "polygon",
+      };
     }
+  }
+
+  const yahooCandles = await fetchYahooCandles({ symbol, range });
+  if (yahooCandles && yahooCandles.length > 0) {
+    return {
+      symbol,
+      range,
+      candles: keepLastSessionCandles(yahooCandles, range),
+      provider: "yahoo",
+    };
+  }
+
+  if (allowDemo) {
+    return {
+      symbol,
+      range,
+      candles: buildDemoCandles(range, now),
+      provider: "demo",
+    };
   }
 
   return {
     symbol,
     range,
-    candles: allowDemo ? buildDemoCandles(range, now) : [],
-    provider: "demo",
+    candles: [],
+    provider: null,
   };
 }
