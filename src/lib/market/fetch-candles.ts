@@ -1,4 +1,5 @@
 import {
+  chartRangeDef,
   chartRangeWindow,
   finnhubResolutionForRange,
   isIntradayMinuteRange,
@@ -7,6 +8,7 @@ import {
   type ChartRangeKey,
 } from "@/lib/market/chart-range";
 import { getFinnhubApiKey, getPolygonApiKey } from "@/lib/jobs/vendor-env";
+import { sessionMoveFromPreviousClose } from "@/lib/market/session-move";
 import { toVendorBareSymbol } from "@/lib/market/vendor-symbol";
 import { fetchYahooCandles } from "@/lib/market/yahoo-market";
 
@@ -27,6 +29,11 @@ export type DeskCandleSeries = {
   range: ChartRangeKey;
   candles: DeskCandle[];
   provider: "finnhub" | "polygon" | "yahoo" | "demo" | null;
+  /**
+   * Prior session's last close (for 1D header % vs previous close).
+   * Null when unknown or not applicable to the selected range.
+   */
+  previousClose: number | null;
 };
 
 function finite(n: unknown): n is number {
@@ -44,6 +51,30 @@ export function clipCandlesToWindow(
 }
 
 /**
+ * Clip 1m–1H series to the lookback. When wall-clock `now` misses (weekend /
+ * after-hours), fall back to the last N minutes ending at the newest bar —
+ * never the full session (that painted the same open→close % on every chip).
+ */
+export function clipIntradayLookbackCandles(
+  candles: DeskCandle[],
+  range: ChartRangeKey,
+  now = new Date(),
+): DeskCandle[] {
+  if (!isIntradayMinuteRange(range) || candles.length === 0) return candles;
+  const mins = chartRangeDef(range).lookbackMinutes;
+  if (mins == null || mins <= 0) return candles;
+
+  const { fromSec, toSec } = chartRangeWindow(range, now);
+  const live = candles.filter((c) => c.time >= fromSec && c.time <= toSec);
+  if (live.length > 0) return live;
+
+  const last = candles[candles.length - 1]!;
+  const from = last.time - mins * 60;
+  const trailing = candles.filter((c) => c.time >= from && c.time <= last.time);
+  return trailing.length > 0 ? trailing : candles.slice(-1);
+}
+
+/**
  * 1D fetches a multi-day window so weekends still hit a cash session — keep
  * only the newest UTC trading day so chart % stays a session move, not 5D.
  */
@@ -58,6 +89,98 @@ export function keepLastSessionCandles(
     (c) => new Date(c.time * 1000).toISOString().slice(0, 10) === day,
   );
   return filtered.length > 0 ? filtered : candles;
+}
+
+/**
+ * Last close from the UTC day before the newest bar's session.
+ * Call on the multi-day series *before* `keepLastSessionCandles`.
+ */
+export function previousCloseFromPriorSession(
+  candles: DeskCandle[],
+): number | null {
+  if (candles.length === 0) return null;
+  const last = candles[candles.length - 1]!;
+  const lastDay = new Date(last.time * 1000).toISOString().slice(0, 10);
+  let priorClose: number | null = null;
+  for (const c of candles) {
+    const day = new Date(c.time * 1000).toISOString().slice(0, 10);
+    if (day < lastDay) {
+      priorClose = c.close;
+    }
+  }
+  return priorClose != null && Number.isFinite(priorClose) && priorClose > 0
+    ? priorClose
+    : null;
+}
+
+/**
+ * Chart header Δ: 1D uses previous close (exchange convention); other ranges
+ * use first open → last close of the visible lookback.
+ */
+export function chartHeaderMove(options: {
+  range: ChartRangeKey;
+  candles: DeskCandle[];
+  previousClose?: number | null;
+}): {
+  price: number | null;
+  change: number | null;
+  changePercent: number | null;
+} {
+  const { range, candles, previousClose } = options;
+  if (candles.length === 0) {
+    return { price: null, change: null, changePercent: null };
+  }
+  const last = candles[candles.length - 1]!;
+  const price = last.close;
+
+  if (range === "1D") {
+    const move = sessionMoveFromPreviousClose(price, previousClose);
+    return { price, change: move.change, changePercent: move.changePercent };
+  }
+
+  const first = candles[0]!;
+  const baseline = first.open;
+  if (!Number.isFinite(baseline) || baseline === 0 || !Number.isFinite(price)) {
+    return { price, change: null, changePercent: null };
+  }
+  const change = price - baseline;
+  const changePercent = (change / baseline) * 100;
+  // Lookbacks are allowed to be large (OTC / multi-month). Only drop
+  // non-finite values — the 200% session guard stays on the 1D path above.
+  if (!Number.isFinite(changePercent)) {
+    return { price, change: null, changePercent: null };
+  }
+  return {
+    price,
+    change: Number(change.toFixed(4)),
+    changePercent: Number(changePercent.toFixed(3)),
+  };
+}
+
+function finalizeSeries(options: {
+  symbol: string;
+  range: ChartRangeKey;
+  candles: DeskCandle[];
+  provider: DeskCandleSeries["provider"];
+  now?: Date;
+}): DeskCandleSeries {
+  const previousClose =
+    options.range === "1D"
+      ? previousCloseFromPriorSession(options.candles)
+      : null;
+  const sessionClipped = keepLastSessionCandles(options.candles, options.range);
+  const candles = clipIntradayLookbackCandles(
+    sessionClipped,
+    options.range,
+    options.now,
+  );
+  return {
+    symbol: options.symbol,
+    range: options.range,
+    candles,
+    provider: options.provider,
+    previousClose,
+  };
 }
 
 /**
@@ -251,6 +374,7 @@ export async function fetchDeskCandles(options: {
       range,
       candles: allowDemo ? buildDemoCandles(range, now) : [],
       provider: allowDemo ? "demo" : null,
+      previousClose: null,
     };
   }
 
@@ -258,12 +382,13 @@ export async function fetchDeskCandles(options: {
   if (finnhubKey) {
     const candles = await finnhubOhlc(symbol, finnhubKey, range, now);
     if (candles) {
-      return {
+      return finalizeSeries({
         symbol,
         range,
-        candles: keepLastSessionCandles(candles, range),
+        candles,
         provider: "finnhub",
-      };
+        now,
+      });
     }
   }
 
@@ -271,23 +396,30 @@ export async function fetchDeskCandles(options: {
   if (polygonKey) {
     const candles = await polygonOhlc(symbol, polygonKey, range, now);
     if (candles) {
-      return {
+      return finalizeSeries({
         symbol,
         range,
-        candles: keepLastSessionCandles(candles, range),
+        candles,
         provider: "polygon",
-      };
+        now,
+      });
     }
   }
 
-  const yahooCandles = await fetchYahooCandles({ symbol, range });
+  // Keep the multi-day 1D window so we can read prior-session close before clip.
+  const yahooCandles = await fetchYahooCandles({
+    symbol,
+    range,
+    clipToLastSession: false,
+  });
   if (yahooCandles && yahooCandles.length > 0) {
-    return {
+    return finalizeSeries({
       symbol,
       range,
-      candles: keepLastSessionCandles(yahooCandles, range),
+      candles: yahooCandles,
       provider: "yahoo",
-    };
+      now,
+    });
   }
 
   if (allowDemo) {
@@ -296,6 +428,7 @@ export async function fetchDeskCandles(options: {
       range,
       candles: buildDemoCandles(range, now),
       provider: "demo",
+      previousClose: null,
     };
   }
 
@@ -304,5 +437,6 @@ export async function fetchDeskCandles(options: {
     range,
     candles: [],
     provider: null,
+    previousClose: null,
   };
 }

@@ -21,7 +21,7 @@ import {
   chartUsesAreaSeries,
   type ChartRangeKey,
 } from "@/lib/market/chart-range";
-import type { DeskCandle } from "@/lib/market/fetch-candles";
+import { chartHeaderMove, type DeskCandle } from "@/lib/market/fetch-candles";
 import { cn } from "@/lib/utils";
 import { toUserFacingMessage } from "@/lib/errors/user-facing";
 
@@ -29,6 +29,7 @@ type CandlesPayload = {
   symbol: string;
   range: ChartRangeKey;
   provider: "finnhub" | "polygon" | "yahoo" | "demo" | null;
+  previousClose?: number | null;
   candles: DeskCandle[];
 };
 
@@ -205,18 +206,18 @@ export function DeskLightweightChart({
   const isDemo =
     payload?.provider === "demo" && (payload.candles?.length ?? 0) > 0;
   const last = payload?.candles[payload.candles.length - 1];
-  const first = payload?.candles[0];
-  // Never surface demo OHLC as a real session % — traders read the big green
-  // number first and miss the Sample chip.
-  const change = !isDemo && last && first ? last.close - first.open : null;
-  const changePct =
-    change != null && first && first.open !== 0
-      ? (change / first.open) * 100
-      : null;
-  // Hide absurd chart % (bad vendor bars / unadjusted reverse splits).
-  const safeChangePct =
-    changePct != null && Math.abs(changePct) <= 200 ? changePct : null;
-  const safeChange = safeChangePct != null ? change : null;
+  // 1D must use previous close (not session open) — open→last is a different
+  // statistic and was painting e.g. +7.7% when the real session move was ~1%.
+  const headerMove =
+    !isDemo && payload?.candles?.length
+      ? chartHeaderMove({
+          range,
+          candles: payload.candles,
+          previousClose: payload.previousClose,
+        })
+      : { price: null, change: null, changePercent: null };
+  const safeChange = headerMove.change;
+  const safeChangePct = headerMove.changePercent;
   const up =
     safeChange == null ? null : safeChange === 0 ? null : safeChange > 0;
   const hasEventMarker =

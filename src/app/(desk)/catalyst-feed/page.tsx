@@ -2,7 +2,7 @@ import { DeskDashboardGrid } from "@/components/desk-dashboard-grid";
 import { PageEnter } from "@/components/page-enter";
 import type { WatchlistCriteria } from "@/db/schema";
 import { getCurrentAppUser } from "@/lib/auth/current-user";
-import { toFeedCatalyst } from "@/lib/catalysts/feed-catalyst";
+import { toPublicFeedCatalyst } from "@/lib/catalysts/public-catalyst";
 import {
   DEFAULT_FEED_FILTERS,
   type FeedFilterState,
@@ -101,7 +101,7 @@ export default async function CatalystFeedPage({
   return (
     <PageEnter className="flex min-h-0 flex-1 flex-col p-4 sm:p-5">
       <DeskDashboardGrid
-        initialCatalysts={recentCatalysts.map(toFeedCatalyst)}
+        initialCatalysts={recentCatalysts.map(toPublicFeedCatalyst)}
         isAdmin={user.isAdmin}
         initialSymbolFilter={symbol?.trim().toUpperCase() || undefined}
         initialWatchlistCriteria={initialWatchlistCriteria}

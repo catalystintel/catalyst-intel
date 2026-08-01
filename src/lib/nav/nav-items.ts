@@ -3,7 +3,6 @@ import {
   Bookmark,
   ChartNoAxesCombined,
   LayoutDashboard,
-  Newspaper,
   Star,
   Wrench,
   type LucideIcon,
@@ -12,7 +11,6 @@ import {
 /** Stable identifier for the active nav entry, passed by each page. */
 export type NavKey =
   | "live"
-  | "news"
   | "watchlist"
   | "alerts"
   | "reports"
@@ -44,25 +42,21 @@ const PRIMARY_NAV: NavItem[] = [
     icon: LayoutDashboard,
     href: "/catalyst-feed",
   },
-  {
-    key: "news",
-    label: "News Feed",
-    icon: Newspaper,
-    href: "/news-feed",
-  },
   { key: "alerts", label: "Alerts", icon: Bell, href: "/alerts" },
   { key: "watchlist", label: "Watchlists", icon: Star, href: "/watchlist" },
   {
     key: "reports",
     label: "Reports",
     icon: Bookmark,
-    href: "/reports",
+    comingSoon: true,
+    comingSoonHint: "Saved digests and shareable snapshots",
   },
   {
     key: "analytics",
     label: "Analytics",
     icon: ChartNoAxesCombined,
-    href: "/analytics",
+    comingSoon: true,
+    comingSoonHint: "Volume, categories, and symbol heat over a window",
   },
 ];
 
@@ -90,7 +84,6 @@ export function getPrimaryNav(isAdmin: boolean): NavItem[] {
 export function navKeyFromPathname(pathname: string | null): NavKey {
   if (!pathname) return "live";
   if (pathname.startsWith("/catalyst-feed")) return "live";
-  if (pathname.startsWith("/news-feed")) return "news";
   if (pathname.startsWith("/analytics")) return "analytics";
   if (pathname.startsWith("/admin")) return "admin";
   if (pathname.startsWith("/alerts")) return "alerts";

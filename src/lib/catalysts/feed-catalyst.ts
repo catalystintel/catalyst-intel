@@ -96,6 +96,8 @@ export interface RawCatalystRow {
   sector?: string | null;
   /** Optional raw_sources.raw_content for keyFacts extraction. */
   rawContent?: unknown;
+  /** Pre-extracted keyFacts (public API already computed these). */
+  keyFacts?: { label: string; value: string }[];
 }
 
 function toEventCategory(
@@ -191,6 +193,21 @@ export function toFeedCatalyst(row: RawCatalystRow): FeedCatalyst {
     sourceUrl: row.sourceUrl,
     sourceProvider: row.sourceProvider ?? null,
     sector: normalizeToGicsLabel(row.sector) ?? row.sector ?? null,
-    keyFacts: normalizeKeyFacts(row.rawContent),
+    keyFacts:
+      Array.isArray(row.keyFacts) && row.keyFacts.length > 0
+        ? row.keyFacts
+            .filter((f): f is { label: string; value: string } =>
+              Boolean(
+                f &&
+                typeof f === "object" &&
+                typeof f.label === "string" &&
+                typeof f.value === "string" &&
+                f.label.trim() &&
+                f.value.trim(),
+              ),
+            )
+            .map((f) => ({ label: f.label.trim(), value: f.value.trim() }))
+            .slice(0, 6)
+        : normalizeKeyFacts(row.rawContent),
   };
 }

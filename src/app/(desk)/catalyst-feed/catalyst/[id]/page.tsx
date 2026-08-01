@@ -31,7 +31,10 @@ import {
   fetchArticleEnrichment,
   type ArticleEnrichment,
 } from "@/lib/catalysts/enrich-article";
-import { toFeedCatalyst } from "@/lib/catalysts/feed-catalyst";
+import {
+  scrubPublicArticleText,
+  toPublicFeedCatalyst,
+} from "@/lib/catalysts/public-catalyst";
 import { getCurrentAppUser } from "@/lib/auth/current-user";
 
 interface PageProps {
@@ -77,19 +80,19 @@ export default async function CatalystArticlePage({ params }: PageProps) {
 
   const row = { ...rowMeta, rawContent };
 
-  const catalyst = toFeedCatalyst(row);
-  const { body, source: bodySource } = extractArticleBody({
+  const catalyst = toPublicFeedCatalyst(row);
+  const { body: rawBody, source: bodySource } = extractArticleBody({
     provider: row.sourceProvider,
     rawContent: row.rawContent,
     summary: row.summary,
     title: row.title,
     headline: row.headline,
   });
-  const { summary, generated } = resolveArticleSummary({
+  const { summary: rawSummary, generated } = resolveArticleSummary({
     summary: row.summary,
     title: row.title,
     headline: row.headline,
-    body,
+    body: rawBody,
     symbol: row.symbol,
     companyName: row.companyName,
     eventCategory: row.eventCategory,
@@ -99,6 +102,8 @@ export default async function CatalystArticlePage({ params }: PageProps) {
     provider: row.sourceProvider,
     rawContent: row.rawContent,
   });
+  const body = scrubPublicArticleText(rawBody);
+  const summary = scrubPublicArticleText(rawSummary);
 
   const earningsMeta = {
     eventCategory: row.eventCategory,

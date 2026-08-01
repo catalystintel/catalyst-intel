@@ -5,8 +5,8 @@ import { databaseUnavailableMessage, isLibsqlConfigured } from "@/db/env";
 import { db } from "@/db/client";
 import { watchlists, type WatchlistCriteria } from "@/db/schema";
 import { getCurrentAppUser } from "@/lib/auth/current-user";
-import { toFeedCatalyst } from "@/lib/catalysts/feed-catalyst";
 import { queryFeedPage, queryFeedTotal } from "@/lib/catalysts/feed-query";
+import { toPublicFeedCatalyst } from "@/lib/catalysts/public-catalyst";
 import { getClientIp } from "@/lib/http/client-ip";
 import { RATE_LIMITS, checkRateLimit } from "@/lib/http/rate-limit";
 import {
@@ -76,7 +76,7 @@ export async function GET(
   return withRateLimitHeaders(
     NextResponse.json({
       total,
-      catalysts: rows.map(toFeedCatalyst),
+      catalysts: rows.map(toPublicFeedCatalyst),
     }),
     limitResult,
   );

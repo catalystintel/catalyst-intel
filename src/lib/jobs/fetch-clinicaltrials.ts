@@ -96,11 +96,7 @@ export async function fetchClinicalTrials(): Promise<SourceFetchResult> {
       timestamp: new Date(`${date}T12:00:00.000Z`).toISOString(),
       summary: [studyTitle, conditions.join(", ")].filter(Boolean).join(" · "),
       confidence: 65,
-      tags: [
-        "clinicaltrials",
-        "clinical",
-        ...conditions.map((c) => c.toLowerCase()).slice(0, 2),
-      ],
+      tags: ["clinical", ...conditions.map((c) => c.toLowerCase()).slice(0, 2)],
     });
   }
 

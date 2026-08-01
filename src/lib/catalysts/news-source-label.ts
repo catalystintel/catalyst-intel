@@ -1,5 +1,6 @@
 /**
  * Publisher / source label for a News Feed headline.
+ * Never names a vendor (Finnhub / Polygon / wire house) — product is the source.
  */
 
 import type { NewsHeadline } from "@/lib/catalysts/news-feed-query";
@@ -7,14 +8,14 @@ import type { NewsHeadline } from "@/lib/catalysts/news-feed-query";
 export function newsSourceLabel(h: NewsHeadline): string {
   if (
     h.type === "Wire" ||
+    h.type === "Press Release" ||
     h.subcategory === "benzinga_wire" ||
-    /benzinga wire/i.test(h.headline ?? "")
+    h.subcategory === "press_release" ||
+    h.subcategory === "pr_wire"
   ) {
-    return "Wire";
+    return "Press release";
   }
-  if (h.type === "Company News") return h.headline?.trim() || "Company news";
-  if (h.headline?.trim()) return h.headline.trim();
-  if (h.sourceProvider === "polygon") return "Polygon";
-  if (h.sourceProvider === "finnhub") return "Finnhub";
+  if (h.type === "Company News") return "Company news";
+  if (h.type === "Market News") return "Market news";
   return h.type || "News";
 }

@@ -1,4 +1,5 @@
 import type { AlertChannel, AlertRuleConditions } from "@/db/schema";
+import { formatAlertMessage } from "@/lib/alerts/format-message";
 import { classifySession, sessionMatches } from "@/lib/alerts/session";
 import { assertWebhookUrlSafeForFetch } from "@/lib/alerts/webhook-url";
 import { sendResendEmail } from "@/lib/email/resend";
@@ -75,22 +76,11 @@ function conditionsMatch(
   return true;
 }
 
-function buildBody(catalyst: AlertCatalystPayload, ruleName: string) {
-  return {
-    source: "catalyst-intel",
-    rule: ruleName,
-    catalyst: {
-      id: catalyst.id,
-      symbol: catalyst.symbol,
-      headline: catalyst.headline ?? catalyst.title,
-      eventCategory: catalyst.eventCategory,
-      impactScore: catalyst.impactScore,
-      timestamp: catalyst.timestamp,
-      sourceUrl: catalyst.sourceUrl,
-    },
-  };
-}
-
+/**
+ * Webhook delivery — paused from the product surface (UI + create API) until
+ * Slack/Discord-shaped payloads ship. Keep this path so existing rules and a
+ * quick revive still work.
+ */
 async function deliverWebhook(
   url: string,
   body: unknown,
@@ -126,21 +116,12 @@ async function deliverEmail(
   catalyst: AlertCatalystPayload,
   ruleName: string,
 ): Promise<{ ok: boolean; detail: string }> {
-  const subject = `[Catalyst] ${catalyst.symbol ?? "—"} · ${catalyst.headline ?? catalyst.title}`;
-  const proof = catalyst.sourceUrl ? `\nFiling: ${catalyst.sourceUrl}` : "";
-  const text = [
-    `Rule: ${ruleName}`,
-    `Symbol: ${catalyst.symbol ?? "—"}`,
-    `Event: ${catalyst.headline ?? catalyst.title}`,
-    `Category: ${catalyst.eventCategory ?? "—"}`,
-    `Materiality: ${catalyst.impactScore ?? "—"}`,
-    `Filed: ${catalyst.timestamp}`,
-    proof,
-  ]
-    .filter(Boolean)
-    .join("\n");
-
-  return sendResendEmail({ to, subject, text });
+  const message = formatAlertMessage(catalyst, { ruleName });
+  return sendResendEmail({
+    to,
+    subject: message.subject,
+    text: message.text,
+  });
 }
 
 async function deliverTelegram(
@@ -148,19 +129,8 @@ async function deliverTelegram(
   catalyst: AlertCatalystPayload,
   ruleName: string,
 ): Promise<{ ok: boolean; detail: string }> {
-  const proof = catalyst.sourceUrl ? `\nFiling: ${catalyst.sourceUrl}` : "";
-  const text = [
-    `🔔 ${ruleName}`,
-    `${catalyst.symbol ?? "—"} · ${catalyst.headline ?? catalyst.title}`,
-    `Category: ${catalyst.eventCategory ?? "—"}`,
-    `Materiality: ${catalyst.impactScore ?? "—"}`,
-    `Filed: ${catalyst.timestamp}`,
-    proof,
-  ]
-    .filter(Boolean)
-    .join("\n");
-
-  return sendTelegramMessage({ chatId, text });
+  const message = formatAlertMessage(catalyst, { ruleName });
+  return sendTelegramMessage({ chatId, text: message.text });
 }
 
 async function deliverPush(
@@ -173,14 +143,15 @@ async function deliverPush(
     return {
       ok: false,
       detail:
-        "No push subscriptions — enable browser notifications in Settings.",
+        "No push subscriptions — enable browser notifications on /alerts first.",
     };
   }
 
+  const message = formatAlertMessage(catalyst, { ruleName });
   const payload = {
-    title: `${catalyst.symbol ?? "Catalyst"} · ${ruleName}`,
-    body: catalyst.headline ?? catalyst.title,
-    url: catalyst.sourceUrl ?? undefined,
+    title: message.pushTitle,
+    body: message.pushBody,
+    url: message.deskUrl ?? message.sourceUrl ?? undefined,
   };
 
   const outcomes = await Promise.all(
@@ -280,9 +251,8 @@ export async function deliverAlertRules(options: {
       continue;
     }
 
-    const body = buildBody(options.catalyst, rule.name);
-
     if (rule.channel === "webhook") {
+      // Product channel paused — delivery kept for existing rules / revive.
       if (!rule.webhookUrl) {
         results.push({
           ruleId: rule.id,
@@ -292,6 +262,24 @@ export async function deliverAlertRules(options: {
         });
         continue;
       }
+      const message = formatAlertMessage(options.catalyst, {
+        ruleName: rule.name,
+      });
+      const body = {
+        source: "catalyst-intel",
+        rule: rule.name,
+        text: message.text,
+        catalyst: {
+          id: options.catalyst.id,
+          symbol: options.catalyst.symbol,
+          headline: message.headline,
+          eventCategory: options.catalyst.eventCategory,
+          impactScore: options.catalyst.impactScore,
+          timestamp: options.catalyst.timestamp,
+          sourceUrl: options.catalyst.sourceUrl,
+          deskUrl: message.deskUrl,
+        },
+      };
       const delivered = await deliverWebhook(rule.webhookUrl, body);
       results.push({
         ruleId: rule.id,

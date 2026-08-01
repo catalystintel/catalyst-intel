@@ -1,7 +1,13 @@
 /**
  * Strip upstream aggregator brand / host traces from PR-wire fields before
- * anything is persisted or shown. Product identity is always "PR Wire".
+ * anything is persisted or shown. Product identity never names RTPR or a
+ * wire house (PR Newswire, Business Wire, etc.).
  */
+
+import {
+  looksLikeOriginLabel,
+  scrubOriginMentions,
+} from "@/lib/catalysts/sanitize-source-origin";
 
 /** Host tokens that must never appear in stored or displayed wire content. */
 function blockedHostRe(): RegExp {
@@ -26,8 +32,8 @@ export function containsBlockedWireTrace(value: string): boolean {
 }
 
 /**
- * Remove blocked hosts, brand tokens, and upstream permalinks from free text.
- * Safe to run on titles, bodies, authors, and HTML.
+ * Remove blocked hosts, brand tokens, wire-house bylines, and upstream
+ * permalinks from free text. Safe to run on titles, bodies, authors, HTML.
  */
 export function sanitizePrWireText(
   value: string | null | undefined,
@@ -37,7 +43,7 @@ export function sanitizePrWireText(
   out = out.replace(blockedUrlRe(), "");
   out = out.replace(blockedHostRe(), "");
   out = out.replace(blockedBrandRe(), "");
-  // Collapse leftover empty " — " / "| " chrome after stripping.
+  out = scrubOriginMentions(out) ?? "";
   out = out
     .replace(/\s*[|—–-]\s*(?=[|—–-]|$)/g, " ")
     .replace(/\s{2,}/g, " ")
@@ -46,16 +52,18 @@ export function sanitizePrWireText(
 }
 
 /**
- * Keep only known wire publishers (Business Wire, etc.). Anything that looks
- * like the aggregator brand becomes the product label "PR Wire".
+ * Never persist a wire-house or aggregator byline. Returns null so callers
+ * omit publisher fields rather than inventing a product source label.
  */
 export function sanitizePrWirePublisher(
   author: string | null | undefined,
-): string {
+): string | null {
   const cleaned = sanitizePrWireText(author);
-  if (!cleaned) return "PR Wire";
-  if (/^pr\s*wire$/i.test(cleaned)) return "PR Wire";
-  return cleaned;
+  if (!cleaned) return null;
+  if (looksLikeOriginLabel(cleaned)) return null;
+  if (/^pr\s*wire$/i.test(cleaned)) return null;
+  // Remaining author strings are still treated as origin risk — hide them.
+  return null;
 }
 
 /** Drop image URLs hosted on blocked upstream domains. */

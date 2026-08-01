@@ -61,6 +61,27 @@ const nextConfig: NextConfig = {
         destination: "/catalyst-feed/:path*",
         permanent: true,
       },
+      // News Feed unshipped; Reports / Analytics are Coming Soon in the sidebar.
+      {
+        source: "/news-feed",
+        destination: "/catalyst-feed",
+        permanent: false,
+      },
+      {
+        source: "/analytics",
+        destination: "/catalyst-feed",
+        permanent: false,
+      },
+      {
+        source: "/reports",
+        destination: "/catalyst-feed",
+        permanent: false,
+      },
+      {
+        source: "/reports/s/:token",
+        destination: "/catalyst-feed",
+        permanent: false,
+      },
     ];
   },
   async rewrites() {

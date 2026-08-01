@@ -18,7 +18,17 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SkeletonCard } from "@/components/loading-skeleton";
-import type { AlertChannel, AlertRuleConditions } from "@/db/schema";
+import type {
+  AlertChannel,
+  AlertRuleConditions,
+  AlertSession,
+} from "@/db/schema";
+import {
+  ALERT_SESSION_OPTIONS,
+  formatSessionsForDisplay,
+  sessionsFromSelection,
+  type AlertSessionOptionValue,
+} from "@/lib/alerts/format-message";
 import { useWebPush } from "@/hooks/use-web-push";
 import { toUserFacingMessage } from "@/lib/errors/user-facing";
 import { cn } from "@/lib/utils";
@@ -55,12 +65,8 @@ const CHANNELS: ChannelMeta[] = [
     blurb: "Message the bot, paste your chat ID, get fires on your phone",
     Icon: MessageCircle,
   },
-  {
-    value: "webhook",
-    label: "Webhook",
-    blurb: "POST JSON to any HTTPS URL (Slack, Discord, Zapier…)",
-    Icon: Link2,
-  },
+  // Webhook paused until Slack/Discord-shaped payloads ship — revive with:
+  // { value: "webhook", label: "Webhook", blurb: "POST JSON to any HTTPS URL", Icon: Link2 },
   {
     value: "email",
     label: "Email",
@@ -70,10 +76,12 @@ const CHANNELS: ChannelMeta[] = [
 ];
 
 function channelIcon(channel: AlertChannel) {
+  if (channel === "webhook") return Link2;
   return CHANNELS.find((c) => c.value === channel)?.Icon ?? Bell;
 }
 
 function channelLabel(channel: AlertChannel) {
+  if (channel === "webhook") return "Webhook";
   return CHANNELS.find((c) => c.value === channel)?.label ?? channel;
 }
 
@@ -93,11 +101,14 @@ export function AlertRulesPanel() {
   const [name, setName] = useState("AH/PM bombs");
   const [channel, setChannel] = useState<AlertChannel>("push");
   const [channelSeeded, setChannelSeeded] = useState(false);
-  const [webhookUrl, setWebhookUrl] = useState("");
+  // Webhook URL state reserved for a quick revive of the channel card.
+  // const [webhookUrl, setWebhookUrl] = useState("");
   const [sessionEmail, setSessionEmail] = useState("");
   const [telegramChatId, setTelegramChatId] = useState("");
   const [minImpact, setMinImpact] = useState("70");
-  const [sessionsAhPm, setSessionsAhPm] = useState(true);
+  const [selectedSessions, setSelectedSessions] = useState<
+    AlertSessionOptionValue[]
+  >(["AH", "PM"]);
   const [tagsInput, setTagsInput] = useState("");
 
   const webPush = useWebPush(pushPublicKey);
@@ -139,7 +150,7 @@ export function AlertRulesPanel() {
       if (pushAvailable) setChannel("push");
       else if (telegramConfigured) setChannel("telegram");
       else if (emailConfigured && sessionEmail) setChannel("email");
-      else setChannel("webhook");
+      else setChannel("push");
       setChannelSeeded(true);
     }, 0);
     return () => window.clearTimeout(id);
@@ -172,7 +183,7 @@ export function AlertRulesPanel() {
           return { state: "blocked", label: "Unavailable here" };
         return { state: "ready", label: "Bot ready" };
       case "webhook":
-        return { state: "ready", label: "Always available" };
+        return { state: "blocked", label: "Paused" };
       case "email":
         if (!emailConfigured)
           return { state: "blocked", label: "Unavailable here" };
@@ -182,15 +193,25 @@ export function AlertRulesPanel() {
     }
   }
 
+  function toggleSession(value: AlertSessionOptionValue) {
+    setSelectedSessions((prev) => {
+      if (prev.includes(value)) {
+        const next = prev.filter((s) => s !== value);
+        return next.length === 0 ? prev : next;
+      }
+      return [...prev, value];
+    });
+  }
+
   function canSave(): boolean {
     const ready = channelReady(channel);
     if (ready.state === "blocked") return false;
-    if (channel === "webhook" && !webhookUrl.trim()) return false;
+    if (channel === "webhook") return false;
     if (channel === "telegram" && !telegramChatId.trim()) return false;
     if (channel === "push" && webPush.status !== "subscribed") return false;
     if (channel === "email" && (!emailConfigured || !sessionEmail))
       return false;
-    return true;
+    return selectedSessions.length > 0;
   }
 
   async function createRule(e: React.FormEvent) {
@@ -205,9 +226,10 @@ export function AlertRulesPanel() {
         .split(",")
         .map((t) => t.trim().toLowerCase())
         .filter(Boolean);
+      const sessions: AlertSession[] = sessionsFromSelection(selectedSessions);
       const conditions: AlertRuleConditions = {
         minImpact: Number(minImpact) || 70,
-        sessions: sessionsAhPm ? ["AH", "PM"] : ["any"],
+        sessions,
         ...(tags.length > 0 ? { tags } : {}),
       };
       const res = await fetch("/api/alert-rules", {
@@ -217,14 +239,12 @@ export function AlertRulesPanel() {
         body: JSON.stringify({
           name,
           channel,
-          webhookUrl: channel === "webhook" ? webhookUrl : undefined,
           telegramChatId: channel === "telegram" ? telegramChatId : undefined,
           conditions,
         }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Could not create rule.");
-      setWebhookUrl("");
       if (channel === "telegram") setTelegramChatId("");
       await load();
       toast.success(`Rule "${name}" saved — use Test to verify delivery.`);
@@ -330,12 +350,12 @@ export function AlertRulesPanel() {
             {
               n: "1",
               title: "Pick a channel",
-              body: "Push, Telegram, webhook, or email — each card shows if it is ready on this deployment.",
+              body: "Push, Telegram, or email — each card shows if it is ready on this deployment.",
             },
             {
               n: "2",
               title: "Finish setup",
-              body: "Follow the short checklist for that channel (enable push, paste a chat ID or webhook URL).",
+              body: "Follow the short checklist for that channel (enable push, or paste a Telegram chat ID).",
             },
             {
               n: "3",
@@ -466,8 +486,6 @@ export function AlertRulesPanel() {
               telegramConfigured={telegramConfigured}
               telegramChatId={telegramChatId}
               setTelegramChatId={setTelegramChatId}
-              webhookUrl={webhookUrl}
-              setWebhookUrl={setWebhookUrl}
               emailConfigured={emailConfigured}
               sessionEmail={sessionEmail}
             />
@@ -518,8 +536,8 @@ export function AlertRulesPanel() {
                   />
                 </div>
                 <span className="text-[0.7rem] text-[var(--desk-text-dim)]">
-                  Higher = fewer, more material alerts. 70 is a solid AH/PM
-                  default.
+                  Higher = fewer, more material alerts. 70 is a solid default
+                  for bombs.
                 </span>
               </label>
             </div>
@@ -544,45 +562,51 @@ export function AlertRulesPanel() {
               </span>
             </label>
 
-            <button
-              type="button"
-              role="switch"
-              aria-checked={sessionsAhPm}
-              onClick={() => setSessionsAhPm((v) => !v)}
-              className={cn(
-                "btn-press mt-4 flex w-full items-center justify-between gap-3 rounded-xl border px-4 py-3 text-left transition-colors duration-200",
-                sessionsAhPm
-                  ? "border-[color-mix(in_srgb,var(--desk-live)_40%,transparent)] bg-[color-mix(in_srgb,var(--desk-live)_08%,transparent)]"
-                  : "border-[var(--desk-border-strong)] bg-[var(--desk-overlay-soft)]",
-              )}
-            >
-              <span>
-                <span className="block text-sm font-medium text-[var(--desk-text)]">
-                  After-hours / pre-market only
-                </span>
-                <span className="mt-0.5 block text-xs text-[var(--desk-text-muted)]">
-                  {sessionsAhPm
-                    ? "Fires on AH and PM sessions — the classic bomb window."
-                    : "Fires in any session (regular hours included)."}
-                </span>
-              </span>
-              <span
-                aria-hidden
-                className={cn(
-                  "relative h-6 w-11 shrink-0 rounded-full transition-colors duration-200",
-                  sessionsAhPm
-                    ? "bg-[var(--desk-live)]"
-                    : "bg-[var(--desk-overlay-strong)]",
-                )}
+            <div className="mt-4">
+              <p className="text-xs font-medium text-[var(--desk-text-secondary)]">
+                Sessions (US equities, Eastern Time)
+              </p>
+              <p className="mt-0.5 text-[0.7rem] text-[var(--desk-text-dim)]">
+                Choose which tape sessions can fire this rule. Selecting all
+                three is the same as any session.
+              </p>
+              <div
+                role="group"
+                aria-label="Sessions"
+                className="mt-2.5 flex flex-wrap gap-2"
               >
-                <span
-                  className={cn(
-                    "absolute top-0.5 left-0.5 size-5 rounded-full bg-[#121212] shadow transition-transform duration-200",
-                    sessionsAhPm && "translate-x-5",
-                  )}
-                />
-              </span>
-            </button>
+                {ALERT_SESSION_OPTIONS.map((opt) => {
+                  const on = selectedSessions.includes(opt.value);
+                  return (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      aria-pressed={on}
+                      onClick={() => toggleSession(opt.value)}
+                      className={cn(
+                        "btn-press rounded-lg border px-3 py-2 text-left transition-colors duration-200",
+                        on
+                          ? "border-[color-mix(in_srgb,var(--desk-live)_45%,transparent)] bg-[color-mix(in_srgb,var(--desk-live)_10%,transparent)]"
+                          : "border-[var(--desk-border-strong)] bg-[var(--desk-overlay-soft)] hover:border-[var(--desk-text-dim)]",
+                      )}
+                    >
+                      <span className="block text-sm font-medium text-[var(--desk-text)]">
+                        {opt.label}
+                      </span>
+                      <span className="mt-0.5 block font-mono text-[0.65rem] text-[var(--desk-text-dim)]">
+                        {opt.short} · {opt.hint}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="mt-2 font-mono text-[0.65rem] tracking-wide text-[var(--desk-text-dim)] uppercase">
+                Fires on:{" "}
+                {formatSessionsForDisplay(
+                  sessionsFromSelection(selectedSessions),
+                )}
+              </p>
+            </div>
           </fieldset>
 
           <div className="flex flex-col gap-2 border-t border-[var(--desk-border)] pt-4 sm:flex-row sm:items-center sm:justify-between">
@@ -684,9 +708,7 @@ export function AlertRulesPanel() {
                       </p>
                       <p className="mt-1 font-mono text-[0.65rem] tracking-wide text-[var(--desk-text-dim)] uppercase">
                         Min impact {rule.conditions.minImpact ?? 0}
-                        {rule.conditions.sessions?.length
-                          ? ` · ${rule.conditions.sessions.join(" / ")}`
-                          : ""}
+                        {` · ${formatSessionsForDisplay(rule.conditions.sessions)}`}
                         {rule.conditions.tags?.length
                           ? ` · tags: ${rule.conditions.tags.join(", ")}`
                           : ""}
@@ -783,8 +805,6 @@ function ChannelSetup({
   telegramConfigured,
   telegramChatId,
   setTelegramChatId,
-  webhookUrl,
-  setWebhookUrl,
   emailConfigured,
   sessionEmail,
 }: {
@@ -795,8 +815,6 @@ function ChannelSetup({
   telegramConfigured: boolean;
   telegramChatId: string;
   setTelegramChatId: (v: string) => void;
-  webhookUrl: string;
-  setWebhookUrl: (v: string) => void;
   emailConfigured: boolean;
   sessionEmail: string;
 }) {
@@ -806,7 +824,7 @@ function ChannelSetup({
         <StatusCallout
           tone="blocked"
           title="Push isn’t available on this deployment"
-          body="The server is missing VAPID keys. Pick Webhook (always works), or ask ops to enable Web Push — then you’ll enable browser notifications here in one click."
+          body="The server is missing VAPID keys. Pick Telegram or Email, or ask ops to enable Web Push — then you’ll enable browser notifications here in one click."
         />
       );
     }
@@ -824,7 +842,7 @@ function ChannelSetup({
         <StatusCallout
           tone="blocked"
           title="This browser doesn’t support Web Push"
-          body="Try Chrome, Edge, or Firefox on desktop — or pick Telegram / webhook / email."
+          body="Try Chrome, Edge, or Firefox on desktop — or pick Telegram or email."
         />
       );
     }
@@ -863,7 +881,7 @@ function ChannelSetup({
         <StatusCallout
           tone="blocked"
           title="Telegram bot isn’t configured"
-          body="This deployment is missing TELEGRAM_BOT_TOKEN. Use Webhook now, or ask ops to wire the bot. Once live: message the bot → copy your chat ID → paste it here → Save & Test."
+          body="This deployment is missing TELEGRAM_BOT_TOKEN. Use Push or Email for now, or ask ops to wire the bot. Once live: message the bot → copy your chat ID → paste it here → Save & Test."
         />
       );
     }
@@ -897,33 +915,14 @@ function ChannelSetup({
     );
   }
 
+  // Webhook channel UI paused — see CHANNELS comment above to revive.
   if (channel === "webhook") {
     return (
-      <div>
-        <SetupSteps
-          steps={[
-            "Create an incoming webhook in Slack, Discord, Zapier, or your own HTTPS endpoint.",
-            "Paste the HTTPS URL below (http and localhost are rejected).",
-            "Save, then Test — we POST a JSON payload for the latest matching catalyst.",
-          ]}
-        />
-        <label className="flex flex-col gap-1.5">
-          <span className="text-xs font-medium text-[var(--desk-text-secondary)]">
-            Webhook URL
-          </span>
-          <Input
-            value={webhookUrl}
-            onChange={(e) => setWebhookUrl(e.target.value)}
-            placeholder="https://hooks.example.com/…"
-            aria-label="Webhook URL"
-            type="url"
-            className="h-10 border-[var(--desk-border-strong)] bg-[var(--desk-overlay-soft)] font-mono text-xs"
-          />
-          <span className="text-[0.7rem] text-[var(--desk-text-dim)]">
-            Always available — no extra vendor keys required.
-          </span>
-        </label>
-      </div>
+      <StatusCallout
+        tone="blocked"
+        title="Webhook alerts are paused"
+        body="Use Push, Telegram, or Email. Existing webhook rules still appear in Your rules if you created them earlier."
+      />
     );
   }
 
@@ -933,7 +932,7 @@ function ChannelSetup({
       <StatusCallout
         tone="blocked"
         title="Email delivery isn’t configured"
-        body="This deployment is missing the email provider key. Use Webhook (always works) or Push/Telegram when those are enabled."
+        body="This deployment is missing the email provider key. Use Push or Telegram when those are enabled."
       />
     );
   }

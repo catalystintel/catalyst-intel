@@ -43,11 +43,11 @@ function base(overrides: Partial<FeedCatalyst> = {}): FeedCatalyst {
 }
 
 describe("sourceDisplay", () => {
-  it("maps sec-edgar to SEC EDGAR with type · symbol meta", () => {
+  it("maps sec-edgar to Filings with type · symbol meta", () => {
     expect(sourceDisplay(base())).toMatchObject({
-      name: "SEC EDGAR",
+      name: "Filings",
       meta: "8-K · NVDA",
-      initial: "S",
+      initial: "F",
       tone: "sec",
     });
   });
@@ -57,22 +57,22 @@ describe("sourceDisplay", () => {
       sourceDisplay(
         base({ sourceProvider: "nasdaq-halts", type: "Trading Halt" }),
       ),
-    ).toMatchObject({ name: "Nasdaq Halts", initial: "N" });
+    ).toMatchObject({ name: "Halt", initial: "H" });
   });
 
-  it("labels Polygon Benzinga wire as Wire", () => {
+  it("labels press-release wire rows without vendor brands", () => {
     expect(
       sourceDisplay(
         base({
           sourceProvider: "polygon",
-          type: "Wire",
-          headline: "Benzinga Wire",
-          subcategory: "benzinga_wire",
+          type: "Press Release",
+          headline: null,
+          subcategory: "press_release",
         }),
       ),
     ).toMatchObject({
-      name: "Benzinga Wire",
-      initial: "B",
+      name: "Press release",
+      initial: "P",
       tone: "wire",
     });
   });
@@ -83,11 +83,11 @@ describe("sectorLabel", () => {
     expect(sectorLabel(base({ sector: "Technology" }))).toBe("Technology");
   });
 
-  it("falls back to event category, then SEC Filings", () => {
+  it("falls back to event category, then Filings", () => {
     expect(sectorLabel(base())).toBe("Earnings");
     expect(
       sectorLabel(base({ eventCategory: null, sector: null, type: "8-K" })),
-    ).toBe("SEC Filings");
+    ).toBe("Filings");
   });
 });
 

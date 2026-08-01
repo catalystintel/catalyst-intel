@@ -2,8 +2,8 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { databaseUnavailableMessage, isLibsqlConfigured } from "@/db/env";
 import { getCurrentAppUser } from "@/lib/auth/current-user";
-import { toFeedCatalyst } from "@/lib/catalysts/feed-catalyst";
 import { queryFeedPage, queryFeedTotal } from "@/lib/catalysts/feed-query";
+import { toPublicFeedCatalyst } from "@/lib/catalysts/public-catalyst";
 import { getClientIp } from "@/lib/http/client-ip";
 import { RATE_LIMITS, checkRateLimit } from "@/lib/http/rate-limit";
 import {
@@ -82,7 +82,7 @@ export async function POST(request: NextRequest) {
   return withRateLimitHeaders(
     NextResponse.json({
       total,
-      catalysts: rows.map(toFeedCatalyst),
+      catalysts: rows.map(toPublicFeedCatalyst),
     }),
     limitResult,
   );

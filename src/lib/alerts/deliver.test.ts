@@ -32,6 +32,7 @@ describe("deliverAlertRules", () => {
     });
     expect(results[0]).toMatchObject({ channel: "push", ok: false });
     expect(results[0].detail.toLowerCase()).toContain("no push subscriptions");
+    expect(results[0].detail.toLowerCase()).toContain("/alerts");
   });
 
   it("fails telegram rules missing a chat id", async () => {
