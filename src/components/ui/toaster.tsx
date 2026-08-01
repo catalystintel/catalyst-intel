@@ -6,7 +6,7 @@ import { Toaster as SonnerToaster } from "sonner";
  * Desk-themed toast host. Mounted once in `AppShell` so any client
  * component can call `toast(...)` from `sonner` without wiring its own
  * inline error/message state (see live-catalyst-feed's `pollError`,
- * watchlist-playbook-panel and alert-rules-panel for the pattern this
+ * watchlists/watchlist-hub and alert-rules-panel for the pattern this
  * replaces).
  */
 export function Toaster() {
