@@ -10,6 +10,9 @@ import { db } from "@/db/client";
 import { isLibsqlConfigured } from "@/db/env";
 import { catalysts, rawSources } from "@/db/schema";
 import { getFinnhubApiKey, getPolygonApiKey } from "@/lib/jobs/vendor-env";
+import { reconcileSessionMove } from "@/lib/market/session-move";
+import { toVendorBareSymbol } from "@/lib/market/vendor-symbol";
+import { fetchYahooQuote } from "@/lib/market/yahoo-market";
 
 const FINNHUB_BASE = "https://finnhub.io/api/v1";
 const POLYGON_BASE = "https://api.polygon.io";
@@ -45,7 +48,7 @@ export interface ArticleMarketQuote {
   high: number | null;
   low: number | null;
   previousClose: number | null;
-  provider: "finnhub" | "polygon";
+  provider: "finnhub" | "polygon" | "yahoo";
   asOf: string | null;
 }
 
@@ -91,7 +94,7 @@ function emptyEnrichment(): ArticleEnrichment {
 
 function normalizeSymbol(raw: string | null | undefined): string | null {
   if (!raw) return null;
-  const symbol = raw.trim().toUpperCase();
+  const symbol = toVendorBareSymbol(raw);
   return SYMBOL_RE.test(symbol) ? symbol : null;
 }
 
@@ -190,17 +193,6 @@ interface PolygonNewsArticle {
   publisher?: { name?: string };
 }
 
-interface PolygonPrevAgg {
-  results?: Array<{
-    o?: number;
-    c?: number;
-    h?: number;
-    l?: number;
-    v?: number;
-    t?: number;
-  }>;
-}
-
 async function fetchProfile(
   symbol: string,
   apiKey: string,
@@ -228,14 +220,31 @@ async function fetchFinnhubQuote(
   if (!row) return null;
   const price = finiteOrNull(row.c);
   if (price == null || price <= 0) return null;
+  const previousClose = finiteOrNull(row.pc);
+  const open = finiteOrNull(row.o);
+  const move = reconcileSessionMove({
+    price,
+    previousClose,
+    open,
+    vendorChange: finiteOrNull(row.d),
+    vendorChangePercent: finiteOrNull(row.dp),
+  });
+  // Drop quotes whose session % is nonsense (stale pc after splits, etc.).
+  if (
+    move.changePercent == null &&
+    finiteOrNull(row.dp) != null &&
+    Math.abs(row.dp!) > 50
+  ) {
+    return null;
+  }
   return {
     price,
-    change: finiteOrNull(row.d),
-    changePercent: finiteOrNull(row.dp),
-    open: finiteOrNull(row.o),
+    change: move.change,
+    changePercent: move.changePercent,
+    open,
     high: finiteOrNull(row.h),
     low: finiteOrNull(row.l),
-    previousClose: finiteOrNull(row.pc),
+    previousClose,
     provider: "finnhub",
     asOf:
       typeof row.t === "number" && row.t > 0
@@ -244,35 +253,79 @@ async function fetchFinnhubQuote(
   };
 }
 
+/**
+ * Last completed session vs prior close from daily aggregates.
+ * Avoids treating a single bar's open→close as "session change" (that
+ * produced fake hundreds-of-percent moves on reverse-split names).
+ */
 async function fetchPolygonPrevQuote(
   symbol: string,
   apiKey: string,
 ): Promise<ArticleMarketQuote | null> {
-  const payload = await polygonGet<PolygonPrevAgg>(
-    `/v2/aggs/ticker/${encodeURIComponent(symbol)}/prev`,
+  const to = new Date();
+  const from = new Date(to.getTime() - 14 * 86_400_000);
+  const fromYmd = from.toISOString().slice(0, 10);
+  const toYmd = to.toISOString().slice(0, 10);
+  const payload = await polygonGet<{
+    results?: Array<{
+      o?: number;
+      h?: number;
+      l?: number;
+      c?: number;
+      t?: number;
+    }>;
+  }>(
+    `/v2/aggs/ticker/${encodeURIComponent(symbol)}/range/1/day/${fromYmd}/${toYmd}`,
     apiKey,
-    { adjusted: "true" },
+    { adjusted: "true", sort: "asc", limit: "15" },
   );
-  const bar = payload?.results?.[0];
-  if (!bar) return null;
-  const open = finiteOrNull(bar.o);
-  const close = finiteOrNull(bar.c);
-  if (open == null || close == null || open === 0) return null;
-  const change = close - open;
-  const changePercent = (change / open) * 100;
+  const bars = payload?.results ?? [];
+  if (bars.length === 0) return null;
+
+  const last = bars[bars.length - 1]!;
+  const prior = bars.length >= 2 ? bars[bars.length - 2]! : null;
+  const close = finiteOrNull(last.c);
+  const open = finiteOrNull(last.o);
+  if (close == null || close <= 0) return null;
+
+  const previousClose = finiteOrNull(prior?.c) ?? finiteOrNull(last.o);
+  const move = reconcileSessionMove({
+    price: close,
+    previousClose,
+    open,
+  });
+
   return {
     price: close,
-    change: Number(change.toFixed(4)),
-    changePercent: Number(changePercent.toFixed(3)),
+    change: move.change,
+    changePercent: move.changePercent,
     open,
-    high: finiteOrNull(bar.h),
-    low: finiteOrNull(bar.l),
-    previousClose: open,
+    high: finiteOrNull(last.h),
+    low: finiteOrNull(last.l),
+    previousClose,
     provider: "polygon",
     asOf:
-      typeof bar.t === "number" && bar.t > 0
-        ? new Date(bar.t).toISOString()
+      typeof last.t === "number" && last.t > 0
+        ? new Date(last.t).toISOString()
         : null,
+  };
+}
+
+async function fetchYahooMarketQuote(
+  symbol: string,
+): Promise<ArticleMarketQuote | null> {
+  const row = await fetchYahooQuote(symbol);
+  if (!row) return null;
+  return {
+    price: row.price,
+    change: row.change,
+    changePercent: row.changePercent,
+    open: row.open,
+    high: row.high,
+    low: row.low,
+    previousClose: row.previousClose,
+    provider: "yahoo",
+    asOf: row.asOf,
   };
 }
 
@@ -471,10 +524,13 @@ async function fetchArticleEnrichmentInner(options: {
     polygonNewsFill = await fetchPolygonSymbolNews(symbol, polygonKey);
   }
 
-  // Quote: Finnhub first; if missing, try Polygon prev (soft-fail free tier).
+  // Quote: Finnhub → Polygon daily → Yahoo (keyless). Never paint absurd %.
   let quote = finnhubQuote;
   if (!quote && polygonKey) {
     quote = polygonQuote ?? (await fetchPolygonPrevQuote(symbol, polygonKey));
+  }
+  if (!quote) {
+    quote = await fetchYahooMarketQuote(symbol);
   }
 
   const value: ArticleEnrichment = {
@@ -527,6 +583,9 @@ export async function fetchMarketQuoteBundle(options: {
     let quote = finnhubQuote;
     if (!quote && polygonKey) {
       quote = polygonQuote ?? (await fetchPolygonPrevQuote(symbol, polygonKey));
+    }
+    if (!quote) {
+      quote = await fetchYahooMarketQuote(symbol);
     }
 
     const value: ArticleEnrichment = {
