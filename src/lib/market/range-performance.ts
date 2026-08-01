@@ -6,6 +6,8 @@ import {
   type ChartRangeKey,
 } from "@/lib/market/chart-range";
 import { getFinnhubApiKey, getPolygonApiKey } from "@/lib/jobs/vendor-env";
+import { toVendorBareSymbol } from "@/lib/market/vendor-symbol";
+import { fetchYahooCloseSeries } from "@/lib/market/yahoo-market";
 
 const FINNHUB_BASE = "https://finnhub.io/api/v1";
 const POLYGON_BASE = "https://api.polygon.io";
@@ -17,7 +19,7 @@ export type RangePerformance = {
   changePercent: number | null;
   /** First close (or open) used as the range baseline. */
   baseline: number | null;
-  provider: "finnhub" | "polygon" | "session" | null;
+  provider: "finnhub" | "polygon" | "yahoo" | "session" | null;
 };
 
 type CandleSeries = {
@@ -143,14 +145,14 @@ async function polygonCandles(
 
 /**
  * Range performance for the split-panel quote header.
- * Prefer Finnhub candles; fall back to Polygon aggregates.
+ * Prefer Finnhub candles; fall back to Polygon aggregates, then Yahoo.
  */
 export async function fetchRangePerformance(options: {
   symbol: string;
   range: ChartRangeKey;
   now?: Date;
 }): Promise<RangePerformance> {
-  const symbol = options.symbol.trim().toUpperCase();
+  const symbol = toVendorBareSymbol(options.symbol);
   const range = options.range;
   const now = options.now ?? new Date();
   const empty: RangePerformance = {
@@ -185,6 +187,15 @@ export async function fetchRangePerformance(options: {
         ...performanceFromCandles(series),
       };
     }
+  }
+
+  const yahoo = await fetchYahooCloseSeries({ symbol, range });
+  if (yahoo && yahoo.closes.length > 0) {
+    return {
+      range,
+      provider: "yahoo",
+      ...performanceFromCandles(yahoo),
+    };
   }
 
   return empty;

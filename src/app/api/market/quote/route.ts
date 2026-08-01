@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
   }
 
   const raw = request.nextUrl.searchParams.get("symbol")?.trim() ?? "";
-  if (!raw || raw.length > 12) {
+  if (!raw || raw.length > 20) {
     return withRateLimitHeaders(
       NextResponse.json({ error: "Invalid symbol." }, { status: 400 }),
       limitResult,

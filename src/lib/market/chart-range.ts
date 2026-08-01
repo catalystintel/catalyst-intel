@@ -80,11 +80,13 @@ export const CHART_RANGES: readonly ChartRangeDef[] = [
     lookbackDays: null,
     lookbackMinutes: 60,
   },
+  // 5 calendar days so weekends/holidays still cover the last US cash session
+  // for Finnhub/Polygon 5-minute bars (Yahoo uses its own range param).
   {
     key: "1D",
     label: "1D",
     interval: "5",
-    lookbackDays: 1,
+    lookbackDays: 5,
     lookbackMinutes: null,
   },
   {
