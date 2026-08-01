@@ -201,8 +201,17 @@ export const watchlists = sqliteTable("watchlists", {
 });
 
 /**
- * Playbook: which event categories count as signal when the tape is quiet.
- * One row per user; `categories` is a JSON string array of EventCategoryKey.
+ * Playbook / quiet-mode signal sources. One row per user.
+ *
+ * `watchlistIds` (which of the user's saved `watchlists` rules count as
+ * "signal") is the current mechanism — a row matches quiet mode if it
+ * matches ANY selected watchlist's criteria, or is on the flat
+ * `watchlist_entries` symbol list (see `matchesQuietPlaybook` in
+ * lib/catalysts/playbook.ts). `categories` is the legacy single-axis
+ * mechanism (event-type checkboxes only); kept for old rows / the
+ * one-click "migrate to a watchlist" action, and as the implicit default
+ * (`DEFAULT_PLAYBOOK_CATEGORIES`) when a user has never selected any
+ * watchlist. Not written by the current UI otherwise.
  */
 export const playbookSettings = sqliteTable("playbook_settings", {
   id: integer("id").primaryKey({ autoIncrement: true }),
@@ -210,11 +219,14 @@ export const playbookSettings = sqliteTable("playbook_settings", {
     .notNull()
     .unique()
     .references(() => users.id),
+  /** @deprecated Superseded by `watchlistIds`; see table comment. */
   categories: text("categories", { mode: "json" }).notNull(),
-  /** When true, Live feed only shows watchlist + playbook-matching rows. */
+  /** When true, Live feed only shows rows matching a selected signal source. */
   quietMode: integer("quiet_mode", { mode: "boolean" })
     .notNull()
     .default(false),
+  /** JSON array of `watchlists.id` the user has selected as quiet signal sources. */
+  watchlistIds: text("watchlist_ids", { mode: "json" }),
   updatedAt: text("updated_at")
     .notNull()
     .default(sql`(current_timestamp)`),

@@ -24,7 +24,7 @@ Enforced by `npm run db:check` / husky pre-commit (`scripts/check-db-tables-doc.
 | `users`                | App accounts (Supabase id, email, role, free/pro)                                                                                               |
 | `watchlist_entries`    | Per-user symbols the desk cares about                                                                                                           |
 | `watchlists`           | Per-user named, saved feed-filter combos ("smart" watchlists) — symbols/categories/forms/tags/sources, previewable and re-appliable to the tape |
-| `playbook_settings`    | Per-user quiet-mode filter (which event categories count as signal)                                                                             |
+| `playbook_settings`    | Per-user quiet-mode signal sources — selected `watchlists` ids (OR'd with the flat symbol list); legacy event-category list kept for migration  |
 | `dismissed_catalysts`  | Per-user “dismissed” catalysts so they stay hidden across devices                                                                               |
 | `user_source_settings` | Per-admin feed source visibility toggles (JSON list of enabled sources; missing = all on)                                                       |
 
