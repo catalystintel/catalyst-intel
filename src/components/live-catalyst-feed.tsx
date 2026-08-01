@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import {
   useCallback,
   useEffect,
@@ -17,7 +18,6 @@ import {
   ListFilter,
   Loader2,
   Plus,
-  RefreshCw,
   X,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -27,6 +27,15 @@ import { DeskTip } from "@/components/desk-tip";
 import { FeedFilterMultiSelect } from "@/components/feed-filter-multi-select";
 import { TapeSplitPanel } from "@/components/tape-split-panel";
 import { SymbolActionMenu } from "@/components/symbol-action-menu";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { useAutoFocusScrollRegion } from "@/hooks/use-auto-focus-scroll-region";
 import { useLiveFeedQuery } from "@/hooks/use-live-feed-query";
@@ -41,8 +50,8 @@ import {
   eventLabel as feedEventLabel,
 } from "@/lib/catalysts/feed-display";
 import {
-  DEFAULT_PLAYBOOK_CATEGORIES,
   matchesQuietPlaybook,
+  type QuietSignalWatchlist,
 } from "@/lib/catalysts/playbook";
 import {
   CATEGORY_LABELS,
@@ -53,13 +62,18 @@ import { classifyFeedEmpty } from "@/lib/catalysts/feed-empty-state";
 import { passesSymbolFeedGate } from "@/lib/catalysts/symbol-feed-gate";
 import { isLocalDevUi } from "@/lib/dev/local-dev-ui";
 import {
+  DEFAULT_FEED_FILTERS,
+  filtersToWatchlistCriteria,
   isFiltersDefault,
   isPanelFiltersDefault,
   readPersistedFeedFilters,
   touchPersistedFeedFilters,
+  watchlistCriteriaToFilters,
   writePersistedFeedFilters,
   type FeedFilterState,
 } from "@/lib/catalysts/feed-filter-persist";
+import type { WatchlistCriteria } from "@/db/schema";
+import { writeWatchlistDraftHandoff } from "@/lib/watchlist/draft-handoff";
 import type { FeedFacets } from "@/lib/catalysts/feed-query-types";
 import {
   formatClockTime,
@@ -138,6 +152,7 @@ export function LiveCatalystFeed({
   isAdmin,
   showSourceLabels = false,
   initialSymbolFilter,
+  initialWatchlistCriteria,
   initialSelectedId,
   onFocusSymbol,
 }: {
@@ -147,6 +162,8 @@ export function LiveCatalystFeed({
   showSourceLabels?: boolean;
   /** Pre-fills the symbol filter, e.g. arriving via `?symbol=` from Analytics. */
   initialSymbolFilter?: string;
+  /** Full filter combo from a saved watchlist's "Apply to feed" deep link. */
+  initialWatchlistCriteria?: WatchlistCriteria;
   /** Re-opens the split panel, e.g. arriving via `?c=` after details. */
   initialSelectedId?: number;
   /**
@@ -192,14 +209,16 @@ export function LiveCatalystFeed({
     () => new Set(),
   );
   const [watchlistSymbols, setWatchlistSymbols] = useState<string[]>([]);
-  const [playbookCategories, setPlaybookCategories] = useState<
-    EventCategoryKey[]
-  >(DEFAULT_PLAYBOOK_CATEGORIES);
+  const [signalWatchlists, setSignalWatchlists] = useState<
+    QuietSignalWatchlist[]
+  >([]);
   const [quietMode, setQuietMode] = useState(false);
   const [prefsLoaded, setPrefsLoaded] = useState(false);
-  const [manualRefreshing, setManualRefreshing] = useState(false);
   const [articleId, setArticleId] = useState<number | null>(null);
   const [pendingNew, setPendingNew] = useState(0);
+  const [saveWatchlistOpen, setSaveWatchlistOpen] = useState(false);
+  const [saveWatchlistName, setSaveWatchlistName] = useState("");
+  const [savingWatchlist, setSavingWatchlist] = useState(false);
   const jumpToLatestRef = useRef<(() => void) | null>(null);
   const skipFilterAnimRef = useRef(true);
   const skipFlashRef = useRef(false);
@@ -247,10 +266,8 @@ export function LiveCatalystFeed({
         }
         if (pRes.ok) {
           const pData = await pRes.json();
-          setPlaybookCategories(
-            Array.isArray(pData.categories) && pData.categories.length > 0
-              ? pData.categories
-              : DEFAULT_PLAYBOOK_CATEGORIES,
+          setSignalWatchlists(
+            Array.isArray(pData.signalWatchlists) ? pData.signalWatchlists : [],
           );
           setQuietMode(Boolean(pData.quietMode));
         }
@@ -272,12 +289,12 @@ export function LiveCatalystFeed({
   );
 
   // Restore tape filters from localStorage after mount (avoids SSR/hydration
-  // mismatch). Deep-link `?symbol=` wins for the symbol field; other saved
-  // filters still apply when still within the idle window.
+  // mismatch). Deep-link `?symbol=` wins as an exact symbol chip; other
+  // saved filters still apply when still within the idle window.
   useEffect(() => {
     const restoreId = window.setTimeout(() => {
       const saved = readPersistedFeedFilters();
-      const urlSymbol = initialSymbolFilter?.trim() ?? "";
+      const urlSymbol = initialSymbolFilter?.trim().toUpperCase() ?? "";
       // Drop retired panel facets (industries / forms / earnings surprises)
       // and never restore vendor source filters outside local-dev.
       const sanitize = (filters: FeedFilterState): FeedFilterState => ({
@@ -288,20 +305,32 @@ export function LiveCatalystFeed({
         sourceFilters: isLocalDevUi() ? filters.sourceFilters : [],
       });
 
+      if (initialWatchlistCriteria) {
+        setFilterState((prev) => ({
+          ...DEFAULT_FEED_FILTERS,
+          ...prev,
+          ...watchlistCriteriaToFilters(initialWatchlistCriteria),
+          symbolOnly: true,
+        }));
+        setFiltersOpen(true);
+        setFiltersHydrated(true);
+        return;
+      }
+
       if (urlSymbol) {
         setFilterState((prev) => ({
           ...prev,
-          symbolQuery: urlSymbol,
           ...(saved
             ? sanitize({
                 ...prev,
                 categoryFilters: saved.categoryFilters,
                 sourceFilters: saved.sourceFilters,
+                tagFilters: saved.tagFilters,
                 timeWindow: saved.timeWindow,
                 symbolOnly: saved.symbolOnly,
-                symbolQuery: urlSymbol,
               })
             : {}),
+          symbolFilters: [urlSymbol],
           // Desk rule is always on (CPI / Jobs excepted).
           symbolOnly: true,
         }));
@@ -312,7 +341,7 @@ export function LiveCatalystFeed({
       setFiltersHydrated(true);
     }, 0);
     return () => window.clearTimeout(restoreId);
-  }, [initialSymbolFilter, setFilterState]);
+  }, [initialSymbolFilter, initialWatchlistCriteria, setFilterState]);
 
   // Persist filters while active; clear storage when back to product defaults.
   useEffect(() => {
@@ -386,26 +415,6 @@ export function LiveCatalystFeed({
     }
   }, [catalysts]);
 
-  const handleManualRefresh = useCallback(() => {
-    if (manualRefreshing) return;
-    setManualRefreshing(true);
-    const minSpinMs = 500;
-    const startedAt = Date.now();
-    void refresh()
-      .then(() => {
-        if (pollErrorRef.current) {
-          toast.error(pollErrorRef.current);
-        }
-      })
-      .finally(() => {
-        const elapsed = Date.now() - startedAt;
-        window.setTimeout(
-          () => setManualRefreshing(false),
-          Math.max(0, minSpinMs - elapsed),
-        );
-      });
-  }, [manualRefreshing, refresh]);
-
   useEffect(() => {
     const syncPresence = () => setPresence(readPresence());
     syncPresence();
@@ -447,19 +456,18 @@ export function LiveCatalystFeed({
     const next = !quietMode;
     setQuietMode(next);
     try {
+      // Signal sources (watchlistIds) are unaffected — the API preserves
+      // whatever was last saved when the field is omitted.
       await fetch("/api/playbook", {
         method: "PUT",
         credentials: "same-origin",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          categories: playbookCategories,
-          quietMode: next,
-        }),
+        body: JSON.stringify({ quietMode: next }),
       });
     } catch {
       setQuietMode(!next);
     }
-  }, [quietMode, playbookCategories]);
+  }, [quietMode]);
 
   const undismissCatalyst = useCallback((id: number) => {
     setDismissedIds((prev) => {
@@ -518,10 +526,19 @@ export function LiveCatalystFeed({
 
   const filterToSymbol = useCallback(
     (symbol: string) => {
-      patchFilters({ symbolQuery: symbol.trim().toUpperCase() });
+      const t = symbol.trim().toUpperCase();
+      if (!t) return;
+      // Exact chip, not the fuzzy `q` search — "Filter tape to SYMBOL"
+      // should gate rows to that name only, not just bias the search box.
+      setFilterState((prev) => ({
+        ...prev,
+        symbolFilters: prev.symbolFilters.includes(t)
+          ? prev.symbolFilters
+          : [...prev.symbolFilters, t],
+      }));
       setFiltersOpen(true);
     },
-    [patchFilters],
+    [setFilterState],
   );
 
   // Keep `?c=` in sync with the open row so article / browser back lands on
@@ -596,25 +613,63 @@ export function LiveCatalystFeed({
     [quietAddSymbol, watchlistSymbols],
   );
 
+  const openSaveWatchlist = useCallback(() => {
+    setSaveWatchlistName("");
+    setSaveWatchlistOpen(true);
+  }, []);
+
+  const submitSaveWatchlist = useCallback(async () => {
+    const name = saveWatchlistName.trim();
+    if (!name) {
+      toast.error("Name your watchlist first.");
+      return;
+    }
+    setSavingWatchlist(true);
+    try {
+      const res = await fetch("/api/watchlists", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name,
+          criteria: filtersToWatchlistCriteria(filterState),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Could not save watchlist.");
+      toast.success(`Saved "${name}" — manage it under Watchlists.`);
+      setSaveWatchlistOpen(false);
+    } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : "Could not save watchlist.",
+      );
+    } finally {
+      setSavingWatchlist(false);
+    }
+  }, [saveWatchlistName, filterState]);
+
   const facetOptions = useMemo(() => buildFacetOptions(facets), [facets]);
 
   const visible = useMemo(() => {
     const filtered = catalysts.filter((c) => {
       if (dismissedIds.has(c.id)) return false;
       return matchesQuietPlaybook(
-        { symbol: c.symbol, eventCategory: c.eventCategory },
-        { quietMode, watchlistSymbols, playbookCategories },
+        {
+          symbol: c.symbol,
+          eventCategory: c.eventCategory,
+          type: c.type,
+          tags: c.tags,
+          sourceProvider: c.sourceProvider,
+          companyName: c.companyName,
+          title: c.title,
+          headline: c.headline,
+        },
+        { quietMode, watchlistSymbols, signalWatchlists },
       );
     });
     // Always newest → oldest (event time), even after client overlays.
     return sortFeedNewestFirst(filtered);
-  }, [
-    catalysts,
-    dismissedIds,
-    quietMode,
-    watchlistSymbols,
-    playbookCategories,
-  ]);
+  }, [catalysts, dismissedIds, quietMode, watchlistSymbols, signalWatchlists]);
 
   const selectedRaw = selectedId
     ? (catalysts.find((c) => c.id === selectedId) ?? null)
@@ -663,7 +718,7 @@ export function LiveCatalystFeed({
             type="button"
             onClick={() => void toggleQuietMode()}
             disabled={!prefsLoaded}
-            title="When on, only show catalysts for symbols on your watchlist that match your playbook event categories"
+            title="When on, only show catalysts matching your symbols or selected signal watchlists (edit under Watchlists)"
             className={cn(
               "inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-[0.82rem] font-medium transition-colors",
               quietMode
@@ -729,18 +784,6 @@ export function LiveCatalystFeed({
               {pendingNew} new
             </button>
           ) : null}
-          <button
-            type="button"
-            aria-label="Refresh"
-            aria-busy={manualRefreshing}
-            onClick={handleManualRefresh}
-            disabled={manualRefreshing}
-            className="btn-press grid size-[34px] place-items-center rounded-lg border border-[var(--desk-border-strong)] text-[var(--desk-text-muted)] transition-colors hover:bg-[var(--desk-overlay-strong)] hover:text-[var(--desk-text)] disabled:cursor-default disabled:opacity-70"
-          >
-            <RefreshCw
-              className={cn("size-4", manualRefreshing && "animate-spin")}
-            />
-          </button>
         </div>
       </div>
 
@@ -754,9 +797,10 @@ export function LiveCatalystFeed({
             visibleCount={visible.length}
             quietMode={quietMode}
             watchlistCount={watchlistSymbols.length}
-            playbookCount={playbookCategories.length}
+            signalWatchlistCount={signalWatchlists.length}
             panelFiltersActive={panelFiltersActive}
             onClearFilters={clearFilters}
+            onSaveWatchlist={openSaveWatchlist}
           />
         </div>
       ) : null}
@@ -799,7 +843,7 @@ export function LiveCatalystFeed({
               ) : (
                 <p className="text-sm text-[var(--desk-text-muted)]">
                   {emptyKind === "quiet"
-                    ? "Quiet playbook: no watchlist/playbook matches right now."
+                    ? "Quiet mode: no rows match your symbols or selected watchlists right now."
                     : "No rows match these filters."}
                 </p>
               )}
@@ -886,6 +930,52 @@ export function LiveCatalystFeed({
           if (!next) setArticleId(null);
         }}
       />
+
+      <Dialog open={saveWatchlistOpen} onOpenChange={setSaveWatchlistOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Save as watchlist</DialogTitle>
+            <DialogDescription>
+              Freezes your current symbol / event-type / tag / source filters
+              into a named list you can preview, re-apply, and manage under
+              Watchlists.
+            </DialogDescription>
+          </DialogHeader>
+          <Input
+            value={saveWatchlistName}
+            onChange={(e) => setSaveWatchlistName(e.target.value)}
+            placeholder="e.g. AH biotech catalysts"
+            aria-label="Watchlist name"
+            autoFocus
+            onKeyDown={(e) => {
+              if (e.key === "Enter") void submitSaveWatchlist();
+            }}
+          />
+          <DialogFooter className="sm:justify-between">
+            <Link
+              href="/watchlist"
+              onClick={() => {
+                writeWatchlistDraftHandoff({
+                  name: saveWatchlistName.trim() || undefined,
+                  criteria: filtersToWatchlistCriteria(filterState),
+                });
+                setSaveWatchlistOpen(false);
+              }}
+              className="inline-flex items-center gap-1.5 self-center font-mono text-[0.72rem] text-[var(--desk-text-muted)] underline-offset-2 hover:text-[var(--desk-text)] hover:underline"
+            >
+              Need dynamic rules or AI help? Open the builder →
+            </Link>
+            <Button
+              type="button"
+              disabled={savingWatchlist}
+              onClick={() => void submitSaveWatchlist()}
+              className="bg-[var(--desk-live)] text-[#121212] hover:brightness-110"
+            >
+              {savingWatchlist ? "Saving…" : "Save watchlist"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </section>
   );
 }
@@ -893,6 +983,15 @@ export function LiveCatalystFeed({
 interface FacetOptions {
   categories: { value: string; label: string; count?: number }[];
   sources: { value: string; label: string; count?: number }[];
+  tags: { value: string; label: string; count?: number }[];
+}
+
+/** `category:earnings` → "Category: earnings" for the tag multi-select. */
+function tagLabel(tag: string): string {
+  const [ns, ...rest] = tag.split(":");
+  if (rest.length === 0) return tag;
+  const value = rest.join(":");
+  return `${ns.charAt(0).toUpperCase()}${ns.slice(1)}: ${value}`;
 }
 
 function buildFacetOptions(facets: FeedFacets | null): FacetOptions {
@@ -907,6 +1006,11 @@ function buildFacetOptions(facets: FeedFacets | null): FacetOptions {
       label: b.key,
       count: b.count,
     })),
+    tags: (facets?.tags ?? []).map((b) => ({
+      value: b.key,
+      label: tagLabel(b.key),
+      count: b.count,
+    })),
   };
 }
 
@@ -918,9 +1022,10 @@ interface FeedFiltersProps {
   visibleCount: number;
   quietMode: boolean;
   watchlistCount: number;
-  playbookCount: number;
+  signalWatchlistCount: number;
   panelFiltersActive: boolean;
   onClearFilters: () => void;
+  onSaveWatchlist: () => void;
 }
 
 function FeedFilters({
@@ -931,24 +1036,31 @@ function FeedFilters({
   visibleCount,
   quietMode,
   watchlistCount,
-  playbookCount,
+  signalWatchlistCount,
   panelFiltersActive,
   onClearFilters,
+  onSaveWatchlist,
 }: FeedFiltersProps) {
+  const removeSymbolFilter = (symbol: string) =>
+    onPatchFilters({
+      symbolFilters: filterState.symbolFilters.filter((s) => s !== symbol),
+    });
+
   return (
     <div className="flex flex-col gap-2">
       {quietMode ? (
         <p className="font-mono text-[0.72rem] text-[var(--desk-text-dim)]">
-          Quiet playbook on · {watchlistCount} watchlist symbol
-          {watchlistCount === 1 ? "" : "s"} · {playbookCount} event type
-          {playbookCount === 1 ? "" : "s"} — edit under Watchlists.
+          Quiet mode on · {watchlistCount} symbol
+          {watchlistCount === 1 ? "" : "s"} · {signalWatchlistCount} watchlist
+          {signalWatchlistCount === 1 ? "" : "s"} selected — edit under
+          Watchlists.
         </p>
       ) : null}
       <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
         <Input
           value={filterState.symbolQuery}
           onChange={(e) => onPatchFilters({ symbolQuery: e.target.value })}
-          placeholder="Symbol, company, title…"
+          placeholder="Search symbol, company, title…"
           aria-label="Search by symbol, company, or title"
           className="h-8 w-full border-[var(--desk-border-strong)] bg-[var(--desk-overlay-soft)] font-mono text-xs tracking-wide sm:w-56 md:text-xs"
         />
@@ -980,6 +1092,14 @@ function FeedFilters({
             emptyLabel="All event types"
             searchPlaceholder="Search event types…"
           />
+          <FeedFilterMultiSelect
+            label="Tag"
+            options={facetOptions.tags}
+            selected={filterState.tagFilters}
+            onChange={(tagFilters) => onPatchFilters({ tagFilters })}
+            emptyLabel="All tags"
+            searchPlaceholder="Search tags…"
+          />
           {isLocalDevUi() ? (
             <FeedFilterMultiSelect
               label="Source"
@@ -988,6 +1108,17 @@ function FeedFilters({
               onChange={(sourceFilters) => onPatchFilters({ sourceFilters })}
               emptyLabel="All sources"
             />
+          ) : null}
+          {panelFiltersActive ? (
+            <button
+              type="button"
+              onClick={onSaveWatchlist}
+              title="Save these filters as a named, re-appliable watchlist"
+              className="inline-flex h-8 items-center gap-1 rounded-md border border-[var(--desk-border-strong)] bg-[var(--desk-overlay-soft)] px-2.5 font-mono text-[0.7rem] tracking-wide text-[var(--desk-text-secondary)] transition-colors hover:bg-[var(--desk-overlay-strong)] hover:text-[var(--desk-text)]"
+            >
+              <Plus className="size-3" />
+              Save as watchlist
+            </button>
           ) : null}
           {panelFiltersActive ? (
             <button
@@ -1001,12 +1132,61 @@ function FeedFilters({
           ) : null}
         </div>
       </div>
+      {filterState.symbolFilters.length > 0 ||
+      filterState.tagFilters.length > 0 ? (
+        <div
+          className="flex flex-wrap items-center gap-1.5"
+          role="group"
+          aria-label="Active exact filters"
+        >
+          {filterState.symbolFilters.map((symbol) => (
+            <ActiveFilterChip
+              key={`symbol:${symbol}`}
+              label={symbol}
+              onRemove={() => removeSymbolFilter(symbol)}
+            />
+          ))}
+          {filterState.tagFilters.map((tag) => (
+            <ActiveFilterChip
+              key={`tag:${tag}`}
+              label={tagLabel(tag)}
+              onRemove={() =>
+                onPatchFilters({
+                  tagFilters: filterState.tagFilters.filter((t) => t !== tag),
+                })
+              }
+            />
+          ))}
+        </div>
+      ) : null}
       {total != null ? (
         <p className="font-mono text-[0.72rem] text-[var(--desk-text-dim)] tabular-nums">
           Showing {visibleCount} of {total}
         </p>
       ) : null}
     </div>
+  );
+}
+
+function ActiveFilterChip({
+  label,
+  onRemove,
+}: {
+  label: string;
+  onRemove: () => void;
+}) {
+  return (
+    <span className="inline-flex items-center gap-1 rounded-full border border-[var(--desk-live)]/40 bg-[var(--desk-live)]/10 px-2 py-0.5 font-mono text-[0.68rem] tracking-wide text-[var(--desk-live)]">
+      {label}
+      <button
+        type="button"
+        onClick={onRemove}
+        aria-label={`Remove ${label} filter`}
+        className="rounded-full p-0.5 hover:bg-[var(--desk-live)]/20"
+      >
+        <X className="size-2.5" />
+      </button>
+    </span>
   );
 }
 
@@ -1105,7 +1285,7 @@ function CatalystFeedList({
 
   // "N new" affordance: when the user has scrolled down, newly-arrived rows
   // land at the top of the tape (out of view). Count them here and report to
-  // the parent toolbar (next to Refresh) — click scrolls back to newest.
+  // the parent toolbar — click scrolls back to newest.
   const [atTop, setAtTop] = useState(true);
   const [pendingNew, setPendingNew] = useState(0);
   const knownListIds = useRef<Set<number>>(new Set(catalysts.map((c) => c.id)));

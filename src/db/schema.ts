@@ -164,8 +164,54 @@ export const watchlistEntries = sqliteTable("watchlist_entries", {
 });
 
 /**
- * Playbook: which event categories count as signal when the tape is quiet.
- * One row per user; `categories` is a JSON string array of EventCategoryKey.
+ * Saved feed-filter combinations ("smart" watchlists) — a user can have many.
+ * Unlike `watchlist_entries` (a flat symbol list for quiet mode), a row here
+ * freezes an arbitrary filter combo (symbols + categories + forms + tags +
+ * sources + free-text) so it can be named, previewed, and re-applied to the
+ * live tape — and, next phase, referenced from an alert rule's conditions.
+ */
+export interface WatchlistCriteria {
+  /** Exact symbol matches (uppercase). */
+  symbols?: string[];
+  /** EventCategoryKey values. */
+  categories?: string[];
+  /** FeedFormFilter values (8-K, 424B, 4, S-3, 13D, 13G, other). */
+  forms?: string[];
+  /** Auto/vendor tags (lowercase), e.g. "category:earnings", "fda". */
+  tags?: string[];
+  /** Vendor provider ids (local-dev facet; harmless no-op elsewhere). */
+  sources?: string[];
+  /** Free-text search over symbol/company/title/headline. */
+  q?: string;
+}
+
+export const watchlists = sqliteTable("watchlists", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: integer("user_id")
+    .notNull()
+    .references(() => users.id),
+  name: text("name").notNull(),
+  criteria: text("criteria", { mode: "json" }).notNull(),
+  createdAt: text("created_at")
+    .notNull()
+    .default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at")
+    .notNull()
+    .default(sql`(current_timestamp)`),
+});
+
+/**
+ * Playbook / quiet-mode signal sources. One row per user.
+ *
+ * `watchlistIds` (which of the user's saved `watchlists` rules count as
+ * "signal") is the current mechanism — a row matches quiet mode if it
+ * matches ANY selected watchlist's criteria, or is on the flat
+ * `watchlist_entries` symbol list (see `matchesQuietPlaybook` in
+ * lib/catalysts/playbook.ts). `categories` is the legacy single-axis
+ * mechanism (event-type checkboxes only); kept for old rows / the
+ * one-click "migrate to a watchlist" action, and as the implicit default
+ * (`DEFAULT_PLAYBOOK_CATEGORIES`) when a user has never selected any
+ * watchlist. Not written by the current UI otherwise.
  */
 export const playbookSettings = sqliteTable("playbook_settings", {
   id: integer("id").primaryKey({ autoIncrement: true }),
@@ -173,11 +219,14 @@ export const playbookSettings = sqliteTable("playbook_settings", {
     .notNull()
     .unique()
     .references(() => users.id),
+  /** @deprecated Superseded by `watchlistIds`; see table comment. */
   categories: text("categories", { mode: "json" }).notNull(),
-  /** When true, Live feed only shows watchlist + playbook-matching rows. */
+  /** When true, Live feed only shows rows matching a selected signal source. */
   quietMode: integer("quiet_mode", { mode: "boolean" })
     .notNull()
     .default(false),
+  /** JSON array of `watchlists.id` the user has selected as quiet signal sources. */
+  watchlistIds: text("watchlist_ids", { mode: "json" }),
   updatedAt: text("updated_at")
     .notNull()
     .default(sql`(current_timestamp)`),
@@ -209,12 +258,21 @@ export type AlertChannel = "email" | "webhook" | "push" | "telegram";
 export interface AlertRuleConditions {
   /** Empty / omitted = any category. */
   categories?: string[];
-  /** Minimum rule-based impact score (0–100). */
+  /**
+   * @deprecated Impact score retired — ignored by matching and stripped on
+   * normalize. Kept optional so older stored JSON still parses.
+   */
   minImpact?: number;
   /** Session filter for AH/PM bombs; default any. */
   sessions?: AlertSession[];
   /** When true, only fire for catalysts whose symbol is on the user's watchlist. */
   watchlistOnly?: boolean;
+  /**
+   * Any-match against the catalyst's auto/vendor tags (see `deriveAutoTags`
+   * in ingest-pipeline.ts), e.g. ["category:regulatory", "fda"]. Empty /
+   * omitted = any tags.
+   */
+  tags?: string[];
 }
 
 /**

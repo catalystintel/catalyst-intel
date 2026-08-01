@@ -2,8 +2,9 @@ import { and, eq, gte } from "drizzle-orm";
 
 import { db } from "@/db/client";
 import { catalysts, companies, rawSources } from "@/db/schema";
-import type { SentimentLean, SymbolSource } from "@/db/schema";
+import type { AlertSession, SentimentLean, SymbolSource } from "@/db/schema";
 import { ensureIngestSummary } from "@/lib/catalysts/article-content";
+import { formBucketFromType } from "@/lib/catalysts/feed-form-filters";
 import { computeMateriality } from "@/lib/catalysts/materiality";
 import { evaluateCatalystQuality } from "@/lib/catalysts/quality-gate";
 import {
@@ -98,6 +99,61 @@ async function resolveCompany(
     .returning({ id: companies.id })
     .get();
   return { id: inserted.id, marketCapMillions: null };
+}
+
+/**
+ * Deterministic, rule-based tags computed from fields every catalyst already
+ * has — independent of whether the vendor fetcher supplied any `tags` of its
+ * own (see `NormalizedCatalyst.tags` for the free-form vendor tags this gets
+ * merged with in `ingestNormalizedCatalysts`).
+ *
+ * Namespaced (`category:`, `form:`, …) so the feed's tag filter, saved
+ * "smart" watchlists, and (next phase) alert rule conditions can combine on
+ * structured fields — event type, form, session, materiality tier, sentiment
+ * lean, symbol — without every fetcher having to agree on a vocabulary.
+ */
+export function deriveAutoTags(input: {
+  eventCategory: EventCategoryKey;
+  type: string;
+  symbol?: string | null;
+  session: AlertSession;
+  impactScore: number;
+  sentiment?: SentimentLean | null;
+}): string[] {
+  const tags: string[] = [
+    `category:${input.eventCategory}`,
+    `form:${formBucketFromType(input.type).toLowerCase()}`,
+  ];
+  if (input.session !== "any") tags.push(`session:${input.session}`);
+  const impactTier =
+    input.impactScore >= 70
+      ? "high"
+      : input.impactScore >= 40
+        ? "medium"
+        : "low";
+  tags.push(`impact:${impactTier}`);
+  if (input.sentiment) tags.push(`sentiment:${input.sentiment}`);
+  const symbol = input.symbol?.trim().toUpperCase();
+  if (symbol) tags.push(`symbol:${symbol.toLowerCase()}`);
+  return tags;
+}
+
+/** Case-insensitive de-dupe, preserving first-seen casing, then trimmed. */
+function mergeTags(
+  vendorTags: string[] | null | undefined,
+  autoTags: string[],
+): string[] {
+  const merged: string[] = [];
+  const seen = new Set<string>();
+  for (const tag of [...(vendorTags ?? []), ...autoTags]) {
+    const trimmed = tag?.trim();
+    if (!trimmed) continue;
+    const key = trimmed.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    merged.push(trimmed);
+  }
+  return merged;
 }
 
 /**
@@ -215,13 +271,14 @@ export async function ingestNormalizedCatalysts(
         companyName,
       );
 
+      const session = classifySession(timestamp);
+
       let impactScore: number;
       let materialityReasons: string[] | null;
       if (typeof item.impactScore === "number") {
         impactScore = item.impactScore;
         materialityReasons = null;
       } else {
-        const session = classifySession(timestamp);
         const computed = computeMateriality({
           eventCategory: category,
           itemCodes: item.itemCodes,
@@ -232,6 +289,18 @@ export async function ingestNormalizedCatalysts(
         impactScore = computed.score;
         materialityReasons = computed.reasons;
       }
+
+      const tags = mergeTags(
+        item.tags,
+        deriveAutoTags({
+          eventCategory: category,
+          type: item.type,
+          symbol,
+          session,
+          impactScore,
+          sentiment: item.sentiment,
+        }),
+      );
 
       const summary = ensureIngestSummary({
         summary: item.summary,
@@ -264,7 +333,7 @@ export async function ingestNormalizedCatalysts(
           summary,
           impactScore,
           confidence: item.confidence ?? null,
-          tags: item.tags ?? null,
+          tags,
           historicalImpact: item.historicalImpact ?? null,
           symbolSource: item.symbolSource ?? null,
           sentiment: item.sentiment ?? null,

@@ -15,6 +15,7 @@ import { IngestionAuditSection } from "./ingestion-audit-section";
 import { MigrateTrigger } from "./migrate-trigger";
 import { ResetDbTrigger } from "./reset-db-trigger";
 import { ShowArticleSourceToggle } from "./show-article-source-toggle";
+import { TelegramBotSetup } from "./telegram-bot-setup";
 import { WhatsNewPanel } from "./whats-new-panel";
 
 export default async function AdminPage() {
@@ -158,6 +159,21 @@ export default async function AdminPage() {
         </div>
         <div className="px-4 py-4 sm:px-5">
           <MigrateTrigger />
+        </div>
+      </section>
+
+      <section className="overflow-hidden rounded-xl border border-[var(--desk-border)] bg-[var(--desk-panel)]">
+        <div className="border-b border-border/60 px-4 py-4 sm:px-5">
+          <h2 className="font-mono text-sm tracking-wide text-foreground">
+            Telegram bot
+          </h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            One-click webhook + commands + brand avatar so /start returns chat
+            IDs for alert rules.
+          </p>
+        </div>
+        <div className="px-4 py-4 sm:px-5">
+          <TelegramBotSetup />
         </div>
       </section>
 

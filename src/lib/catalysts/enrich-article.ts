@@ -362,9 +362,9 @@ async function fetchRelatedFromDb(
       if (!title) continue;
       out.push({
         title,
-        url: row.sourceUrl?.trim() || null,
+        url: null,
         publishedAt: row.timestamp || null,
-        source: row.sourceProvider?.trim() || "Catalyst",
+        source: "Catalyst",
         catalystId: row.id,
       });
     }
@@ -392,12 +392,12 @@ async function fetchFinnhubCompanyNews(
     if (!title) continue;
     out.push({
       title,
-      url: row.url?.trim() || null,
+      url: null,
       publishedAt:
         typeof row.datetime === "number" && row.datetime > 0
           ? new Date(row.datetime * 1000).toISOString()
           : null,
-      source: row.source?.trim() || "Finnhub",
+      source: "Related",
       catalystId: null,
     });
   }
@@ -426,9 +426,9 @@ async function fetchPolygonSymbolNews(
     if (!title) continue;
     out.push({
       title,
-      url: article.article_url?.trim() || null,
+      url: null,
       publishedAt: article.published_utc?.trim() || null,
-      source: article.publisher?.name?.trim() || "Polygon",
+      source: "Related",
       catalystId: null,
     });
   }

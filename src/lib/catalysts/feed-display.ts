@@ -64,44 +64,51 @@ export interface SourceDisplay {
 }
 
 const PROVIDER_DISPLAY: Record<string, Omit<SourceDisplay, "meta">> = {
-  "sec-edgar": { name: "SEC EDGAR", initial: "S", tone: "sec" },
-  "nasdaq-halts": { name: "Nasdaq Halts", initial: "N", tone: "generic" },
+  "sec-edgar": { name: "Filings", initial: "F", tone: "sec" },
+  "nasdaq-halts": { name: "Halt", initial: "H", tone: "generic" },
   "macro-calendar": { name: "Macro", initial: "M", tone: "generic" },
-  "fmp-econ-calendar": { name: "FMP Econ", initial: "E", tone: "generic" },
-  "pr-wire": { name: "PR Wire", initial: "W", tone: "wire" },
-  finnhub: { name: "Finnhub", initial: "F", tone: "generic" },
-  polygon: { name: "Polygon", initial: "P", tone: "generic" },
-  openfda: { name: "openFDA", initial: "O", tone: "generic" },
-  clinicaltrials: { name: "ClinicalTrials", initial: "C", tone: "generic" },
-  form4api: { name: "Form4API", initial: "4", tone: "generic" },
+  "fmp-econ-calendar": { name: "Macro", initial: "E", tone: "generic" },
+  "pr-wire": { name: "Press release", initial: "P", tone: "wire" },
+  finnhub: { name: "Calendar", initial: "C", tone: "generic" },
+  polygon: { name: "News", initial: "N", tone: "generic" },
+  openfda: { name: "Regulatory", initial: "R", tone: "generic" },
+  clinicaltrials: { name: "Clinical", initial: "C", tone: "generic" },
+  form4api: { name: "Form 4", initial: "4", tone: "generic" },
 };
 
 /**
  * Maps a catalyst's provider / filing type into a display name for muted meta.
- * Polygon rows with Benzinga Wire tagging surface as Wire (not generic Polygon).
- * PR-wire rows always surface as PR Wire (never the upstream aggregator brand).
+ * Wire rows surface as Press release (never a vendor or wire-house brand).
  */
 export function sourceDisplay(c: FeedCatalyst): SourceDisplay {
-  if (c.sourceProvider === "pr-wire" || c.subcategory === "pr_wire") {
+  if (
+    c.sourceProvider === "pr-wire" ||
+    c.subcategory === "pr_wire" ||
+    c.subcategory === "press_release" ||
+    c.type === "Press Release" ||
+    c.type === "Wire"
+  ) {
     const meta =
-      [c.type?.trim() || "Wire", c.symbol?.trim()]
+      [c.type?.trim() || "Press release", c.symbol?.trim()]
         .filter(Boolean)
-        .join(" · ") || "Wire";
-    return { name: "PR Wire", meta, initial: "W", tone: "wire" };
+        .join(" · ") || "Press release";
+    return { name: "Press release", meta, initial: "P", tone: "wire" };
   }
 
   const isWire =
-    c.sourceProvider === "polygon" &&
-    (/wire/i.test(c.type ?? "") ||
-      c.subcategory === "benzinga_wire" ||
-      /benzinga wire/i.test(c.headline ?? ""));
+    (c.sourceProvider === "polygon" &&
+      (/wire/i.test(c.type ?? "") ||
+        c.subcategory === "benzinga_wire" ||
+        c.subcategory === "press_release" ||
+        /benzinga wire/i.test(c.headline ?? ""))) ||
+    c.type === "Press Release";
 
   if (isWire) {
     const meta =
-      [c.type?.trim() || "Wire", c.symbol?.trim()]
+      [c.type?.trim() || "Press release", c.symbol?.trim()]
         .filter(Boolean)
-        .join(" · ") || "Wire";
-    return { name: "Benzinga Wire", meta, initial: "B", tone: "wire" };
+        .join(" · ") || "Press release";
+    return { name: "Press release", meta, initial: "P", tone: "wire" };
   }
 
   const known = c.sourceProvider
@@ -132,7 +139,7 @@ export function sectorLabel(c: FeedCatalyst): string {
     return CATEGORY_LABELS[c.eventCategory as EventCategoryKey];
   }
   if (c.sourceProvider === "sec-edgar" || /^8-?K$/i.test(c.type)) {
-    return "SEC Filings";
+    return "Filings";
   }
   return c.type?.trim() || "Other";
 }
@@ -1127,7 +1134,10 @@ const SUBCATEGORY_LABELS: Record<string, string> = {
   ipo_filed: "IPO filed",
   ipo_withdrawn: "IPO withdrawn",
   ipo_news: "IPO news",
-  benzinga_wire: "Benzinga Wire",
+  benzinga_wire: "Press release",
+  press_release: "Press release",
+  fda_approval: "FDA approval",
+  openfda_approval: "FDA approval",
   halt_resumed: "Halt resumed",
   halt: "Trading halt",
   bmo: "Before market open",

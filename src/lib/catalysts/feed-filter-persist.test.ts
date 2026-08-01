@@ -63,28 +63,61 @@ describe("feed-filter-persist", () => {
   });
 
   it("round-trips multi filters", () => {
+    vi.stubEnv("NODE_ENV", "development");
     writePersistedFeedFilters({
       symbolQuery: "TSLA",
+      symbolFilters: ["NVDA", "AAPL"],
       categoryFilters: ["news", "earnings"],
       sectorFilters: ["information_technology"],
       formFilters: ["8-K"],
       sourceFilters: ["sec-edgar"],
+      tagFilters: ["category:earnings"],
       timeWindow: "4h",
       symbolOnly: false,
       earningsSurprisesOnly: true,
     });
     expect(readPersistedFeedFilters()).toEqual({
       symbolQuery: "TSLA",
+      symbolFilters: ["NVDA", "AAPL"],
       categoryFilters: ["news", "earnings"],
       // Retired panel facets are stripped on read/write.
       sectorFilters: [],
       formFilters: [],
       sourceFilters: ["sec-edgar"],
+      tagFilters: ["category:earnings"],
       timeWindow: "4h",
       // Always coerced on read — desk rule is not optional.
       symbolOnly: true,
       earningsSurprisesOnly: false,
     });
+    vi.unstubAllEnvs();
+  });
+
+  it("drops source filters outside local development", () => {
+    localStorage.setItem(
+      FEED_FILTER_STORAGE_KEY,
+      JSON.stringify({
+        ...DEFAULT_FEED_FILTERS,
+        sourceFilters: ["sec-edgar"],
+        lastActiveAt: Date.now(),
+      }),
+    );
+    expect(readPersistedFeedFilters()?.sourceFilters).toEqual([]);
+  });
+
+  it("exact symbol chips and tag chips count as active panel filters", () => {
+    expect(
+      isPanelFiltersDefault({
+        ...DEFAULT_FEED_FILTERS,
+        symbolFilters: ["NVDA"],
+      }),
+    ).toBe(false);
+    expect(
+      isPanelFiltersDefault({
+        ...DEFAULT_FEED_FILTERS,
+        tagFilters: ["fda"],
+      }),
+    ).toBe(false);
   });
 
   it("retired panel facets alone do not count as active", () => {
@@ -137,19 +170,23 @@ describe("feed-filter-persist", () => {
   it("feedApiQuery encodes filters", () => {
     const qs = feedApiQuery({
       symbolQuery: "AAPL",
+      symbolFilters: ["NVDA"],
       categoryFilters: ["earnings"],
       sectorFilters: ["financials"],
       formFilters: ["8-K"],
       sourceFilters: ["sec-edgar"],
+      tagFilters: ["fda"],
       timeWindow: "24h",
       symbolOnly: false,
       earningsSurprisesOnly: true,
     });
     const params = new URLSearchParams(qs);
     expect(params.get("q")).toBe("AAPL");
+    expect(params.get("symbols")).toBe("NVDA");
     expect(params.get("categories")).toBe("earnings");
     expect(params.get("sectors")).toBe("financials");
     expect(params.get("forms")).toBe("8-K");
+    expect(params.get("tags")).toBe("fda");
     expect(params.get("window")).toBe("24h");
     // Always sent — tape gate is not optional.
     expect(params.get("symbolOnly")).toBe("1");

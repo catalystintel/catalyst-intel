@@ -20,6 +20,11 @@ import {
   needsEarningsEnrichment,
 } from "@/lib/catalysts/enrich-earnings";
 import { fetchArticleEnrichment } from "@/lib/catalysts/enrich-article";
+import {
+  scrubPublicArticleText,
+  toPublicFeedCatalyst,
+} from "@/lib/catalysts/public-catalyst";
+import { isLocalDevUi } from "@/lib/dev/local-dev-ui";
 import { getClientIp } from "@/lib/http/client-ip";
 import { RATE_LIMITS, checkRateLimit } from "@/lib/http/rate-limit";
 import {
@@ -34,6 +39,7 @@ interface RouteContext {
 /**
  * Authenticated single-catalyst payload for the in-app details view.
  * Includes derived summary + body text from stored raw_content.
+ * Never returns rawContent or vendor origin fields (except local-dev proof).
  */
 export async function GET(request: NextRequest, context: RouteContext) {
   if (!isLibsqlConfigured()) {
@@ -175,42 +181,22 @@ export async function GET(request: NextRequest, context: RouteContext) {
     excludeCatalystId: row.id,
   });
 
-  const catalyst = {
-    id: row.id,
-    symbol: row.symbol,
-    companyName: row.companyName,
-    type: row.type,
-    title: row.title,
-    headline: row.headline,
-    eventCategory: row.eventCategory,
-    subcategory: row.subcategory,
-    itemCodes: row.itemCodes,
-    timestamp: row.timestamp,
-    summary: row.summary,
-    impactScore: row.impactScore,
-    confidence: row.confidence,
-    tags: row.tags,
-    historicalImpact: row.historicalImpact,
-    aiBullets: row.aiBullets,
-    aiLean: row.aiLean,
-    aiUncertain: row.aiUncertain,
-    sourceUrl: row.sourceUrl,
-    sourceProvider: row.sourceProvider,
-    sector: row.sector,
-    rawContent: row.rawContent,
-  };
+  const publicCatalyst = toPublicFeedCatalyst(row);
+  const includeOrigins = isLocalDevUi();
 
   return withRateLimitHeaders(
     NextResponse.json({
-      catalyst,
+      catalyst: publicCatalyst,
       article: {
-        summary,
+        summary: scrubPublicArticleText(summary),
         summaryGenerated,
-        body,
+        body: scrubPublicArticleText(body),
         bodySource,
         detailCards,
         enrichment,
-        filingProofMeta: extractFilingProofMeta(row.rawContent),
+        filingProofMeta: includeOrigins
+          ? extractFilingProofMeta(row.rawContent)
+          : null,
         thumbUrl: extractArticleThumbUrl(row.rawContent),
       },
     }),

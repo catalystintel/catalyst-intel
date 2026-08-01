@@ -8,6 +8,7 @@ import {
   LiveCatalystFeed,
   type FeedCatalyst,
 } from "@/components/live-catalyst-feed";
+import type { WatchlistCriteria } from "@/db/schema";
 import type { MacroEventDef } from "@/lib/jobs/fetch-macro-calendar";
 
 /**
@@ -25,6 +26,7 @@ export function DeskDashboardGrid({
   isAdmin,
   showSourceLabels = false,
   initialSymbolFilter,
+  initialWatchlistCriteria,
   initialSelectedId,
   macroEvents,
 }: {
@@ -33,6 +35,8 @@ export function DeskDashboardGrid({
   /** Admin personal pref: show vendor source on tape / split / details. */
   showSourceLabels?: boolean;
   initialSymbolFilter?: string;
+  /** Full filter combo applied from a saved watchlist's "Apply to feed". */
+  initialWatchlistCriteria?: WatchlistCriteria;
   initialSelectedId?: number;
   macroEvents: MacroEventDef[];
 }) {
@@ -48,6 +52,7 @@ export function DeskDashboardGrid({
           isAdmin={isAdmin}
           showSourceLabels={showSourceLabels}
           initialSymbolFilter={initialSymbolFilter}
+          initialWatchlistCriteria={initialWatchlistCriteria}
           initialSelectedId={initialSelectedId}
           onFocusSymbol={setFocusSymbol}
         />

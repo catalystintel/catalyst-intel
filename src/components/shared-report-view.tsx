@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 
 import { CategoryBadge } from "@/components/category-badge";
-import { MaterialityBadge } from "@/components/materiality-badge";
 import { SkeletonCard } from "@/components/loading-skeleton";
 import type { ReportDetail } from "@/lib/reports/types";
 import { formatEventTime, formatRelativeAge } from "@/lib/format/relative-time";
@@ -105,10 +104,6 @@ export function SharedReportView({ token }: { token: string }) {
                   {item.eventCategory ? (
                     <CategoryBadge category={item.eventCategory} />
                   ) : null}
-                  <MaterialityBadge
-                    score={item.impactScore}
-                    category={item.eventCategory}
-                  />
                 </span>
               </span>
               <span className="hidden pt-0.5 font-mono text-[0.68rem] text-[var(--desk-text-dim)] sm:inline">

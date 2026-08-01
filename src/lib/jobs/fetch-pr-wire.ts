@@ -311,7 +311,7 @@ export function publicReceiptHistoricalImpact(article: {
   const date = ts && !Number.isNaN(Date.parse(ts)) ? ts.slice(0, 10) : null;
   const maxAbs = finiteNumber(article.realizedMaxAbs);
   return {
-    provider: "pr-wire",
+    // No vendor `provider` key — product APIs scrub origins.
     status: "settled",
     pctChange: Number(pct.toFixed(3)),
     maxAbs: maxAbs === null ? null : Number(maxAbs.toFixed(3)),
@@ -331,7 +331,7 @@ export function mapPublicEventCategory(
   const classified = categorizeNewsHeadline(title);
   return {
     eventCategory: classified.eventCategory,
-    subcategory: classified.subcategory || "pr_wire",
+    subcategory: classified.subcategory || "press_release",
   };
 }
 
@@ -378,7 +378,7 @@ export function publicReceiptToArticle(
     ticker,
     tickers: [ticker],
     title,
-    author: "PR Wire",
+    author: undefined,
     created: scoredAt,
     article_published_at: scoredAt,
     impactScore,
@@ -438,23 +438,38 @@ export function articleToNormalized(
   const theme = sanitizePrWireText(article.theme);
   const historicalImpact = publicReceiptHistoricalImpact(article);
 
+  // Prefer hydrate extract; otherwise build snippets from the full body.
+  const extracted =
+    article.extracted ??
+    (body
+      ? {
+          investorSummary:
+            body.length > 420 ? `${body.slice(0, 417).trim()}…` : body,
+          bodySnippets: body
+            .split(/(?<=[.!?])\s+/)
+            .map((s) => s.trim())
+            .filter((s) => s.length >= 40)
+            .slice(0, 8),
+          keyFacts: title ? [{ label: "Headline", value: title }] : [],
+        }
+      : null);
+
   const rawContent: Record<string, unknown> = {
     id,
     ticker: symbol,
     tickers: symbols,
     title,
-    author: publisher,
     created: timestamp,
     article_body: body,
     exchange,
-    wireSource: "pr_wire",
-    publisherName: publisher,
     eventType: article.eventType ?? null,
     eventLabel,
     theme,
     tier: article.tier ?? null,
     settled: article.settled ?? null,
   };
+  // Never persist author / publisherName / wireSource — origin leak.
+  if (publisher) rawContent.byline = publisher;
   if (imageUrl) rawContent.image_url = imageUrl;
   if (typeof article.impactScore === "number") {
     rawContent.impactScore = article.impactScore;
@@ -465,17 +480,17 @@ export function articleToNormalized(
   if (typeof article.realizedMaxAbs === "number") {
     rawContent.realizedMaxAbs = article.realizedMaxAbs;
   }
-  if (article.extracted) {
+  if (extracted) {
     rawContent.extracted = {
-      investorSummary: sanitizePrWireText(article.extracted.investorSummary),
-      keyFacts: (article.extracted.keyFacts ?? [])
+      investorSummary: sanitizePrWireText(extracted.investorSummary),
+      keyFacts: (extracted.keyFacts ?? [])
         .map((f) => ({
           label: sanitizePrWireText(f.label) ?? "",
           value: sanitizePrWireText(f.value) ?? "",
         }))
         .filter((f) => f.label && f.value)
         .slice(0, 8),
-      bodySnippets: (article.extracted.bodySnippets ?? [])
+      bodySnippets: (extracted.bodySnippets ?? [])
         .map((s) => sanitizePrWireText(s))
         .filter((s): s is string => Boolean(s))
         .slice(0, 8),
@@ -487,7 +502,9 @@ export function articleToNormalized(
     typeof article.realizedMovePct === "number" &&
     Math.abs(article.realizedMovePct) >= 5
       ? 88
-      : 78;
+      : body && body.length >= 280
+        ? 82
+        : 78;
 
   return {
     provider: "pr-wire",
@@ -496,11 +513,11 @@ export function articleToNormalized(
     rawContent,
     symbol,
     companyName: symbol,
-    type: "Wire",
+    type: "Press Release",
     title,
-    headline: "PR Wire",
+    headline: eventLabel || null,
     eventCategory: mapped.eventCategory,
-    subcategory: mapped.subcategory || "pr_wire",
+    subcategory: mapped.subcategory || "press_release",
     timestamp,
     summary,
     confidence,
@@ -508,8 +525,6 @@ export function articleToNormalized(
     sentiment: article.sentiment ?? null,
     historicalImpact,
     tags: [
-      "wire",
-      "press-release",
       ...(article.eventType ? [article.eventType] : []),
       ...(theme ? [theme] : []),
       ...symbols.slice(0, 3),
@@ -672,7 +687,8 @@ async function hydrateArticleFromUrl(
         ? nested.tickers.filter((t): t is string => typeof t === "string")
         : undefined,
       title,
-      author: stringField(nested, "author") ?? undefined,
+      // Wire-house author never persisted.
+      author: undefined,
       created:
         stringField(nested, "created", "article_published_at") ?? undefined,
       article_published_at:
@@ -692,7 +708,7 @@ async function hydrateArticleFromUrl(
               .split(/(?<=[.!?])\s+/)
               .map((s) => s.trim())
               .filter((s) => s.length >= 40)
-              .slice(0, 6),
+              .slice(0, 8),
             keyFacts: title ? [{ label: "Headline", value: title }] : undefined,
           }
         : null,
@@ -772,10 +788,27 @@ function parseFeedRefs(payload: unknown): PrWireFeedRef[] {
     .filter((r) => Boolean(r.article_url));
 }
 
+function buildBodyExtract(
+  body: string,
+  title?: string | null,
+): NonNullable<PrWireArticle["extracted"]> {
+  return {
+    investorSummary: body.length > 420 ? `${body.slice(0, 417).trim()}…` : body,
+    bodySnippets: body
+      .split(/(?<=[.!?])\s+/)
+      .map((s) => s.trim())
+      .filter((s) => s.length >= 40)
+      .slice(0, 8),
+    keyFacts: title?.trim()
+      ? [{ label: "Headline", value: title.trim() }]
+      : undefined,
+  };
+}
+
 /**
- * Optional authenticated full firehose when PR_WIRE_API_KEY + BASE are set.
- * Newest-first cursor pages; each `/a/{id}` permalink is scraped for Details body.
- * Free path does not use this — public receipts have no article URLs.
+ * Authenticated firehose when PR_WIRE_API_KEY + BASE are set.
+ * Prefer `/articles` (includes `article_body` per OpenAPI) so Details get the
+ * full press text. Fall back to body-free `/feed/articles` + `/a/{id}` hydrate.
  */
 async function fetchAuthenticatedArticles(
   baseUrl: string,
@@ -790,103 +823,116 @@ async function fetchAuthenticatedArticles(
     ),
   );
 
-  // Prefer body-free feed + hydrate (recommended RTPR surface).
+  // Prefer full-payload /articles — bodies included; richest Details content.
   try {
-    const hydrated: PrWireArticle[] = [];
+    const collected: PrWireArticle[] = [];
     let nextToken: string | null = null;
     for (let page = 0; page < AUTH_FEED_MAX_PAGES; page++) {
       const qs = new URLSearchParams({
-        limit: String(AUTH_FEED_PAGE_LIMIT),
+        limit: String(Math.min(AUTH_FEED_PAGE_LIMIT, maxArticles)),
       });
       if (nextToken) qs.set("next_token", nextToken);
-      const feedPayload = await fetchJson(
-        `${baseUrl}/feed/articles?${qs.toString()}`,
-        { apiKey, pathLabel: "/feed/articles" },
+      const fullPayload = await fetchJson(
+        `${baseUrl}/articles?${qs.toString()}`,
+        { apiKey, pathLabel: "/articles" },
       );
-      const refs = parseFeedRefs(feedPayload);
-      const root = asRecord(feedPayload);
+      const articles = parseFullArticlesPayload(fullPayload);
+      const root = asRecord(fullPayload);
       nextToken =
         typeof root?.next_token === "string" && root.next_token.trim()
           ? root.next_token.trim()
           : null;
 
-      for (const ref of refs) {
-        if (!ref.article_url) continue;
-        if (hydrated.length >= maxArticles) break;
+      for (const article of articles) {
+        if (collected.length >= maxArticles) break;
+        if (article.article_body?.trim()) {
+          collected.push({
+            ...article,
+            // Author is a wire-house brand — drop before normalize.
+            author: undefined,
+            extracted: buildBodyExtract(article.article_body, article.title),
+          });
+          continue;
+        }
+        if (!article.article_url) {
+          collected.push({ ...article, author: undefined });
+          continue;
+        }
         try {
-          const full = await hydrateArticleFromUrl(ref.article_url, apiKey);
-          if (!full) continue;
-          hydrated.push({
+          const full = await hydrateArticleFromUrl(article.article_url, apiKey);
+          collected.push({
+            ...article,
             ...full,
-            ticker: full.ticker ?? ref.ticker,
+            author: undefined,
+            ticker: full?.ticker ?? article.ticker,
             article_published_at:
-              full.article_published_at ?? ref.article_published_at,
-            // Ephemeral — used for hydrate id only; never persisted as url.
-            article_url: ref.article_url,
+              full?.article_published_at ?? article.article_published_at,
           });
         } catch (hydrateError) {
           if (isPrWireRateLimitError(hydrateError)) throw hydrateError;
+          collected.push({ ...article, author: undefined });
         }
       }
 
-      if (hydrated.length >= maxArticles || !nextToken || refs.length === 0) {
+      if (
+        collected.length >= maxArticles ||
+        !nextToken ||
+        articles.length === 0
+      ) {
         break;
       }
     }
-    if (hydrated.length > 0) return hydrated;
+    if (collected.length > 0) return collected;
   } catch (error) {
     if (!(error instanceof PrWireHttpError) || error.status !== 404) {
       throw error;
     }
   }
 
-  // Legacy full-payload /articles (may already include bodies).
-  const fullPayload = await fetchJson(
-    `${baseUrl}/articles?limit=${Math.min(500, maxArticles)}`,
-    {
-      apiKey,
-      pathLabel: "/articles",
-    },
-  );
-  const articles = parseFullArticlesPayload(fullPayload);
-  const out: PrWireArticle[] = [];
-  for (const article of articles.slice(0, maxArticles)) {
-    if (article.article_body?.trim()) {
-      out.push({
-        ...article,
-        extracted: {
-          investorSummary:
-            article.article_body.length > 420
-              ? `${article.article_body.slice(0, 417).trim()}…`
-              : article.article_body,
-          bodySnippets: article.article_body
-            .split(/(?<=[.!?])\s+/)
-            .map((s) => s.trim())
-            .filter((s) => s.length >= 40)
-            .slice(0, 6),
-        },
-      });
-      continue;
+  // Fallback: body-free feed + hydrate each `/a/{id}` permalink.
+  const hydrated: PrWireArticle[] = [];
+  let nextToken: string | null = null;
+  for (let page = 0; page < AUTH_FEED_MAX_PAGES; page++) {
+    const qs = new URLSearchParams({
+      limit: String(AUTH_FEED_PAGE_LIMIT),
+    });
+    if (nextToken) qs.set("next_token", nextToken);
+    const feedPayload = await fetchJson(
+      `${baseUrl}/feed/articles?${qs.toString()}`,
+      { apiKey, pathLabel: "/feed/articles" },
+    );
+    const refs = parseFeedRefs(feedPayload);
+    const root = asRecord(feedPayload);
+    nextToken =
+      typeof root?.next_token === "string" && root.next_token.trim()
+        ? root.next_token.trim()
+        : null;
+
+    for (const ref of refs) {
+      if (!ref.article_url) continue;
+      if (hydrated.length >= maxArticles) break;
+      try {
+        const full = await hydrateArticleFromUrl(ref.article_url, apiKey);
+        if (!full) continue;
+        hydrated.push({
+          ...full,
+          author: undefined,
+          ticker: full.ticker ?? ref.ticker,
+          article_published_at:
+            full.article_published_at ?? ref.article_published_at,
+          // Ephemeral — used for hydrate id only; never persisted as url.
+          article_url: ref.article_url,
+        });
+      } catch (hydrateError) {
+        if (isPrWireRateLimitError(hydrateError)) throw hydrateError;
+      }
     }
-    if (!article.article_url) {
-      out.push(article);
-      continue;
-    }
-    try {
-      const full = await hydrateArticleFromUrl(article.article_url, apiKey);
-      out.push({
-        ...article,
-        ...full,
-        ticker: full?.ticker ?? article.ticker,
-        article_published_at:
-          full?.article_published_at ?? article.article_published_at,
-      });
-    } catch (hydrateError) {
-      if (isPrWireRateLimitError(hydrateError)) throw hydrateError;
-      out.push(article);
+
+    if (hydrated.length >= maxArticles || !nextToken || refs.length === 0) {
+      break;
     }
   }
-  return out;
+  return hydrated;
 }
 
 /**
@@ -894,8 +940,8 @@ async function fetchAuthenticatedArticles(
  *
  * Default (no key): newest-first scrape of the public delayed impact board
  * (keyless; upstream floor score≥70; no article URLs). Optional env
- * credentials unlock the authenticated firehose + `/a/{id}` body scrape for
- * Details.
+ * credentials unlock `/articles` full bodies (preferred) or `/a/{id}` hydrate
+ * for Details.
  */
 export async function fetchPrWire(options?: {
   limit?: number;
@@ -934,7 +980,7 @@ export async function fetchPrWire(options?: {
       message:
         mode === "public"
           ? `Public impact board · ${normalized.length} newest receipts (delayed · score≥70 upstream).`
-          : `Authenticated wire · ${normalized.length} articles (detail pages scraped).`,
+          : `Authenticated wire · ${normalized.length} articles (full bodies).`,
     };
   } catch (error) {
     if (isPrWireRateLimitError(error)) {

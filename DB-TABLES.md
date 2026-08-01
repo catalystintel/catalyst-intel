@@ -5,7 +5,7 @@ Migrations live in [`drizzle/`](drizzle/). Keep this file in sync whenever the
 schema changes — see [`.cursor/skills/db-tables-doc/SKILL.md`](.cursor/skills/db-tables-doc/SKILL.md).
 Enforced by `npm run db:check` / husky pre-commit (`scripts/check-db-tables-doc.mjs`).
 
-**16 tables** (libSQL / SQLite via Drizzle).
+**17 tables** (libSQL / SQLite via Drizzle).
 
 ## Core market data
 
@@ -19,13 +19,14 @@ Enforced by `npm run db:check` / husky pre-commit (`scripts/check-db-tables-doc.
 
 ## Users & desk preferences
 
-| Table                  | What’s stored                                                        |
-| ---------------------- | -------------------------------------------------------------------- |
-| `users`                | App accounts (Supabase id, email, role, free/pro)                    |
-| `watchlist_entries`    | Per-user symbols the desk cares about                                |
-| `playbook_settings`    | Per-user quiet-mode filter (which event categories count as signal)  |
-| `dismissed_catalysts`  | Per-user “dismissed” catalysts so they stay hidden across devices    |
-| `user_source_settings` | Per-admin feed display prefs (show vendor source labels on the tape) |
+| Table                  | What’s stored                                                                                                                                   |
+| ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| `users`                | App accounts (Supabase id, email, role, free/pro)                                                                                               |
+| `watchlist_entries`    | Per-user symbols the desk cares about                                                                                                           |
+| `watchlists`           | Per-user named, saved feed-filter combos ("smart" watchlists) — symbols/categories/forms/tags/sources, previewable and re-appliable to the tape |
+| `playbook_settings`    | Per-user quiet-mode signal sources — selected `watchlists` ids (OR'd with the flat symbol list); legacy event-category list kept for migration  |
+| `dismissed_catalysts`  | Per-user “dismissed” catalysts so they stay hidden across devices                                                                               |
+| `user_source_settings` | Per-admin feed display prefs (show vendor source labels on the tape)                                                                            |
 
 ## Alerts
 

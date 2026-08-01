@@ -218,28 +218,26 @@ function newsToNormalized(
     externalId: `polygon:news:${id}`,
     url: article.article_url ?? null,
     rawContent: {
-      ...article,
-      wireSource: wire ? "benzinga" : "other",
-      publisherName: publisher,
+      id: article.id,
+      title: article.title,
+      description: article.description ?? null,
+      published_utc: article.published_utc ?? null,
+      tickers: symbols,
+      // No publisherName / wireSource — origin leak in raw blobs.
     },
     symbol,
     companyName: symbol,
-    type: wire ? "Wire" : "Market News",
+    type: wire ? "Press Release" : "Market News",
     title: displayTitle,
-    headline: wire ? "Benzinga Wire" : publisher,
+    headline: null,
     eventCategory: classified.eventCategory,
-    subcategory: wire ? "benzinga_wire" : classified.subcategory,
+    subcategory: wire ? "press_release" : classified.subcategory,
     timestamp,
     summary,
     confidence: wire ? 70 : 60,
     sentiment: sentiment?.sentiment ?? null,
     sentimentReasoning: sentiment?.reasoning ?? null,
-    tags: [
-      "polygon",
-      ...(wire ? (["benzinga", "wire"] as const) : (["news"] as const)),
-      ...classified.tags,
-      ...symbols.slice(0, 3),
-    ],
+    tags: [...classified.tags, ...symbols.slice(0, 3)],
   };
 }
 

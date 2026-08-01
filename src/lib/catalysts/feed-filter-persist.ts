@@ -1,3 +1,4 @@
+import type { WatchlistCriteria } from "@/db/schema";
 import type { FeedFormFilter } from "@/lib/catalysts/feed-form-filters";
 import {
   isFeedTimeWindow,
@@ -18,6 +19,8 @@ export const FEED_FILTER_IDLE_MS = 60 * 60 * 1000; // 1 hour
 
 export interface PersistedFeedFilters {
   symbolQuery: string;
+  /** Exact symbol chips — "Filter tape to SYMBOL" adds here, not to `symbolQuery`. */
+  symbolFilters: string[];
   categoryFilters: EventCategoryKey[];
   /**
    * Retired from the feed panel UI. Kept on the persisted / API shape for
@@ -27,6 +30,8 @@ export interface PersistedFeedFilters {
   /** @deprecated Retired from the feed panel UI — always cleared on restore. */
   formFilters: FeedFormFilter[];
   sourceFilters: string[];
+  /** Auto/vendor tag chips (lowercase), any-match — see `deriveAutoTags`. */
+  tagFilters: string[];
   timeWindow: FeedTimeWindow;
   /**
    * Always true for the desk tape (symbol required; CPI / Jobs NFP excepted).
@@ -47,10 +52,12 @@ export type FeedFilterState = Omit<PersistedFeedFilters, "lastActiveAt">;
 /** Product defaults after idle expiry / Clear filters. */
 export const DEFAULT_FEED_FILTERS: FeedFilterState = {
   symbolQuery: "",
+  symbolFilters: [],
   categoryFilters: [],
   sectorFilters: [],
   formFilters: [],
   sourceFilters: [],
+  tagFilters: [],
   timeWindow: "all",
   /** Always on: tradable names only (CPI / Jobs NFP still allowed). */
   symbolOnly: true,
@@ -65,8 +72,10 @@ export const DEFAULT_FEED_FILTERS: FeedFilterState = {
 export function isPanelFiltersDefault(filters: FeedFilterState): boolean {
   return (
     !filters.symbolQuery.trim() &&
+    filters.symbolFilters.length === 0 &&
     filters.categoryFilters.length === 0 &&
     filters.sourceFilters.length === 0 &&
+    filters.tagFilters.length === 0 &&
     filters.timeWindow === "all"
   );
 }
@@ -111,6 +120,9 @@ export function readPersistedFeedFilters(
 
     const symbolQuery =
       typeof parsed.symbolQuery === "string" ? parsed.symbolQuery : "";
+    const symbolFilters = parseStringArray(parsed.symbolFilters).map((s) =>
+      s.toUpperCase(),
+    );
     let categoryFilters = parseStringArray(parsed.categoryFilters).filter(
       isEventCategoryKey,
     );
@@ -122,8 +134,11 @@ export function readPersistedFeedFilters(
     ) {
       categoryFilters = [parsed.categoryFilter];
     }
-    const sourceFilters = parseStringArray(parsed.sourceFilters).map((s) =>
-      s.toLowerCase(),
+    const sourceFilters = isLocalDevUi()
+      ? parseStringArray(parsed.sourceFilters).map((s) => s.toLowerCase())
+      : [];
+    const tagFilters = parseStringArray(parsed.tagFilters).map((t) =>
+      t.toLowerCase(),
     );
     const timeWindow =
       typeof parsed.timeWindow === "string" &&
@@ -132,12 +147,14 @@ export function readPersistedFeedFilters(
         : "all";
     return {
       symbolQuery,
+      symbolFilters,
       categoryFilters,
       // Retired panel facets — ignore legacy values so old sessions don't
       // keep applying invisible industry / form / surprise gates.
       sectorFilters: [],
       formFilters: [],
       sourceFilters,
+      tagFilters,
       timeWindow,
       // Always enforce symbol gate (ignore legacy persisted false).
       symbolOnly: true,
@@ -162,11 +179,14 @@ export function writePersistedFeedFilters(
   }
   const payload: PersistedFeedFilters = {
     symbolQuery: filters.symbolQuery,
+    symbolFilters: filters.symbolFilters,
     categoryFilters: filters.categoryFilters,
     // Do not resurrect retired panel facets from in-memory state.
     sectorFilters: [],
     formFilters: [],
-    sourceFilters: filters.sourceFilters,
+    // Source facet is local-dev only — never persist into deploy builds.
+    sourceFilters: isLocalDevUi() ? filters.sourceFilters : [],
+    tagFilters: filters.tagFilters,
     timeWindow: filters.timeWindow,
     symbolOnly: filters.symbolOnly,
     earningsSurprisesOnly: false,
@@ -201,6 +221,9 @@ export function feedApiQuery(
   const params = new URLSearchParams();
   params.set("window", filters.timeWindow);
   if (filters.symbolQuery.trim()) params.set("q", filters.symbolQuery.trim());
+  if (filters.symbolFilters.length > 0) {
+    params.set("symbols", filters.symbolFilters.join(","));
+  }
   if (filters.categoryFilters.length > 0) {
     params.set("categories", filters.categoryFilters.join(","));
   }
@@ -209,6 +232,9 @@ export function feedApiQuery(
   }
   if (filters.formFilters.length > 0) {
     params.set("forms", filters.formFilters.join(","));
+  }
+  if (filters.tagFilters.length > 0) {
+    params.set("tags", filters.tagFilters.join(","));
   }
   // Source facet is local-dev only. Never send in deploy builds.
   if (isLocalDevUi() && filters.sourceFilters.length > 0) {
@@ -225,4 +251,40 @@ export function feedApiQuery(
   }
   if (options?.facets === false) params.set("facets", "0");
   return params.toString();
+}
+
+/** Snapshot of the current tape filters as a saveable "smart" watchlist. */
+export function filtersToWatchlistCriteria(
+  filters: FeedFilterState,
+): WatchlistCriteria {
+  const criteria: WatchlistCriteria = {};
+  if (filters.symbolFilters.length > 0)
+    criteria.symbols = filters.symbolFilters;
+  if (filters.categoryFilters.length > 0) {
+    criteria.categories = filters.categoryFilters;
+  }
+  if (filters.sourceFilters.length > 0)
+    criteria.sources = filters.sourceFilters;
+  if (filters.tagFilters.length > 0) criteria.tags = filters.tagFilters;
+  if (filters.symbolQuery.trim()) criteria.q = filters.symbolQuery.trim();
+  return criteria;
+}
+
+/** Applies a saved watchlist's criteria onto the live feed's filter state. */
+export function watchlistCriteriaToFilters(
+  criteria: WatchlistCriteria,
+): Partial<FeedFilterState> {
+  return {
+    symbolFilters: (criteria.symbols ?? [])
+      .map((s) => s.trim().toUpperCase())
+      .filter(Boolean),
+    categoryFilters: (criteria.categories ?? []).filter(isEventCategoryKey),
+    sourceFilters: (criteria.sources ?? [])
+      .map((s) => s.trim().toLowerCase())
+      .filter(Boolean),
+    tagFilters: (criteria.tags ?? [])
+      .map((t) => t.trim().toLowerCase())
+      .filter(Boolean),
+    symbolQuery: criteria.q?.trim() ?? "",
+  };
 }

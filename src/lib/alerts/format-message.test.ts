@@ -27,15 +27,15 @@ describe("formatAlertMessage", () => {
     expect(message.symbol).toBe("NVDA");
     expect(message.subject).toContain("NVDA");
     expect(message.subject).toContain("8-K Item 8.01");
-    expect(message.pushTitle).toBe("NVDA · High");
+    expect(message.pushTitle).toBe("NVDA · Disclosure");
     expect(message.pushBody).toBe("8-K Item 8.01 — Other Events");
     expect(message.deskUrl).toBe(
       "https://app.example/catalyst-feed/catalyst/42",
     );
-    expect(message.text).toContain("NVDA · High impact");
+    expect(message.text).toContain("NVDA · Disclosure");
     expect(message.text).toContain("Disclosure");
     expect(message.text).toContain("After-hours");
-    expect(message.text).toContain("Impact 88 (High)");
+    expect(message.text).not.toMatch(/impact/i);
     expect(message.text).toContain("Rule: AH/PM bombs");
     expect(message.text).toContain("Open on desk:");
     expect(message.text).toContain("Original source:");

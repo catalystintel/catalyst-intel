@@ -535,13 +535,6 @@ export function TapeSplitPanel({
               value={formatEventTime(catalyst.timestamp)}
               tabular
             />
-            {typeof catalyst.impactScore === "number" ? (
-              <MetaCell
-                label="Impact"
-                value={String(catalyst.impactScore)}
-                tabular
-              />
-            ) : null}
           </dl>
         </div>
 

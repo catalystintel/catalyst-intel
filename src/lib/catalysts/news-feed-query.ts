@@ -38,12 +38,23 @@ import {
   isEventCategoryKey,
   type EventCategoryKey,
 } from "@/lib/catalysts/taxonomy";
+import { isLocalDevUi } from "@/lib/dev/local-dev-ui";
+import {
+  scrubOriginHeadline,
+  scrubOriginMentions,
+  scrubOriginSubcategory,
+} from "@/lib/catalysts/sanitize-source-origin";
 
 export const NEWS_FEED_PAGE_SIZE = 60;
 export const NEWS_FEED_MAX_LIMIT = 150;
 
-/** Catalyst `type` values written by Finnhub + Polygon news ingest. */
-export const NEWS_FEED_TYPES = ["Company News", "Wire", "Market News"] as const;
+/** Catalyst `type` values written by news / press ingest. */
+export const NEWS_FEED_TYPES = [
+  "Company News",
+  "Wire",
+  "Press Release",
+  "Market News",
+] as const;
 
 export interface NewsFeedFilters {
   q: string;
@@ -211,22 +222,23 @@ export function toNewsHeadline(row: {
   sourceProvider: string | null;
   externalId: string | null;
 }): NewsHeadline {
+  const includeOrigins = isLocalDevUi();
   return {
     id: row.id,
     symbol: row.symbol,
     companyName: row.companyName,
     type: row.type,
-    title: row.title,
-    headline: row.headline,
+    title: scrubOriginMentions(row.title) ?? row.title,
+    headline: scrubOriginHeadline(row.headline),
     eventCategory: toEventCategory(row.eventCategory),
-    subcategory: row.subcategory?.trim() || null,
+    subcategory: scrubOriginSubcategory(row.subcategory),
     timestamp: row.timestamp,
-    summary: row.summary,
+    summary: scrubOriginMentions(row.summary),
     impactScore: row.impactScore,
     sentiment: toSentiment(row.sentiment),
-    sourceUrl: row.sourceUrl,
-    sourceProvider: row.sourceProvider,
-    externalId: row.externalId,
+    sourceUrl: includeOrigins ? row.sourceUrl : null,
+    sourceProvider: includeOrigins ? row.sourceProvider : null,
+    externalId: includeOrigins ? row.externalId : null,
   };
 }
 

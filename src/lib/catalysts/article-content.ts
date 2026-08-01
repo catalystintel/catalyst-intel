@@ -473,19 +473,19 @@ function providerContextSentence(
         }
         return "Form 4 filings report insider buys, sells, or related equity changes.";
       }
-      return "This is a current SEC disclosure traders watch for material company news.";
+      return "This is a current disclosure traders watch for material company news.";
     case "nasdaq-halts":
       return "Exchange trading-halt events can pause liquidity until trading resumes.";
     case "polygon":
-      return "This is market news coverage; open the original article for the full write-up.";
+      return "This is market news coverage with the available write-up below.";
     case "pr-wire":
-      return "This is a company press release from a major PR wire.";
+      return "This is a company press release.";
     case "finnhub":
       if (category === "earnings") {
         return "This is a scheduled earnings calendar entry with estimate or actual figures when available.";
       }
       if (category === "clinical" || category === "regulatory") {
-        return "This is a biotech or regulatory calendar entry from Finnhub.";
+        return "This is a biotech or regulatory calendar entry.";
       }
       if (category === "analyst") {
         return "This reflects analyst coverage — upgrades, downgrades, or recent price-target context.";
@@ -493,13 +493,13 @@ function providerContextSentence(
       if (category === "capital") {
         return "This reflects capital-markets activity such as offerings or IPO calendar entries.";
       }
-      return "This is a Finnhub catalyst calendar entry.";
+      return "This is a scheduled catalyst calendar entry.";
     case "form4api":
       return "Form 4 filings report insider buys, sells, or related equity changes.";
     case "openfda":
       return "This reflects an FDA-side regulatory record.";
     case "clinicaltrials":
-      return "This reflects a ClinicalTrials.gov study update.";
+      return "This reflects a clinical-trial study update.";
     default:
       return null;
   }
@@ -736,13 +736,13 @@ export function resolveArticleSummary(
   };
 }
 
-/** Secondary CTA label for the vendor original URL. */
+/** Secondary CTA label for the vendor original URL (local-dev proof only). */
 export function originalSourceLabel(provider?: string | null): string {
   switch (provider?.trim()) {
     case "sec-edgar":
-      return "Original on SEC EDGAR";
+      return "Original filing";
     case "nasdaq-halts":
-      return "Original on Nasdaq";
+      return "Original exchange notice";
     case "polygon":
       return "Original article";
     case "macro-calendar":
@@ -750,15 +750,15 @@ export function originalSourceLabel(provider?: string | null): string {
     case "fmp-econ-calendar":
       return "Economic calendar source";
     case "finnhub":
-      return "Original on source";
+      return "Original record";
     case "openfda":
-      return "Original on openFDA";
+      return "Original FDA record";
     case "clinicaltrials":
-      return "Original on ClinicalTrials.gov";
+      return "Original study record";
     case "form4api":
       return "Original Form 4";
     default:
-      return "View original source";
+      return "View original";
   }
 }
 

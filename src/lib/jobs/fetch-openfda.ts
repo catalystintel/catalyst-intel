@@ -198,7 +198,7 @@ export async function fetchOpenFda(): Promise<SourceFetchResult> {
         .filter(Boolean)
         .join(" · "),
       confidence: 70,
-      tags: ["openfda", "fda", "approval"],
+      tags: ["fda", "approval"],
     });
   }
 

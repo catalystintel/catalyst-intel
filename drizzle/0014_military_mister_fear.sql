@@ -1,0 +1,1 @@
+ALTER TABLE `playbook_settings` ADD `watchlist_ids` text;

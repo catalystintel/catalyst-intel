@@ -63,10 +63,14 @@ export const FEED_MAX_LIMIT = 200;
 
 export interface FeedQueryFilters {
   q: string;
+  /** Exact symbol matches (uppercase) — distinct from the fuzzy `q` search. */
+  symbols: string[];
   categories: EventCategoryKey[];
   sectors: GicsSectorKey[];
   forms: FeedFormFilter[];
   sources: string[];
+  /** Auto/vendor tags (lowercase, any-match) — see `deriveAutoTags`. */
+  tags: string[];
   timeWindow: FeedTimeWindow;
   /**
    * Legacy client flag (always treated as on for the tape). The symbol /
@@ -89,7 +93,8 @@ export interface FeedCursor {
   id: number;
 }
 
-export type FeedFacetAxis = "categories" | "sectors" | "forms" | "sources";
+export type FeedFacetAxis =
+  "categories" | "sectors" | "forms" | "sources" | "tags";
 
 /** Reverse map: GICS key → strings that may appear in companies.sector. */
 const SECTOR_SQL_ALIASES: Record<GicsSectorKey, string[]> = {
@@ -195,6 +200,21 @@ function formTypeSql(forms: FeedFormFilter[]): SQL | undefined {
   return parts.length === 1 ? parts[0] : or(...parts);
 }
 
+/**
+ * Any-match against the JSON `tags` array column. Matches on the quoted
+ * substring (tags never contain quotes/backslashes) — avoids a `json_each`
+ * table-valued join for a column that is usually small and rarely queried
+ * standalone.
+ */
+function tagsSql(tags: string[]): SQL | undefined {
+  if (tags.length === 0) return undefined;
+  const parts = tags.map((tag) => {
+    const safe = tag.toLowerCase().replace(/["\\%_]/g, "");
+    return sql`lower(${catalysts.tags}) LIKE ${`%"${safe}"%`}`;
+  });
+  return parts.length === 1 ? parts[0] : or(...parts);
+}
+
 function parseCsvParam(raw: string | null): string[] {
   if (!raw?.trim()) return [];
   return raw
@@ -234,6 +254,10 @@ export function parseFeedQueryFromSearchParams(
   const sources = parseCsvParam(params.get("sources")).map((s) =>
     s.toLowerCase(),
   );
+  const symbols = parseCsvParam(params.get("symbols")).map((s) =>
+    s.toUpperCase(),
+  );
+  const tags = parseCsvParam(params.get("tags")).map((t) => t.toLowerCase());
 
   // Product rule: symbol required (CPI/Jobs excepted). Default on; only an
   // explicit opt-out param is parsed for backward compat — `buildFeedWhere`
@@ -252,10 +276,12 @@ export function parseFeedQueryFromSearchParams(
 
   return {
     q: (params.get("q") ?? "").trim(),
+    symbols,
     categories,
     sectors,
     forms,
     sources,
+    tags,
     timeWindow,
     symbolOnly,
     earningsSurprisesOnly,
@@ -315,6 +341,17 @@ export function buildFeedWhere(
         like(catalysts.headline, pattern),
       )!,
     );
+  }
+
+  // Exact symbol chip filter — separate from the fuzzy `q` search above so
+  // "Filter tape to SYMBOL" actually gates rows to that name only.
+  if (filters.symbols.length > 0) {
+    parts.push(inArray(catalysts.symbol, filters.symbols));
+  }
+
+  if (options?.omit !== "tags" && filters.tags.length > 0) {
+    const tagSql = tagsSql(filters.tags);
+    if (tagSql) parts.push(tagSql);
   }
 
   if (options?.omit !== "categories" && filters.categories.length > 0) {
@@ -476,6 +513,48 @@ async function facetGroupBy(
     .sort((a, b) => b.count - a.count || a.key.localeCompare(b.key));
 }
 
+/** Cap how many rows we scan to tally tag counts (JS-side; JSON array column). */
+const TAGS_FACET_SCAN_LIMIT = 4000;
+
+/**
+ * Tag counts over the filtered corpus. `tags` is a JSON array column, so
+ * (unlike the scalar facet axes above) counts are tallied in JS rather than
+ * a SQL `GROUP BY`.
+ */
+async function tagsFacetCounts(
+  filters: FeedQueryFilters,
+): Promise<FeedFacetBucket[]> {
+  const where = buildFeedWhere(filters, { omit: "tags" });
+  const rows = await db
+    .select({ tags: catalysts.tags })
+    .from(catalysts)
+    .leftJoin(rawSources, eq(catalysts.rawSourceId, rawSources.id))
+    .leftJoin(companies, eq(catalysts.companyId, companies.id))
+    .leftJoin(eventClusters, eq(catalysts.clusterId, eventClusters.id))
+    .where(where)
+    .orderBy(desc(catalysts.timestamp), desc(catalysts.id))
+    .limit(TAGS_FACET_SCAN_LIMIT)
+    .all();
+
+  const counts = new Map<string, number>();
+  for (const row of rows) {
+    const tags = row.tags;
+    if (!Array.isArray(tags)) continue;
+    const seen = new Set<string>();
+    for (const raw of tags) {
+      if (typeof raw !== "string") continue;
+      const tag = raw.trim().toLowerCase();
+      if (!tag || seen.has(tag)) continue;
+      seen.add(tag);
+      counts.set(tag, (counts.get(tag) ?? 0) + 1);
+    }
+  }
+
+  return [...counts.entries()]
+    .map(([key, count]) => ({ key, count }))
+    .sort((a, b) => b.count - a.count || a.key.localeCompare(b.key));
+}
+
 /**
  * Facet counts with exclude-own-axis semantics so chips stay useful while
  * other filters are active.
@@ -483,12 +562,14 @@ async function facetGroupBy(
 export async function queryFeedFacets(
   filters: FeedQueryFilters,
 ): Promise<FeedFacets> {
-  const [categoryRows, sectorRows, sourceRows, typeRows] = await Promise.all([
-    facetGroupBy(filters, "categories", catalysts.eventCategory),
-    facetGroupBy(filters, "sectors", companies.sector),
-    facetGroupBy(filters, "sources", rawSources.provider),
-    facetGroupBy(filters, "forms", catalysts.type),
-  ]);
+  const [categoryRows, sectorRows, sourceRows, typeRows, tagRows] =
+    await Promise.all([
+      facetGroupBy(filters, "categories", catalysts.eventCategory),
+      facetGroupBy(filters, "sectors", companies.sector),
+      facetGroupBy(filters, "sources", rawSources.provider),
+      facetGroupBy(filters, "forms", catalysts.type),
+      tagsFacetCounts(filters),
+    ]);
 
   // Collapse raw types into form buckets; map sectors onto GICS keys.
   const formCounts = new Map<FeedFormFilter, number>();
@@ -517,6 +598,7 @@ export async function queryFeedFacets(
       .map(([key, count]) => ({ key, count }))
       .sort((a, b) => b.count - a.count || a.key.localeCompare(b.key)),
     sources: sourceRows.filter((r) => r.key !== "unknown"),
+    tags: tagRows,
   };
 }
 
