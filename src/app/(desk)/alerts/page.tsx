@@ -20,9 +20,10 @@ export default async function AlertsPage() {
           Alert rules
         </h1>
         <p className="mt-2 max-w-2xl text-sm leading-relaxed text-[var(--desk-text-muted)]">
-          Get AH/PM bombs when you are away from the tape. Pick Push, Telegram,
-          webhook, or email — each channel has a short setup checklist. After
-          you save a rule, use{" "}
+          Get material catalysts when you are away from the tape. Pick Push,
+          Telegram, or email — each channel has a short setup checklist. Choose
+          which sessions (pre-market, regular hours, after-hours) can fire.
+          After you save a rule, use{" "}
           <span className="text-[var(--desk-text)]">Test</span> to fire against
           the latest catalyst and confirm delivery.
         </p>

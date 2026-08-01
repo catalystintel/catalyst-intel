@@ -12,7 +12,7 @@ import {
   webPushPublicKey,
 } from "@/lib/alerts/deliver";
 import { normalizeAlertConditions } from "@/lib/alerts/normalize";
-import { validateWebhookUrl } from "@/lib/alerts/webhook-url";
+// import { validateWebhookUrl } from "@/lib/alerts/webhook-url"; // revive with webhook channel
 import { getClientIp } from "@/lib/http/client-ip";
 import { RATE_LIMITS, checkRateLimit } from "@/lib/http/rate-limit";
 import {
@@ -26,10 +26,13 @@ import {
 
 const CHANNELS = new Set<AlertChannel>([
   "email",
-  "webhook",
+  // "webhook" — paused until Slack/Discord-shaped payloads ship
   "push",
   "telegram",
 ]);
+
+const WEBHOOK_PAUSED_MESSAGE =
+  "Webhook alerts are temporarily unavailable. Use Push, Telegram, or Email.";
 
 async function requireUser(
   request: NextRequest,
@@ -144,19 +147,21 @@ export async function POST(request: NextRequest) {
       ? (raw.channel as AlertChannel)
       : null;
   if (!channel) {
+    if (raw.channel === "webhook") {
+      return withRateLimitHeaders(
+        NextResponse.json({ error: WEBHOOK_PAUSED_MESSAGE }, { status: 400 }),
+        limitResult,
+      );
+    }
     return withRateLimitHeaders(
       NextResponse.json(
-        { error: "channel must be email, webhook, push, or telegram." },
+        { error: "channel must be email, push, or telegram." },
         { status: 400 },
       ),
       limitResult,
     );
   }
 
-  const webhookUrl =
-    typeof raw.webhookUrl === "string" && raw.webhookUrl.trim()
-      ? raw.webhookUrl.trim()
-      : null;
   const telegramChatId =
     typeof raw.telegramChatId === "string" && raw.telegramChatId.trim()
       ? raw.telegramChatId.trim()
@@ -164,26 +169,12 @@ export async function POST(request: NextRequest) {
   const conditions = normalizeAlertConditions(raw.conditions);
   const enabled = raw.enabled === undefined ? true : Boolean(raw.enabled);
 
-  let safeWebhookUrl: string | null = null;
-  if (channel === "webhook") {
-    if (!webhookUrl) {
-      return withRateLimitHeaders(
-        NextResponse.json(
-          { error: "webhookUrl is required for webhook rules." },
-          { status: 400 },
-        ),
-        limitResult,
-      );
-    }
-    const validated = validateWebhookUrl(webhookUrl);
-    if (!validated.ok) {
-      return withRateLimitHeaders(
-        NextResponse.json({ error: validated.reason }, { status: 400 }),
-        limitResult,
-      );
-    }
-    safeWebhookUrl = validated.url;
-  }
+  /*
+   * Webhook create — paused. To revive:
+   * 1. Add "webhook" back to CHANNELS
+   * 2. Restore validateWebhookUrl import + URL checks
+   * 3. Uncomment webhook card in alert-rules-panel.tsx
+   */
   // Email alerts always go to the signed-in user's verified session email.
   const emailTo = channel === "email" ? user.email : null;
   if (channel === "email" && !emailTo) {
@@ -212,7 +203,7 @@ export async function POST(request: NextRequest) {
       name,
       channel,
       enabled,
-      webhookUrl: channel === "webhook" ? safeWebhookUrl : null,
+      webhookUrl: null,
       emailTo,
       telegramChatId: channel === "telegram" ? telegramChatId : null,
       conditions,
