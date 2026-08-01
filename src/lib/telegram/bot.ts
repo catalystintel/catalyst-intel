@@ -52,6 +52,80 @@ export function getTelegramBotUsername(): string | undefined {
   return raw.replace(/^@/, "");
 }
 
+export type TelegramBotIdentity = {
+  username: string | null;
+  firstName: string | null;
+  /** `https://t.me/<username>` when username is known */
+  deepLink: string | null;
+  /** `@username` when known */
+  handle: string | null;
+};
+
+function identityFromUsername(
+  username: string | null | undefined,
+  firstName?: string | null,
+): TelegramBotIdentity {
+  const clean = username?.replace(/^@/, "").trim() || null;
+  return {
+    username: clean,
+    firstName: firstName?.trim() || null,
+    deepLink: clean ? `https://t.me/${clean}` : null,
+    handle: clean ? `@${clean}` : null,
+  };
+}
+
+let cachedBotIdentity: {
+  at: number;
+  identity: TelegramBotIdentity;
+} | null = null;
+
+const BOT_IDENTITY_CACHE_MS = 5 * 60_000;
+
+/** Test helper — clears the in-memory getMe cache. */
+export function clearTelegramBotIdentityCache(): void {
+  cachedBotIdentity = null;
+}
+
+/**
+ * Resolves the live bot @username via getMe (cached ~5m), falling back to
+ * NEXT_PUBLIC_TELEGRAM_BOT_USERNAME / TELEGRAM_BOT_USERNAME. Never throws.
+ */
+export async function resolveTelegramBotIdentity(): Promise<TelegramBotIdentity> {
+  const envFallback = identityFromUsername(getTelegramBotUsername());
+
+  if (!isTelegramConfigured()) {
+    return envFallback;
+  }
+
+  const now = Date.now();
+  if (cachedBotIdentity && now - cachedBotIdentity.at < BOT_IDENTITY_CACHE_MS) {
+    return cachedBotIdentity.identity.username
+      ? cachedBotIdentity.identity
+      : envFallback.username
+        ? envFallback
+        : cachedBotIdentity.identity;
+  }
+
+  const me = await getTelegramBotProfile();
+  if (me.ok && (me.username || me.firstName)) {
+    const identity = identityFromUsername(
+      me.username ?? envFallback.username,
+      me.firstName,
+    );
+    cachedBotIdentity = { at: now, identity };
+    return identity;
+  }
+
+  if (envFallback.username) {
+    cachedBotIdentity = { at: now, identity: envFallback };
+    return envFallback;
+  }
+
+  const empty = identityFromUsername(null);
+  cachedBotIdentity = { at: now, identity: empty };
+  return empty;
+}
+
 /**
  * Shared secret used when registering the Telegram webhook (`secret_token`).
  * Fail closed when unset — the webhook route rejects all updates.
@@ -421,6 +495,14 @@ export async function setupTelegramBot(options: {
   }
 
   const me = await getTelegramBotProfile();
+  if (me.ok) {
+    // Warm the identity cache so /alerts shows @username immediately.
+    clearTelegramBotIdentityCache();
+    cachedBotIdentity = {
+      at: Date.now(),
+      identity: identityFromUsername(me.username, me.firstName),
+    };
+  }
   const webhook = await setTelegramWebhook({
     url: options.webhookUrl,
     secretToken: secret,

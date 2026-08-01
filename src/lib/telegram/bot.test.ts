@@ -2,12 +2,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   buildTelegramInboundReply,
+  clearTelegramBotIdentityCache,
   escapeTelegramHtml,
   getTelegramBotUsername,
   isTelegramConfigured,
   isValidTelegramWebhookSecret,
   normalizeTelegramCommand,
   parseTelegramCommand,
+  resolveTelegramBotIdentity,
   sendTelegramMessage,
   setupTelegramBot,
   telegramWelcomeReply,
@@ -33,6 +35,7 @@ afterEach(() => {
   }
   if (originalUsername === undefined) delete process.env.TELEGRAM_BOT_USERNAME;
   else process.env.TELEGRAM_BOT_USERNAME = originalUsername;
+  clearTelegramBotIdentityCache();
   vi.restoreAllMocks();
 });
 
@@ -50,6 +53,51 @@ describe("getTelegramBotUsername", () => {
     delete process.env.TELEGRAM_BOT_USERNAME;
     process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME = "@CatalystIntelBot";
     expect(getTelegramBotUsername()).toBe("CatalystIntelBot");
+  });
+});
+
+describe("resolveTelegramBotIdentity", () => {
+  it("falls back to env username when token is missing", async () => {
+    delete process.env.TELEGRAM_BOT_TOKEN;
+    process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME = "EnvBot";
+    const identity = await resolveTelegramBotIdentity();
+    expect(identity).toMatchObject({
+      username: "EnvBot",
+      handle: "@EnvBot",
+      deepLink: "https://t.me/EnvBot",
+    });
+  });
+
+  it("uses getMe username so the desk can show the live @handle", async () => {
+    process.env.TELEGRAM_BOT_TOKEN = "123:abc";
+    delete process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME;
+    delete process.env.TELEGRAM_BOT_USERNAME;
+
+    vi.spyOn(global, "fetch").mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          ok: true,
+          result: {
+            id: 1,
+            username: "LiveCatalystBot",
+            first_name: "Catalyst Intel",
+          },
+        }),
+        { status: 200 },
+      ),
+    );
+
+    const identity = await resolveTelegramBotIdentity();
+    expect(identity.handle).toBe("@LiveCatalystBot");
+    expect(identity.firstName).toBe("Catalyst Intel");
+    expect(identity.deepLink).toBe("https://t.me/LiveCatalystBot");
+
+    // Cached — second call should not hit the network again.
+    const fetchMock = vi.mocked(global.fetch);
+    fetchMock.mockClear();
+    const again = await resolveTelegramBotIdentity();
+    expect(again.handle).toBe("@LiveCatalystBot");
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 });
 

@@ -5,6 +5,8 @@ import {
   Bell,
   CheckCircle2,
   CircleAlert,
+  Copy,
+  ExternalLink,
   FlaskConical,
   Info,
   Link2,
@@ -62,7 +64,7 @@ const CHANNELS: ChannelMeta[] = [
   {
     value: "telegram",
     label: "Telegram",
-    blurb: "Message the bot, paste your chat ID, get fires on your phone",
+    blurb: "Open the bot, paste your chat ID, get fires on your phone",
     Icon: MessageCircle,
   },
   // Webhook paused until Slack/Discord-shaped payloads ship — revive with:
@@ -95,6 +97,13 @@ export function AlertRulesPanel() {
   const [pushPublicKey, setPushPublicKey] = useState<string | null>(null);
   const [telegramConfigured, setTelegramConfigured] = useState(false);
   const [telegramBotUsername, setTelegramBotUsername] = useState<string | null>(
+    null,
+  );
+  const [telegramBotName, setTelegramBotName] = useState<string | null>(null);
+  const [telegramBotHandle, setTelegramBotHandle] = useState<string | null>(
+    null,
+  );
+  const [telegramBotDeepLink, setTelegramBotDeepLink] = useState<string | null>(
     null,
   );
   const [loaded, setLoaded] = useState(false);
@@ -131,11 +140,28 @@ export function AlertRulesPanel() {
       setPushAvailable(Boolean(data.pushAvailable));
       setPushPublicKey(data.pushPublicKey ?? null);
       setTelegramConfigured(Boolean(data.telegramConfigured));
-      setTelegramBotUsername(
+      const username =
         typeof data.telegramBotUsername === "string"
           ? data.telegramBotUsername
-          : null,
+          : null;
+      const handle =
+        typeof data.telegramBotHandle === "string"
+          ? data.telegramBotHandle
+          : username
+            ? `@${username.replace(/^@/, "")}`
+            : null;
+      const deepLink =
+        typeof data.telegramBotDeepLink === "string"
+          ? data.telegramBotDeepLink
+          : username
+            ? `https://t.me/${username.replace(/^@/, "")}`
+            : null;
+      setTelegramBotUsername(username);
+      setTelegramBotName(
+        typeof data.telegramBotName === "string" ? data.telegramBotName : null,
       );
+      setTelegramBotHandle(handle);
+      setTelegramBotDeepLink(deepLink);
     } catch (err) {
       toast.error(toUserFacingMessage(err, "Load failed."));
     } finally {
@@ -192,7 +218,10 @@ export function AlertRulesPanel() {
       case "telegram":
         if (!telegramConfigured)
           return { state: "blocked", label: "Unavailable here" };
-        return { state: "ready", label: "Bot ready" };
+        return {
+          state: "ready",
+          label: telegramBotHandle ?? "Bot ready",
+        };
       case "webhook":
         return { state: "blocked", label: "Paused" };
       case "email":
@@ -434,6 +463,10 @@ export function AlertRulesPanel() {
                 const ready = channelReady(opt.value);
                 const selected = channel === opt.value;
                 const Icon = opt.Icon;
+                const blurb =
+                  opt.value === "telegram" && telegramBotHandle
+                    ? `Open ${telegramBotHandle} → paste chat ID → get fires`
+                    : opt.blurb;
                 return (
                   <button
                     key={opt.value}
@@ -467,7 +500,7 @@ export function AlertRulesPanel() {
                         <ReadyBadge state={ready.state} label={ready.label} />
                       </span>
                       <span className="mt-1 block text-xs leading-relaxed text-[var(--desk-text-muted)]">
-                        {opt.blurb}
+                        {blurb}
                       </span>
                     </span>
                   </button>
@@ -491,6 +524,9 @@ export function AlertRulesPanel() {
               webPush={webPush}
               telegramConfigured={telegramConfigured}
               telegramBotUsername={telegramBotUsername}
+              telegramBotName={telegramBotName}
+              telegramBotHandle={telegramBotHandle}
+              telegramBotDeepLink={telegramBotDeepLink}
               telegramChatId={telegramChatId}
               setTelegramChatId={setTelegramChatId}
               emailConfigured={emailConfigured}
@@ -788,6 +824,9 @@ function ChannelSetup({
   webPush,
   telegramConfigured,
   telegramBotUsername,
+  telegramBotName,
+  telegramBotHandle,
+  telegramBotDeepLink,
   telegramChatId,
   setTelegramChatId,
   emailConfigured,
@@ -799,6 +838,9 @@ function ChannelSetup({
   webPush: ReturnType<typeof useWebPush>;
   telegramConfigured: boolean;
   telegramBotUsername: string | null;
+  telegramBotName: string | null;
+  telegramBotHandle: string | null;
+  telegramBotDeepLink: string | null;
   telegramChatId: string;
   setTelegramChatId: (v: string) => void;
   emailConfigured: boolean;
@@ -885,33 +927,88 @@ function ChannelSetup({
         />
       );
     }
-    const handle = telegramBotUsername
-      ? `@${telegramBotUsername.replace(/^@/, "")}`
-      : null;
-    const botUrl = telegramBotUsername
-      ? `https://t.me/${telegramBotUsername.replace(/^@/, "")}`
-      : null;
+    const handle =
+      telegramBotHandle ??
+      (telegramBotUsername
+        ? `@${telegramBotUsername.replace(/^@/, "")}`
+        : null);
+    const botUrl =
+      telegramBotDeepLink ??
+      (telegramBotUsername
+        ? `https://t.me/${telegramBotUsername.replace(/^@/, "")}`
+        : null);
+    const displayName = telegramBotName?.trim() || "Catalyst Intel";
+
+    async function copyHandle() {
+      if (!handle) return;
+      try {
+        await navigator.clipboard.writeText(handle);
+        toast.success(`Copied ${handle}`);
+      } catch {
+        toast.error("Could not copy — select the bot name manually.");
+      }
+    }
+
     return (
-      <div>
+      <div className="flex flex-col gap-4">
+        <div className="rounded-lg border border-[var(--desk-border-strong)] bg-[var(--desk-overlay-soft)] px-3.5 py-3">
+          <p className="font-mono text-[0.65rem] tracking-[0.16em] text-[var(--desk-text-dim)] uppercase">
+            Find the bot
+          </p>
+          <div className="mt-2 flex flex-wrap items-baseline gap-x-2 gap-y-1">
+            <span className="text-base font-semibold text-[var(--desk-text)]">
+              {displayName}
+            </span>
+            {handle ? (
+              <span className="font-mono text-sm text-[var(--desk-live)]">
+                {handle}
+              </span>
+            ) : (
+              <span className="text-xs text-[var(--desk-text-muted)]">
+                Username loading… refresh if it stays blank
+              </span>
+            )}
+          </div>
+          <p className="mt-1 text-xs text-[var(--desk-text-muted)]">
+            Search that name in Telegram, or open it directly below, then send{" "}
+            <span className="font-mono">/start</span>.
+          </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {botUrl ? (
+              <a
+                href={botUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="btn-press inline-flex h-8 items-center gap-2 rounded-lg bg-[var(--desk-live)] px-2.5 text-sm font-medium text-[#121212] hover:brightness-110"
+              >
+                <ExternalLink className="size-3.5" aria-hidden />
+                Open {handle ?? "bot"} in Telegram
+              </a>
+            ) : null}
+            {handle ? (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => void copyHandle()}
+                className="btn-press gap-2 border-[var(--desk-border-strong)] bg-transparent text-[var(--desk-text)] hover:bg-[var(--desk-overlay-strong)]"
+              >
+                <Copy className="size-3.5" aria-hidden />
+                Copy {handle}
+              </Button>
+            ) : null}
+          </div>
+        </div>
+
         <SetupSteps
           steps={[
-            botUrl
-              ? `Open ${handle} in Telegram and send /start (or tap Open bot).`
-              : "Open Telegram and send /start to the Catalyst Intel bot.",
+            handle
+              ? `Open ${handle} (button above) and send /start.`
+              : "Open the Catalyst Intel bot in Telegram and send /start.",
             "The bot replies with your numeric chat ID — long-press to copy it.",
             "Paste the chat ID below, save the rule, then hit Test.",
           ]}
         />
-        {botUrl ? (
-          <a
-            href={botUrl}
-            target="_blank"
-            rel="noreferrer"
-            className="mb-4 inline-flex text-sm font-medium text-[var(--desk-live)] underline-offset-2 hover:underline"
-          >
-            Open {handle}
-          </a>
-        ) : null}
+
         <label className="flex flex-col gap-1.5">
           <span className="text-xs font-medium text-[var(--desk-text-secondary)]">
             Your Telegram chat ID

@@ -11,7 +11,10 @@ import {
   isWebPushConfigured,
   webPushPublicKey,
 } from "@/lib/alerts/deliver";
-import { getTelegramBotUsername } from "@/lib/telegram/bot";
+import {
+  getTelegramBotUsername,
+  resolveTelegramBotIdentity,
+} from "@/lib/telegram/bot";
 import { normalizeAlertConditions } from "@/lib/alerts/normalize";
 // import { validateWebhookUrl } from "@/lib/alerts/webhook-url"; // revive with webhook channel
 import { getClientIp } from "@/lib/http/client-ip";
@@ -103,6 +106,16 @@ export async function GET(request: NextRequest) {
     .orderBy(desc(alertRules.createdAt))
     .all();
 
+  const telegramConfigured = isTelegramConfigured();
+  const telegramBot = telegramConfigured
+    ? await resolveTelegramBotIdentity()
+    : {
+        username: getTelegramBotUsername() ?? null,
+        firstName: null,
+        deepLink: null,
+        handle: null,
+      };
+
   return withRateLimitHeaders(
     NextResponse.json({
       rules: rows.map(serializeRule),
@@ -110,8 +123,11 @@ export async function GET(request: NextRequest) {
       sessionEmail: user.email,
       pushAvailable: isWebPushConfigured(),
       pushPublicKey: webPushPublicKey(),
-      telegramConfigured: isTelegramConfigured(),
-      telegramBotUsername: getTelegramBotUsername() ?? null,
+      telegramConfigured,
+      telegramBotUsername: telegramBot.username,
+      telegramBotName: telegramBot.firstName,
+      telegramBotHandle: telegramBot.handle,
+      telegramBotDeepLink: telegramBot.deepLink,
     }),
     limitResult,
   );
