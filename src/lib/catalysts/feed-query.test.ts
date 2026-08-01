@@ -42,10 +42,12 @@ describe("parseFeedQueryFromSearchParams", () => {
   it("parses multi filters and q", () => {
     const params = new URLSearchParams({
       q: "NVDA",
+      symbols: "nvda,aapl",
       categories: "earnings,capital",
       sectors: "information_technology,financials",
       forms: "8-K,424B",
       sources: "sec-edgar",
+      tags: "FDA,category:earnings",
       window: "24h",
       symbolOnly: "1",
     });
@@ -53,10 +55,12 @@ describe("parseFeedQueryFromSearchParams", () => {
       nowIso: "2026-07-24T20:00:00.000Z",
     });
     expect(filters.q).toBe("NVDA");
+    expect(filters.symbols).toEqual(["NVDA", "AAPL"]);
     expect(filters.categories).toEqual(["earnings", "capital"]);
     expect(filters.sectors).toEqual(["information_technology", "financials"]);
     expect(filters.forms).toEqual(["8-K", "424B"]);
     expect(filters.sources).toEqual(["sec-edgar"]);
+    expect(filters.tags).toEqual(["fda", "category:earnings"]);
     expect(filters.timeWindow).toBe("24h");
     expect(filters.symbolOnly).toBe(true);
     expect(filters.earningsSurprisesOnly).toBe(false);

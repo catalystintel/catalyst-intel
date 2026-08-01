@@ -12,4 +12,6 @@ export interface FeedFacets {
   sectors: FeedFacetBucket[];
   forms: FeedFacetBucket[];
   sources: FeedFacetBucket[];
+  /** Auto/vendor tag counts over the filtered corpus (see `deriveAutoTags`). */
+  tags: FeedFacetBucket[];
 }
