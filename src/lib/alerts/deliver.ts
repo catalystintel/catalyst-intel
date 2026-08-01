@@ -4,7 +4,7 @@ import { classifySession, sessionMatches } from "@/lib/alerts/session";
 import { assertWebhookUrlSafeForFetch } from "@/lib/alerts/webhook-url";
 import { sendResendEmail } from "@/lib/email/resend";
 import { sendWebPush, type PushSubscriptionRecord } from "@/lib/push/web-push";
-import { sendTelegramMessage } from "@/lib/telegram/bot";
+import { escapeTelegramHtml, sendTelegramMessage } from "@/lib/telegram/bot";
 
 export interface AlertCatalystPayload {
   id: number;
@@ -118,6 +118,44 @@ async function deliverTelegram(
   ruleName: string,
 ): Promise<{ ok: boolean; detail: string }> {
   const message = formatAlertMessage(catalyst, { ruleName });
+  const bodyLines = message.text.split("\n");
+  const impactLine = bodyLines[0] ?? message.pushTitle;
+  const impactSuffix = impactLine.includes(" · ")
+    ? impactLine.slice(impactLine.indexOf(" · ") + 3)
+    : impactLine;
+
+  const htmlParts: string[] = [
+    `<b>${escapeTelegramHtml(message.symbol)}</b> · ${escapeTelegramHtml(impactSuffix)}`,
+    escapeTelegramHtml(message.headline),
+  ];
+
+  for (const line of bodyLines.slice(2)) {
+    if (!line) {
+      htmlParts.push("");
+      continue;
+    }
+    if (line.startsWith("Open on desk: ") && message.deskUrl) {
+      htmlParts.push(
+        `<a href="${escapeTelegramHtml(message.deskUrl)}">Open on desk</a>`,
+      );
+      continue;
+    }
+    if (line.startsWith("Original source: ") && message.sourceUrl) {
+      htmlParts.push(
+        `<a href="${escapeTelegramHtml(message.sourceUrl)}">Original source</a>`,
+      );
+      continue;
+    }
+    htmlParts.push(escapeTelegramHtml(line));
+  }
+
+  const htmlResult = await sendTelegramMessage({
+    chatId,
+    text: htmlParts.join("\n"),
+    parseMode: "HTML",
+    disableWebPagePreview: false,
+  });
+  if (htmlResult.ok) return htmlResult;
   return sendTelegramMessage({ chatId, text: message.text });
 }
 
