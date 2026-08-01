@@ -164,6 +164,43 @@ export const watchlistEntries = sqliteTable("watchlist_entries", {
 });
 
 /**
+ * Saved feed-filter combinations ("smart" watchlists) — a user can have many.
+ * Unlike `watchlist_entries` (a flat symbol list for quiet mode), a row here
+ * freezes an arbitrary filter combo (symbols + categories + forms + tags +
+ * sources + free-text) so it can be named, previewed, and re-applied to the
+ * live tape — and, next phase, referenced from an alert rule's conditions.
+ */
+export interface WatchlistCriteria {
+  /** Exact symbol matches (uppercase). */
+  symbols?: string[];
+  /** EventCategoryKey values. */
+  categories?: string[];
+  /** FeedFormFilter values (8-K, 424B, 4, S-3, 13D, 13G, other). */
+  forms?: string[];
+  /** Auto/vendor tags (lowercase), e.g. "category:earnings", "fda". */
+  tags?: string[];
+  /** Vendor provider ids (local-dev facet; harmless no-op elsewhere). */
+  sources?: string[];
+  /** Free-text search over symbol/company/title/headline. */
+  q?: string;
+}
+
+export const watchlists = sqliteTable("watchlists", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: integer("user_id")
+    .notNull()
+    .references(() => users.id),
+  name: text("name").notNull(),
+  criteria: text("criteria", { mode: "json" }).notNull(),
+  createdAt: text("created_at")
+    .notNull()
+    .default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at")
+    .notNull()
+    .default(sql`(current_timestamp)`),
+});
+
+/**
  * Playbook: which event categories count as signal when the tape is quiet.
  * One row per user; `categories` is a JSON string array of EventCategoryKey.
  */
@@ -211,6 +248,12 @@ export interface AlertRuleConditions {
   sessions?: AlertSession[];
   /** When true, only fire for catalysts whose symbol is on the user's watchlist. */
   watchlistOnly?: boolean;
+  /**
+   * Any-match against the catalyst's auto/vendor tags (see `deriveAutoTags`
+   * in ingest-pipeline.ts), e.g. ["category:regulatory", "fda"]. Empty /
+   * omitted = any tags.
+   */
+  tags?: string[];
 }
 
 /**
