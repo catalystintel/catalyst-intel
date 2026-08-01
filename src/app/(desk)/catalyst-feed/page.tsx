@@ -1,5 +1,6 @@
 import { DeskDashboardGrid } from "@/components/desk-dashboard-grid";
 import { PageEnter } from "@/components/page-enter";
+import type { WatchlistCriteria } from "@/db/schema";
 import { getCurrentAppUser } from "@/lib/auth/current-user";
 import { toFeedCatalyst } from "@/lib/catalysts/feed-catalyst";
 import {
@@ -27,10 +28,12 @@ function ssrFeedFilters(
   const defaults: FeedFilterState = DEFAULT_FEED_FILTERS;
   return {
     q: defaults.symbolQuery,
+    symbols: defaults.symbolFilters,
     categories: defaults.categoryFilters,
     sectors: defaults.sectorFilters,
     forms: defaults.formFilters,
     sources: mergeSourceProviderFilters(defaults.sourceFilters, adminProviders),
+    tags: defaults.tagFilters,
     timeWindow: defaults.timeWindow,
     symbolOnly: true,
     earningsSurprisesOnly: defaults.earningsSurprisesOnly,
@@ -42,10 +45,42 @@ function ssrFeedFilters(
 export default async function CatalystFeedPage({
   searchParams,
 }: {
-  searchParams: Promise<{ symbol?: string; c?: string }>;
+  searchParams: Promise<{
+    symbol?: string;
+    c?: string;
+    symbols?: string;
+    categories?: string;
+    sources?: string;
+    tags?: string;
+    q?: string;
+  }>;
 }) {
-  const { symbol, c } = await searchParams;
+  const { symbol, c, symbols, categories, sources, tags, q } =
+    await searchParams;
   const initialSelectedId = parseFeedCatalystId(c);
+  // "Apply to feed" deep link from a saved watchlist (see `/watchlist`).
+  const initialWatchlistCriteria: WatchlistCriteria | undefined =
+    symbols || categories || sources || tags || q
+      ? {
+          symbols: symbols
+            ?.split(",")
+            .map((s) => s.trim().toUpperCase())
+            .filter(Boolean),
+          categories: categories
+            ?.split(",")
+            .map((s) => s.trim())
+            .filter(Boolean),
+          sources: sources
+            ?.split(",")
+            .map((s) => s.trim().toLowerCase())
+            .filter(Boolean),
+          tags: tags
+            ?.split(",")
+            .map((s) => s.trim().toLowerCase())
+            .filter(Boolean),
+          q: q?.trim(),
+        }
+      : undefined;
 
   // Auth / DB setup handled by the shared `(desk)/layout.tsx`.
   const user = await getCurrentAppUser();
@@ -69,6 +104,7 @@ export default async function CatalystFeedPage({
         initialCatalysts={recentCatalysts.map(toFeedCatalyst)}
         isAdmin={user.isAdmin}
         initialSymbolFilter={symbol?.trim().toUpperCase() || undefined}
+        initialWatchlistCriteria={initialWatchlistCriteria}
         initialSelectedId={initialSelectedId}
         macroEvents={macroEvents}
       />

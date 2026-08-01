@@ -27,6 +27,15 @@ import { DeskTip } from "@/components/desk-tip";
 import { FeedFilterMultiSelect } from "@/components/feed-filter-multi-select";
 import { TapeSplitPanel } from "@/components/tape-split-panel";
 import { SymbolActionMenu } from "@/components/symbol-action-menu";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { useAutoFocusScrollRegion } from "@/hooks/use-auto-focus-scroll-region";
 import { useLiveFeedQuery } from "@/hooks/use-live-feed-query";
@@ -52,13 +61,17 @@ import { classifyFeedEmpty } from "@/lib/catalysts/feed-empty-state";
 import { passesSymbolFeedGate } from "@/lib/catalysts/symbol-feed-gate";
 import { isLocalDevUi } from "@/lib/dev/local-dev-ui";
 import {
+  DEFAULT_FEED_FILTERS,
+  filtersToWatchlistCriteria,
   isFiltersDefault,
   isPanelFiltersDefault,
   readPersistedFeedFilters,
   touchPersistedFeedFilters,
+  watchlistCriteriaToFilters,
   writePersistedFeedFilters,
   type FeedFilterState,
 } from "@/lib/catalysts/feed-filter-persist";
+import type { WatchlistCriteria } from "@/db/schema";
 import type { FeedFacets } from "@/lib/catalysts/feed-query-types";
 import {
   formatClockTime,
@@ -136,6 +149,7 @@ export function LiveCatalystFeed({
   initialCatalysts,
   isAdmin,
   initialSymbolFilter,
+  initialWatchlistCriteria,
   initialSelectedId,
   onFocusSymbol,
 }: {
@@ -143,6 +157,8 @@ export function LiveCatalystFeed({
   isAdmin: boolean;
   /** Pre-fills the symbol filter, e.g. arriving via `?symbol=` from Analytics. */
   initialSymbolFilter?: string;
+  /** Full filter combo from a saved watchlist's "Apply to feed" deep link. */
+  initialWatchlistCriteria?: WatchlistCriteria;
   /** Re-opens the split panel, e.g. arriving via `?c=` after details. */
   initialSelectedId?: number;
   /**
@@ -196,6 +212,9 @@ export function LiveCatalystFeed({
   const [manualRefreshing, setManualRefreshing] = useState(false);
   const [articleId, setArticleId] = useState<number | null>(null);
   const [pendingNew, setPendingNew] = useState(0);
+  const [saveWatchlistOpen, setSaveWatchlistOpen] = useState(false);
+  const [saveWatchlistName, setSaveWatchlistName] = useState("");
+  const [savingWatchlist, setSavingWatchlist] = useState(false);
   const jumpToLatestRef = useRef<(() => void) | null>(null);
   const skipFilterAnimRef = useRef(true);
   const skipFlashRef = useRef(false);
@@ -268,12 +287,12 @@ export function LiveCatalystFeed({
   );
 
   // Restore tape filters from localStorage after mount (avoids SSR/hydration
-  // mismatch). Deep-link `?symbol=` wins for the symbol field; other saved
-  // filters still apply when still within the idle window.
+  // mismatch). Deep-link `?symbol=` wins as an exact symbol chip; other
+  // saved filters still apply when still within the idle window.
   useEffect(() => {
     const restoreId = window.setTimeout(() => {
       const saved = readPersistedFeedFilters();
-      const urlSymbol = initialSymbolFilter?.trim() ?? "";
+      const urlSymbol = initialSymbolFilter?.trim().toUpperCase() ?? "";
       // Drop retired panel facets (industries / forms / earnings surprises)
       // and never restore vendor source filters outside local-dev.
       const sanitize = (filters: FeedFilterState): FeedFilterState => ({
@@ -284,20 +303,32 @@ export function LiveCatalystFeed({
         sourceFilters: isLocalDevUi() ? filters.sourceFilters : [],
       });
 
+      if (initialWatchlistCriteria) {
+        setFilterState((prev) => ({
+          ...DEFAULT_FEED_FILTERS,
+          ...prev,
+          ...watchlistCriteriaToFilters(initialWatchlistCriteria),
+          symbolOnly: true,
+        }));
+        setFiltersOpen(true);
+        setFiltersHydrated(true);
+        return;
+      }
+
       if (urlSymbol) {
         setFilterState((prev) => ({
           ...prev,
-          symbolQuery: urlSymbol,
           ...(saved
             ? sanitize({
                 ...prev,
                 categoryFilters: saved.categoryFilters,
                 sourceFilters: saved.sourceFilters,
+                tagFilters: saved.tagFilters,
                 timeWindow: saved.timeWindow,
                 symbolOnly: saved.symbolOnly,
-                symbolQuery: urlSymbol,
               })
             : {}),
+          symbolFilters: [urlSymbol],
           // Desk rule is always on (CPI / Jobs excepted).
           symbolOnly: true,
         }));
@@ -308,7 +339,7 @@ export function LiveCatalystFeed({
       setFiltersHydrated(true);
     }, 0);
     return () => window.clearTimeout(restoreId);
-  }, [initialSymbolFilter, setFilterState]);
+  }, [initialSymbolFilter, initialWatchlistCriteria, setFilterState]);
 
   // Persist filters while active; clear storage when back to product defaults.
   useEffect(() => {
@@ -514,10 +545,19 @@ export function LiveCatalystFeed({
 
   const filterToSymbol = useCallback(
     (symbol: string) => {
-      patchFilters({ symbolQuery: symbol.trim().toUpperCase() });
+      const t = symbol.trim().toUpperCase();
+      if (!t) return;
+      // Exact chip, not the fuzzy `q` search — "Filter tape to SYMBOL"
+      // should gate rows to that name only, not just bias the search box.
+      setFilterState((prev) => ({
+        ...prev,
+        symbolFilters: prev.symbolFilters.includes(t)
+          ? prev.symbolFilters
+          : [...prev.symbolFilters, t],
+      }));
       setFiltersOpen(true);
     },
-    [patchFilters],
+    [setFilterState],
   );
 
   // Keep `?c=` in sync with the open row so article / browser back lands on
@@ -591,6 +631,41 @@ export function LiveCatalystFeed({
     },
     [quietAddSymbol, watchlistSymbols],
   );
+
+  const openSaveWatchlist = useCallback(() => {
+    setSaveWatchlistName("");
+    setSaveWatchlistOpen(true);
+  }, []);
+
+  const submitSaveWatchlist = useCallback(async () => {
+    const name = saveWatchlistName.trim();
+    if (!name) {
+      toast.error("Name your watchlist first.");
+      return;
+    }
+    setSavingWatchlist(true);
+    try {
+      const res = await fetch("/api/watchlists", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name,
+          criteria: filtersToWatchlistCriteria(filterState),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Could not save watchlist.");
+      toast.success(`Saved "${name}" — manage it under Watchlists.`);
+      setSaveWatchlistOpen(false);
+    } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : "Could not save watchlist.",
+      );
+    } finally {
+      setSavingWatchlist(false);
+    }
+  }, [saveWatchlistName, filterState]);
 
   const facetOptions = useMemo(() => buildFacetOptions(facets), [facets]);
 
@@ -753,6 +828,7 @@ export function LiveCatalystFeed({
             playbookCount={playbookCategories.length}
             panelFiltersActive={panelFiltersActive}
             onClearFilters={clearFilters}
+            onSaveWatchlist={openSaveWatchlist}
           />
         </div>
       ) : null}
@@ -879,6 +955,39 @@ export function LiveCatalystFeed({
           if (!next) setArticleId(null);
         }}
       />
+
+      <Dialog open={saveWatchlistOpen} onOpenChange={setSaveWatchlistOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Save as watchlist</DialogTitle>
+            <DialogDescription>
+              Freezes your current symbol / event-type / tag / source filters
+              into a named list you can preview, re-apply, and manage under
+              Watchlists.
+            </DialogDescription>
+          </DialogHeader>
+          <Input
+            value={saveWatchlistName}
+            onChange={(e) => setSaveWatchlistName(e.target.value)}
+            placeholder="e.g. AH biotech catalysts"
+            aria-label="Watchlist name"
+            autoFocus
+            onKeyDown={(e) => {
+              if (e.key === "Enter") void submitSaveWatchlist();
+            }}
+          />
+          <DialogFooter>
+            <Button
+              type="button"
+              disabled={savingWatchlist}
+              onClick={() => void submitSaveWatchlist()}
+              className="bg-[var(--desk-live)] text-[#121212] hover:brightness-110"
+            >
+              {savingWatchlist ? "Saving…" : "Save watchlist"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </section>
   );
 }
@@ -886,6 +995,15 @@ export function LiveCatalystFeed({
 interface FacetOptions {
   categories: { value: string; label: string; count?: number }[];
   sources: { value: string; label: string; count?: number }[];
+  tags: { value: string; label: string; count?: number }[];
+}
+
+/** `category:earnings` → "Category: earnings" for the tag multi-select. */
+function tagLabel(tag: string): string {
+  const [ns, ...rest] = tag.split(":");
+  if (rest.length === 0) return tag;
+  const value = rest.join(":");
+  return `${ns.charAt(0).toUpperCase()}${ns.slice(1)}: ${value}`;
 }
 
 function buildFacetOptions(facets: FeedFacets | null): FacetOptions {
@@ -898,6 +1016,11 @@ function buildFacetOptions(facets: FeedFacets | null): FacetOptions {
     sources: (facets?.sources ?? []).map((b) => ({
       value: b.key,
       label: b.key,
+      count: b.count,
+    })),
+    tags: (facets?.tags ?? []).map((b) => ({
+      value: b.key,
+      label: tagLabel(b.key),
       count: b.count,
     })),
   };
@@ -914,6 +1037,7 @@ interface FeedFiltersProps {
   playbookCount: number;
   panelFiltersActive: boolean;
   onClearFilters: () => void;
+  onSaveWatchlist: () => void;
 }
 
 function FeedFilters({
@@ -927,7 +1051,13 @@ function FeedFilters({
   playbookCount,
   panelFiltersActive,
   onClearFilters,
+  onSaveWatchlist,
 }: FeedFiltersProps) {
+  const removeSymbolFilter = (symbol: string) =>
+    onPatchFilters({
+      symbolFilters: filterState.symbolFilters.filter((s) => s !== symbol),
+    });
+
   return (
     <div className="flex flex-col gap-2">
       {quietMode ? (
@@ -941,7 +1071,7 @@ function FeedFilters({
         <Input
           value={filterState.symbolQuery}
           onChange={(e) => onPatchFilters({ symbolQuery: e.target.value })}
-          placeholder="Symbol, company, title…"
+          placeholder="Search symbol, company, title…"
           aria-label="Search by symbol, company, or title"
           className="h-8 w-full border-[var(--desk-border-strong)] bg-[var(--desk-overlay-soft)] font-mono text-xs tracking-wide sm:w-56 md:text-xs"
         />
@@ -973,6 +1103,14 @@ function FeedFilters({
             emptyLabel="All event types"
             searchPlaceholder="Search event types…"
           />
+          <FeedFilterMultiSelect
+            label="Tag"
+            options={facetOptions.tags}
+            selected={filterState.tagFilters}
+            onChange={(tagFilters) => onPatchFilters({ tagFilters })}
+            emptyLabel="All tags"
+            searchPlaceholder="Search tags…"
+          />
           {isLocalDevUi() ? (
             <FeedFilterMultiSelect
               label="Source"
@@ -981,6 +1119,17 @@ function FeedFilters({
               onChange={(sourceFilters) => onPatchFilters({ sourceFilters })}
               emptyLabel="All sources"
             />
+          ) : null}
+          {panelFiltersActive ? (
+            <button
+              type="button"
+              onClick={onSaveWatchlist}
+              title="Save these filters as a named, re-appliable watchlist"
+              className="inline-flex h-8 items-center gap-1 rounded-md border border-[var(--desk-border-strong)] bg-[var(--desk-overlay-soft)] px-2.5 font-mono text-[0.7rem] tracking-wide text-[var(--desk-text-secondary)] transition-colors hover:bg-[var(--desk-overlay-strong)] hover:text-[var(--desk-text)]"
+            >
+              <Plus className="size-3" />
+              Save as watchlist
+            </button>
           ) : null}
           {panelFiltersActive ? (
             <button
@@ -994,12 +1143,61 @@ function FeedFilters({
           ) : null}
         </div>
       </div>
+      {filterState.symbolFilters.length > 0 ||
+      filterState.tagFilters.length > 0 ? (
+        <div
+          className="flex flex-wrap items-center gap-1.5"
+          role="group"
+          aria-label="Active exact filters"
+        >
+          {filterState.symbolFilters.map((symbol) => (
+            <ActiveFilterChip
+              key={`symbol:${symbol}`}
+              label={symbol}
+              onRemove={() => removeSymbolFilter(symbol)}
+            />
+          ))}
+          {filterState.tagFilters.map((tag) => (
+            <ActiveFilterChip
+              key={`tag:${tag}`}
+              label={tagLabel(tag)}
+              onRemove={() =>
+                onPatchFilters({
+                  tagFilters: filterState.tagFilters.filter((t) => t !== tag),
+                })
+              }
+            />
+          ))}
+        </div>
+      ) : null}
       {total != null ? (
         <p className="font-mono text-[0.72rem] text-[var(--desk-text-dim)] tabular-nums">
           Showing {visibleCount} of {total}
         </p>
       ) : null}
     </div>
+  );
+}
+
+function ActiveFilterChip({
+  label,
+  onRemove,
+}: {
+  label: string;
+  onRemove: () => void;
+}) {
+  return (
+    <span className="inline-flex items-center gap-1 rounded-full border border-[var(--desk-live)]/40 bg-[var(--desk-live)]/10 px-2 py-0.5 font-mono text-[0.68rem] tracking-wide text-[var(--desk-live)]">
+      {label}
+      <button
+        type="button"
+        onClick={onRemove}
+        aria-label={`Remove ${label} filter`}
+        className="rounded-full p-0.5 hover:bg-[var(--desk-live)]/20"
+      >
+        <X className="size-2.5" />
+      </button>
+    </span>
   );
 }
 

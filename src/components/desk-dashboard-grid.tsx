@@ -8,6 +8,7 @@ import {
   LiveCatalystFeed,
   type FeedCatalyst,
 } from "@/components/live-catalyst-feed";
+import type { WatchlistCriteria } from "@/db/schema";
 import type { MacroEventDef } from "@/lib/jobs/fetch-macro-calendar";
 
 /**
@@ -24,12 +25,15 @@ export function DeskDashboardGrid({
   initialCatalysts,
   isAdmin,
   initialSymbolFilter,
+  initialWatchlistCriteria,
   initialSelectedId,
   macroEvents,
 }: {
   initialCatalysts: FeedCatalyst[];
   isAdmin: boolean;
   initialSymbolFilter?: string;
+  /** Full filter combo applied from a saved watchlist's "Apply to feed". */
+  initialWatchlistCriteria?: WatchlistCriteria;
   initialSelectedId?: number;
   macroEvents: MacroEventDef[];
 }) {
@@ -44,6 +48,7 @@ export function DeskDashboardGrid({
           initialCatalysts={initialCatalysts}
           isAdmin={isAdmin}
           initialSymbolFilter={initialSymbolFilter}
+          initialWatchlistCriteria={initialWatchlistCriteria}
           initialSelectedId={initialSelectedId}
           onFocusSymbol={setFocusSymbol}
         />
