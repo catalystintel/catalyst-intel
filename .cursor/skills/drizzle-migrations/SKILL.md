@@ -53,6 +53,8 @@ historically lacks snapshots for 0002–0004).
 - [ ] `src/db/schema.ts` staged
 - [ ] New `drizzle/000N_*.sql` staged (reviewed)
 - [ ] `drizzle/meta/_journal.json` + new `drizzle/meta/000N_snapshot.json` staged
+- [ ] If tables were added/removed/renamed: update root `DB-TABLES.md` (see
+      [db-tables-doc](../db-tables-doc/SKILL.md))
 - [ ] `npm run db:check` passes
 - [ ] Prefer verifying with local CI build placeholders (see `local-ci-check` skill)
 
@@ -82,6 +84,7 @@ Do **not** hand-edit production DBs. Ship SQL via this flow.
 ## Never do
 
 - Commit schema without generated SQL
+- Add/remove/rename tables without updating `DB-TABLES.md` in the same commit
 - Use `db:push` for shared staging/prod (bypasses migration history)
 - Squash/delete applied migration files from history
 - Skip husky / `--no-verify` to bypass `db:check` unless the user explicitly requests it
