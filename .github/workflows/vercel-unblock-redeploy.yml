@@ -7,18 +7,15 @@ name: Unblock Omer Vercel deploys
 # On every push to `main`, poll the Vercel deployments API for this SHA until
 # it is BLOCKED/ERROR (heal) or healthy — no blind 60s sleep. Then heal any
 # leftover BLOCKED / access-failed Production deploys.
-# Schedule remains a backup poller; workflow_dispatch is for manual runs.
+# workflow_dispatch is for manual runs.
 #
 # Fallback chain (see scripts/vercel-unblock-redeploy.mjs):
 #   API same-sha redeploy → API latest-commit → API gitSource tip → CLI file upload
 #
-# Schedule only runs from the repo default branch (`main`). Keep this file on
-# both `dev` and `main` so promote carries it.
+# Keep this file on both `dev` and `main` so promote carries it.
 on:
   push:
     branches: [main]
-  schedule:
-    - cron: "*/10 * * * *"
   workflow_dispatch: {}
 
 jobs:

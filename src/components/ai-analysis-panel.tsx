@@ -5,7 +5,6 @@ import { Info, Sparkles } from "lucide-react";
 
 import { DeskTip } from "@/components/desk-tip";
 import { Skeleton } from "@/components/loading-skeleton";
-import type { AiLean } from "@/db/schema";
 import type { TriageResult } from "@/lib/jobs/llm-triage";
 import { cn } from "@/lib/utils";
 
@@ -15,48 +14,23 @@ type PanelState =
   | { kind: "ready"; analysis: TriageResult }
   | { kind: "unavailable"; message: string };
 
-const LEAN_LABEL: Record<AiLean, string> = {
-  bullish: "Bullish lean",
-  bearish: "Bearish lean",
-  neutral: "Neutral lean",
-  uncertain: "Uncertain",
-};
-
-const LEAN_CLASS: Record<AiLean, string> = {
-  bullish: "text-[var(--desk-positive)]",
-  bearish: "text-[var(--desk-negative)]",
-  neutral: "text-[var(--desk-text-secondary)]",
-  uncertain: "text-[var(--desk-text-dim)]",
-};
-
 const AI_INFO_TIP =
   "Short plain-English triage grounded in this event’s stored filing text and key facts. Shared for every viewer once computed. Not a prediction or buy/sell advice.";
 
 function AnalysisBody({ analysis }: { analysis: TriageResult }) {
   return (
     <div className="ai-analysis-reveal flex flex-col gap-2.5">
-      <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <p className="inline-flex items-center gap-1.5 font-mono text-[0.65rem] tracking-[0.14em] text-[var(--desk-text-dim)] uppercase">
-          AI analysis
-          <DeskTip content={AI_INFO_TIP} side="bottom">
-            <span
-              className="inline-flex size-3.5 items-center justify-center rounded-full border border-[var(--desk-border-strong)] text-[var(--desk-text-dim)] hover:text-[var(--desk-text)]"
-              aria-label="About AI analysis"
-            >
-              <Info className="size-2.5" aria-hidden />
-            </span>
-          </DeskTip>
-        </p>
-        <span
-          className={cn(
-            "font-mono text-[0.65rem] tracking-wide uppercase",
-            LEAN_CLASS[analysis.lean],
-          )}
-        >
-          {LEAN_LABEL[analysis.lean]}
-          {analysis.uncertain ? " · limited text" : ""}
-        </span>
-      </div>
+      <p className="inline-flex items-center gap-1.5 font-mono text-[0.65rem] tracking-[0.14em] text-[var(--desk-text-dim)] uppercase">
+        AI analysis
+        <DeskTip content={AI_INFO_TIP} side="bottom">
+          <span
+            className="inline-flex size-3.5 items-center justify-center rounded-full border border-[var(--desk-border-strong)] text-[var(--desk-text-dim)] hover:text-[var(--desk-text)]"
+            aria-label="About AI analysis"
+          >
+            <Info className="size-2.5" aria-hidden />
+          </span>
+        </DeskTip>
+      </p>
       <ul className="flex list-none flex-col gap-1.5 pl-0">
         {analysis.bullets.map((bullet, i) => (
           <li
