@@ -1,17 +1,20 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Plus, Trash2, Upload } from "lucide-react";
+import { ArrowRight, Plus, Sparkles, Trash2, Upload } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SkeletonCard } from "@/components/loading-skeleton";
+import type { WatchlistCriteria } from "@/db/schema";
+import type { QuietSignalWatchlist } from "@/lib/catalysts/playbook";
 import {
   CATEGORY_LABELS,
   type EventCategoryKey,
-} from "@/lib/jobs/parse-8k-items";
-import { DEFAULT_PLAYBOOK_CATEGORIES } from "@/lib/catalysts/playbook";
+} from "@/lib/catalysts/taxonomy";
+import { WATCHLIST_BUILDER_ANCHOR } from "@/lib/watchlist/draft-handoff";
 import { parsePortfolioSymbols } from "@/lib/watchlist/parse-portfolio-symbols";
 import {
   notifyWatchlistChanged,
@@ -23,17 +26,50 @@ import {
   toUserFacingMessage,
 } from "@/lib/errors/user-facing";
 
-const ALL_CATEGORIES = Object.keys(CATEGORY_LABELS) as EventCategoryKey[];
+interface SavedWatchlist {
+  id: number;
+  name: string;
+  criteria: WatchlistCriteria;
+}
 
+function criteriaSummary(criteria: WatchlistCriteria): string {
+  const parts: string[] = [];
+  if (criteria.symbols?.length) parts.push(criteria.symbols.join(", "));
+  if (criteria.categories?.length) {
+    parts.push(
+      criteria.categories
+        .map((c) => CATEGORY_LABELS[c as EventCategoryKey] ?? c)
+        .join(", "),
+    );
+  }
+  if (criteria.forms?.length) parts.push(criteria.forms.join(", "));
+  if (criteria.tags?.length) parts.push(criteria.tags.join(", "));
+  if (criteria.sources?.length) parts.push(criteria.sources.join(", "));
+  if (criteria.q) parts.push(`"${criteria.q}"`);
+  return parts.length > 0 ? parts.join(" · ") : "No filters";
+}
+
+/**
+ * Quiet mode's "My symbols" flat list, plus which saved watchlists (rules)
+ * count as additional signal sources. A watchlist is no longer just one
+ * flat list — quiet mode ORs across every selected source (see
+ * `matchesQuietPlaybook`).
+ */
 export function WatchlistPlaybookPanel() {
   const [symbols, setSymbols] = useState<{ id: number; symbol: string }[]>([]);
-  const [categories, setCategories] = useState<EventCategoryKey[]>(
-    DEFAULT_PLAYBOOK_CATEGORIES,
+  const [legacyCategories, setLegacyCategories] = useState<EventCategoryKey[]>(
+    [],
   );
+  const [savedWatchlists, setSavedWatchlists] = useState<SavedWatchlist[]>([]);
+  const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const [signalWatchlists, setSignalWatchlists] = useState<
+    QuietSignalWatchlist[]
+  >([]);
   const [quietMode, setQuietMode] = useState(false);
   const [draft, setDraft] = useState("");
   const [portfolioDraft, setPortfolioDraft] = useState("");
   const [saving, setSaving] = useState(false);
+  const [migrating, setMigrating] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const [nyseBySymbol, setNyseBySymbol] = useState<
     Record<string, { lastPrice: string | null; description: string | null }>
@@ -43,12 +79,16 @@ export function WatchlistPlaybookPanel() {
 
   const load = useCallback(async () => {
     try {
-      const [wRes, pRes, nRes] = await Promise.all([
+      const [wRes, pRes, listRes, nRes] = await Promise.all([
         fetch("/api/watchlist", {
           credentials: "same-origin",
           cache: "no-store",
         }),
         fetch("/api/playbook", {
+          credentials: "same-origin",
+          cache: "no-store",
+        }),
+        fetch("/api/watchlists", {
           credentials: "same-origin",
           cache: "no-store",
         }),
@@ -63,12 +103,21 @@ export function WatchlistPlaybookPanel() {
       const wData = await wRes.json();
       const pData = await pRes.json();
       setSymbols(wData.symbols ?? []);
-      setCategories(
-        Array.isArray(pData.categories) && pData.categories.length > 0
-          ? pData.categories
-          : DEFAULT_PLAYBOOK_CATEGORIES,
+      setLegacyCategories(
+        Array.isArray(pData.categories) ? pData.categories : [],
+      );
+      setSelectedIds(
+        Array.isArray(pData.watchlistIds) ? pData.watchlistIds : [],
+      );
+      setSignalWatchlists(
+        Array.isArray(pData.signalWatchlists) ? pData.signalWatchlists : [],
       );
       setQuietMode(Boolean(pData.quietMode));
+
+      if (listRes.ok) {
+        const listData = await listRes.json();
+        setSavedWatchlists(listData.watchlists ?? []);
+      }
 
       if (nRes.ok) {
         const nData = await nRes.json();
@@ -162,7 +211,7 @@ export function WatchlistPlaybookPanel() {
         }`,
       );
       if (enableQuiet && !quietMode) {
-        await savePlaybook(categories, true, { notify: true });
+        await savePlaybook({ quietMode: true }, { notify: true });
       }
     } catch (err) {
       toast.error(toUserFacingMessage(err, "Import failed."));
@@ -203,25 +252,25 @@ export function WatchlistPlaybookPanel() {
   }
 
   async function savePlaybook(
-    nextCategories: EventCategoryKey[],
-    nextQuiet: boolean,
+    patch: { watchlistIds?: number[]; quietMode?: boolean },
     { notify = false }: { notify?: boolean } = {},
   ) {
+    const nextIds = patch.watchlistIds ?? selectedIds;
+    const nextQuiet = patch.quietMode ?? quietMode;
     setSaving(true);
-    setCategories(nextCategories);
+    setSelectedIds(nextIds);
     setQuietMode(nextQuiet);
     try {
       const res = await fetch("/api/playbook", {
         method: "PUT",
         credentials: "same-origin",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          categories: nextCategories,
-          quietMode: nextQuiet,
-        }),
+        body: JSON.stringify({ watchlistIds: nextIds, quietMode: nextQuiet }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Could not save playbook.");
+      setSelectedIds(data.watchlistIds ?? nextIds);
+      setSignalWatchlists(data.signalWatchlists ?? []);
       if (notify) {
         toast.success(
           nextQuiet ? "Quiet mode turned on" : "Quiet mode turned off",
@@ -235,11 +284,37 @@ export function WatchlistPlaybookPanel() {
     }
   }
 
-  function toggleCategory(cat: EventCategoryKey) {
-    const next = categories.includes(cat)
-      ? categories.filter((c) => c !== cat)
-      : [...categories, cat];
-    void savePlaybook(next, quietMode);
+  function toggleWatchlist(id: number) {
+    const next = selectedIds.includes(id)
+      ? selectedIds.filter((x) => x !== id)
+      : [...selectedIds, id];
+    void savePlaybook({ watchlistIds: next });
+  }
+
+  async function migrateLegacyCategories() {
+    if (legacyCategories.length === 0) return;
+    setMigrating(true);
+    try {
+      const res = await fetch("/api/watchlists", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: "Migrated playbook",
+          criteria: { categories: legacyCategories },
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Could not migrate.");
+      notifyWatchlistChanged();
+      await load();
+      await savePlaybook({ watchlistIds: [...selectedIds, data.id] });
+      toast.success('Created "Migrated playbook" and added it as a signal.');
+    } catch (err) {
+      toast.error(toUserFacingMessage(err, "Could not migrate categories."));
+    } finally {
+      setMigrating(false);
+    }
   }
 
   if (!loaded) {
@@ -251,16 +326,18 @@ export function WatchlistPlaybookPanel() {
     );
   }
 
+  const signalCount = signalWatchlists.length;
+
   return (
     <div className="flex flex-col gap-8">
       <section className="overflow-hidden rounded-xl border border-[var(--desk-border)] bg-[var(--desk-panel)]">
         <div className="border-b border-[var(--desk-border)] px-4 py-4 sm:px-5">
           <h2 className="text-sm font-semibold text-[var(--desk-text)]">
-            Watchlist symbols
+            My symbols
           </h2>
           <p className="mt-1 text-sm text-[var(--desk-text-muted)]">
-            When Quiet playbook is on, the Live feed only shows these names
-            (plus playbook categories below).
+            Always counts as a quiet-mode signal source, alongside any
+            watchlists you select below.
           </p>
         </div>
         <div className="flex flex-col gap-4 px-4 py-4 sm:px-5">
@@ -294,7 +371,7 @@ export function WatchlistPlaybookPanel() {
             </p>
             <p className="text-xs text-[var(--desk-text-muted)]">
               Paste tickers or upload a CSV (first column = symbol). Focuses the
-              Live tape via Quiet playbook — no broker sync.
+              Live tape via Quiet mode — no broker sync.
             </p>
             <textarea
               value={portfolioDraft}
@@ -342,8 +419,8 @@ export function WatchlistPlaybookPanel() {
           ) : null}
           {symbols.length === 0 ? (
             <p className="font-mono text-xs text-[var(--desk-text-dim)]">
-              No symbols yet — quiet mode will filter by playbook categories
-              only.
+              No symbols yet — quiet mode will rely on your selected watchlists
+              below.
             </p>
           ) : (
             <ul className="flex flex-wrap gap-2">
@@ -383,17 +460,21 @@ export function WatchlistPlaybookPanel() {
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <h2 className="text-sm font-semibold text-[var(--desk-text)]">
-                Playbook categories
+                Signal watchlists
               </h2>
               <p className="mt-1 text-sm text-[var(--desk-text-muted)]">
-                Signal types that survive quiet-mode noise filtering.
+                Pick any saved watchlists (rules) that should also count as
+                signal when quiet mode is on — not just one flat list.
+                {signalCount > 0
+                  ? ` ${signalCount} selected.`
+                  : " None selected yet."}
               </p>
             </div>
             <button
               type="button"
               disabled={saving}
               onClick={() =>
-                void savePlaybook(categories, !quietMode, { notify: true })
+                void savePlaybook({ quietMode: !quietMode }, { notify: true })
               }
               className={cn(
                 "inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-[0.82rem] font-medium transition-colors",
@@ -406,26 +487,84 @@ export function WatchlistPlaybookPanel() {
             </button>
           </div>
         </div>
-        <div className="flex flex-wrap gap-1.5 px-4 py-4 sm:px-5">
-          {ALL_CATEGORIES.map((cat) => {
-            const active = categories.includes(cat);
-            return (
-              <button
-                key={cat}
-                type="button"
-                disabled={saving}
-                onClick={() => toggleCategory(cat)}
-                className={cn(
-                  "inline-flex h-8 items-center rounded-md border px-2.5 font-mono text-[0.7rem] tracking-wide transition-colors",
-                  active
-                    ? "border-[var(--desk-text-dim)] bg-[var(--desk-overlay-strong)] text-[var(--desk-text)]"
-                    : "border-[var(--desk-border)] text-[var(--desk-text-muted)] hover:border-[var(--desk-border-strong)]",
-                )}
+
+        <div className="flex flex-col gap-3 px-4 py-4 sm:px-5">
+          {savedWatchlists.length === 0 ? (
+            <div className="flex flex-col items-start gap-2 rounded-lg border border-dashed border-[var(--desk-border-strong)] bg-[var(--desk-overlay-soft)] px-3 py-3">
+              <p className="text-sm text-[var(--desk-text-muted)]">
+                No saved watchlists yet — build one below (template, AI, or by
+                hand) to use as a quiet-mode signal.
+              </p>
+              <Link
+                href={`#${WATCHLIST_BUILDER_ANCHOR}`}
+                className="inline-flex items-center gap-1 text-xs font-medium text-[var(--desk-live)] hover:underline"
               >
-                {CATEGORY_LABELS[cat]}
-              </button>
-            );
-          })}
+                Build a watchlist
+                <ArrowRight className="size-3" />
+              </Link>
+            </div>
+          ) : (
+            <ul className="flex flex-col gap-2">
+              {savedWatchlists.map((w) => {
+                const active = selectedIds.includes(w.id);
+                return (
+                  <li key={w.id}>
+                    <button
+                      type="button"
+                      disabled={saving}
+                      onClick={() => toggleWatchlist(w.id)}
+                      aria-pressed={active}
+                      className={cn(
+                        "flex w-full items-start gap-3 rounded-lg border px-3 py-2.5 text-left transition-colors",
+                        active
+                          ? "border-[var(--desk-live)]/45 bg-[var(--desk-live)]/10"
+                          : "border-[var(--desk-border-strong)] bg-[var(--desk-overlay-soft)] hover:bg-[var(--desk-overlay-strong)]",
+                      )}
+                    >
+                      <span
+                        aria-hidden
+                        className={cn(
+                          "mt-0.5 grid size-4 shrink-0 place-items-center rounded-sm border text-[0.6rem]",
+                          active
+                            ? "border-[var(--desk-live)] bg-[var(--desk-live)] text-[#121212]"
+                            : "border-[var(--desk-border-strong)]",
+                        )}
+                      >
+                        {active ? "✓" : ""}
+                      </span>
+                      <span className="min-w-0">
+                        <span className="block text-sm font-medium text-[var(--desk-text)]">
+                          {w.name}
+                        </span>
+                        <span className="mt-0.5 block truncate font-mono text-[0.68rem] text-[var(--desk-text-dim)]">
+                          {criteriaSummary(w.criteria)}
+                        </span>
+                      </span>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+
+          {legacyCategories.length > 0 ? (
+            <button
+              type="button"
+              disabled={migrating}
+              onClick={() => void migrateLegacyCategories()}
+              className="inline-flex items-center gap-1.5 self-start rounded-md border border-[var(--desk-border-strong)] bg-[var(--desk-overlay-soft)] px-2.5 py-1.5 font-mono text-[0.7rem] text-[var(--desk-text-secondary)] transition-colors hover:bg-[var(--desk-overlay-strong)] hover:text-[var(--desk-text)]"
+            >
+              <Sparkles className="size-3" />
+              {migrating
+                ? "Migrating…"
+                : "Turn my old playbook categories into a watchlist"}
+            </button>
+          ) : null}
+
+          <p className="text-xs text-[var(--desk-text-dim)]">
+            Nothing selected? Quiet mode falls back to a sane default event-type
+            filter until you pick a symbol or watchlist.
+          </p>
         </div>
       </section>
     </div>

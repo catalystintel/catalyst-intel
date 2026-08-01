@@ -30,10 +30,15 @@ import { toUserFacingMessage } from "@/lib/errors/user-facing";
 import { isLocalDevUi } from "@/lib/dev/local-dev-ui";
 import { feedHref } from "@/lib/nav/feed-href";
 import {
+  WATCHLIST_BUILDER_ANCHOR,
   WATCHLIST_DRAFT_HANDOFF_KEY,
   type WatchlistDraftHandoff,
 } from "@/lib/watchlist/draft-handoff";
 import { WATCHLIST_TEMPLATES } from "@/lib/watchlist/templates";
+import {
+  notifyWatchlistChanged,
+  subscribeWatchlistChanged,
+} from "@/lib/watchlist/watchlist-events";
 import { cn } from "@/lib/utils";
 
 interface SavedWatchlist {
@@ -259,6 +264,10 @@ export function WatchlistWorkspace() {
     return () => window.clearTimeout(id);
   }, [load]);
 
+  // Refresh when a watchlist changes elsewhere on the page (e.g. the "My
+  // symbols" / Signal watchlists panel's migrate-to-watchlist action).
+  useEffect(() => subscribeWatchlistChanged(() => void load()), [load]);
+
   // One-shot handoff from the Catalyst Feed's "Open in watchlist builder"
   // link — prefills the draft with the tape's current filters, unsaved.
   useEffect(() => {
@@ -380,6 +389,7 @@ export function WatchlistWorkspace() {
       setAiPrompt("");
       setAiRationale(null);
       await load();
+      notifyWatchlistChanged();
     } catch (err) {
       toast.error(toUserFacingMessage(err, "Could not save watchlist."));
     } finally {
@@ -413,6 +423,7 @@ export function WatchlistWorkspace() {
       if (!res.ok) throw new Error(data.error ?? "Could not delete.");
       setWatchlists((prev) => prev.filter((w) => w.id !== id));
       if (editingId === id) cancelEdit();
+      notifyWatchlistChanged();
       toast.success(`Deleted "${name}"`);
     } catch (err) {
       toast.error(toUserFacingMessage(err, "Could not delete watchlist."));
@@ -466,8 +477,9 @@ export function WatchlistWorkspace() {
     <div className="flex flex-col gap-6">
       {/* Builder */}
       <section
+        id={WATCHLIST_BUILDER_ANCHOR}
         ref={builderRef}
-        className="overflow-hidden rounded-xl border border-[var(--desk-border)] bg-[var(--desk-panel)]"
+        className="scroll-mt-4 overflow-hidden rounded-xl border border-[var(--desk-border)] bg-[var(--desk-panel)]"
       >
         <div className="border-b border-[var(--desk-border)] px-4 py-4 sm:px-5">
           <h2 className="flex items-center gap-2 text-sm font-semibold text-[var(--desk-text)]">

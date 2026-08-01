@@ -50,8 +50,8 @@ import {
   eventLabel as feedEventLabel,
 } from "@/lib/catalysts/feed-display";
 import {
-  DEFAULT_PLAYBOOK_CATEGORIES,
   matchesQuietPlaybook,
+  type QuietSignalWatchlist,
 } from "@/lib/catalysts/playbook";
 import {
   CATEGORY_LABELS,
@@ -206,9 +206,9 @@ export function LiveCatalystFeed({
     () => new Set(),
   );
   const [watchlistSymbols, setWatchlistSymbols] = useState<string[]>([]);
-  const [playbookCategories, setPlaybookCategories] = useState<
-    EventCategoryKey[]
-  >(DEFAULT_PLAYBOOK_CATEGORIES);
+  const [signalWatchlists, setSignalWatchlists] = useState<
+    QuietSignalWatchlist[]
+  >([]);
   const [quietMode, setQuietMode] = useState(false);
   const [prefsLoaded, setPrefsLoaded] = useState(false);
   const [manualRefreshing, setManualRefreshing] = useState(false);
@@ -264,10 +264,8 @@ export function LiveCatalystFeed({
         }
         if (pRes.ok) {
           const pData = await pRes.json();
-          setPlaybookCategories(
-            Array.isArray(pData.categories) && pData.categories.length > 0
-              ? pData.categories
-              : DEFAULT_PLAYBOOK_CATEGORIES,
+          setSignalWatchlists(
+            Array.isArray(pData.signalWatchlists) ? pData.signalWatchlists : [],
           );
           setQuietMode(Boolean(pData.quietMode));
         }
@@ -476,19 +474,18 @@ export function LiveCatalystFeed({
     const next = !quietMode;
     setQuietMode(next);
     try {
+      // Signal sources (watchlistIds) are unaffected — the API preserves
+      // whatever was last saved when the field is omitted.
       await fetch("/api/playbook", {
         method: "PUT",
         credentials: "same-origin",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          categories: playbookCategories,
-          quietMode: next,
-        }),
+        body: JSON.stringify({ quietMode: next }),
       });
     } catch {
       setQuietMode(!next);
     }
-  }, [quietMode, playbookCategories]);
+  }, [quietMode]);
 
   const undismissCatalyst = useCallback((id: number) => {
     setDismissedIds((prev) => {
@@ -675,19 +672,22 @@ export function LiveCatalystFeed({
     const filtered = catalysts.filter((c) => {
       if (dismissedIds.has(c.id)) return false;
       return matchesQuietPlaybook(
-        { symbol: c.symbol, eventCategory: c.eventCategory },
-        { quietMode, watchlistSymbols, playbookCategories },
+        {
+          symbol: c.symbol,
+          eventCategory: c.eventCategory,
+          type: c.type,
+          tags: c.tags,
+          sourceProvider: c.sourceProvider,
+          companyName: c.companyName,
+          title: c.title,
+          headline: c.headline,
+        },
+        { quietMode, watchlistSymbols, signalWatchlists },
       );
     });
     // Always newest → oldest (event time), even after client overlays.
     return sortFeedNewestFirst(filtered);
-  }, [
-    catalysts,
-    dismissedIds,
-    quietMode,
-    watchlistSymbols,
-    playbookCategories,
-  ]);
+  }, [catalysts, dismissedIds, quietMode, watchlistSymbols, signalWatchlists]);
 
   const selectedRaw = selectedId
     ? (catalysts.find((c) => c.id === selectedId) ?? null)
@@ -736,7 +736,7 @@ export function LiveCatalystFeed({
             type="button"
             onClick={() => void toggleQuietMode()}
             disabled={!prefsLoaded}
-            title="When on, only show catalysts for symbols on your watchlist that match your playbook event categories"
+            title="When on, only show catalysts matching your symbols or selected signal watchlists (edit under Watchlists)"
             className={cn(
               "inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-[0.82rem] font-medium transition-colors",
               quietMode
@@ -827,7 +827,7 @@ export function LiveCatalystFeed({
             visibleCount={visible.length}
             quietMode={quietMode}
             watchlistCount={watchlistSymbols.length}
-            playbookCount={playbookCategories.length}
+            signalWatchlistCount={signalWatchlists.length}
             panelFiltersActive={panelFiltersActive}
             onClearFilters={clearFilters}
             onSaveWatchlist={openSaveWatchlist}
@@ -873,7 +873,7 @@ export function LiveCatalystFeed({
               ) : (
                 <p className="text-sm text-[var(--desk-text-muted)]">
                   {emptyKind === "quiet"
-                    ? "Quiet playbook: no watchlist/playbook matches right now."
+                    ? "Quiet mode: no rows match your symbols or selected watchlists right now."
                     : "No rows match these filters."}
                 </p>
               )}
@@ -1049,7 +1049,7 @@ interface FeedFiltersProps {
   visibleCount: number;
   quietMode: boolean;
   watchlistCount: number;
-  playbookCount: number;
+  signalWatchlistCount: number;
   panelFiltersActive: boolean;
   onClearFilters: () => void;
   onSaveWatchlist: () => void;
@@ -1063,7 +1063,7 @@ function FeedFilters({
   visibleCount,
   quietMode,
   watchlistCount,
-  playbookCount,
+  signalWatchlistCount,
   panelFiltersActive,
   onClearFilters,
   onSaveWatchlist,
@@ -1077,9 +1077,10 @@ function FeedFilters({
     <div className="flex flex-col gap-2">
       {quietMode ? (
         <p className="font-mono text-[0.72rem] text-[var(--desk-text-dim)]">
-          Quiet playbook on · {watchlistCount} watchlist symbol
-          {watchlistCount === 1 ? "" : "s"} · {playbookCount} event type
-          {playbookCount === 1 ? "" : "s"} — edit under Watchlists.
+          Quiet mode on · {watchlistCount} symbol
+          {watchlistCount === 1 ? "" : "s"} · {signalWatchlistCount} watchlist
+          {signalWatchlistCount === 1 ? "" : "s"} selected — edit under
+          Watchlists.
         </p>
       ) : null}
       <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
