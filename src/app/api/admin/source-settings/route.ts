@@ -4,9 +4,11 @@ import { databaseUnavailableMessage, isLibsqlConfigured } from "@/db/env";
 import { getCurrentAppUser } from "@/lib/auth/current-user";
 import {
   feedSourceCatalogEntries,
-  loadEnabledSourcesForUser,
+  loadSourceSettingsForUser,
   normalizeEnabledSources,
+  normalizeShowSourceLabels,
   upsertEnabledSourcesForUser,
+  upsertShowSourceLabelsForUser,
 } from "@/lib/catalysts/user-source-settings";
 import { getClientIp } from "@/lib/http/client-ip";
 import { RATE_LIMITS, checkRateLimit } from "@/lib/http/rate-limit";
@@ -18,6 +20,15 @@ import {
   isSameOriginRequest,
   sameOriginForbiddenResponse,
 } from "@/lib/http/same-origin";
+
+function catalogPayload() {
+  return feedSourceCatalogEntries().map((s) => ({
+    id: s.id,
+    label: s.label,
+    contributes: s.contributes,
+    fetchEnabled: s.fetchEnabled !== false,
+  }));
+}
 
 async function requireAdmin(
   request: NextRequest,
@@ -75,21 +86,14 @@ export async function GET(request: NextRequest) {
     limitResult: NonNullable<(typeof auth)["limitResult"]>;
   };
 
-  const { enabledSources, persisted } = await loadEnabledSourcesForUser(
-    user.id,
-  );
-  const catalog = feedSourceCatalogEntries().map((s) => ({
-    id: s.id,
-    label: s.label,
-    contributes: s.contributes,
-    fetchEnabled: s.fetchEnabled !== false,
-  }));
+  const settings = await loadSourceSettingsForUser(user.id);
 
   return withRateLimitHeaders(
     NextResponse.json({
-      enabledSources,
-      persisted,
-      catalog,
+      enabledSources: settings.enabledSources,
+      showSourceLabels: settings.showSourceLabels,
+      persisted: settings.persisted,
+      catalog: catalogPayload(),
     }),
     limitResult,
   );
@@ -117,21 +121,43 @@ export async function PUT(request: NextRequest) {
     typeof body === "object" && body !== null
       ? (body as Record<string, unknown>)
       : {};
-  const enabledSources = await upsertEnabledSourcesForUser(
-    user.id,
-    normalizeEnabledSources(raw.enabledSources),
-  );
+
+  const hasEnabled = "enabledSources" in raw;
+  const hasShowLabels = "showSourceLabels" in raw;
+  if (!hasEnabled && !hasShowLabels) {
+    return withRateLimitHeaders(
+      NextResponse.json(
+        {
+          error:
+            "Provide enabledSources and/or showSourceLabels in the request body.",
+        },
+        { status: 400 },
+      ),
+      limitResult,
+    );
+  }
+
+  if (hasEnabled) {
+    await upsertEnabledSourcesForUser(
+      user.id,
+      normalizeEnabledSources(raw.enabledSources),
+    );
+  }
+  if (hasShowLabels) {
+    await upsertShowSourceLabelsForUser(
+      user.id,
+      normalizeShowSourceLabels(raw.showSourceLabels),
+    );
+  }
+
+  const settings = await loadSourceSettingsForUser(user.id);
 
   return withRateLimitHeaders(
     NextResponse.json({
-      enabledSources,
+      enabledSources: settings.enabledSources,
+      showSourceLabels: settings.showSourceLabels,
       persisted: true,
-      catalog: feedSourceCatalogEntries().map((s) => ({
-        id: s.id,
-        label: s.label,
-        contributes: s.contributes,
-        fetchEnabled: s.fetchEnabled !== false,
-      })),
+      catalog: catalogPayload(),
     }),
     limitResult,
   );

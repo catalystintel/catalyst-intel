@@ -23,12 +23,15 @@ import type { MacroEventDef } from "@/lib/jobs/fetch-macro-calendar";
 export function DeskDashboardGrid({
   initialCatalysts,
   isAdmin,
+  showSourceLabels = false,
   initialSymbolFilter,
   initialSelectedId,
   macroEvents,
 }: {
   initialCatalysts: FeedCatalyst[];
   isAdmin: boolean;
+  /** Admin personal pref: show vendor source on tape / split / details. */
+  showSourceLabels?: boolean;
   initialSymbolFilter?: string;
   initialSelectedId?: number;
   macroEvents: MacroEventDef[];
@@ -43,6 +46,7 @@ export function DeskDashboardGrid({
         <LiveCatalystFeed
           initialCatalysts={initialCatalysts}
           isAdmin={isAdmin}
+          showSourceLabels={showSourceLabels}
           initialSymbolFilter={initialSymbolFilter}
           initialSelectedId={initialSelectedId}
           onFocusSymbol={setFocusSymbol}

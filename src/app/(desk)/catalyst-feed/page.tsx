@@ -13,6 +13,7 @@ import {
 import {
   mergeSourceProviderFilters,
   resolveAdminFeedProviders,
+  resolveAdminShowSourceLabels,
 } from "@/lib/catalysts/user-source-settings";
 import { withDbRetry } from "@/lib/db/with-db-retry";
 import { loadDeskMacroEvents } from "@/lib/jobs/desk-macro-events";
@@ -53,7 +54,10 @@ export default async function CatalystFeedPage({
     return null;
   }
 
-  const adminProviders = await resolveAdminFeedProviders(user.id, user.isAdmin);
+  const [adminProviders, showSourceLabels] = await Promise.all([
+    resolveAdminFeedProviders(user.id, user.isAdmin),
+    resolveAdminShowSourceLabels(user.id, user.isAdmin),
+  ]);
   const recentCatalysts = await withDbRetry(() =>
     queryFeedPage(ssrFeedFilters(new Date().toISOString(), adminProviders), {
       limit: 200,
@@ -68,6 +72,7 @@ export default async function CatalystFeedPage({
       <DeskDashboardGrid
         initialCatalysts={recentCatalysts.map(toFeedCatalyst)}
         isAdmin={user.isAdmin}
+        showSourceLabels={showSourceLabels}
         initialSymbolFilter={symbol?.trim().toUpperCase() || undefined}
         initialSelectedId={initialSelectedId}
         macroEvents={macroEvents}

@@ -57,6 +57,7 @@ export function CatalystArticleDialog({
   open,
   onOpenChange,
   isAdmin = false,
+  showSourceLabels = false,
 }: {
   catalystId: number | null;
   open: boolean;
@@ -66,6 +67,7 @@ export function CatalystArticleDialog({
    * (`EdgarProofLink` / `isLocalDevUi`).
    */
   isAdmin?: boolean;
+  showSourceLabels?: boolean;
 }) {
   const [load, setLoad] = useState<LoadState>({ status: "idle" });
 
@@ -186,6 +188,7 @@ export function CatalystArticleDialog({
               variant="dialog"
               catalyst={ready.catalyst}
               isAdmin={isAdmin}
+              showSourceLabels={showSourceLabels}
               summary={ready.article.summary}
               summaryGenerated={ready.article.summaryGenerated}
               body={ready.article.body}

@@ -32,6 +32,7 @@ import {
   type ArticleEnrichment,
 } from "@/lib/catalysts/enrich-article";
 import { toFeedCatalyst } from "@/lib/catalysts/feed-catalyst";
+import { resolveAdminShowSourceLabels } from "@/lib/catalysts/user-source-settings";
 import { getCurrentAppUser } from "@/lib/auth/current-user";
 
 interface PageProps {
@@ -156,12 +157,16 @@ export default async function CatalystArticlePage({ params }: PageProps) {
   );
   const thumbUrl = extractArticleThumbUrl(row.rawContent);
   const user = await getCurrentAppUser();
+  const showSourceLabels = user
+    ? await resolveAdminShowSourceLabels(user.id, user.isAdmin)
+    : false;
 
   return (
     <PageEnter className="flex min-h-0 flex-1 flex-col overflow-y-auto p-4 sm:p-5">
       <CatalystArticleView
         catalyst={catalyst}
         isAdmin={Boolean(user?.isAdmin)}
+        showSourceLabels={showSourceLabels}
         summary={summary}
         summaryGenerated={generated}
         body={body}

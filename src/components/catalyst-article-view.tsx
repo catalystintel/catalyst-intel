@@ -8,7 +8,11 @@ import { CategoryBadge } from "@/components/category-badge";
 import { EdgarProofLink } from "@/components/edgar-proof-link";
 import type { FeedCatalyst } from "@/lib/catalysts/feed-catalyst";
 import { benzingaPanelForCategory } from "@/lib/catalysts/benzinga-analogs";
-import { sectorLabel, titleLine } from "@/lib/catalysts/feed-display";
+import {
+  sectorLabel,
+  sourceDisplay,
+  titleLine,
+} from "@/lib/catalysts/feed-display";
 import { type ArticleBodySource } from "@/lib/catalysts/article-content";
 import type {
   ArticleDetailCard,
@@ -60,6 +64,8 @@ export interface CatalystArticleViewProps {
    * inside `EdgarProofLink` (local-dev only).
    */
   isAdmin?: boolean;
+  /** When true, show vendor source in the details meta grid. */
+  showSourceLabels?: boolean;
 }
 
 /**
@@ -82,6 +88,7 @@ export function CatalystArticleView({
   enrichment = null,
   filingProofMeta = null,
   variant = "page",
+  showSourceLabels = false,
 }: CatalystArticleViewProps) {
   const categoryLabel = catalyst.eventCategory
     ? CATEGORY_LABELS[catalyst.eventCategory]
@@ -212,6 +219,9 @@ export function CatalystArticleView({
           />
           <MetaCell label="Type" value={catalyst.type || "—"} />
           <MetaCell label="Sector" value={sectorLabel(catalyst)} />
+          {showSourceLabels ? (
+            <MetaCell label="Source" value={sourceDisplay(catalyst).name} />
+          ) : null}
           <MetaCell
             label="Event time"
             value={formatTimeDate(catalyst.timestamp)}

@@ -25,7 +25,7 @@ Enforced by `npm run db:check` / husky pre-commit (`scripts/check-db-tables-doc.
 | `watchlist_entries`    | Per-user symbols the desk cares about                                                     |
 | `playbook_settings`    | Per-user quiet-mode filter (which event categories count as signal)                       |
 | `dismissed_catalysts`  | Per-user “dismissed” catalysts so they stay hidden across devices                         |
-| `user_source_settings` | Per-admin feed source visibility toggles (JSON list of enabled sources; missing = all on) |
+| `user_source_settings` | Per-admin feed prefs: vendor visibility list + whether article source labels show on the tape |
 
 ## Alerts
 

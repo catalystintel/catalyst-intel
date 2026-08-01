@@ -14,6 +14,7 @@ import { FetchTrigger } from "./fetch-trigger";
 import { IngestionAuditSection } from "./ingestion-audit-section";
 import { MigrateTrigger } from "./migrate-trigger";
 import { ResetDbTrigger } from "./reset-db-trigger";
+import { ShowArticleSourceToggle } from "./show-article-source-toggle";
 import { SourceVisibilityToggles } from "./source-visibility-toggles";
 import { WhatsNewPanel } from "./whats-new-panel";
 
@@ -77,6 +78,23 @@ export default async function AdminPage() {
       <section className="overflow-hidden rounded-xl border border-[var(--desk-border)] bg-[var(--desk-panel)]">
         <div className="border-b border-border/60 px-4 py-4 sm:px-5">
           <WhatsNewPanel />
+        </div>
+      </section>
+
+      <section className="overflow-hidden rounded-xl border border-[var(--desk-border)] bg-[var(--desk-panel)]">
+        <div className="border-b border-border/60 px-4 py-4 sm:px-5">
+          <h2 className="font-mono text-sm tracking-wide text-foreground">
+            Feed display
+          </h2>
+          <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
+            Personal display only — controls whether each article shows its
+            vendor source on{" "}
+            <span className="text-[var(--desk-text-secondary)]">your</span>{" "}
+            Catalyst Feed.
+          </p>
+        </div>
+        <div className="px-4 py-4 sm:px-5">
+          <ShowArticleSourceToggle />
         </div>
       </section>
 
