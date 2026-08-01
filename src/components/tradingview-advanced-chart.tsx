@@ -126,7 +126,8 @@ export function TradingViewAdvancedChart({
             onClick={() => onRangeChange(r.key)}
             aria-pressed={active}
             className={cn(
-              "rounded-sm px-2 py-0.5 font-mono text-[0.65rem] tracking-wide uppercase transition-colors",
+              // No CSS uppercase — `1m` (minutes) must stay distinct from `1M` (month).
+              "rounded-sm px-2 py-0.5 font-mono text-[0.65rem] tracking-wide transition-colors",
               active
                 ? "bg-[var(--desk-live)]/15 text-[var(--desk-live)]"
                 : "text-[var(--desk-text-muted)] hover:bg-[var(--desk-overlay-strong)] hover:text-[var(--desk-text)]",
@@ -222,7 +223,7 @@ export function TradingViewAdvancedChart({
                       onClick={() => onRangeChange(r.key)}
                       aria-pressed={active}
                       className={cn(
-                        "rounded-sm px-2 py-0.5 font-mono text-[0.65rem] tracking-wide uppercase transition-colors",
+                        "rounded-sm px-2 py-0.5 font-mono text-[0.65rem] tracking-wide transition-colors",
                         active
                           ? "bg-[var(--desk-live)]/15 text-[var(--desk-live)]"
                           : "text-[var(--desk-text-muted)] hover:bg-[var(--desk-overlay-strong)] hover:text-[var(--desk-text)]",

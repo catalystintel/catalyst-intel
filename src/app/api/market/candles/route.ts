@@ -7,12 +7,15 @@ import {
   rateLimitExceededResponse,
   withRateLimitHeaders,
 } from "@/lib/http/rate-limit-response";
-import { DEFAULT_CHART_RANGE, isChartRangeKey } from "@/lib/market/chart-range";
+import {
+  DEFAULT_CHART_RANGE,
+  parseChartRangeKey,
+} from "@/lib/market/chart-range";
 import { fetchDeskCandles } from "@/lib/market/fetch-candles";
 
 /**
  * Authenticated OHLC series for the desk Lightweight Charts blotter.
- * Query: `?symbol=AAPL&range=1D`
+ * Query: `?symbol=AAPL&range=1D` (also `1m` / `5m` / `10m` / `30m` / `1H`).
  */
 export async function GET(request: NextRequest) {
   const ip = getClientIp(request);
@@ -41,10 +44,9 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const rangeRaw =
-    request.nextUrl.searchParams.get("range")?.trim().toUpperCase() ??
-    DEFAULT_CHART_RANGE;
-  if (!isChartRangeKey(rangeRaw)) {
+  const rangeParam = request.nextUrl.searchParams.get("range");
+  const rangeRaw = parseChartRangeKey(rangeParam) ?? DEFAULT_CHART_RANGE;
+  if (rangeParam?.trim() && !parseChartRangeKey(rangeParam)) {
     return withRateLimitHeaders(
       NextResponse.json({ error: "Invalid range." }, { status: 400 }),
       limitResult,

@@ -28,6 +28,16 @@ describe("buildTradingViewEmbedUrl", () => {
         buildTradingViewEmbedUrl("AAPL", { range: "5Y" }),
       ).searchParams.get("interval"),
     ).toBe("W");
+    expect(
+      new URL(
+        buildTradingViewEmbedUrl("AAPL", { range: "30m" }),
+      ).searchParams.get("interval"),
+    ).toBe("1");
+    expect(
+      new URL(
+        buildTradingViewEmbedUrl("AAPL", { range: "1H" }),
+      ).searchParams.get("interval"),
+    ).toBe("1");
   });
 
   it("trims bare symbols", () => {

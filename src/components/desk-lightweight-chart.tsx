@@ -17,6 +17,8 @@ import { useTheme } from "next-themes";
 import {
   CHART_RANGES,
   DEFAULT_CHART_RANGE,
+  chartTimeVisible,
+  chartUsesAreaSeries,
   type ChartRangeKey,
 } from "@/lib/market/chart-range";
 import type { DeskCandle } from "@/lib/market/fetch-candles";
@@ -227,7 +229,8 @@ export function DeskLightweightChart({
               onClick={() => onRangeChange(r.key)}
               aria-pressed={active}
               className={cn(
-                "rounded-sm px-2 py-0.5 font-mono text-[0.65rem] tracking-wide uppercase transition-colors",
+                // No CSS uppercase — `1m` (minutes) must stay distinct from `1M` (month).
+                "rounded-sm px-2 py-0.5 font-mono text-[0.65rem] tracking-wide transition-colors",
                 active
                   ? "bg-[var(--desk-panel)] text-[var(--desk-text)] shadow-[0_1px_2px_rgba(0,0,0,0.12)]"
                   : "text-[var(--desk-text-muted)] hover:text-[var(--desk-text)]",
@@ -418,7 +421,7 @@ export function DeskLightweightChart({
                         onClick={() => onRangeChange(r.key)}
                         aria-pressed={activeChip}
                         className={cn(
-                          "rounded-sm px-2 py-0.5 font-mono text-[0.65rem] tracking-wide uppercase transition-colors",
+                          "rounded-sm px-2 py-0.5 font-mono text-[0.65rem] tracking-wide transition-colors",
                           activeChip
                             ? "bg-[var(--desk-panel)] text-[var(--desk-text)] shadow-[0_1px_2px_rgba(0,0,0,0.12)]"
                             : "text-[var(--desk-text-muted)] hover:text-[var(--desk-text)]",
@@ -488,7 +491,7 @@ function useChartPane({
       },
       timeScale: {
         borderColor: theme.border,
-        timeVisible: payload.range === "1D" || payload.range === "5D",
+        timeVisible: chartTimeVisible(payload.range),
         secondsVisible: false,
       },
       crosshair: {
@@ -515,7 +518,7 @@ function useChartPane({
     });
     chartRef.current = chart;
 
-    const useCandles = payload.range !== "1D";
+    const useCandles = !chartUsesAreaSeries(payload.range);
     let series: ISeriesApi<"Candlestick"> | ISeriesApi<"Area">;
 
     if (useCandles) {
