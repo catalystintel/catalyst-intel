@@ -34,17 +34,23 @@ shape and matching engine is used for:
 - **Quiet mode** (`lib/catalysts/playbook.ts` → `matchesQuietPlaybook`) — a
   watchlist is one of potentially _many_ selectable "signal sources", not
   the one flat symbol list anymore. See "Quiet mode" section below.
-- (Next phase, partially wired) alert rule conditions
-  (`AlertRuleConditions.tags`, `lib/alerts/deliver.ts`).
+- Alert rules (`AlertRuleConditions.watchlistIds` + `tags`) — a rule can
+  gate on one or more saved watchlists (OR across selected ids via
+  `matchesWatchlistCriteria` in `lib/alerts/deliver.ts`). Legacy
+  `watchlistOnly` still means flat `watchlist_entries` symbols and ORs
+  with `watchlistIds` when both are set.
+- The Catalyst Feed filter panel's **Watchlists** dropdown applies a
+  saved watchlist's criteria onto `FeedFilterState` (same mapping as the
+  deep-link path: `watchlistCriteriaToFilters`).
 
 **Do not build a second, parallel filter-matching implementation.** Server-
 side, any new axis or matching rule belongs in `feed-query.ts`
 (`buildFeedWhere`) and should flow through `criteriaToFeedFilters` for
 watchlists. Client-side (rows already in memory, no round trip), the one
 sanctioned mirror is `lib/watchlist/match-criteria.ts` →
-`matchesWatchlistCriteria` — used by Quiet mode today. Don't write a third,
-ad hoc criteria check anywhere else; extend one of these two and keep them
-in sync.
+`matchesWatchlistCriteria` — used by Quiet mode **and** alert
+`watchlistIds` matching. Don't write a third, ad hoc criteria check
+anywhere else; extend one of these two and keep them in sync.
 
 ## The tag vocabulary (`deriveAutoTags`)
 
@@ -113,7 +119,9 @@ silently drop the field):
 9. If it should gate alerts too: `AlertRuleConditions` (`db/schema.ts`),
    `normalizeAlertConditions` (`lib/alerts/normalize.ts`), `conditionsMatch`
    (`lib/alerts/deliver.ts`), and the payload built in `auto-fire.ts` /
-   `/api/alert-rules/test`.
+   `/api/alert-rules/test`. For whole-watchlist gating, prefer
+   `AlertRuleConditions.watchlistIds` (reuse `matchesWatchlistCriteria`)
+   over adding parallel fields on the alert conditions shape.
 
 ## AI drafting (`lib/watchlist/ai-draft.ts`)
 

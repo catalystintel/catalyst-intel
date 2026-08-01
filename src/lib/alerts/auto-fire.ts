@@ -22,10 +22,13 @@ import {
   pushSubscriptions,
   rawSources,
   watchlistEntries,
+  watchlists,
+  type WatchlistCriteria,
 } from "@/db/schema";
 import {
   deliverAlertRules,
   type AlertCatalystPayload,
+  type AlertWatchlistCriteriaById,
   type DeliverableRule,
 } from "@/lib/alerts/deliver";
 import { normalizeAlertConditions } from "@/lib/alerts/normalize";
@@ -48,7 +51,10 @@ export async function runAlertAutoFire(options: {
       eventCategory: catalysts.eventCategory,
       impactScore: catalysts.impactScore,
       timestamp: catalysts.timestamp,
+      type: catalysts.type,
+      companyName: catalysts.companyName,
       sourceUrl: rawSources.url,
+      sourceProvider: rawSources.provider,
       tags: catalysts.tags,
     })
     .from(catalysts)
@@ -83,9 +89,9 @@ export async function runAlertAutoFire(options: {
     existing.map((d) => `${d.alertRuleId}:${d.catalystId}`),
   );
 
-  // Watchlists keyed by user — needed for `watchlistOnly` conditions.
+  // Flat symbols (legacy `watchlistOnly`) + saved criteria (`watchlistIds`).
   const userIds = [...new Set(ruleRows.map((r) => r.userId))];
-  const watchlistRows = await db
+  const watchlistEntryRows = await db
     .select({
       userId: watchlistEntries.userId,
       symbol: watchlistEntries.symbol,
@@ -93,11 +99,30 @@ export async function runAlertAutoFire(options: {
     .from(watchlistEntries)
     .where(inArray(watchlistEntries.userId, userIds))
     .all();
-  const watchlistsByUser = new Map<number, string[]>();
-  for (const row of watchlistRows) {
-    const list = watchlistsByUser.get(row.userId) ?? [];
+  const flatSymbolsByUser = new Map<number, string[]>();
+  for (const row of watchlistEntryRows) {
+    const list = flatSymbolsByUser.get(row.userId) ?? [];
     list.push(row.symbol);
-    watchlistsByUser.set(row.userId, list);
+    flatSymbolsByUser.set(row.userId, list);
+  }
+
+  const savedWatchlistRows = await db
+    .select({
+      id: watchlists.id,
+      userId: watchlists.userId,
+      criteria: watchlists.criteria,
+    })
+    .from(watchlists)
+    .where(inArray(watchlists.userId, userIds))
+    .all();
+  const criteriaByUser = new Map<number, AlertWatchlistCriteriaById>();
+  for (const row of savedWatchlistRows) {
+    let map = criteriaByUser.get(row.userId);
+    if (!map) {
+      map = new Map();
+      criteriaByUser.set(row.userId, map);
+    }
+    map.set(row.id, (row.criteria ?? {}) as WatchlistCriteria);
   }
 
   // Only fetched for users with at least one push rule — most won't have any.
@@ -149,6 +174,9 @@ export async function runAlertAutoFire(options: {
       impactScore: catalyst.impactScore,
       timestamp: catalyst.timestamp,
       sourceUrl: catalyst.sourceUrl,
+      type: catalyst.type,
+      companyName: catalyst.companyName,
+      sourceProvider: catalyst.sourceProvider,
       tags: Array.isArray(catalyst.tags)
         ? (catalyst.tags as unknown[]).filter(
             (t): t is string => typeof t === "string",
@@ -165,7 +193,8 @@ export async function runAlertAutoFire(options: {
       const results = await deliverAlertRules({
         catalyst: payload,
         rules: candidateRules,
-        watchlistSymbols: watchlistsByUser.get(userId) ?? [],
+        watchlistSymbols: flatSymbolsByUser.get(userId) ?? [],
+        watchlistCriteriaById: criteriaByUser.get(userId),
         pushSubscriptions: subscriptionsByUser.get(userId) ?? [],
         onDeadPushSubscription: async (endpoint) => {
           await db

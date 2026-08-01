@@ -1,5 +1,8 @@
 import type { AlertRuleConditions, AlertSession } from "@/db/schema";
-import { normalizePlaybookCategories } from "@/lib/catalysts/playbook";
+import {
+  normalizePlaybookCategories,
+  normalizeWatchlistIds,
+} from "@/lib/catalysts/playbook";
 
 const SESSIONS = new Set<string>(["AH", "PM", "RTH", "any"]);
 
@@ -19,6 +22,7 @@ export function normalizeAlertConditions(value: unknown): AlertRuleConditions {
 
   // Impact score retired — drop legacy `minImpact` so it never surfaces in UI.
   const watchlistOnly = raw.watchlistOnly === true;
+  const watchlistIds = normalizeWatchlistIds(raw.watchlistIds);
 
   const tags = Array.isArray(raw.tags)
     ? raw.tags
@@ -30,6 +34,7 @@ export function normalizeAlertConditions(value: unknown): AlertRuleConditions {
     ...(categories.length > 0 ? { categories } : {}),
     ...(sessions && sessions.length > 0 ? { sessions } : {}),
     ...(watchlistOnly ? { watchlistOnly: true } : {}),
+    ...(watchlistIds.length > 0 ? { watchlistIds } : {}),
     ...(tags && tags.length > 0 ? { tags } : {}),
   };
 }

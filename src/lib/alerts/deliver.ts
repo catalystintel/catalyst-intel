@@ -1,10 +1,15 @@
-import type { AlertChannel, AlertRuleConditions } from "@/db/schema";
+import type {
+  AlertChannel,
+  AlertRuleConditions,
+  WatchlistCriteria,
+} from "@/db/schema";
 import { formatAlertMessage } from "@/lib/alerts/format-message";
 import { classifySession, sessionMatches } from "@/lib/alerts/session";
 import { assertWebhookUrlSafeForFetch } from "@/lib/alerts/webhook-url";
 import { sendResendEmail } from "@/lib/email/resend";
 import { sendWebPush, type PushSubscriptionRecord } from "@/lib/push/web-push";
 import { escapeTelegramHtml, sendTelegramMessage } from "@/lib/telegram/bot";
+import { matchesWatchlistCriteria } from "@/lib/watchlist/match-criteria";
 
 export interface AlertCatalystPayload {
   id: number;
@@ -17,6 +22,10 @@ export interface AlertCatalystPayload {
   sourceUrl: string | null;
   /** Auto/vendor tags (see `deriveAutoTags` in ingest-pipeline.ts). */
   tags?: string[] | null;
+  /** Needed for saved-watchlist criteria (forms / q / sources). */
+  type?: string | null;
+  companyName?: string | null;
+  sourceProvider?: string | null;
 }
 
 export interface DeliverableRule {
@@ -37,10 +46,14 @@ export interface DeliveryResult {
   detail: string;
 }
 
+/** Criteria keyed by `watchlists.id` for `conditions.watchlistIds` matching. */
+export type AlertWatchlistCriteriaById = Map<number, WatchlistCriteria>;
+
 function conditionsMatch(
   catalyst: AlertCatalystPayload,
   conditions: AlertRuleConditions,
   watchlistSymbols?: Set<string>,
+  watchlistCriteriaById?: AlertWatchlistCriteriaById,
 ): boolean {
   const cats = conditions.categories ?? [];
   if (cats.length > 0) {
@@ -54,9 +67,23 @@ function conditionsMatch(
   const filingSession = classifySession(catalyst.timestamp);
   if (!sessionMatches(filingSession, conditions.sessions)) return false;
 
-  if (conditions.watchlistOnly) {
-    const symbol = catalyst.symbol?.toUpperCase();
-    if (!symbol || !watchlistSymbols?.has(symbol)) return false;
+  const wantedWatchlistIds = conditions.watchlistIds ?? [];
+  const hasWatchlistGate =
+    conditions.watchlistOnly === true || wantedWatchlistIds.length > 0;
+  if (hasWatchlistGate) {
+    let matched = false;
+    if (conditions.watchlistOnly) {
+      const symbol = catalyst.symbol?.toUpperCase();
+      if (symbol && watchlistSymbols?.has(symbol)) matched = true;
+    }
+    if (!matched && wantedWatchlistIds.length > 0) {
+      matched = wantedWatchlistIds.some((id) => {
+        const criteria = watchlistCriteriaById?.get(id);
+        if (!criteria) return false;
+        return matchesWatchlistCriteria(catalyst, criteria);
+      });
+    }
+    if (!matched) return false;
   }
 
   const wantedTags = conditions.tags ?? [];
@@ -215,10 +242,15 @@ export async function deliverAlertRules(options: {
   /** When true, skip condition matching (admin test fire). */
   force?: boolean;
   /**
-   * Uppercase symbols on the rule owner's watchlist — required for
-   * `watchlistOnly` conditions to match. Omit = treat as empty watchlist.
+   * Uppercase symbols on the rule owner's flat `watchlist_entries` —
+   * required for legacy `watchlistOnly` conditions. Omit = empty.
    */
   watchlistSymbols?: string[];
+  /**
+   * Saved watchlist criteria for the rule owner — required for
+   * `conditions.watchlistIds` to match. Missing ids never match.
+   */
+  watchlistCriteriaById?: AlertWatchlistCriteriaById;
   /** Web Push subscriptions for the rules' owner (all rules share one user). */
   pushSubscriptions?: PushSubscriptionRecord[];
   /** Lets the caller prune a subscription that the push service reports gone. */
@@ -232,7 +264,12 @@ export async function deliverAlertRules(options: {
   for (const rule of options.rules) {
     if (
       !options.force &&
-      !conditionsMatch(options.catalyst, rule.conditions, watchlistSet)
+      !conditionsMatch(
+        options.catalyst,
+        rule.conditions,
+        watchlistSet,
+        options.watchlistCriteriaById,
+      )
     ) {
       results.push({
         ruleId: rule.id,
