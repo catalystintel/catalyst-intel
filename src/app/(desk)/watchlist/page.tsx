@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 
 import { PageEnter } from "@/components/page-enter";
+import { SmartWatchlistsPanel } from "@/components/smart-watchlists-panel";
 import { WatchlistPlaybookPanel } from "@/components/watchlist-playbook-panel";
 import { getCurrentAppUser } from "@/lib/auth/current-user";
 
@@ -25,6 +26,7 @@ export default async function WatchlistPage() {
         </p>
       </div>
       <WatchlistPlaybookPanel />
+      <SmartWatchlistsPanel />
     </PageEnter>
   );
 }
