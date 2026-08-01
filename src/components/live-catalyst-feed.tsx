@@ -178,7 +178,7 @@ export function LiveCatalystFeed({
   const [selectedId, setSelectedId] = useState<number | null>(
     initialSelectedId && initialSelectedId > 0 ? initialSelectedId : null,
   );
-  const [filtersOpen, setFiltersOpen] = useState(Boolean(initialSymbolFilter));
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const [filtersHydrated, setFiltersHydrated] = useState(false);
   const [filterRecalc, setFilterRecalc] = useState(false);
   const [dismissedIds, setDismissedIds] = useState<Set<number>>(() =>
@@ -301,11 +301,9 @@ export function LiveCatalystFeed({
           // Desk rule is always on (CPI / Jobs excepted).
           symbolOnly: true,
         }));
-        setFiltersOpen(true);
       } else if (saved) {
         const restored = { ...sanitize(saved), symbolOnly: true };
         setFilterState(restored);
-        if (!isPanelFiltersDefault(restored)) setFiltersOpen(true);
       }
       setFiltersHydrated(true);
     }, 0);
