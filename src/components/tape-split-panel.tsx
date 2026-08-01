@@ -19,7 +19,11 @@ import type {
   ArticleMarketQuote,
 } from "@/lib/catalysts/enrich-article";
 import { toTradingViewSymbol } from "@/lib/catalysts/enrich-article-format";
-import { sectorLabel, titleLine } from "@/lib/catalysts/feed-display";
+import {
+  sectorLabel,
+  sourceDisplay,
+  titleLine,
+} from "@/lib/catalysts/feed-display";
 import { plainEnglishForSecForm } from "@/lib/catalysts/sec-form-plain-english";
 import { formatEventTime, formatRelativeAge } from "@/lib/format/relative-time";
 import { CATEGORY_LABELS } from "@/lib/jobs/parse-8k-items";
@@ -103,6 +107,7 @@ export function TapeSplitPanel({
   onAiAnalyzed,
   className,
   mobileOverlay = false,
+  showSourceLabels = false,
 }: {
   catalyst: FeedCatalyst;
   onClose: () => void;
@@ -115,6 +120,8 @@ export function TapeSplitPanel({
    * inside `EdgarProofLink` (local-dev only).
    */
   isAdmin?: boolean;
+  /** When true, show vendor source in the meta grid. */
+  showSourceLabels?: boolean;
   className?: string;
   /** Full-screen overlay on small viewports. */
   mobileOverlay?: boolean;
@@ -515,6 +522,9 @@ export function TapeSplitPanel({
             />
             <MetaCell label="Form" value={catalyst.type || "—"} />
             <MetaCell label="Sector" value={sectorLabel(catalyst)} />
+            {showSourceLabels ? (
+              <MetaCell label="Source" value={sourceDisplay(catalyst).name} />
+            ) : null}
             <MetaCell
               label="Age"
               value={formatRelativeAge(catalyst.timestamp)}

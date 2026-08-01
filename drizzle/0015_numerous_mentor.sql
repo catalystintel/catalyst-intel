@@ -1,0 +1,1 @@
+ALTER TABLE `user_source_settings` ADD `show_source_labels` integer DEFAULT false NOT NULL;

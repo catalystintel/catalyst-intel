@@ -233,9 +233,9 @@ export const playbookSettings = sqliteTable("playbook_settings", {
 });
 
 /**
- * Admin-only personal feed source visibility. One row per admin user;
- * `enabled_sources` is a JSON array of CatalystSourceId. Missing row =
- * all feed-row sources on. Does not affect ingest / other users.
+ * Admin-only personal feed display prefs. One row per admin user.
+ * `show_source_labels` toggles vendor names on the tape. `enabled_sources`
+ * is a legacy column (unused; kept for migration compat).
  */
 export const userSourceSettings = sqliteTable("user_source_settings", {
   id: integer("id").primaryKey({ autoIncrement: true }),
@@ -243,7 +243,11 @@ export const userSourceSettings = sqliteTable("user_source_settings", {
     .notNull()
     .unique()
     .references(() => users.id),
+  /** @deprecated Unused — filtering UI removed; kept NOT NULL for existing rows. */
   enabledSources: text("enabled_sources", { mode: "json" }).notNull(),
+  showSourceLabels: integer("show_source_labels", { mode: "boolean" })
+    .notNull()
+    .default(false),
   updatedAt: text("updated_at")
     .notNull()
     .default(sql`(current_timestamp)`),

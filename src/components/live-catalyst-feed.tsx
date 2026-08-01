@@ -44,6 +44,7 @@ import {
   type FeedCatalyst,
 } from "@/lib/catalysts/feed-catalyst";
 import {
+  sourceDisplay,
   titleLine,
   titleTooltipLine,
   eventLabel as feedEventLabel,
@@ -149,6 +150,7 @@ function writeDismissedIds(ids: Set<number>) {
 export function LiveCatalystFeed({
   initialCatalysts,
   isAdmin,
+  showSourceLabels = false,
   initialSymbolFilter,
   initialWatchlistCriteria,
   initialSelectedId,
@@ -156,6 +158,8 @@ export function LiveCatalystFeed({
 }: {
   initialCatalysts: FeedCatalyst[];
   isAdmin: boolean;
+  /** Admin personal pref: show vendor source under the title. */
+  showSourceLabels?: boolean;
   /** Pre-fills the symbol filter, e.g. arriving via `?symbol=` from Analytics. */
   initialSymbolFilter?: string;
   /** Full filter combo from a saved watchlist's "Apply to feed" deep link. */
@@ -863,6 +867,7 @@ export function LiveCatalystFeed({
               dismissingIds={dismissingIds}
               selectedId={selectedId}
               splitOpen={Boolean(selected)}
+              showSourceLabels={showSourceLabels}
               watchlistSymbols={watchlistSymbols}
               onSelect={openSplit}
               onRead={openArticle}
@@ -893,6 +898,7 @@ export function LiveCatalystFeed({
               key={selected.id}
               catalyst={selected}
               isAdmin={isAdmin}
+              showSourceLabels={showSourceLabels}
               onClose={() => setSelectedId(null)}
               onRead={() => openArticle(selected.id)}
               onDismiss={() => {
@@ -918,6 +924,7 @@ export function LiveCatalystFeed({
       <CatalystArticleDialog
         catalystId={articleId}
         isAdmin={isAdmin}
+        showSourceLabels={showSourceLabels}
         open={articleId != null}
         onOpenChange={(next) => {
           if (!next) setArticleId(null);
@@ -1214,6 +1221,7 @@ function CatalystFeedList({
   dismissingIds,
   selectedId,
   splitOpen = false,
+  showSourceLabels = false,
   watchlistSymbols,
   onSelect,
   onRead,
@@ -1235,6 +1243,7 @@ function CatalystFeedList({
   selectedId: number | null;
   /** When the split panel is open, drop the Actions column so titles stay readable. */
   splitOpen?: boolean;
+  showSourceLabels?: boolean;
   watchlistSymbols: string[];
   onSelect: (id: number) => void;
   onRead: (id: number) => void;
@@ -1393,6 +1402,9 @@ function CatalystFeedList({
           const eventLabel = feedEventLabel(catalyst);
           const title = titleLine(catalyst);
           const tooltipTitle = titleTooltipLine(catalyst);
+          const sourceName = showSourceLabels
+            ? sourceDisplay(catalyst).name
+            : null;
           const onWatchlist = Boolean(
             catalyst.symbol &&
             watchlistSymbols.includes(catalyst.symbol.toUpperCase()),
@@ -1460,6 +1472,7 @@ function CatalystFeedList({
                   companyName={catalyst.companyName}
                   eventLabel={eventLabel}
                   symbol={catalyst.symbol}
+                  sourceName={sourceName}
                 />
                 {/* Mobile: Time under Title (Symbol is the leading index col) */}
                 <div className="mt-1.5 flex flex-col gap-1 sm:hidden">
@@ -1615,6 +1628,7 @@ function FeedTitleWithTooltip({
   companyName,
   eventLabel,
   symbol,
+  sourceName = null,
 }: {
   title: string;
   /** Longer filing blurb for hover (not the truncated tape line). */
@@ -1622,6 +1636,8 @@ function FeedTitleWithTooltip({
   companyName: string | null;
   eventLabel: string;
   symbol: string | null;
+  /** When set (admin “show article source”), muted vendor under the title. */
+  sourceName?: string | null;
 }) {
   const anchorRef = useRef<HTMLSpanElement>(null);
   const [coords, setCoords] = useState<{
@@ -1632,7 +1648,8 @@ function FeedTitleWithTooltip({
 
   const company = companyName?.trim() || null;
   const normalizedSymbol = symbol?.trim().toUpperCase() || null;
-  const meta = [normalizedSymbol, company, eventLabel]
+  const source = sourceName?.trim() || null;
+  const meta = [normalizedSymbol, company, eventLabel, source]
     .filter(Boolean)
     .join(" · ");
   const tip = tooltipTitle.trim() || title;
@@ -1682,6 +1699,11 @@ function FeedTitleWithTooltip({
       <span className="feed-article-title block truncate text-[var(--desk-text)]">
         {title}
       </span>
+      {source ? (
+        <span className="desk-data mt-0.5 block truncate font-medium tracking-tight text-[var(--desk-text-dim)]">
+          {source}
+        </span>
+      ) : null}
       {coords
         ? createPortal(
             <span

@@ -3,10 +3,9 @@ import { NextResponse, type NextRequest } from "next/server";
 import { databaseUnavailableMessage, isLibsqlConfigured } from "@/db/env";
 import { getCurrentAppUser } from "@/lib/auth/current-user";
 import {
-  feedSourceCatalogEntries,
-  loadEnabledSourcesForUser,
-  normalizeEnabledSources,
-  upsertEnabledSourcesForUser,
+  loadSourceSettingsForUser,
+  normalizeShowSourceLabels,
+  upsertShowSourceLabelsForUser,
 } from "@/lib/catalysts/user-source-settings";
 import { getClientIp } from "@/lib/http/client-ip";
 import { RATE_LIMITS, checkRateLimit } from "@/lib/http/rate-limit";
@@ -75,21 +74,12 @@ export async function GET(request: NextRequest) {
     limitResult: NonNullable<(typeof auth)["limitResult"]>;
   };
 
-  const { enabledSources, persisted } = await loadEnabledSourcesForUser(
-    user.id,
-  );
-  const catalog = feedSourceCatalogEntries().map((s) => ({
-    id: s.id,
-    label: s.label,
-    contributes: s.contributes,
-    fetchEnabled: s.fetchEnabled !== false,
-  }));
+  const settings = await loadSourceSettingsForUser(user.id);
 
   return withRateLimitHeaders(
     NextResponse.json({
-      enabledSources,
-      persisted,
-      catalog,
+      showSourceLabels: settings.showSourceLabels,
+      persisted: settings.persisted,
     }),
     limitResult,
   );
@@ -117,21 +107,26 @@ export async function PUT(request: NextRequest) {
     typeof body === "object" && body !== null
       ? (body as Record<string, unknown>)
       : {};
-  const enabledSources = await upsertEnabledSourcesForUser(
+
+  if (!("showSourceLabels" in raw)) {
+    return withRateLimitHeaders(
+      NextResponse.json(
+        { error: "Provide showSourceLabels in the request body." },
+        { status: 400 },
+      ),
+      limitResult,
+    );
+  }
+
+  const showSourceLabels = await upsertShowSourceLabelsForUser(
     user.id,
-    normalizeEnabledSources(raw.enabledSources),
+    normalizeShowSourceLabels(raw.showSourceLabels),
   );
 
   return withRateLimitHeaders(
     NextResponse.json({
-      enabledSources,
+      showSourceLabels,
       persisted: true,
-      catalog: feedSourceCatalogEntries().map((s) => ({
-        id: s.id,
-        label: s.label,
-        contributes: s.contributes,
-        fetchEnabled: s.fetchEnabled !== false,
-      })),
     }),
     limitResult,
   );

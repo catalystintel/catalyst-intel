@@ -24,6 +24,7 @@ import type { MacroEventDef } from "@/lib/jobs/fetch-macro-calendar";
 export function DeskDashboardGrid({
   initialCatalysts,
   isAdmin,
+  showSourceLabels = false,
   initialSymbolFilter,
   initialWatchlistCriteria,
   initialSelectedId,
@@ -31,6 +32,8 @@ export function DeskDashboardGrid({
 }: {
   initialCatalysts: FeedCatalyst[];
   isAdmin: boolean;
+  /** Admin personal pref: show vendor source on tape / split / details. */
+  showSourceLabels?: boolean;
   initialSymbolFilter?: string;
   /** Full filter combo applied from a saved watchlist's "Apply to feed". */
   initialWatchlistCriteria?: WatchlistCriteria;
@@ -47,6 +50,7 @@ export function DeskDashboardGrid({
         <LiveCatalystFeed
           initialCatalysts={initialCatalysts}
           isAdmin={isAdmin}
+          showSourceLabels={showSourceLabels}
           initialSymbolFilter={initialSymbolFilter}
           initialWatchlistCriteria={initialWatchlistCriteria}
           initialSelectedId={initialSelectedId}

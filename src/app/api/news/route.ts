@@ -19,10 +19,6 @@ import {
   queryNewsFeedPage,
   queryNewsFeedTotal,
 } from "@/lib/catalysts/news-feed-query";
-import {
-  mergeSourceProviderFilters,
-  resolveAdminFeedProviders,
-} from "@/lib/catalysts/user-source-settings";
 import { getClientIp } from "@/lib/http/client-ip";
 import { RATE_LIMITS, checkRateLimit } from "@/lib/http/rate-limit";
 import {
@@ -58,9 +54,6 @@ export async function GET(request: NextRequest) {
 
   const params = request.nextUrl.searchParams;
   const filters = parseNewsFeedFilters(params);
-
-  const adminProviders = await resolveAdminFeedProviders(user.id, user.isAdmin);
-  filters.sources = mergeSourceProviderFilters([], adminProviders);
 
   if (params.get("watchlist") === "1") {
     const rows = await db

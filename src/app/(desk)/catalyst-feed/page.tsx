@@ -11,18 +11,12 @@ import {
   queryFeedPage,
   type FeedQueryFilters,
 } from "@/lib/catalysts/feed-query";
-import {
-  mergeSourceProviderFilters,
-  resolveAdminFeedProviders,
-} from "@/lib/catalysts/user-source-settings";
+import { resolveAdminShowSourceLabels } from "@/lib/catalysts/user-source-settings";
 import { withDbRetry } from "@/lib/db/with-db-retry";
 import { loadDeskMacroEvents } from "@/lib/jobs/desk-macro-events";
 import { parseFeedCatalystId } from "@/lib/nav/feed-href";
 
-function ssrFeedFilters(
-  nowIso: string,
-  adminProviders: string[] | null,
-): FeedQueryFilters {
+function ssrFeedFilters(nowIso: string): FeedQueryFilters {
   // Same shared query as `/api/catalysts` — symbol gate always applied
   // (CPI / Jobs NFP excepted via `symbolFeedGateSql`).
   const defaults: FeedFilterState = DEFAULT_FEED_FILTERS;
@@ -32,7 +26,7 @@ function ssrFeedFilters(
     categories: defaults.categoryFilters,
     sectors: defaults.sectorFilters,
     forms: defaults.formFilters,
-    sources: mergeSourceProviderFilters(defaults.sourceFilters, adminProviders),
+    sources: defaults.sourceFilters,
     tags: defaults.tagFilters,
     timeWindow: defaults.timeWindow,
     symbolOnly: true,
@@ -88,9 +82,12 @@ export default async function CatalystFeedPage({
     return null;
   }
 
-  const adminProviders = await resolveAdminFeedProviders(user.id, user.isAdmin);
+  const showSourceLabels = await resolveAdminShowSourceLabels(
+    user.id,
+    user.isAdmin,
+  );
   const recentCatalysts = await withDbRetry(() =>
-    queryFeedPage(ssrFeedFilters(new Date().toISOString(), adminProviders), {
+    queryFeedPage(ssrFeedFilters(new Date().toISOString()), {
       limit: 200,
     }),
   );
@@ -103,6 +100,7 @@ export default async function CatalystFeedPage({
       <DeskDashboardGrid
         initialCatalysts={recentCatalysts.map(toPublicFeedCatalyst)}
         isAdmin={user.isAdmin}
+        showSourceLabels={showSourceLabels}
         initialSymbolFilter={symbol?.trim().toUpperCase() || undefined}
         initialWatchlistCriteria={initialWatchlistCriteria}
         initialSelectedId={initialSelectedId}
