@@ -47,11 +47,7 @@ function conditionsMatch(
     }
   }
 
-  const minImpact = conditions.minImpact;
-  if (typeof minImpact === "number") {
-    const score = catalyst.impactScore ?? 0;
-    if (score < minImpact) return false;
-  }
+  // Impact score gating retired — ignore legacy `minImpact` on stored rules.
 
   const filingSession = classifySession(catalyst.timestamp);
   if (!sessionMatches(filingSession, conditions.sessions)) return false;

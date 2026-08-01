@@ -190,19 +190,6 @@ export function CatalystArticleView({
           </div>
         ) : null}
 
-        {catalyst.materialityReasons.length > 0 ? (
-          <div role="note" aria-label="Why this score">
-            <p className="font-mono text-[0.62rem] tracking-[0.14em] text-[var(--desk-text-dim)] uppercase">
-              Why this score
-            </p>
-            <ul className="mt-1.5 list-disc space-y-1 pl-4 text-sm leading-snug text-[var(--desk-text-secondary)]">
-              {catalyst.materialityReasons.map((reason) => (
-                <li key={reason}>{reason}</li>
-              ))}
-            </ul>
-          </div>
-        ) : null}
-
         <dl className="grid grid-cols-2 gap-3 font-mono text-xs sm:grid-cols-3">
           <MetaCell
             label="Category"

@@ -17,17 +17,12 @@ export function normalizeAlertConditions(value: unknown): AlertRuleConditions {
       ) as AlertSession[])
     : undefined;
 
-  let minImpact: number | undefined;
-  if (typeof raw.minImpact === "number" && Number.isFinite(raw.minImpact)) {
-    minImpact = Math.max(0, Math.min(100, Math.round(raw.minImpact)));
-  }
-
+  // Impact score retired — drop legacy `minImpact` so it never surfaces in UI.
   const watchlistOnly = raw.watchlistOnly === true;
 
   return {
     ...(categories.length > 0 ? { categories } : {}),
     ...(sessions && sessions.length > 0 ? { sessions } : {}),
-    ...(minImpact !== undefined ? { minImpact } : {}),
     ...(watchlistOnly ? { watchlistOnly: true } : {}),
   };
 }

@@ -122,9 +122,9 @@ export function readPersistedFeedFilters(
     ) {
       categoryFilters = [parsed.categoryFilter];
     }
-    const sourceFilters = parseStringArray(parsed.sourceFilters).map((s) =>
-      s.toLowerCase(),
-    );
+    const sourceFilters = isLocalDevUi()
+      ? parseStringArray(parsed.sourceFilters).map((s) => s.toLowerCase())
+      : [];
     const timeWindow =
       typeof parsed.timeWindow === "string" &&
       isFeedTimeWindow(parsed.timeWindow)
@@ -166,7 +166,8 @@ export function writePersistedFeedFilters(
     // Do not resurrect retired panel facets from in-memory state.
     sectorFilters: [],
     formFilters: [],
-    sourceFilters: filters.sourceFilters,
+    // Source facet is local-dev only — never persist into deploy builds.
+    sourceFilters: isLocalDevUi() ? filters.sourceFilters : [],
     timeWindow: filters.timeWindow,
     symbolOnly: filters.symbolOnly,
     earningsSurprisesOnly: false,

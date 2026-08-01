@@ -63,6 +63,7 @@ describe("feed-filter-persist", () => {
   });
 
   it("round-trips multi filters", () => {
+    vi.stubEnv("NODE_ENV", "development");
     writePersistedFeedFilters({
       symbolQuery: "TSLA",
       categoryFilters: ["news", "earnings"],
@@ -85,6 +86,19 @@ describe("feed-filter-persist", () => {
       symbolOnly: true,
       earningsSurprisesOnly: false,
     });
+    vi.unstubAllEnvs();
+  });
+
+  it("drops source filters outside local development", () => {
+    localStorage.setItem(
+      FEED_FILTER_STORAGE_KEY,
+      JSON.stringify({
+        ...DEFAULT_FEED_FILTERS,
+        sourceFilters: ["sec-edgar"],
+        lastActiveAt: Date.now(),
+      }),
+    );
+    expect(readPersistedFeedFilters()?.sourceFilters).toEqual([]);
   });
 
   it("retired panel facets alone do not count as active", () => {
