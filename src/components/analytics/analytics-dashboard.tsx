@@ -58,7 +58,7 @@ export function AnalyticsDashboard() {
   useEffect(() => {
     // Defer so `load`'s setState calls are not synchronous in the effect
     // body (react-hooks/set-state-in-effect) - same pattern as
-    // watchlist-playbook-panel.tsx's initial load.
+    // watchlists/watchlist-hub.tsx's initial load.
     const id = window.setTimeout(() => {
       void load(window_);
     }, 0);

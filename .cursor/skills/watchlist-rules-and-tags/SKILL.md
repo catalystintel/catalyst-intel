@@ -10,7 +10,7 @@ description: >-
   whenever touching src/lib/watchlist/**, src/lib/catalysts/playbook.ts,
   src/lib/jobs/ingest-pipeline.ts tag derivation, src/db/schema.ts
   WatchlistCriteria/AlertRuleConditions/playbookSettings,
-  src/components/watchlist-workspace.tsx or watchlist-playbook-panel.tsx,
+  src/components/watchlists/**,
   feed tag/symbol filters, or the /api/watchlists* / /api/playbook routes.
 ---
 
@@ -27,8 +27,8 @@ shape and matching engine is used for:
 - The Catalyst Feed's own filter panel (`live-catalyst-feed.tsx` /
   `feed-filter-persist.ts` / `feed-query.ts`) — via `symbolFilters` /
   `categoryFilters` / `tagFilters` / `sourceFilters` state.
-- Saved "smart" watchlists (`watchlists` table, `/api/watchlists*`,
-  `watchlist-workspace.tsx`).
+- Saved watchlists (`watchlists` table, `/api/watchlists*`, and the
+  `components/watchlists/` UI — see "UI layout" below).
 - Watchlist previews (ad-hoc and saved) via
   `lib/watchlist/criteria-to-feed-filters.ts` → `feed-query.ts`.
 - **Quiet mode** (`lib/catalysts/playbook.ts` → `matchesQuietPlaybook`) — a
@@ -107,9 +107,9 @@ silently drop the field):
    already derives `CATEGORY_LIST` / `FORM_LIST` from `taxonomy.ts` /
    `feed-form-filters.ts` — keep doing that (single source of truth) rather
    than hardcoding lists that can drift.
-8. `watchlist-workspace.tsx` — `DraftFields`, `draftToCriteria`,
-   `criteriaToDraft`, `criteriaChips`, and a form control if it's
-   user-editable.
+8. `components/watchlists/watchlist-editor-dialog.tsx` (a form control, if
+   user-editable) and `lib/watchlist/criteria-display.ts` (`criteriaChips` /
+   `criteriaSummary`, so the axis shows on cards and in quiet-mode rows).
 9. If it should gate alerts too: `AlertRuleConditions` (`db/schema.ts`),
    `normalizeAlertConditions` (`lib/alerts/normalize.ts`), `conditionsMatch`
    (`lib/alerts/deliver.ts`), and the payload built in `auto-fire.ts` /
@@ -182,12 +182,35 @@ playbook event-category checkboxes" (both gates ANDed). That's gone. Today:
   tags, sourceProvider, companyName, title, headline) — if you add a new
   `WatchlistCriteria` axis, make sure whatever field it needs is passed
   through here too, not just into `matchesWatchlistCriteria`.
-- UI: `watchlist-playbook-panel.tsx` (My symbols + Signal watchlists
-  checklist + migrate button) and `watchlist-workspace.tsx` (builder +
-  saved list) both call `notifyWatchlistChanged()` after mutating a
-  watchlist and both subscribe to it — keep that two-way wiring when
-  editing either component so the two panels on `/watchlist` stay in sync
-  without a full reload.
+
+## UI layout (`components/watchlists/`)
+
+`/watchlist` is one client shell with two tabs — keep them separate; the
+library and the quiet-mode config are different jobs and crowding them was
+the old design's main problem.
+
+| File                          | Role                                                                           |
+| ----------------------------- | ------------------------------------------------------------------------------ |
+| `watchlist-hub.tsx`           | Owns all page state (watchlists, quiet settings, symbols) + the tab switch     |
+| `watchlist-card.tsx`          | One watchlist: chips, live match count, open-on-tape / preview / edit / delete |
+| `watchlist-editor-dialog.tsx` | Create & edit in a modal: start step (AI / template / manual) → form + preview |
+| `quiet-mode-panel.tsx`        | Quiet switch, "My symbols", signal-watchlist switches, legacy migrate          |
+| `chip-input.tsx`              | Token field for list axes (symbols, tags) with optional quick-add suggestions  |
+| `watchlist-preview.tsx`       | Shared preview fetchers (`draft` / `saved`) + `PreviewRows`                    |
+
+Rules of thumb when changing this UI:
+
+- **State lives in the hub**, not in the card/dialog — the quiet-mode
+  selection is shown in two places (card pill + quiet tab switch) and must
+  stay one source of truth.
+- Mutations call `notifyWatchlistChanged()`; the hub subscribes, so anything
+  changed elsewhere (tape "Watch", handoff, migrate) refreshes without a
+  reload. Keep both sides wired.
+- Creation is **dialog-based** (guided, one decision at a time). Don't
+  regress to an always-expanded inline form, and don't add a CSV/portfolio
+  paste import — that was removed deliberately as impractical.
+- Only the page-level "New watchlist" button is a solid accent CTA; card
+  actions stay tinted/outlined so a grid of cards doesn't scream.
 
 ## Watchlist templates (`lib/watchlist/templates.ts`)
 

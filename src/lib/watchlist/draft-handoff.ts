@@ -8,9 +8,6 @@ import type { WatchlistCriteria } from "@/db/schema";
  */
 export const WATCHLIST_DRAFT_HANDOFF_KEY = "ci.watchlist-draft-handoff";
 
-/** DOM id of the builder section on `/watchlist` — anchor target for deep links. */
-export const WATCHLIST_BUILDER_ANCHOR = "watchlist-builder";
-
 export interface WatchlistDraftHandoff {
   name?: string;
   criteria: WatchlistCriteria;
