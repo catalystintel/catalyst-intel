@@ -189,7 +189,7 @@ function SidebarEntry({
         title={hint}
         className={cn(
           base,
-          "cursor-not-allowed text-[var(--desk-text-dim)] select-none",
+          "cursor-default text-[var(--desk-text-dim)] select-none",
         )}
       >
         <Icon className="size-[17px] shrink-0 opacity-90" />
