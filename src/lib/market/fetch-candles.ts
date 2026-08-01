@@ -1,6 +1,7 @@
 import {
   chartRangeWindow,
   finnhubResolutionForRange,
+  isIntradayMinuteRange,
   polygonAggForRange,
   ymdUtc,
   type ChartRangeKey,
@@ -32,6 +33,16 @@ function finite(n: unknown): n is number {
   return typeof n === "number" && Number.isFinite(n);
 }
 
+/** Polygon day-bounded aggs can overshoot short windows — clip to [from, to]. */
+export function clipCandlesToWindow(
+  candles: DeskCandle[],
+  fromSec: number,
+  toSec: number,
+): DeskCandle[] {
+  const clipped = candles.filter((c) => c.time >= fromSec && c.time <= toSec);
+  return clipped.length > 0 ? clipped : candles;
+}
+
 /**
  * 1D fetches a multi-day window so weekends still hit a cash session — keep
  * only the newest UTC trading day so chart % stays a session move, not 5D.
@@ -59,9 +70,18 @@ export function buildDemoCandles(
 ): DeskCandle[] {
   const { fromSec, toSec } = chartRangeWindow(range, now);
   const span = Math.max(toSec - fromSec, 60);
-  const points =
-    range === "1D" ? 78 : range === "5D" ? 40 : range === "1M" ? 31 : 60;
-  const step = Math.max(Math.floor(span / points), 60);
+  const points = isIntradayMinuteRange(range)
+    ? Math.max(Math.min(Math.floor(span / 60) + 1, 60), 1)
+    : range === "1D"
+      ? 78
+      : range === "5D"
+        ? 40
+        : range === "1M"
+          ? 31
+          : 60;
+  const step = isIntradayMinuteRange(range)
+    ? 60
+    : Math.max(Math.floor(span / points), 60);
   const out: DeskCandle[] = [];
   let price = 100;
   for (let t = fromSec; t <= toSec && out.length < points; t += step) {
@@ -136,7 +156,8 @@ async function finnhubOhlc(
       }
       candles.push({ time, open, high, low, close });
     }
-    return candles.length > 0 ? candles : null;
+    if (candles.length === 0) return null;
+    return clipCandlesToWindow(candles, fromSec, toSec);
   } catch {
     return null;
   }
@@ -197,7 +218,8 @@ async function polygonOhlc(
         close: b.c,
       });
     }
-    return candles.length > 0 ? candles : null;
+    if (candles.length === 0) return null;
+    return clipCandlesToWindow(candles, fromSec, toSec);
   } catch {
     return null;
   }

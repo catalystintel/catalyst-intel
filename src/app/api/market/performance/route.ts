@@ -7,12 +7,15 @@ import {
   rateLimitExceededResponse,
   withRateLimitHeaders,
 } from "@/lib/http/rate-limit-response";
-import { DEFAULT_CHART_RANGE, isChartRangeKey } from "@/lib/market/chart-range";
+import {
+  DEFAULT_CHART_RANGE,
+  parseChartRangeKey,
+} from "@/lib/market/chart-range";
 import { fetchRangePerformance } from "@/lib/market/range-performance";
 
 /**
  * Authenticated lookback performance for the Live tape chart header.
- * Query: `?symbol=AAPL&range=1M`
+ * Query: `?symbol=AAPL&range=1M` (also short windows like `30m` / `1H`).
  *
  * `1D` is intentionally rejected — the split panel uses the session quote
  * for that window so we do not burn a candle call on every open.
@@ -44,10 +47,9 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const rangeRaw =
-    request.nextUrl.searchParams.get("range")?.trim().toUpperCase() ??
-    DEFAULT_CHART_RANGE;
-  if (!isChartRangeKey(rangeRaw)) {
+  const rangeParam = request.nextUrl.searchParams.get("range");
+  const rangeRaw = parseChartRangeKey(rangeParam) ?? DEFAULT_CHART_RANGE;
+  if (rangeParam?.trim() && !parseChartRangeKey(rangeParam)) {
     return withRateLimitHeaders(
       NextResponse.json({ error: "Invalid range." }, { status: 400 }),
       limitResult,

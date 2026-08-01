@@ -4,7 +4,11 @@
  * and Polygon is unset — without this every chart shows empty SAMPLE.
  */
 
-import { type ChartRangeKey } from "@/lib/market/chart-range";
+import {
+  chartRangeWindow,
+  isIntradayMinuteRange,
+  type ChartRangeKey,
+} from "@/lib/market/chart-range";
 import type { DeskCandle } from "@/lib/market/fetch-candles";
 import { toYahooSymbol } from "@/lib/market/vendor-symbol";
 import { sessionMoveFromPreviousClose } from "@/lib/market/session-move";
@@ -38,6 +42,13 @@ function yahooRangeParams(range: ChartRangeKey): {
   range: string;
 } {
   switch (range) {
+    case "1m":
+    case "5m":
+    case "10m":
+    case "30m":
+    case "1H":
+      // Yahoo has no sub-day `range`; pull 1d of 1m bars and clip client-side.
+      return { interval: "1m", range: "1d" };
     case "1D":
       // Weekend / holiday: 5d keeps the last session's 5m bars available.
       return { interval: "5m", range: "5d" };
@@ -132,6 +143,13 @@ export async function fetchYahooCandles(options: {
       candles.push({ time, open, high, low, close });
     }
     if (candles.length === 0) return null;
+    if (isIntradayMinuteRange(options.range)) {
+      const { fromSec, toSec } = chartRangeWindow(options.range);
+      const clipped = candles.filter(
+        (c) => c.time >= fromSec && c.time <= toSec,
+      );
+      return clipped.length > 0 ? clipped : candles;
+    }
     const filtered = filterLastSession(candles, options.range);
     return filtered.length > 0 ? filtered : candles;
   } catch {

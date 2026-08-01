@@ -4,15 +4,30 @@ import {
   chartRangeWindow,
   finnhubResolutionForRange,
   isChartRangeKey,
+  isIntradayMinuteRange,
+  parseChartRangeKey,
   polygonAggForRange,
 } from "./chart-range";
 import { performanceFromCandles } from "./range-performance";
 
 describe("chart-range", () => {
-  it("validates range keys", () => {
+  it("validates range keys (1m minutes vs 1M month stay distinct)", () => {
     expect(isChartRangeKey("1M")).toBe(true);
-    expect(isChartRangeKey("1m")).toBe(false);
+    expect(isChartRangeKey("1m")).toBe(true);
+    expect(isChartRangeKey("5m")).toBe(true);
+    expect(isChartRangeKey("10m")).toBe(true);
+    expect(isChartRangeKey("30m")).toBe(true);
+    expect(isChartRangeKey("1H")).toBe(true);
     expect(isChartRangeKey("2Y")).toBe(false);
+  });
+
+  it("parses range params without collapsing 1m into 1M", () => {
+    expect(parseChartRangeKey("1m")).toBe("1m");
+    expect(parseChartRangeKey("1M")).toBe("1M");
+    expect(parseChartRangeKey("1d")).toBe("1D");
+    expect(parseChartRangeKey("30M")).toBe("30m");
+    expect(parseChartRangeKey("1h")).toBe("1H");
+    expect(parseChartRangeKey("nope")).toBeNull();
   });
 
   it("maps YTD to Jan 1 UTC of the current year", () => {
@@ -22,6 +37,43 @@ describe("chart-range", () => {
       "2026-01-01T00:00:00.000Z",
     );
     expect(toSec).toBe(Math.floor(now.getTime() / 1000));
+  });
+
+  it("maps short lookbacks to minute windows + 1m vendor resolution", () => {
+    const now = new Date("2026-08-01T15:00:00.000Z");
+    const toSec = Math.floor(now.getTime() / 1000);
+
+    expect(isIntradayMinuteRange("30m")).toBe(true);
+    expect(isIntradayMinuteRange("1D")).toBe(false);
+
+    expect(chartRangeWindow("1m", now)).toEqual({
+      fromSec: toSec - 60,
+      toSec,
+    });
+    expect(chartRangeWindow("5m", now)).toEqual({
+      fromSec: toSec - 5 * 60,
+      toSec,
+    });
+    expect(chartRangeWindow("10m", now)).toEqual({
+      fromSec: toSec - 10 * 60,
+      toSec,
+    });
+    expect(chartRangeWindow("30m", now)).toEqual({
+      fromSec: toSec - 30 * 60,
+      toSec,
+    });
+    expect(chartRangeWindow("1H", now)).toEqual({
+      fromSec: toSec - 60 * 60,
+      toSec,
+    });
+
+    for (const key of ["1m", "5m", "10m", "30m", "1H"] as const) {
+      expect(finnhubResolutionForRange(key)).toBe("1");
+      expect(polygonAggForRange(key)).toEqual({
+        multiplier: 1,
+        timespan: "minute",
+      });
+    }
   });
 
   it("maps resolutions for Finnhub / Polygon", () => {
