@@ -96,6 +96,11 @@ function filterLastSession(
 export async function fetchYahooCandles(options: {
   symbol: string;
   range: ChartRangeKey;
+  /**
+   * When false, leave the multi-day 1D window intact so callers can read
+   * prior-session close before clipping. Default true (session-only series).
+   */
+  clipToLastSession?: boolean;
 }): Promise<DeskCandle[] | null> {
   const yahooSymbol = toYahooSymbol(options.symbol);
   if (!yahooSymbol) return null;
@@ -149,6 +154,9 @@ export async function fetchYahooCandles(options: {
         (c) => c.time >= fromSec && c.time <= toSec,
       );
       return clipped.length > 0 ? clipped : candles;
+    }
+    if (options.clipToLastSession === false) {
+      return candles;
     }
     const filtered = filterLastSession(candles, options.range);
     return filtered.length > 0 ? filtered : candles;

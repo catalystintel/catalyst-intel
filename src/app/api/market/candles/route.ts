@@ -67,6 +67,7 @@ export async function GET(request: NextRequest) {
       symbol: series.symbol,
       range: series.range,
       provider: series.provider,
+      previousClose: series.previousClose,
       candles: series.candles,
     }),
     limitResult,
