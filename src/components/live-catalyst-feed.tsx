@@ -59,12 +59,7 @@ import {
   writePersistedFeedFilters,
   type FeedFilterState,
 } from "@/lib/catalysts/feed-filter-persist";
-import {
-  FEED_FORM_LABELS,
-  type FeedFormFilter,
-} from "@/lib/catalysts/feed-form-filters";
 import type { FeedFacets } from "@/lib/catalysts/feed-query-types";
-import { gicsLabel, type GicsSectorKey } from "@/lib/companies/gics-sectors";
 import {
   formatClockTime,
   formatEventTimeParts,
@@ -279,9 +274,15 @@ export function LiveCatalystFeed({
     const restoreId = window.setTimeout(() => {
       const saved = readPersistedFeedFilters();
       const urlSymbol = initialSymbolFilter?.trim() ?? "";
-      // Source facet is local-dev only — never restore vendor filters in deploy.
-      const sanitize = (filters: FeedFilterState): FeedFilterState =>
-        isLocalDevUi() ? filters : { ...filters, sourceFilters: [] };
+      // Drop retired panel facets (industries / forms / earnings surprises)
+      // and never restore vendor source filters outside local-dev.
+      const sanitize = (filters: FeedFilterState): FeedFilterState => ({
+        ...filters,
+        sectorFilters: [],
+        formFilters: [],
+        earningsSurprisesOnly: false,
+        sourceFilters: isLocalDevUi() ? filters.sourceFilters : [],
+      });
 
       if (urlSymbol) {
         setFilterState((prev) => ({
@@ -291,12 +292,9 @@ export function LiveCatalystFeed({
             ? sanitize({
                 ...prev,
                 categoryFilters: saved.categoryFilters,
-                sectorFilters: saved.sectorFilters,
-                formFilters: saved.formFilters,
                 sourceFilters: saved.sourceFilters,
                 timeWindow: saved.timeWindow,
                 symbolOnly: saved.symbolOnly,
-                earningsSurprisesOnly: saved.earningsSurprisesOnly,
                 symbolQuery: urlSymbol,
               })
             : {}),
@@ -889,8 +887,6 @@ export function LiveCatalystFeed({
 
 interface FacetOptions {
   categories: { value: string; label: string; count?: number }[];
-  sectors: { value: string; label: string; count?: number }[];
-  forms: { value: string; label: string; count?: number }[];
   sources: { value: string; label: string; count?: number }[];
 }
 
@@ -899,16 +895,6 @@ function buildFacetOptions(facets: FeedFacets | null): FacetOptions {
     categories: (facets?.categories ?? []).map((b) => ({
       value: b.key,
       label: CATEGORY_LABELS[b.key as EventCategoryKey] ?? b.key,
-      count: b.count,
-    })),
-    sectors: (facets?.sectors ?? []).map((b) => ({
-      value: b.key,
-      label: gicsLabel(b.key as GicsSectorKey),
-      count: b.count,
-    })),
-    forms: (facets?.forms ?? []).map((b) => ({
-      value: b.key,
-      label: FEED_FORM_LABELS[b.key as FeedFormFilter] ?? b.key,
       count: b.count,
     })),
     sources: (facets?.sources ?? []).map((b) => ({
@@ -945,24 +931,24 @@ function FeedFilters({
   onClearFilters,
 }: FeedFiltersProps) {
   return (
-    <div className="flex flex-col gap-2.5">
+    <div className="flex flex-col gap-2">
       {quietMode ? (
         <p className="font-mono text-[0.72rem] text-[var(--desk-text-dim)]">
           Quiet playbook on · {watchlistCount} watchlist symbol
-          {watchlistCount === 1 ? "" : "s"} · {playbookCount} categor
-          {playbookCount === 1 ? "y" : "ies"} — edit under Watchlists.
+          {watchlistCount === 1 ? "" : "s"} · {playbookCount} event type
+          {playbookCount === 1 ? "" : "s"} — edit under Watchlists.
         </p>
       ) : null}
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
         <Input
           value={filterState.symbolQuery}
           onChange={(e) => onPatchFilters({ symbolQuery: e.target.value })}
           placeholder="Symbol, company, title…"
           aria-label="Search by symbol, company, or title"
-          className="h-8 w-52 border-[var(--desk-border-strong)] bg-[var(--desk-overlay-soft)] font-mono text-xs tracking-wide md:text-xs"
+          className="h-8 w-full border-[var(--desk-border-strong)] bg-[var(--desk-overlay-soft)] font-mono text-xs tracking-wide sm:w-56 md:text-xs"
         />
         <div
-          className="flex flex-wrap items-center gap-1"
+          className="inline-flex max-w-full flex-wrap items-center gap-0.5 rounded-md border border-[var(--desk-border)] bg-[var(--desk-overlay-soft)] p-0.5"
           role="group"
           aria-label="Filter by event posting time"
         >
@@ -976,73 +962,42 @@ function FeedFilters({
             </FilterChip>
           ))}
         </div>
-        {panelFiltersActive ? (
-          <button
-            type="button"
-            onClick={onClearFilters}
-            className="inline-flex h-8 items-center gap-1 rounded-md border border-[var(--desk-border)] px-2.5 font-mono text-[0.7rem] tracking-wide text-[var(--desk-text-muted)] transition-colors hover:border-[var(--desk-border-strong)] hover:text-[var(--desk-text)]"
-          >
-            <X className="size-3" />
-            Clear
-          </button>
-        ) : null}
-      </div>
-      <div className="flex flex-wrap items-center gap-2">
-        <FeedFilterMultiSelect
-          label="Categories"
-          options={facetOptions.categories}
-          selected={filterState.categoryFilters}
-          onChange={(categoryFilters) =>
-            onPatchFilters({
-              categoryFilters: categoryFilters as EventCategoryKey[],
-            })
-          }
-          emptyLabel="All categories"
-        />
-        <FeedFilterMultiSelect
-          label="Industries"
-          options={facetOptions.sectors}
-          selected={filterState.sectorFilters}
-          onChange={(sectorFilters) =>
-            onPatchFilters({
-              sectorFilters: sectorFilters as GicsSectorKey[],
-            })
-          }
-          emptyLabel="All industries"
-        />
-        <FeedFilterMultiSelect
-          label="Form type"
-          options={facetOptions.forms}
-          selected={filterState.formFilters}
-          onChange={(formFilters) =>
-            onPatchFilters({
-              formFilters: formFilters as FeedFormFilter[],
-            })
-          }
-          emptyLabel="All forms"
-        />
-        <FilterChip
-          active={filterState.earningsSurprisesOnly}
-          onClick={() =>
-            onPatchFilters({
-              earningsSurprisesOnly: !filterState.earningsSurprisesOnly,
-            })
-          }
-        >
-          Earnings surprises
-        </FilterChip>
-        {isLocalDevUi() ? (
+        <div className="flex flex-wrap items-center gap-2 sm:ml-auto">
           <FeedFilterMultiSelect
-            label="Source"
-            options={facetOptions.sources}
-            selected={filterState.sourceFilters}
-            onChange={(sourceFilters) => onPatchFilters({ sourceFilters })}
-            emptyLabel="All sources"
+            label="Event type"
+            options={facetOptions.categories}
+            selected={filterState.categoryFilters}
+            onChange={(categoryFilters) =>
+              onPatchFilters({
+                categoryFilters: categoryFilters as EventCategoryKey[],
+              })
+            }
+            emptyLabel="All event types"
+            searchPlaceholder="Search event types…"
           />
-        ) : null}
+          {isLocalDevUi() ? (
+            <FeedFilterMultiSelect
+              label="Source"
+              options={facetOptions.sources}
+              selected={filterState.sourceFilters}
+              onChange={(sourceFilters) => onPatchFilters({ sourceFilters })}
+              emptyLabel="All sources"
+            />
+          ) : null}
+          {panelFiltersActive ? (
+            <button
+              type="button"
+              onClick={onClearFilters}
+              className="inline-flex h-8 items-center gap-1 rounded-md border border-[var(--desk-border)] px-2.5 font-mono text-[0.7rem] tracking-wide text-[var(--desk-text-muted)] transition-colors hover:border-[var(--desk-border-strong)] hover:text-[var(--desk-text)]"
+            >
+              <X className="size-3" />
+              Clear
+            </button>
+          ) : null}
+        </div>
       </div>
       {total != null ? (
-        <p className="text-[0.75rem] text-[var(--desk-text-dim)] tabular-nums">
+        <p className="font-mono text-[0.72rem] text-[var(--desk-text-dim)] tabular-nums">
           Showing {visibleCount} of {total}
         </p>
       ) : null}
@@ -1064,10 +1019,10 @@ function FilterChip({
       type="button"
       onClick={onClick}
       className={cn(
-        "inline-flex h-7 items-center rounded-md border px-2.5 font-mono text-[0.7rem] tracking-wide transition-colors",
+        "inline-flex h-7 items-center rounded-[5px] px-2.5 font-mono text-[0.7rem] tracking-wide transition-colors",
         active
-          ? "border-[var(--desk-text-dim)] bg-[var(--desk-overlay-strong)] text-[var(--desk-text)]"
-          : "border-[var(--desk-border)] bg-transparent text-[var(--desk-text-muted)] hover:border-[var(--desk-border-strong)] hover:text-[var(--desk-text)]",
+          ? "bg-[var(--desk-panel)] text-[var(--desk-text)] shadow-[inset_0_0_0_1px_var(--desk-border-strong)]"
+          : "bg-transparent text-[var(--desk-text-muted)] hover:text-[var(--desk-text)]",
       )}
     >
       {children}
