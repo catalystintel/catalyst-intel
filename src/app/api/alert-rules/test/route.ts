@@ -92,6 +92,7 @@ export async function POST(request: NextRequest) {
           impactScore: catalysts.impactScore,
           timestamp: catalysts.timestamp,
           sourceUrl: rawSources.url,
+          tags: catalysts.tags,
         })
         .from(catalysts)
         .leftJoin(rawSources, eq(catalysts.rawSourceId, rawSources.id))
@@ -107,6 +108,7 @@ export async function POST(request: NextRequest) {
           impactScore: catalysts.impactScore,
           timestamp: catalysts.timestamp,
           sourceUrl: rawSources.url,
+          tags: catalysts.tags,
         })
         .from(catalysts)
         .leftJoin(rawSources, eq(catalysts.rawSourceId, rawSources.id))
@@ -165,7 +167,14 @@ export async function POST(request: NextRequest) {
     : [];
 
   const results = await deliverAlertRules({
-    catalyst: catalystRow,
+    catalyst: {
+      ...catalystRow,
+      tags: Array.isArray(catalystRow.tags)
+        ? (catalystRow.tags as unknown[]).filter(
+            (t): t is string => typeof t === "string",
+          )
+        : null,
+    },
     rules: deliverable,
     force,
     pushSubscriptions: userPushSubscriptions,

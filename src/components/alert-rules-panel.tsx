@@ -98,6 +98,7 @@ export function AlertRulesPanel() {
   const [telegramChatId, setTelegramChatId] = useState("");
   const [minImpact, setMinImpact] = useState("70");
   const [sessionsAhPm, setSessionsAhPm] = useState(true);
+  const [tagsInput, setTagsInput] = useState("");
 
   const webPush = useWebPush(pushPublicKey);
 
@@ -200,9 +201,14 @@ export function AlertRulesPanel() {
     }
     setSaving(true);
     try {
+      const tags = tagsInput
+        .split(",")
+        .map((t) => t.trim().toLowerCase())
+        .filter(Boolean);
       const conditions: AlertRuleConditions = {
         minImpact: Number(minImpact) || 70,
         sessions: sessionsAhPm ? ["AH", "PM"] : ["any"],
+        ...(tags.length > 0 ? { tags } : {}),
       };
       const res = await fetch("/api/alert-rules", {
         method: "POST",
@@ -518,6 +524,26 @@ export function AlertRulesPanel() {
               </label>
             </div>
 
+            <label className="mt-4 flex flex-col gap-1.5">
+              <span className="text-xs font-medium text-[var(--desk-text-secondary)]">
+                Tags (optional, comma-separated)
+              </span>
+              <Input
+                value={tagsInput}
+                onChange={(e) => setTagsInput(e.target.value)}
+                placeholder="e.g. category:regulatory, fda"
+                aria-label="Tag conditions"
+                className="h-10 border-[var(--desk-border-strong)] bg-[var(--desk-overlay-soft)] font-mono text-xs"
+              />
+              <span className="text-[0.7rem] text-[var(--desk-text-dim)]">
+                Fires only when the catalyst has at least one of these tags —
+                auto-tags include <code className="font-mono">category:*</code>,{" "}
+                <code className="font-mono">form:*</code>,{" "}
+                <code className="font-mono">impact:*</code>. Same tags you can
+                filter and save watchlists by on the tape.
+              </span>
+            </label>
+
             <button
               type="button"
               role="switch"
@@ -660,6 +686,9 @@ export function AlertRulesPanel() {
                         Min impact {rule.conditions.minImpact ?? 0}
                         {rule.conditions.sessions?.length
                           ? ` · ${rule.conditions.sessions.join(" / ")}`
+                          : ""}
+                        {rule.conditions.tags?.length
+                          ? ` · tags: ${rule.conditions.tags.join(", ")}`
                           : ""}
                         {rule.enabled ? "" : " · paused"}
                       </p>

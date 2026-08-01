@@ -49,6 +49,7 @@ export async function runAlertAutoFire(options: {
       impactScore: catalysts.impactScore,
       timestamp: catalysts.timestamp,
       sourceUrl: rawSources.url,
+      tags: catalysts.tags,
     })
     .from(catalysts)
     .leftJoin(rawSources, eq(catalysts.rawSourceId, rawSources.id))
@@ -148,6 +149,11 @@ export async function runAlertAutoFire(options: {
       impactScore: catalyst.impactScore,
       timestamp: catalyst.timestamp,
       sourceUrl: catalyst.sourceUrl,
+      tags: Array.isArray(catalyst.tags)
+        ? (catalyst.tags as unknown[]).filter(
+            (t): t is string => typeof t === "string",
+          )
+        : null,
     };
 
     for (const [userId, userRules] of rulesByUser) {

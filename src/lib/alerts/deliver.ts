@@ -14,6 +14,8 @@ export interface AlertCatalystPayload {
   impactScore: number | null;
   timestamp: string;
   sourceUrl: string | null;
+  /** Auto/vendor tags (see `deriveAutoTags` in ingest-pipeline.ts). */
+  tags?: string[] | null;
 }
 
 export interface DeliverableRule {
@@ -58,6 +60,16 @@ function conditionsMatch(
   if (conditions.watchlistOnly) {
     const symbol = catalyst.symbol?.toUpperCase();
     if (!symbol || !watchlistSymbols?.has(symbol)) return false;
+  }
+
+  const wantedTags = conditions.tags ?? [];
+  if (wantedTags.length > 0) {
+    const have = new Set(
+      (catalyst.tags ?? [])
+        .filter((t): t is string => typeof t === "string")
+        .map((t) => t.toLowerCase()),
+    );
+    if (!wantedTags.some((t) => have.has(t.toLowerCase()))) return false;
   }
 
   return true;

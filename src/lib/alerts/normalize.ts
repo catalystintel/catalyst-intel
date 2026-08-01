@@ -24,11 +24,18 @@ export function normalizeAlertConditions(value: unknown): AlertRuleConditions {
 
   const watchlistOnly = raw.watchlistOnly === true;
 
+  const tags = Array.isArray(raw.tags)
+    ? raw.tags
+        .filter((t): t is string => typeof t === "string" && t.trim() !== "")
+        .map((t) => t.trim().toLowerCase())
+    : undefined;
+
   return {
     ...(categories.length > 0 ? { categories } : {}),
     ...(sessions && sessions.length > 0 ? { sessions } : {}),
     ...(minImpact !== undefined ? { minImpact } : {}),
     ...(watchlistOnly ? { watchlistOnly: true } : {}),
+    ...(tags && tags.length > 0 ? { tags } : {}),
   };
 }
 
