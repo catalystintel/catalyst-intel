@@ -1,9 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { and, eq } from "drizzle-orm";
 
 import { databaseUnavailableMessage, isLibsqlConfigured } from "@/db/env";
-import { db } from "@/db/client";
-import { watchlists, type WatchlistCriteria } from "@/db/schema";
 import { getCurrentAppUser } from "@/lib/auth/current-user";
 import { toFeedCatalyst } from "@/lib/catalysts/feed-catalyst";
 import { queryFeedPage, queryFeedTotal } from "@/lib/catalysts/feed-query";
@@ -13,20 +10,30 @@ import {
   rateLimitExceededResponse,
   withRateLimitHeaders,
 } from "@/lib/http/rate-limit-response";
+import {
+  isSameOriginRequest,
+  sameOriginForbiddenResponse,
+} from "@/lib/http/same-origin";
 import { criteriaToFeedFilters } from "@/lib/watchlist/criteria-to-feed-filters";
+import { normalizeWatchlistCriteria } from "@/lib/watchlist/normalize-criteria";
 
 /** Small preview slice — this is a "does this look right?" check, not the tape. */
-export const WATCHLIST_PREVIEW_LIMIT = 8;
+const PREVIEW_LIMIT = 8;
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
-) {
+/**
+ * Ad-hoc preview for a watchlist that hasn't been saved yet — the builder
+ * (manual editor + templates + AI draft) calls this on every edit so the
+ * user sees match counts before committing.
+ */
+export async function POST(request: NextRequest) {
   if (!isLibsqlConfigured()) {
     return NextResponse.json(
       { error: databaseUnavailableMessage() },
       { status: 503 },
     );
+  }
+  if (!isSameOriginRequest(request)) {
+    return sameOriginForbiddenResponse();
   }
 
   const ip = getClientIp(request);
@@ -44,32 +51,31 @@ export async function GET(
     );
   }
 
-  const id = Number((await params).id);
-  if (!Number.isFinite(id) || id <= 0) {
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
     return withRateLimitHeaders(
-      NextResponse.json({ error: "Invalid id." }, { status: 400 }),
+      NextResponse.json({ error: "Invalid JSON body." }, { status: 400 }),
+      limitResult,
+    );
+  }
+  const raw =
+    typeof body === "object" && body !== null
+      ? (body as Record<string, unknown>)
+      : {};
+
+  const criteria = normalizeWatchlistCriteria(raw.criteria);
+  if (Object.keys(criteria).length === 0) {
+    return withRateLimitHeaders(
+      NextResponse.json({ total: 0, catalysts: [] }),
       limitResult,
     );
   }
 
-  const row = await db
-    .select()
-    .from(watchlists)
-    .where(and(eq(watchlists.id, id), eq(watchlists.userId, user.id)))
-    .get();
-  if (!row) {
-    return withRateLimitHeaders(
-      NextResponse.json({ error: "Watchlist not found." }, { status: 404 }),
-      limitResult,
-    );
-  }
-
-  const filters = criteriaToFeedFilters(
-    (row.criteria ?? {}) as WatchlistCriteria,
-    new Date().toISOString(),
-  );
+  const filters = criteriaToFeedFilters(criteria, new Date().toISOString());
   const [rows, total] = await Promise.all([
-    queryFeedPage(filters, { limit: WATCHLIST_PREVIEW_LIMIT }),
+    queryFeedPage(filters, { limit: PREVIEW_LIMIT }),
     queryFeedTotal(filters),
   ]);
 

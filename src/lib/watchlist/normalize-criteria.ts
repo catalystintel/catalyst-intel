@@ -1,4 +1,5 @@
 import type { WatchlistCriteria } from "@/db/schema";
+import { isFeedFormFilter } from "@/lib/catalysts/feed-form-filters";
 import { isEventCategoryKey } from "@/lib/catalysts/taxonomy";
 
 function stringArray(
@@ -32,7 +33,7 @@ export function normalizeWatchlistCriteria(value: unknown): WatchlistCriteria {
   const categories = stringArray(raw.categories, (s) => s).filter(
     isEventCategoryKey,
   );
-  const forms = stringArray(raw.forms, (s) => s);
+  const forms = stringArray(raw.forms, (s) => s).filter(isFeedFormFilter);
   const tags = stringArray(raw.tags, (s) => s.toLowerCase(), 60);
   const sources = stringArray(raw.sources, (s) => s.toLowerCase());
   const q =
