@@ -3,6 +3,7 @@
 Source of truth for columns/types: [`src/db/schema.ts`](src/db/schema.ts).
 Migrations live in [`drizzle/`](drizzle/). Keep this file in sync whenever the
 schema changes — see [`.cursor/skills/db-tables-doc/SKILL.md`](.cursor/skills/db-tables-doc/SKILL.md).
+Enforced by `npm run db:check` / husky pre-commit (`scripts/check-db-tables-doc.mjs`).
 
 **15 tables** (libSQL / SQLite via Drizzle).
 
