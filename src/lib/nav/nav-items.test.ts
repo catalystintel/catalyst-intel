@@ -18,14 +18,12 @@ describe("getPrimaryNav", () => {
 
   it("marks reports and analytics as coming soon", () => {
     const items = getPrimaryNav(false);
-    expect(items.find((item) => item.key === "reports")).toMatchObject({
-      comingSoon: true,
-      href: undefined,
-    });
-    expect(items.find((item) => item.key === "analytics")).toMatchObject({
-      comingSoon: true,
-      href: undefined,
-    });
+    const reports = items.find((item) => item.key === "reports");
+    const analytics = items.find((item) => item.key === "analytics");
+    expect(reports?.comingSoon).toBe(true);
+    expect(reports?.href).toBeUndefined();
+    expect(analytics?.comingSoon).toBe(true);
+    expect(analytics?.href).toBeUndefined();
     expect(items.some((item) => item.label === "News Feed")).toBe(false);
   });
 
