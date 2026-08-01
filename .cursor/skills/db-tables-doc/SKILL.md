@@ -62,9 +62,9 @@ one-liner for that table becomes misleading.
 
 ## Commands
 
-| Script                    | Purpose                                              |
-| ------------------------- | ---------------------------------------------------- |
-| `npm run db:tables-check` | Schema ↔ `DB-TABLES.md` table-name sync only         |
+| Script                    | Purpose                                             |
+| ------------------------- | --------------------------------------------------- |
+| `npm run db:tables-check` | Schema ↔ `DB-TABLES.md` table-name sync only        |
 | `npm run db:check`        | Migrations check **and** `DB-TABLES.md` sync (hook) |
 
 ## Never do

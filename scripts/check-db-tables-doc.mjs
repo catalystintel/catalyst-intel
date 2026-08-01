@@ -103,7 +103,9 @@ function main() {
   if (missingInDoc.length > 0 || extraInDoc.length > 0) {
     const parts = [];
     if (missingInDoc.length > 0) {
-      parts.push(`in schema but missing from ${DOC}: ${missingInDoc.join(", ")}`);
+      parts.push(
+        `in schema but missing from ${DOC}: ${missingInDoc.join(", ")}`,
+      );
     }
     if (extraInDoc.length > 0) {
       parts.push(`in ${DOC} but not in schema: ${extraInDoc.join(", ")}`);
@@ -118,9 +120,7 @@ function main() {
     );
   }
   if (count !== schemaTables.size) {
-    fail(
-      `${DOC} says **${count} tables** but schema has ${schemaTables.size}`,
-    );
+    fail(`${DOC} says **${count} tables** but schema has ${schemaTables.size}`);
   }
 
   const staged = stagedFiles();
