@@ -152,6 +152,9 @@ export type YahooQuote = {
 
 /**
  * Session quote from Yahoo chart meta (+ last bar OHLC when present).
+ * Previous close comes from the prior daily bar — not `chartPreviousClose` on
+ * multi-day ranges (that field is the close *before the range*, which made
+ * 1D % look like a multi-day move).
  */
 export async function fetchYahooQuote(
   symbol: string,
@@ -161,7 +164,7 @@ export async function fetchYahooQuote(
 
   try {
     const url = new URL(`${YAHOO_CHART}/${encodeURIComponent(yahooSymbol)}`);
-    // 5d/1d keeps prior close + last session OHLC even on weekends.
+    // Daily bars so we can take last close vs prior session close.
     url.searchParams.set("interval", "1d");
     url.searchParams.set("range", "5d");
     url.searchParams.set("includePrePost", "false");
@@ -182,25 +185,33 @@ export async function fetchYahooQuote(
     const meta = result?.meta;
     if (!meta) return null;
 
-    const price = finite(meta.regularMarketPrice)
-      ? meta.regularMarketPrice
-      : null;
-    if (price == null || price <= 0) return null;
-
-    const previousClose =
-      (finite(meta.chartPreviousClose) ? meta.chartPreviousClose : null) ??
-      (finite(meta.previousClose) ? meta.previousClose : null);
-
     const quote = result?.indicators?.quote?.[0];
     const closes = quote?.close ?? [];
-    let lastIdx = -1;
-    for (let i = closes.length - 1; i >= 0; i--) {
+    const finiteCloses: number[] = [];
+    const finiteIdx: number[] = [];
+    for (let i = 0; i < closes.length; i++) {
       if (finite(closes[i])) {
-        lastIdx = i;
-        break;
+        finiteCloses.push(closes[i]!);
+        finiteIdx.push(i);
       }
     }
 
+    const price =
+      (finite(meta.regularMarketPrice) ? meta.regularMarketPrice : null) ??
+      (finiteCloses.length > 0 ? finiteCloses[finiteCloses.length - 1]! : null);
+    if (price == null || price <= 0) return null;
+
+    // Prior session close = second-to-last daily bar.
+    let previousClose: number | null =
+      finiteCloses.length >= 2 ? finiteCloses[finiteCloses.length - 2]! : null;
+    if (previousClose == null) {
+      previousClose =
+        (finite(meta.previousClose) ? meta.previousClose : null) ??
+        (finite(meta.chartPreviousClose) ? meta.chartPreviousClose : null);
+    }
+
+    const lastIdx =
+      finiteIdx.length > 0 ? finiteIdx[finiteIdx.length - 1]! : -1;
     const open =
       lastIdx >= 0 && finite(quote?.open?.[lastIdx])
         ? quote!.open![lastIdx]!
