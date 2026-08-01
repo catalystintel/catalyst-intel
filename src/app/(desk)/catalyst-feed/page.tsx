@@ -10,11 +10,18 @@ import {
   queryFeedPage,
   type FeedQueryFilters,
 } from "@/lib/catalysts/feed-query";
+import {
+  mergeSourceProviderFilters,
+  resolveAdminFeedProviders,
+} from "@/lib/catalysts/user-source-settings";
 import { withDbRetry } from "@/lib/db/with-db-retry";
 import { loadDeskMacroEvents } from "@/lib/jobs/desk-macro-events";
 import { parseFeedCatalystId } from "@/lib/nav/feed-href";
 
-function ssrFeedFilters(nowIso: string): FeedQueryFilters {
+function ssrFeedFilters(
+  nowIso: string,
+  adminProviders: string[] | null,
+): FeedQueryFilters {
   // Same shared query as `/api/catalysts` — symbol gate always applied
   // (CPI / Jobs NFP excepted via `symbolFeedGateSql`).
   const defaults: FeedFilterState = DEFAULT_FEED_FILTERS;
@@ -23,7 +30,7 @@ function ssrFeedFilters(nowIso: string): FeedQueryFilters {
     categories: defaults.categoryFilters,
     sectors: defaults.sectorFilters,
     forms: defaults.formFilters,
-    sources: defaults.sourceFilters,
+    sources: mergeSourceProviderFilters(defaults.sourceFilters, adminProviders),
     timeWindow: defaults.timeWindow,
     symbolOnly: true,
     earningsSurprisesOnly: defaults.earningsSurprisesOnly,
@@ -46,8 +53,11 @@ export default async function CatalystFeedPage({
     return null;
   }
 
+  const adminProviders = await resolveAdminFeedProviders(user.id, user.isAdmin);
   const recentCatalysts = await withDbRetry(() =>
-    queryFeedPage(ssrFeedFilters(new Date().toISOString()), { limit: 200 }),
+    queryFeedPage(ssrFeedFilters(new Date().toISOString(), adminProviders), {
+      limit: 200,
+    }),
   );
   // Prefer FMP-ingested core prints when dedicated cron has run; else
   // keyless embedded BLS/Fed schedule (same as macro-calendar ingest).

@@ -183,6 +183,23 @@ export const playbookSettings = sqliteTable("playbook_settings", {
     .default(sql`(current_timestamp)`),
 });
 
+/**
+ * Admin-only personal feed source visibility. One row per admin user;
+ * `enabled_sources` is a JSON array of CatalystSourceId. Missing row =
+ * all feed-row sources on. Does not affect ingest / other users.
+ */
+export const userSourceSettings = sqliteTable("user_source_settings", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: integer("user_id")
+    .notNull()
+    .unique()
+    .references(() => users.id),
+  enabledSources: text("enabled_sources", { mode: "json" }).notNull(),
+  updatedAt: text("updated_at")
+    .notNull()
+    .default(sql`(current_timestamp)`),
+});
+
 export type AlertChannel = "email" | "webhook" | "push" | "telegram";
 
 export interface AlertRuleConditions {
