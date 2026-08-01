@@ -88,8 +88,8 @@ export default async function AdminPage() {
           <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
             Personal visibility only — toggles which vendors appear in{" "}
             <span className="text-[var(--desk-text-secondary)]">your</span>{" "}
-            Catalyst Feed and News Feed. Does not pause ingest or change other
-            admins&apos; views.
+            Catalyst Feed. Does not pause ingest or change other admins&apos;
+            views.
           </p>
         </div>
         <div className="px-4 py-4 sm:px-5">
