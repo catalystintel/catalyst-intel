@@ -184,6 +184,10 @@ export function AlertRulesPanel() {
           return { state: "blocked", label: "Permission denied" };
         if (webPush.status === "unsupported")
           return { state: "blocked", label: "Unsupported browser" };
+        if (webPush.status === "loading")
+          return { state: "action", label: "Working…" };
+        if (webPush.status === "error")
+          return { state: "action", label: "Retry enable" };
         return { state: "action", label: "Enable first" };
       case "telegram":
         if (!telegramConfigured)
@@ -844,14 +848,28 @@ function ChannelSetup({
             body="You’re set. Name the rule, set your filters below, and save."
           />
         ) : (
-          <Button
-            type="button"
-            onClick={() => void webPush.subscribe()}
-            className="btn-press gap-2 bg-[var(--desk-live)] text-[#121212] hover:brightness-110"
-          >
-            <Bell className="size-3.5" />
-            Enable browser notifications
-          </Button>
+          <div className="flex flex-col gap-3">
+            <Button
+              type="button"
+              onClick={() => void webPush.subscribe()}
+              disabled={webPush.status === "loading"}
+              className="btn-press w-fit gap-2 bg-[var(--desk-live)] text-[#121212] hover:brightness-110 disabled:opacity-60"
+            >
+              <Bell className="size-3.5" />
+              {webPush.status === "loading"
+                ? "Enabling…"
+                : webPush.status === "error"
+                  ? "Retry browser notifications"
+                  : "Enable browser notifications"}
+            </Button>
+            {webPush.error ? (
+              <StatusCallout
+                tone="blocked"
+                title="Couldn’t enable push"
+                body={webPush.error}
+              />
+            ) : null}
+          </div>
         )}
       </div>
     );
