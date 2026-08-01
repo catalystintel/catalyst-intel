@@ -44,6 +44,10 @@ export function toPublicFeedCatalyst(row: RawCatalystRow): PublicFeedCatalyst {
 
   return {
     ...base,
+    // Impact score retired from the product surface — keep fields for
+    // typed shape / DB compat but never ship scores to the client.
+    impactScore: null,
+    materialityReasons: [],
     title: scrubOriginMentions(base.title) ?? base.title,
     headline: scrubOriginHeadline(base.headline),
     summary: scrubOriginMentions(base.summary),
@@ -52,10 +56,12 @@ export function toPublicFeedCatalyst(row: RawCatalystRow): PublicFeedCatalyst {
     historicalImpact: scrubHistoricalImpact(base.historicalImpact),
     sourceUrl: includeOrigins ? base.sourceUrl : null,
     sourceProvider: includeOrigins ? base.sourceProvider : null,
-    keyFacts: base.keyFacts.map((f) => ({
-      label: scrubOriginMentions(f.label) ?? f.label,
-      value: scrubOriginMentions(f.value) ?? f.value,
-    })),
+    keyFacts: base.keyFacts
+      .filter((f) => !/^impact\s*score$/i.test(f.label.trim()))
+      .map((f) => ({
+        label: scrubOriginMentions(f.label) ?? f.label,
+        value: scrubOriginMentions(f.value) ?? f.value,
+      })),
   };
 }
 

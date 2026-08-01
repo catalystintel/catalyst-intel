@@ -6,7 +6,6 @@ import { BookmarkPlus, Copy, ExternalLink, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { CategoryBadge } from "@/components/category-badge";
-import { MaterialityBadge } from "@/components/materiality-badge";
 import { SkeletonCard } from "@/components/loading-skeleton";
 import {
   REPORT_SCOPE_VALUES,
@@ -314,10 +313,6 @@ export function ReportsDesk() {
                             {item.eventCategory ? (
                               <CategoryBadge category={item.eventCategory} />
                             ) : null}
-                            <MaterialityBadge
-                              score={item.impactScore}
-                              category={item.eventCategory}
-                            />
                           </span>
                         </span>
                         <span className="hidden pt-0.5 font-mono text-[0.68rem] text-[var(--desk-text-dim)] sm:inline">

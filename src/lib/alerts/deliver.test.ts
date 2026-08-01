@@ -67,7 +67,7 @@ describe("deliverAlertRules", () => {
           webhookUrl: "https://example.com/hook",
           emailTo: null,
           telegramChatId: null,
-          conditions: { watchlistOnly: true, minImpact: 70 },
+          conditions: { watchlistOnly: true },
         },
       ],
     });

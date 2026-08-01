@@ -117,7 +117,6 @@ export function AlertRulesPanel() {
   // const [webhookUrl, setWebhookUrl] = useState("");
   const [sessionEmail, setSessionEmail] = useState("");
   const [telegramChatId, setTelegramChatId] = useState("");
-  const [minImpact, setMinImpact] = useState("70");
   const [selectedSessions, setSelectedSessions] = useState<
     AlertSessionOptionValue[]
   >(["AH", "PM"]);
@@ -264,7 +263,6 @@ export function AlertRulesPanel() {
     try {
       const sessions: AlertSession[] = sessionsFromSelection(selectedSessions);
       const conditions: AlertRuleConditions = {
-        minImpact: Number(minImpact) || 70,
         sessions,
       };
       const res = await fetch("/api/alert-rules", {
@@ -540,7 +538,7 @@ export function AlertRulesPanel() {
               3 · When to fire
             </legend>
             <div className="grid gap-3 sm:grid-cols-2">
-              <label className="flex flex-col gap-1.5">
+              <label className="flex flex-col gap-1.5 sm:col-span-2 sm:max-w-md">
                 <span className="text-xs font-medium text-[var(--desk-text-secondary)]">
                   Rule name
                 </span>
@@ -551,37 +549,6 @@ export function AlertRulesPanel() {
                   aria-label="Rule name"
                   className="h-10 border-[var(--desk-border-strong)] bg-[var(--desk-overlay-soft)]"
                 />
-              </label>
-              <label className="flex flex-col gap-1.5">
-                <span className="flex items-center justify-between text-xs font-medium text-[var(--desk-text-secondary)]">
-                  <span>Minimum impact score</span>
-                  <span className="font-mono text-[var(--desk-live)]">
-                    {minImpact || "0"}+
-                  </span>
-                </span>
-                <div className="flex items-center gap-3">
-                  <input
-                    type="range"
-                    min={0}
-                    max={100}
-                    step={5}
-                    value={Number(minImpact) || 0}
-                    onChange={(e) => setMinImpact(e.target.value)}
-                    aria-label="Minimum impact score"
-                    className="alert-range h-2 w-full flex-1 cursor-pointer appearance-none rounded-full bg-[var(--desk-overlay-strong)] accent-[var(--desk-live)]"
-                  />
-                  <Input
-                    value={minImpact}
-                    onChange={(e) => setMinImpact(e.target.value)}
-                    inputMode="numeric"
-                    aria-label="Minimum impact score value"
-                    className="h-10 w-16 border-[var(--desk-border-strong)] bg-[var(--desk-overlay-soft)] text-center font-mono text-xs"
-                  />
-                </div>
-                <span className="text-[0.7rem] text-[var(--desk-text-dim)]">
-                  Higher = fewer, more material alerts. 70 is a solid default
-                  for bombs.
-                </span>
               </label>
             </div>
 
@@ -730,8 +697,7 @@ export function AlertRulesPanel() {
                         </span>
                       </p>
                       <p className="mt-1 font-mono text-[0.65rem] tracking-wide text-[var(--desk-text-dim)] uppercase">
-                        Min impact {rule.conditions.minImpact ?? 0}
-                        {` · ${formatSessionsForDisplay(rule.conditions.sessions)}`}
+                        {formatSessionsForDisplay(rule.conditions.sessions)}
                         {rule.enabled ? "" : " · paused"}
                       </p>
                     </div>
@@ -1065,7 +1031,7 @@ function ChannelSetup({
       <SetupSteps
         steps={[
           "Alerts always go to the email on your signed-in account (shown below).",
-          "Save the rule with your impact / session filters.",
+          "Save the rule with your session filters.",
           "Hit Test — check inbox (and spam) for the sample fire.",
         ]}
       />
