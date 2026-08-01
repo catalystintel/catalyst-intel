@@ -147,7 +147,7 @@ export function AiAnalysisPanel({
             </p>
             <ul className="mt-2 flex flex-col gap-1.5 text-sm text-[var(--desk-text-secondary)]">
               <li>Restates the key facts from the filing…</li>
-              <li>Flags the directional lean when the text supports it…</li>
+              <li>Summarizes what happened in plain English…</li>
               <li>Stays short — no speculation or price targets…</li>
             </ul>
           </>
