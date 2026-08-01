@@ -1,4 +1,5 @@
 import {
+  chartRangeDef,
   chartRangeWindow,
   finnhubResolutionForRange,
   isIntradayMinuteRange,
@@ -47,6 +48,30 @@ export function clipCandlesToWindow(
 ): DeskCandle[] {
   const clipped = candles.filter((c) => c.time >= fromSec && c.time <= toSec);
   return clipped.length > 0 ? clipped : candles;
+}
+
+/**
+ * Clip 1m–1H series to the lookback. When wall-clock `now` misses (weekend /
+ * after-hours), fall back to the last N minutes ending at the newest bar —
+ * never the full session (that painted the same open→close % on every chip).
+ */
+export function clipIntradayLookbackCandles(
+  candles: DeskCandle[],
+  range: ChartRangeKey,
+  now = new Date(),
+): DeskCandle[] {
+  if (!isIntradayMinuteRange(range) || candles.length === 0) return candles;
+  const mins = chartRangeDef(range).lookbackMinutes;
+  if (mins == null || mins <= 0) return candles;
+
+  const { fromSec, toSec } = chartRangeWindow(range, now);
+  const live = candles.filter((c) => c.time >= fromSec && c.time <= toSec);
+  if (live.length > 0) return live;
+
+  const last = candles[candles.length - 1]!;
+  const from = last.time - mins * 60;
+  const trailing = candles.filter((c) => c.time >= from && c.time <= last.time);
+  return trailing.length > 0 ? trailing : candles.slice(-1);
 }
 
 /**
@@ -120,7 +145,9 @@ export function chartHeaderMove(options: {
   }
   const change = price - baseline;
   const changePercent = (change / baseline) * 100;
-  if (!Number.isFinite(changePercent) || Math.abs(changePercent) > 200) {
+  // Lookbacks are allowed to be large (OTC / multi-month). Only drop
+  // non-finite values — the 200% session guard stays on the 1D path above.
+  if (!Number.isFinite(changePercent)) {
     return { price, change: null, changePercent: null };
   }
   return {
@@ -135,15 +162,22 @@ function finalizeSeries(options: {
   range: ChartRangeKey;
   candles: DeskCandle[];
   provider: DeskCandleSeries["provider"];
+  now?: Date;
 }): DeskCandleSeries {
   const previousClose =
     options.range === "1D"
       ? previousCloseFromPriorSession(options.candles)
       : null;
+  const sessionClipped = keepLastSessionCandles(options.candles, options.range);
+  const candles = clipIntradayLookbackCandles(
+    sessionClipped,
+    options.range,
+    options.now,
+  );
   return {
     symbol: options.symbol,
     range: options.range,
-    candles: keepLastSessionCandles(options.candles, options.range),
+    candles,
     provider: options.provider,
     previousClose,
   };
@@ -353,6 +387,7 @@ export async function fetchDeskCandles(options: {
         range,
         candles,
         provider: "finnhub",
+        now,
       });
     }
   }
@@ -366,6 +401,7 @@ export async function fetchDeskCandles(options: {
         range,
         candles,
         provider: "polygon",
+        now,
       });
     }
   }
@@ -382,6 +418,7 @@ export async function fetchDeskCandles(options: {
       range,
       candles: yahooCandles,
       provider: "yahoo",
+      now,
     });
   }
 

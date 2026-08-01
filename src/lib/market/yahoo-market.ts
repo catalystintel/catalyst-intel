@@ -153,6 +153,8 @@ export async function fetchYahooCandles(options: {
       const clipped = candles.filter(
         (c) => c.time >= fromSec && c.time <= toSec,
       );
+      // Prefer live window; if empty (after-hours), keep full day so the
+      // desk can trailing-clip relative to the newest bar.
       return clipped.length > 0 ? clipped : candles;
     }
     if (options.clipToLastSession === false) {

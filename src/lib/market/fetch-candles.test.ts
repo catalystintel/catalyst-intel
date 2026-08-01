@@ -4,6 +4,7 @@ import {
   buildDemoCandles,
   chartHeaderMove,
   clipCandlesToWindow,
+  clipIntradayLookbackCandles,
   keepLastSessionCandles,
   previousCloseFromPriorSession,
 } from "@/lib/market/fetch-candles";
@@ -142,5 +143,40 @@ describe("chartHeaderMove", () => {
       change: null,
       changePercent: null,
     });
+  });
+
+  it("allows lookbacks beyond 200% (real OTC multi-month moves)", () => {
+    const candles = [
+      { time: 1, open: 1, high: 2, low: 1, close: 1.2 },
+      { time: 2, open: 2, high: 4, low: 2, close: 3.5 },
+    ];
+    expect(chartHeaderMove({ range: "YTD", candles })).toEqual({
+      price: 3.5,
+      change: 2.5,
+      changePercent: 250,
+    });
+  });
+});
+
+describe("clipIntradayLookbackCandles", () => {
+  it("uses trailing bars relative to last print when wall-clock window is empty", () => {
+    // Session ended hours ago; wall-clock 1H lookback is empty.
+    const last = Date.parse("2026-07-31T20:00:00Z") / 1000;
+    const bars = [];
+    for (let i = 0; i < 120; i++) {
+      const time = last - (119 - i) * 60;
+      bars.push({
+        time,
+        open: 100 + i * 0.01,
+        high: 101,
+        low: 99,
+        close: 100 + i * 0.01,
+      });
+    }
+    const now = new Date("2026-08-01T16:00:00Z"); // next day
+    const clipped = clipIntradayLookbackCandles(bars, "1H", now);
+    expect(clipped.length).toBe(61); // last hour inclusive of endpoints at 1m
+    expect(clipped[0]!.time).toBe(last - 60 * 60);
+    expect(clipped[clipped.length - 1]!.time).toBe(last);
   });
 });
