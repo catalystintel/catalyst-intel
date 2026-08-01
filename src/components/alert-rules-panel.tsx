@@ -94,6 +94,9 @@ export function AlertRulesPanel() {
   const [pushAvailable, setPushAvailable] = useState(false);
   const [pushPublicKey, setPushPublicKey] = useState<string | null>(null);
   const [telegramConfigured, setTelegramConfigured] = useState(false);
+  const [telegramBotUsername, setTelegramBotUsername] = useState<string | null>(
+    null,
+  );
   const [loaded, setLoaded] = useState(false);
   const [saving, setSaving] = useState(false);
   const [testingId, setTestingId] = useState<number | null>(null);
@@ -128,6 +131,11 @@ export function AlertRulesPanel() {
       setPushAvailable(Boolean(data.pushAvailable));
       setPushPublicKey(data.pushPublicKey ?? null);
       setTelegramConfigured(Boolean(data.telegramConfigured));
+      setTelegramBotUsername(
+        typeof data.telegramBotUsername === "string"
+          ? data.telegramBotUsername
+          : null,
+      );
     } catch (err) {
       toast.error(toUserFacingMessage(err, "Load failed."));
     } finally {
@@ -478,6 +486,7 @@ export function AlertRulesPanel() {
               pushAvailable={pushAvailable}
               webPush={webPush}
               telegramConfigured={telegramConfigured}
+              telegramBotUsername={telegramBotUsername}
               telegramChatId={telegramChatId}
               setTelegramChatId={setTelegramChatId}
               emailConfigured={emailConfigured}
@@ -774,6 +783,7 @@ function ChannelSetup({
   pushAvailable,
   webPush,
   telegramConfigured,
+  telegramBotUsername,
   telegramChatId,
   setTelegramChatId,
   emailConfigured,
@@ -784,6 +794,7 @@ function ChannelSetup({
   pushAvailable: boolean;
   webPush: ReturnType<typeof useWebPush>;
   telegramConfigured: boolean;
+  telegramBotUsername: string | null;
   telegramChatId: string;
   setTelegramChatId: (v: string) => void;
   emailConfigured: boolean;
@@ -852,19 +863,37 @@ function ChannelSetup({
         <StatusCallout
           tone="blocked"
           title="Telegram bot isn’t configured"
-          body="This deployment is missing TELEGRAM_BOT_TOKEN. Use Push or Email for now, or ask ops to wire the bot. Once live: message the bot → copy your chat ID → paste it here → Save & Test."
+          body="This deployment is missing TELEGRAM_BOT_TOKEN. Use Push or Email for now, or ask ops to wire the bot (Admin → Setup Telegram bot). Once live: /start the bot → copy your chat ID → paste it here → Save & Test."
         />
       );
     }
+    const handle = telegramBotUsername
+      ? `@${telegramBotUsername.replace(/^@/, "")}`
+      : null;
+    const botUrl = telegramBotUsername
+      ? `https://t.me/${telegramBotUsername.replace(/^@/, "")}`
+      : null;
     return (
       <div>
         <SetupSteps
           steps={[
-            "Open Telegram and message the Catalyst Intel bot (any text, e.g. /start).",
-            "The bot replies with your numeric chat ID — copy it.",
+            botUrl
+              ? `Open ${handle} in Telegram and send /start (or tap Open bot).`
+              : "Open Telegram and send /start to the Catalyst Intel bot.",
+            "The bot replies with your numeric chat ID — long-press to copy it.",
             "Paste the chat ID below, save the rule, then hit Test.",
           ]}
         />
+        {botUrl ? (
+          <a
+            href={botUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="mb-4 inline-flex text-sm font-medium text-[var(--desk-live)] underline-offset-2 hover:underline"
+          >
+            Open {handle}
+          </a>
+        ) : null}
         <label className="flex flex-col gap-1.5">
           <span className="text-xs font-medium text-[var(--desk-text-secondary)]">
             Your Telegram chat ID
@@ -878,8 +907,8 @@ function ChannelSetup({
             className="h-10 border-[var(--desk-border-strong)] bg-[var(--desk-overlay-soft)] font-mono text-xs"
           />
           <span className="text-[0.7rem] text-[var(--desk-text-dim)]">
-            Message the bot once if you don’t have a chat ID yet — it only
-            replies after you text it.
+            /start, /id, or any message works — the bot always replies with your
+            chat ID.
           </span>
         </label>
       </div>

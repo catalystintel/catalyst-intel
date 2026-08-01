@@ -11,6 +11,7 @@ import {
   isWebPushConfigured,
   webPushPublicKey,
 } from "@/lib/alerts/deliver";
+import { getTelegramBotUsername } from "@/lib/telegram/bot";
 import { normalizeAlertConditions } from "@/lib/alerts/normalize";
 // import { validateWebhookUrl } from "@/lib/alerts/webhook-url"; // revive with webhook channel
 import { getClientIp } from "@/lib/http/client-ip";
@@ -110,6 +111,7 @@ export async function GET(request: NextRequest) {
       pushAvailable: isWebPushConfigured(),
       pushPublicKey: webPushPublicKey(),
       telegramConfigured: isTelegramConfigured(),
+      telegramBotUsername: getTelegramBotUsername() ?? null,
     }),
     limitResult,
   );
