@@ -22,8 +22,8 @@ export interface FeedFilterOption {
 }
 
 /**
- * Searchable multi-select for live-tape facet filters (industries, categories,
- * forms, sources). Shows selected count on the trigger.
+ * Searchable multi-select for live-tape facet filters (event types, sources).
+ * Shows selected count on the trigger.
  */
 export function FeedFilterMultiSelect({
   label,
@@ -54,8 +54,8 @@ export function FeedFilterMultiSelect({
 
   const triggerText =
     selected.length === 0
-      ? (emptyLabel ?? `All ${label.toLowerCase()}`)
-      : `${label} · ${selected.length}`;
+      ? (emptyLabel ?? `All ${label.toLowerCase()}s`)
+      : `${label} ${selected.length}`;
 
   function toggle(value: string) {
     if (selectedSet.has(value)) {
@@ -69,14 +69,14 @@ export function FeedFilterMultiSelect({
     <DropdownMenu>
       <DropdownMenuTrigger
         className={cn(
-          "inline-flex h-8 items-center gap-1 rounded-md border px-2.5 font-mono text-[0.72rem] tracking-wide transition-colors",
+          "inline-flex h-8 items-center gap-1.5 rounded-md border px-2.5 font-mono text-[0.72rem] tracking-wide transition-colors",
           selected.length > 0
-            ? "border-[var(--desk-text-dim)] bg-[var(--desk-overlay-strong)] text-[var(--desk-text)]"
-            : "border-[var(--desk-border)] bg-transparent text-[var(--desk-text-muted)] hover:border-[var(--desk-border-strong)] hover:text-[var(--desk-text)]",
+            ? "border-[var(--desk-border-strong)] bg-[var(--desk-overlay-strong)] text-[var(--desk-text)]"
+            : "border-[var(--desk-border)] bg-[var(--desk-overlay-soft)] text-[var(--desk-text-muted)] hover:border-[var(--desk-border-strong)] hover:text-[var(--desk-text)]",
         )}
       >
-        <span className="max-w-[10rem] truncate">{triggerText}</span>
-        <ChevronsUpDown className="size-3 opacity-60" />
+        <span className="max-w-[11rem] truncate">{triggerText}</span>
+        <ChevronsUpDown className="size-3 shrink-0 opacity-60" />
       </DropdownMenuTrigger>
       <DropdownMenuContent
         align="start"

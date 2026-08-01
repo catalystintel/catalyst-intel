@@ -1,15 +1,9 @@
-import {
-  isFeedFormFilter,
-  type FeedFormFilter,
-} from "@/lib/catalysts/feed-form-filters";
+import type { FeedFormFilter } from "@/lib/catalysts/feed-form-filters";
 import {
   isFeedTimeWindow,
   type FeedTimeWindow,
 } from "@/lib/catalysts/feed-time-window";
-import {
-  isGicsSectorKey,
-  type GicsSectorKey,
-} from "@/lib/companies/gics-sectors";
+import type { GicsSectorKey } from "@/lib/companies/gics-sectors";
 import { isEventCategoryKey } from "@/lib/catalysts/taxonomy";
 import { isLocalDevUi } from "@/lib/dev/local-dev-ui";
 import type { EventCategoryKey } from "@/lib/jobs/parse-8k-items";
@@ -25,7 +19,12 @@ export const FEED_FILTER_IDLE_MS = 60 * 60 * 1000; // 1 hour
 export interface PersistedFeedFilters {
   symbolQuery: string;
   categoryFilters: EventCategoryKey[];
+  /**
+   * Retired from the feed panel UI. Kept on the persisted / API shape for
+   * backward compat; client restore always clears these.
+   */
   sectorFilters: GicsSectorKey[];
+  /** @deprecated Retired from the feed panel UI — always cleared on restore. */
   formFilters: FeedFormFilter[];
   sourceFilters: string[];
   timeWindow: FeedTimeWindow;
@@ -35,8 +34,8 @@ export interface PersistedFeedFilters {
    */
   symbolOnly: boolean;
   /**
-   * When true, tape shows earnings rows with material EPS surprise only
-   * (|surprise %| ≥ threshold — see earnings-surprise.ts).
+   * Retired from the feed panel UI. API still accepts `earningsSurprises=1`;
+   * client restore always clears this.
    */
   earningsSurprisesOnly: boolean;
   /** Epoch ms of last activity while these filters were in use. */
@@ -61,16 +60,14 @@ export const DEFAULT_FEED_FILTERS: FeedFilterState = {
 /**
  * True when search / time / facet gates match product defaults.
  * Ignores `symbolOnly` — that gate is always enforced server-side.
+ * Ignores retired panel facets (sectors / forms / earnings surprises).
  */
 export function isPanelFiltersDefault(filters: FeedFilterState): boolean {
   return (
     !filters.symbolQuery.trim() &&
     filters.categoryFilters.length === 0 &&
-    filters.sectorFilters.length === 0 &&
-    filters.formFilters.length === 0 &&
     filters.sourceFilters.length === 0 &&
-    filters.timeWindow === "all" &&
-    !filters.earningsSurprisesOnly
+    filters.timeWindow === "all"
   );
 }
 
@@ -125,12 +122,6 @@ export function readPersistedFeedFilters(
     ) {
       categoryFilters = [parsed.categoryFilter];
     }
-    const sectorFilters = parseStringArray(parsed.sectorFilters).filter(
-      isGicsSectorKey,
-    );
-    const formFilters = parseStringArray(parsed.formFilters).filter(
-      isFeedFormFilter,
-    );
     const sourceFilters = parseStringArray(parsed.sourceFilters).map((s) =>
       s.toLowerCase(),
     );
@@ -142,13 +133,15 @@ export function readPersistedFeedFilters(
     return {
       symbolQuery,
       categoryFilters,
-      sectorFilters,
-      formFilters,
+      // Retired panel facets — ignore legacy values so old sessions don't
+      // keep applying invisible industry / form / surprise gates.
+      sectorFilters: [],
+      formFilters: [],
       sourceFilters,
       timeWindow,
       // Always enforce symbol gate (ignore legacy persisted false).
       symbolOnly: true,
-      earningsSurprisesOnly: parsed.earningsSurprisesOnly === true,
+      earningsSurprisesOnly: false,
     };
   } catch {
     return null;
@@ -170,12 +163,13 @@ export function writePersistedFeedFilters(
   const payload: PersistedFeedFilters = {
     symbolQuery: filters.symbolQuery,
     categoryFilters: filters.categoryFilters,
-    sectorFilters: filters.sectorFilters,
-    formFilters: filters.formFilters,
+    // Do not resurrect retired panel facets from in-memory state.
+    sectorFilters: [],
+    formFilters: [],
     sourceFilters: filters.sourceFilters,
     timeWindow: filters.timeWindow,
     symbolOnly: filters.symbolOnly,
-    earningsSurprisesOnly: filters.earningsSurprisesOnly,
+    earningsSurprisesOnly: false,
     lastActiveAt: now,
   };
   window.localStorage.setItem(FEED_FILTER_STORAGE_KEY, JSON.stringify(payload));

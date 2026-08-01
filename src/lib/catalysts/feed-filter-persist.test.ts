@@ -76,14 +76,26 @@ describe("feed-filter-persist", () => {
     expect(readPersistedFeedFilters()).toEqual({
       symbolQuery: "TSLA",
       categoryFilters: ["news", "earnings"],
-      sectorFilters: ["information_technology"],
-      formFilters: ["8-K"],
+      // Retired panel facets are stripped on read/write.
+      sectorFilters: [],
+      formFilters: [],
       sourceFilters: ["sec-edgar"],
       timeWindow: "4h",
       // Always coerced on read — desk rule is not optional.
       symbolOnly: true,
-      earningsSurprisesOnly: true,
+      earningsSurprisesOnly: false,
     });
+  });
+
+  it("retired panel facets alone do not count as active", () => {
+    expect(
+      isPanelFiltersDefault({
+        ...DEFAULT_FEED_FILTERS,
+        sectorFilters: ["financials"],
+        formFilters: ["8-K"],
+        earningsSurprisesOnly: true,
+      }),
+    ).toBe(true);
   });
 
   it("migrates legacy single categoryFilter", () => {
