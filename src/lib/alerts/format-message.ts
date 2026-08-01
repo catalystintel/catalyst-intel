@@ -5,14 +5,13 @@
  *   ingest → auto-fire matches rule → format once → channel adapters send
  *
  * Trader-facing rules:
- *   1. Lead with symbol + materiality (scan in <2s)
+ *   1. Lead with symbol + category (scan in <2s)
  *   2. One-line what happened (headline)
- *   3. Context line: category · session · impact score
+ *   3. Context line: category · session
  *   4. One primary action (open on desk); proof URL secondary
  *   5. No emoji, no hype — calm desk tone
  */
 
-import { materialityFromScore } from "@/lib/catalysts/materiality";
 import {
   CATEGORY_LABELS,
   isEventCategoryKey,
@@ -28,6 +27,7 @@ export interface AlertMessageCatalyst {
   headline: string | null;
   title: string;
   eventCategory: string | null;
+  /** @deprecated Impact score retired — ignored in alert copy. */
   impactScore: number | null;
   timestamp: string;
   sourceUrl: string | null;
@@ -173,21 +173,11 @@ export function formatAlertMessage(
     "New catalyst"
   ).slice(0, 200);
 
-  const materiality = materialityFromScore(
-    catalyst.impactScore,
-    catalyst.eventCategory && isEventCategoryKey(catalyst.eventCategory)
-      ? catalyst.eventCategory
-      : null,
-  );
   const session = classifySession(catalyst.timestamp);
   const sessionLabel = session === "any" ? null : sessionDisplayLabel(session);
   const category = categoryLabel(catalyst.eventCategory);
 
-  const contextParts = [
-    category,
-    sessionLabel,
-    `Impact ${materiality.score} (${materiality.label})`,
-  ].filter(Boolean);
+  const contextParts = [category, sessionLabel].filter(Boolean);
 
   const origin = resolveAppOrigin(options?.env);
   const deskUrl = origin
@@ -196,7 +186,7 @@ export function formatAlertMessage(
   const sourceUrl = catalyst.sourceUrl?.trim() || null;
 
   const lines = [
-    `${symbol} · ${materiality.label} impact`,
+    `${symbol} · ${category}`,
     headline,
     "",
     contextParts.join(" · "),
@@ -216,7 +206,7 @@ export function formatAlertMessage(
   }
 
   const subject = `[Catalyst] ${symbol} · ${headline}`.slice(0, 120);
-  const pushTitle = `${symbol} · ${materiality.label}`;
+  const pushTitle = `${symbol} · ${category}`;
   const pushBody = headline;
 
   return {

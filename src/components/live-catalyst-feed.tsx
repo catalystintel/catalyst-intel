@@ -18,7 +18,6 @@ import {
   ListFilter,
   Loader2,
   Plus,
-  RefreshCw,
   X,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -211,7 +210,6 @@ export function LiveCatalystFeed({
   >([]);
   const [quietMode, setQuietMode] = useState(false);
   const [prefsLoaded, setPrefsLoaded] = useState(false);
-  const [manualRefreshing, setManualRefreshing] = useState(false);
   const [articleId, setArticleId] = useState<number | null>(null);
   const [pendingNew, setPendingNew] = useState(0);
   const [saveWatchlistOpen, setSaveWatchlistOpen] = useState(false);
@@ -412,26 +410,6 @@ export function LiveCatalystFeed({
       for (const id of catalysts.map((c) => c.id)) knownIds.current.add(id);
     }
   }, [catalysts]);
-
-  const handleManualRefresh = useCallback(() => {
-    if (manualRefreshing) return;
-    setManualRefreshing(true);
-    const minSpinMs = 500;
-    const startedAt = Date.now();
-    void refresh()
-      .then(() => {
-        if (pollErrorRef.current) {
-          toast.error(pollErrorRef.current);
-        }
-      })
-      .finally(() => {
-        const elapsed = Date.now() - startedAt;
-        window.setTimeout(
-          () => setManualRefreshing(false),
-          Math.max(0, minSpinMs - elapsed),
-        );
-      });
-  }, [manualRefreshing, refresh]);
 
   useEffect(() => {
     const syncPresence = () => setPresence(readPresence());
@@ -802,18 +780,6 @@ export function LiveCatalystFeed({
               {pendingNew} new
             </button>
           ) : null}
-          <button
-            type="button"
-            aria-label="Refresh"
-            aria-busy={manualRefreshing}
-            onClick={handleManualRefresh}
-            disabled={manualRefreshing}
-            className="btn-press grid size-[34px] place-items-center rounded-lg border border-[var(--desk-border-strong)] text-[var(--desk-text-muted)] transition-colors hover:bg-[var(--desk-overlay-strong)] hover:text-[var(--desk-text)] disabled:cursor-default disabled:opacity-70"
-          >
-            <RefreshCw
-              className={cn("size-4", manualRefreshing && "animate-spin")}
-            />
-          </button>
         </div>
       </div>
 
@@ -1310,7 +1276,7 @@ function CatalystFeedList({
 
   // "N new" affordance: when the user has scrolled down, newly-arrived rows
   // land at the top of the tape (out of view). Count them here and report to
-  // the parent toolbar (next to Refresh) — click scrolls back to newest.
+  // the parent toolbar — click scrolls back to newest.
   const [atTop, setAtTop] = useState(true);
   const [pendingNew, setPendingNew] = useState(0);
   const knownListIds = useRef<Set<number>>(new Set(catalysts.map((c) => c.id)));

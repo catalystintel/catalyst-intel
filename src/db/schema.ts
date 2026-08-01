@@ -254,7 +254,10 @@ export type AlertChannel = "email" | "webhook" | "push" | "telegram";
 export interface AlertRuleConditions {
   /** Empty / omitted = any category. */
   categories?: string[];
-  /** Minimum rule-based impact score (0–100). */
+  /**
+   * @deprecated Impact score retired — ignored by matching and stripped on
+   * normalize. Kept optional so older stored JSON still parses.
+   */
   minImpact?: number;
   /** Session filter for AH/PM bombs; default any. */
   sessions?: AlertSession[];
