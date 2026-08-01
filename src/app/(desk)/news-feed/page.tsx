@@ -9,6 +9,10 @@ import {
   queryNewsFeedPage,
   queryNewsFeedTotal,
 } from "@/lib/catalysts/news-feed-query";
+import {
+  mergeSourceProviderFilters,
+  resolveAdminFeedProviders,
+} from "@/lib/catalysts/user-source-settings";
 import { withDbRetry } from "@/lib/db/with-db-retry";
 
 export default async function NewsFeedPage() {
@@ -19,6 +23,8 @@ export default async function NewsFeedPage() {
 
   const params = new URLSearchParams({ window: "24h" });
   const filters = parseNewsFeedFilters(params);
+  const adminProviders = await resolveAdminFeedProviders(user.id, user.isAdmin);
+  filters.sources = mergeSourceProviderFilters([], adminProviders);
 
   const [initialHeadlines, initialTotal] = await withDbRetry(() =>
     Promise.all([

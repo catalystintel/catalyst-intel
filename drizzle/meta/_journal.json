@@ -85,6 +85,13 @@
       "when": 1785485600108,
       "tag": "0011_great_mantis",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "6",
+      "when": 1785571885154,
+      "tag": "0012_volatile_gravity",
+      "breakpoints": true
     }
   ]
 }

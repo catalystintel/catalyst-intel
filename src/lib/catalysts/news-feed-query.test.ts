@@ -25,6 +25,7 @@ describe("news-feed-query", () => {
     expect(filters.q).toBe("");
     expect(filters.categories).toEqual([]);
     expect(filters.symbols).toEqual([]);
+    expect(filters.sources).toEqual([]);
     expect(filters.since).toBeNull();
   });
 

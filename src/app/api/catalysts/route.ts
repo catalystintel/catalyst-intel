@@ -35,6 +35,10 @@ import {
   markRefetchTriggered,
   shouldTriggerBackgroundRefetch,
 } from "@/lib/jobs/ingestion-freshness";
+import {
+  mergeSourceProviderFilters,
+  resolveAdminFeedProviders,
+} from "@/lib/catalysts/user-source-settings";
 
 export async function GET(request: NextRequest) {
   if (!isLibsqlConfigured()) {
@@ -67,6 +71,9 @@ export async function GET(request: NextRequest) {
   if (!isLocalDevUi()) {
     filters.sources = [];
   }
+  // Admin personal source toggles (per-user; independent of the local-dev facet).
+  const adminProviders = await resolveAdminFeedProviders(user.id, user.isAdmin);
+  filters.sources = mergeSourceProviderFilters(filters.sources, adminProviders);
   const cursor = parseFeedCursor(request.nextUrl.searchParams.get("cursor"));
   const limitParam = Number(
     request.nextUrl.searchParams.get("limit") ?? String(FEED_PAGE_SIZE),

@@ -53,6 +53,11 @@ export interface NewsFeedFilters {
   until: string;
   /** When set, only these symbols (watchlist filter). */
   symbols: string[];
+  /**
+   * Optional include-list of `raw_sources.provider` (admin personal source
+   * toggles). Empty = no provider constraint.
+   */
+  sources: string[];
 }
 
 export interface NewsHeadline {
@@ -108,6 +113,7 @@ export function parseNewsFeedFilters(
     since: sinceParam ?? sinceIsoForFeedTimeWindow(timeWindow, now),
     until,
     symbols,
+    sources: [],
   };
 }
 
@@ -149,6 +155,10 @@ export function buildNewsFeedWhere(
 
   if (filters.symbols.length > 0) {
     parts.push(inArray(catalysts.symbol, filters.symbols));
+  }
+
+  if (filters.sources.length > 0) {
+    parts.push(inArray(rawSources.provider, filters.sources));
   }
 
   return and(...parts);
