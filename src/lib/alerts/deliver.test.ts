@@ -74,6 +74,52 @@ describe("deliverAlertRules", () => {
     expect(results[0].skipped).toBe(true);
   });
 
+  it("skips when watchlistIds set and catalyst misses every criteria", async () => {
+    const results = await deliverAlertRules({
+      catalyst,
+      watchlistCriteriaById: new Map([
+        [10, { symbols: ["AAPL"], tags: ["impact:high"] }],
+      ]),
+      rules: [
+        {
+          id: 5,
+          name: "Saved watchlist bombs",
+          channel: "webhook",
+          webhookUrl: "https://example.com/hook",
+          emailTo: null,
+          telegramChatId: null,
+          conditions: { watchlistIds: [10] },
+        },
+      ],
+    });
+    expect(results[0].skipped).toBe(true);
+  });
+
+  it("matches when catalyst hits any selected watchlist criteria", async () => {
+    const results = await deliverAlertRules({
+      catalyst: { ...catalyst, tags: ["impact:high"] },
+      watchlistCriteriaById: new Map([
+        [10, { symbols: ["AAPL"] }],
+        [11, { symbols: ["NVDA"], tags: ["impact:high"] }],
+      ]),
+      rules: [
+        {
+          id: 6,
+          name: "Multi watchlist",
+          channel: "push",
+          webhookUrl: null,
+          emailTo: null,
+          telegramChatId: null,
+          conditions: { watchlistIds: [10, 11] },
+        },
+      ],
+    });
+    // Conditions matched (not skipped); push fails with no subscriptions.
+    expect(results[0].skipped).toBeFalsy();
+    expect(results[0].ok).toBe(false);
+    expect(results[0].detail.toLowerCase()).toContain("no push subscriptions");
+  });
+
   it("rejects private webhook URLs (SSRF guard)", async () => {
     const results = await deliverAlertRules({
       catalyst,

@@ -36,6 +36,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { useAutoFocusScrollRegion } from "@/hooks/use-auto-focus-scroll-region";
 import { useLiveFeedQuery } from "@/hooks/use-live-feed-query";
@@ -219,6 +226,13 @@ export function LiveCatalystFeed({
   const [saveWatchlistOpen, setSaveWatchlistOpen] = useState(false);
   const [saveWatchlistName, setSaveWatchlistName] = useState("");
   const [savingWatchlist, setSavingWatchlist] = useState(false);
+  const [savedWatchlists, setSavedWatchlists] = useState<
+    { id: number; name: string; criteria: WatchlistCriteria }[]
+  >([]);
+  const [appliedWatchlist, setAppliedWatchlist] = useState<{
+    id: number;
+    name: string;
+  } | null>(null);
   const jumpToLatestRef = useRef<(() => void) | null>(null);
   const skipFilterAnimRef = useRef(true);
   const skipFlashRef = useRef(false);
@@ -246,12 +260,16 @@ export function LiveCatalystFeed({
     let cancelled = false;
     async function loadPrefs() {
       try {
-        const [wRes, pRes] = await Promise.all([
+        const [wRes, pRes, listsRes] = await Promise.all([
           fetch("/api/watchlist", {
             credentials: "same-origin",
             cache: "no-store",
           }),
           fetch("/api/playbook", {
+            credentials: "same-origin",
+            cache: "no-store",
+          }),
+          fetch("/api/watchlists", {
             credentials: "same-origin",
             cache: "no-store",
           }),
@@ -270,6 +288,25 @@ export function LiveCatalystFeed({
             Array.isArray(pData.signalWatchlists) ? pData.signalWatchlists : [],
           );
           setQuietMode(Boolean(pData.quietMode));
+        }
+        if (listsRes.ok) {
+          const listsData = await listsRes.json();
+          const list = Array.isArray(listsData.watchlists)
+            ? listsData.watchlists
+            : [];
+          setSavedWatchlists(
+            list.map(
+              (w: {
+                id: number;
+                name: string;
+                criteria?: WatchlistCriteria;
+              }) => ({
+                id: w.id,
+                name: w.name,
+                criteria: w.criteria ?? {},
+              }),
+            ),
+          );
         }
       } catch {
         // Soft-fail: feed still works without prefs.
@@ -618,6 +655,57 @@ export function LiveCatalystFeed({
     setSaveWatchlistOpen(true);
   }, []);
 
+  const applySavedWatchlist = useCallback(
+    (watchlist: { id: number; name: string; criteria: WatchlistCriteria }) => {
+      setFilterState((prev) => ({
+        ...DEFAULT_FEED_FILTERS,
+        ...watchlistCriteriaToFilters(watchlist.criteria),
+        timeWindow: prev.timeWindow,
+        symbolOnly: true,
+      }));
+      setAppliedWatchlist({ id: watchlist.id, name: watchlist.name });
+      setFiltersOpen(true);
+      toast.success(`Applied "${watchlist.name}" filters`);
+    },
+    [setFilterState],
+  );
+
+  const handlePatchFilters = useCallback(
+    (patch: Partial<FeedFilterState>) => {
+      setAppliedWatchlist(null);
+      patchFilters(patch);
+    },
+    [patchFilters],
+  );
+
+  const handleClearFilters = useCallback(() => {
+    setAppliedWatchlist(null);
+    clearFilters();
+  }, [clearFilters]);
+
+  const reloadSavedWatchlists = useCallback(async () => {
+    try {
+      const res = await fetch("/api/watchlists", {
+        credentials: "same-origin",
+        cache: "no-store",
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+      const list = Array.isArray(data.watchlists) ? data.watchlists : [];
+      setSavedWatchlists(
+        list.map(
+          (w: { id: number; name: string; criteria?: WatchlistCriteria }) => ({
+            id: w.id,
+            name: w.name,
+            criteria: w.criteria ?? {},
+          }),
+        ),
+      );
+    } catch {
+      // Soft-fail.
+    }
+  }, []);
+
   const submitSaveWatchlist = useCallback(async () => {
     const name = saveWatchlistName.trim();
     if (!name) {
@@ -639,6 +727,10 @@ export function LiveCatalystFeed({
       if (!res.ok) throw new Error(data.error ?? "Could not save watchlist.");
       toast.success(`Saved "${name}" — manage it under Watchlists.`);
       setSaveWatchlistOpen(false);
+      await reloadSavedWatchlists();
+      if (typeof data.id === "number") {
+        setAppliedWatchlist({ id: data.id, name });
+      }
     } catch (err) {
       toast.error(
         err instanceof Error ? err.message : "Could not save watchlist.",
@@ -646,7 +738,7 @@ export function LiveCatalystFeed({
     } finally {
       setSavingWatchlist(false);
     }
-  }, [saveWatchlistName, filterState]);
+  }, [saveWatchlistName, filterState, reloadSavedWatchlists]);
 
   const facetOptions = useMemo(() => buildFacetOptions(facets), [facets]);
 
@@ -757,7 +849,7 @@ export function LiveCatalystFeed({
           {panelFiltersActive ? (
             <button
               type="button"
-              onClick={clearFilters}
+              onClick={handleClearFilters}
               className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--desk-border-strong)] bg-[var(--desk-overlay-soft)] px-2.5 py-1.5 text-[0.82rem] font-medium text-[var(--desk-text-secondary)] transition-colors hover:bg-[var(--desk-overlay-strong)] hover:text-[var(--desk-text)]"
             >
               <X className="size-3.5 text-[var(--desk-text-muted)]" />
@@ -791,7 +883,7 @@ export function LiveCatalystFeed({
         <div className="border-b border-[var(--desk-border)] bg-[var(--desk-header)]/80 px-4 py-3 sm:px-5">
           <FeedFilters
             filterState={filterState}
-            onPatchFilters={patchFilters}
+            onPatchFilters={handlePatchFilters}
             facetOptions={facetOptions}
             total={total}
             visibleCount={visible.length}
@@ -799,8 +891,11 @@ export function LiveCatalystFeed({
             watchlistCount={watchlistSymbols.length}
             signalWatchlistCount={signalWatchlists.length}
             panelFiltersActive={panelFiltersActive}
-            onClearFilters={clearFilters}
+            onClearFilters={handleClearFilters}
             onSaveWatchlist={openSaveWatchlist}
+            savedWatchlists={savedWatchlists}
+            appliedWatchlist={appliedWatchlist}
+            onApplyWatchlist={applySavedWatchlist}
           />
         </div>
       ) : null}
@@ -851,7 +946,7 @@ export function LiveCatalystFeed({
                 <button
                   type="button"
                   onClick={() => {
-                    clearFilters();
+                    handleClearFilters();
                     setFiltersOpen(true);
                   }}
                   className="rounded-lg border border-[var(--desk-border-strong)] px-3 py-1.5 text-xs font-medium text-[var(--desk-text-secondary)] hover:bg-[var(--desk-overlay-strong)] hover:text-[var(--desk-text)]"
@@ -1026,6 +1121,13 @@ interface FeedFiltersProps {
   panelFiltersActive: boolean;
   onClearFilters: () => void;
   onSaveWatchlist: () => void;
+  savedWatchlists: { id: number; name: string; criteria: WatchlistCriteria }[];
+  appliedWatchlist: { id: number; name: string } | null;
+  onApplyWatchlist: (watchlist: {
+    id: number;
+    name: string;
+    criteria: WatchlistCriteria;
+  }) => void;
 }
 
 function FeedFilters({
@@ -1040,6 +1142,9 @@ function FeedFilters({
   panelFiltersActive,
   onClearFilters,
   onSaveWatchlist,
+  savedWatchlists,
+  appliedWatchlist,
+  onApplyWatchlist,
 }: FeedFiltersProps) {
   const removeSymbolFilter = (symbol: string) =>
     onPatchFilters({
@@ -1080,6 +1185,49 @@ function FeedFilters({
           ))}
         </div>
         <div className="flex flex-wrap items-center gap-2 sm:ml-auto">
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              className={cn(
+                "inline-flex h-8 items-center gap-1.5 rounded-md border px-2.5 font-mono text-[0.72rem] tracking-wide transition-colors",
+                appliedWatchlist
+                  ? "border-[var(--desk-border-strong)] bg-[var(--desk-overlay-strong)] text-[var(--desk-text)]"
+                  : "border-[var(--desk-border)] bg-[var(--desk-overlay-soft)] text-[var(--desk-text-muted)] hover:border-[var(--desk-border-strong)] hover:text-[var(--desk-text)]",
+              )}
+            >
+              <span className="max-w-[11rem] truncate">
+                {appliedWatchlist ? appliedWatchlist.name : "Watchlists"}
+              </span>
+              <ChevronDown className="size-3 shrink-0 opacity-60" />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="min-w-[14rem]">
+              <DropdownMenuLabel className="font-mono text-[0.65rem] tracking-wide uppercase">
+                Apply saved watchlist
+              </DropdownMenuLabel>
+              {savedWatchlists.length === 0 ? (
+                <p className="px-2 py-2 text-xs text-[var(--desk-text-muted)]">
+                  No watchlists yet — create one first.
+                </p>
+              ) : (
+                savedWatchlists.map((w) => (
+                  <DropdownMenuItem
+                    key={w.id}
+                    onClick={() => onApplyWatchlist(w)}
+                    className="font-mono text-xs"
+                  >
+                    {w.name}
+                  </DropdownMenuItem>
+                ))
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <Link
+            href="/watchlist"
+            title="Create or manage watchlists"
+            className="inline-flex h-8 items-center gap-1 rounded-md border border-[var(--desk-border)] bg-[var(--desk-overlay-soft)] px-2.5 font-mono text-[0.7rem] tracking-wide text-[var(--desk-text-muted)] transition-colors hover:border-[var(--desk-border-strong)] hover:text-[var(--desk-text)]"
+          >
+            <Plus className="size-3" />
+            Create
+          </Link>
           <FeedFilterMultiSelect
             label="Event type"
             options={facetOptions.categories}
@@ -1132,13 +1280,20 @@ function FeedFilters({
           ) : null}
         </div>
       </div>
-      {filterState.symbolFilters.length > 0 ||
+      {appliedWatchlist ||
+      filterState.symbolFilters.length > 0 ||
       filterState.tagFilters.length > 0 ? (
         <div
           className="flex flex-wrap items-center gap-1.5"
           role="group"
           aria-label="Active exact filters"
         >
+          {appliedWatchlist ? (
+            <ActiveFilterChip
+              label={`Watchlist: ${appliedWatchlist.name}`}
+              onRemove={onClearFilters}
+            />
+          ) : null}
           {filterState.symbolFilters.map((symbol) => (
             <ActiveFilterChip
               key={`symbol:${symbol}`}

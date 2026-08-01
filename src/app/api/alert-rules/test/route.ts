@@ -8,9 +8,16 @@ import {
   catalysts,
   pushSubscriptions,
   rawSources,
+  watchlistEntries,
+  watchlists,
+  type WatchlistCriteria,
 } from "@/db/schema";
 import { getCurrentAppUser } from "@/lib/auth/current-user";
-import { deliverAlertRules, type DeliverableRule } from "@/lib/alerts/deliver";
+import {
+  deliverAlertRules,
+  type AlertWatchlistCriteriaById,
+  type DeliverableRule,
+} from "@/lib/alerts/deliver";
 import { normalizeAlertConditions } from "@/lib/alerts/normalize";
 import { getClientIp } from "@/lib/http/client-ip";
 import { RATE_LIMITS, checkRateLimit } from "@/lib/http/rate-limit";
@@ -81,35 +88,30 @@ export async function POST(request: NextRequest) {
         : null;
   const force = raw.force !== false;
 
+  const catalystSelect = {
+    id: catalysts.id,
+    symbol: catalysts.symbol,
+    headline: catalysts.headline,
+    title: catalysts.title,
+    eventCategory: catalysts.eventCategory,
+    impactScore: catalysts.impactScore,
+    timestamp: catalysts.timestamp,
+    type: catalysts.type,
+    companyName: catalysts.companyName,
+    sourceUrl: rawSources.url,
+    sourceProvider: rawSources.provider,
+    tags: catalysts.tags,
+  };
+
   const catalystRow = catalystId
     ? await db
-        .select({
-          id: catalysts.id,
-          symbol: catalysts.symbol,
-          headline: catalysts.headline,
-          title: catalysts.title,
-          eventCategory: catalysts.eventCategory,
-          impactScore: catalysts.impactScore,
-          timestamp: catalysts.timestamp,
-          sourceUrl: rawSources.url,
-          tags: catalysts.tags,
-        })
+        .select(catalystSelect)
         .from(catalysts)
         .leftJoin(rawSources, eq(catalysts.rawSourceId, rawSources.id))
         .where(eq(catalysts.id, catalystId))
         .get()
     : await db
-        .select({
-          id: catalysts.id,
-          symbol: catalysts.symbol,
-          headline: catalysts.headline,
-          title: catalysts.title,
-          eventCategory: catalysts.eventCategory,
-          impactScore: catalysts.impactScore,
-          timestamp: catalysts.timestamp,
-          sourceUrl: rawSources.url,
-          tags: catalysts.tags,
-        })
+        .select(catalystSelect)
         .from(catalysts)
         .leftJoin(rawSources, eq(catalysts.rawSourceId, rawSources.id))
         .orderBy(desc(catalysts.timestamp))
@@ -158,6 +160,37 @@ export async function POST(request: NextRequest) {
       conditions: normalizeAlertConditions(r.conditions),
     }));
 
+  const needsFlatSymbols = deliverable.some(
+    (r) => r.conditions.watchlistOnly === true,
+  );
+  const needsSavedWatchlists = deliverable.some(
+    (r) => (r.conditions.watchlistIds?.length ?? 0) > 0,
+  );
+
+  const flatSymbolRows = needsFlatSymbols
+    ? await db
+        .select({ symbol: watchlistEntries.symbol })
+        .from(watchlistEntries)
+        .where(eq(watchlistEntries.userId, user.id))
+        .all()
+    : [];
+
+  const watchlistCriteriaById: AlertWatchlistCriteriaById | undefined =
+    needsSavedWatchlists
+      ? new Map(
+          (
+            await db
+              .select({
+                id: watchlists.id,
+                criteria: watchlists.criteria,
+              })
+              .from(watchlists)
+              .where(eq(watchlists.userId, user.id))
+              .all()
+          ).map((row) => [row.id, (row.criteria ?? {}) as WatchlistCriteria]),
+        )
+      : undefined;
+
   const userPushSubscriptions = deliverable.some((r) => r.channel === "push")
     ? await db
         .select()
@@ -177,6 +210,8 @@ export async function POST(request: NextRequest) {
     },
     rules: deliverable,
     force,
+    watchlistSymbols: flatSymbolRows.map((r) => r.symbol),
+    watchlistCriteriaById,
     pushSubscriptions: userPushSubscriptions,
     onDeadPushSubscription: async (endpoint) => {
       await db

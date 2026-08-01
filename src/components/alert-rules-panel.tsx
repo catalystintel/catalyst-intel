@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useId, useState } from "react";
 import {
   Bell,
@@ -10,6 +11,7 @@ import {
   FlaskConical,
   Info,
   Link2,
+  List,
   Mail,
   MessageCircle,
   Plus,
@@ -24,6 +26,7 @@ import type {
   AlertChannel,
   AlertRuleConditions,
   AlertSession,
+  WatchlistCriteria,
 } from "@/db/schema";
 import {
   ALERT_SESSION_OPTIONS,
@@ -34,6 +37,13 @@ import {
 import { useWebPush } from "@/hooks/use-web-push";
 import { toUserFacingMessage } from "@/lib/errors/user-facing";
 import { cn } from "@/lib/utils";
+import { criteriaSummary } from "@/lib/watchlist/criteria-display";
+
+interface SavedWatchlistOption {
+  id: number;
+  name: string;
+  criteria: WatchlistCriteria;
+}
 
 interface AlertRuleRow {
   id: number;
@@ -121,17 +131,29 @@ export function AlertRulesPanel() {
     AlertSessionOptionValue[]
   >(["AH", "PM"]);
   const [tagsInput, setTagsInput] = useState("");
+  const [savedWatchlists, setSavedWatchlists] = useState<
+    SavedWatchlistOption[]
+  >([]);
+  const [selectedWatchlistIds, setSelectedWatchlistIds] = useState<number[]>(
+    [],
+  );
 
   const webPush = useWebPush(pushPublicKey);
 
   const load = useCallback(async () => {
     try {
-      const res = await fetch("/api/alert-rules", {
-        credentials: "same-origin",
-        cache: "no-store",
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Could not load rules.");
+      const [rulesRes, watchlistsRes] = await Promise.all([
+        fetch("/api/alert-rules", {
+          credentials: "same-origin",
+          cache: "no-store",
+        }),
+        fetch("/api/watchlists", {
+          credentials: "same-origin",
+          cache: "no-store",
+        }),
+      ]);
+      const data = await rulesRes.json();
+      if (!rulesRes.ok) throw new Error(data.error ?? "Could not load rules.");
       setRules(data.rules ?? []);
       setEmailConfigured(Boolean(data.emailConfigured));
       setSessionEmail(
@@ -162,6 +184,27 @@ export function AlertRulesPanel() {
       );
       setTelegramBotHandle(handle);
       setTelegramBotDeepLink(deepLink);
+
+      if (watchlistsRes.ok) {
+        const wData = await watchlistsRes.json();
+        const list = Array.isArray(wData.watchlists) ? wData.watchlists : [];
+        setSavedWatchlists(
+          list.map(
+            (w: {
+              id: number;
+              name: string;
+              criteria?: WatchlistCriteria;
+            }) => ({
+              id: w.id,
+              name: w.name,
+              criteria: w.criteria ?? {},
+            }),
+          ),
+        );
+        setSelectedWatchlistIds((prev) =>
+          prev.filter((id) => list.some((w: { id: number }) => w.id === id)),
+        );
+      }
     } catch (err) {
       toast.error(toUserFacingMessage(err, "Load failed."));
     } finally {
@@ -243,6 +286,18 @@ export function AlertRulesPanel() {
     });
   }
 
+  function toggleWatchlistId(id: number) {
+    setSelectedWatchlistIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
+    );
+  }
+
+  function watchlistNamesForRule(ids: number[] | undefined): string {
+    if (!ids?.length) return "";
+    const byId = new Map(savedWatchlists.map((w) => [w.id, w.name]));
+    return ids.map((id) => byId.get(id) ?? `#${id}`).join(", ");
+  }
+
   function canSave(): boolean {
     const ready = channelReady(channel);
     if (ready.state === "blocked") return false;
@@ -270,6 +325,9 @@ export function AlertRulesPanel() {
       const conditions: AlertRuleConditions = {
         sessions,
         ...(tags.length > 0 ? { tags } : {}),
+        ...(selectedWatchlistIds.length > 0
+          ? { watchlistIds: selectedWatchlistIds }
+          : {}),
       };
       const res = await fetch("/api/alert-rules", {
         method: "POST",
@@ -579,6 +637,87 @@ export function AlertRulesPanel() {
             </label>
 
             <div className="mt-4">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="text-xs font-medium text-[var(--desk-text-secondary)]">
+                  Watchlists (optional)
+                </p>
+                <Link
+                  href="/watchlist"
+                  className="inline-flex items-center gap-1 font-mono text-[0.65rem] tracking-wide text-[var(--desk-live)] uppercase transition-opacity hover:opacity-80"
+                >
+                  <Plus className="size-3" aria-hidden />
+                  Create watchlist
+                  <ExternalLink className="size-3" aria-hidden />
+                </Link>
+              </div>
+              <p className="mt-0.5 text-[0.7rem] text-[var(--desk-text-dim)]">
+                Limit fires to catalysts matching any selected saved watchlist
+                (same rules as Quiet mode). Leave empty to fire on all symbols.
+              </p>
+              {savedWatchlists.length === 0 ? (
+                <div className="mt-2.5 flex flex-col gap-2 rounded-lg border border-dashed border-[var(--desk-border-strong)] bg-[var(--desk-overlay-soft)] px-3 py-3 sm:flex-row sm:items-center sm:justify-between">
+                  <p className="text-xs text-[var(--desk-text-muted)]">
+                    No saved watchlists yet — create one to gate this rule on
+                    symbols, tags, or event types.
+                  </p>
+                  <Link
+                    href="/watchlist"
+                    className="btn-press inline-flex h-8 shrink-0 items-center gap-1.5 rounded-md border border-[var(--desk-border-strong)] bg-[var(--desk-overlay-soft)] px-2.5 font-mono text-xs text-[var(--desk-text-secondary)] transition-colors hover:bg-[var(--desk-overlay-strong)] hover:text-[var(--desk-text)]"
+                  >
+                    <List className="size-3.5" aria-hidden />
+                    Open Watchlists
+                  </Link>
+                </div>
+              ) : (
+                <div
+                  role="group"
+                  aria-label="Watchlists"
+                  className="mt-2.5 flex flex-col gap-1.5"
+                >
+                  {savedWatchlists.map((w) => {
+                    const on = selectedWatchlistIds.includes(w.id);
+                    return (
+                      <button
+                        key={w.id}
+                        type="button"
+                        aria-pressed={on}
+                        onClick={() => toggleWatchlistId(w.id)}
+                        className={cn(
+                          "btn-press flex items-start gap-2.5 rounded-lg border px-3 py-2.5 text-left transition-colors duration-200",
+                          on
+                            ? "border-[color-mix(in_srgb,var(--desk-live)_45%,transparent)] bg-[color-mix(in_srgb,var(--desk-live)_10%,transparent)]"
+                            : "border-[var(--desk-border-strong)] bg-[var(--desk-overlay-soft)] hover:border-[var(--desk-text-dim)]",
+                        )}
+                      >
+                        <span
+                          aria-hidden
+                          className={cn(
+                            "mt-0.5 grid size-4 shrink-0 place-items-center rounded border",
+                            on
+                              ? "border-[var(--desk-live)] bg-[var(--desk-live)] text-[#121212]"
+                              : "border-[var(--desk-border-strong)]",
+                          )}
+                        >
+                          {on ? (
+                            <CheckCircle2 className="size-3" aria-hidden />
+                          ) : null}
+                        </span>
+                        <span className="min-w-0">
+                          <span className="block text-sm font-medium text-[var(--desk-text)]">
+                            {w.name}
+                          </span>
+                          <span className="mt-0.5 block font-mono text-[0.65rem] text-[var(--desk-text-dim)]">
+                            {criteriaSummary(w.criteria) || "Any catalyst"}
+                          </span>
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            <div className="mt-4">
               <p className="text-xs font-medium text-[var(--desk-text-secondary)]">
                 Sessions (US equities, Eastern Time)
               </p>
@@ -726,6 +865,12 @@ export function AlertRulesPanel() {
                         {formatSessionsForDisplay(rule.conditions.sessions)}
                         {rule.conditions.tags?.length
                           ? ` · tags: ${rule.conditions.tags.join(", ")}`
+                          : ""}
+                        {rule.conditions.watchlistIds?.length
+                          ? ` · watchlists: ${watchlistNamesForRule(rule.conditions.watchlistIds)}`
+                          : ""}
+                        {rule.conditions.watchlistOnly
+                          ? " · flat symbols only"
                           : ""}
                         {rule.enabled ? "" : " · paused"}
                       </p>

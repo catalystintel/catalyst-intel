@@ -265,8 +265,19 @@ export interface AlertRuleConditions {
   minImpact?: number;
   /** Session filter for AH/PM bombs; default any. */
   sessions?: AlertSession[];
-  /** When true, only fire for catalysts whose symbol is on the user's watchlist. */
+  /**
+   * @deprecated Prefer `watchlistIds` (saved criteria watchlists). When true,
+   * only fire for catalysts whose symbol is on the flat `watchlist_entries`
+   * list. Combined with `watchlistIds` via OR (any signal source).
+   */
   watchlistOnly?: boolean;
+  /**
+   * Saved `watchlists.id` values owned by the rule's user. Catalyst must
+   * match ANY selected watchlist's full `WatchlistCriteria` (same matcher as
+   * Quiet mode / `matchesWatchlistCriteria`). Empty / omitted = no
+   * watchlist gate from this axis.
+   */
+  watchlistIds?: number[];
   /**
    * Any-match against the catalyst's auto/vendor tags (see `deriveAutoTags`
    * in ingest-pipeline.ts), e.g. ["category:regulatory", "fda"]. Empty /
