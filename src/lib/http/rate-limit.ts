@@ -80,6 +80,8 @@ export const RATE_LIMITS = {
   userWrite: { limit: 30, windowMs: 60_000 },
   /** Alert test-fire (webhook/email). */
   alertTest: { limit: 10, windowMs: 60_000 },
+  /** AI watchlist drafting/refining — LLM call is expensive; keep tight. */
+  watchlistsAiDraft: { limit: 10, windowMs: 60_000 },
   /** Product feedback form (emails the team inbox). */
   feedback: { limit: 8, windowMs: 60_000 },
   /** Prelogin guest ticker search (cookie + IP). */
