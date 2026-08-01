@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import {
   useCallback,
   useEffect,
@@ -72,6 +73,7 @@ import {
   type FeedFilterState,
 } from "@/lib/catalysts/feed-filter-persist";
 import type { WatchlistCriteria } from "@/db/schema";
+import { writeWatchlistDraftHandoff } from "@/lib/watchlist/draft-handoff";
 import type { FeedFacets } from "@/lib/catalysts/feed-query-types";
 import {
   formatClockTime,
@@ -976,7 +978,20 @@ export function LiveCatalystFeed({
               if (e.key === "Enter") void submitSaveWatchlist();
             }}
           />
-          <DialogFooter>
+          <DialogFooter className="sm:justify-between">
+            <Link
+              href="/watchlist"
+              onClick={() => {
+                writeWatchlistDraftHandoff({
+                  name: saveWatchlistName.trim() || undefined,
+                  criteria: filtersToWatchlistCriteria(filterState),
+                });
+                setSaveWatchlistOpen(false);
+              }}
+              className="inline-flex items-center gap-1.5 self-center font-mono text-[0.72rem] text-[var(--desk-text-muted)] underline-offset-2 hover:text-[var(--desk-text)] hover:underline"
+            >
+              Need dynamic rules or AI help? Open the builder →
+            </Link>
             <Button
               type="button"
               disabled={savingWatchlist}

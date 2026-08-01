@@ -1,8 +1,8 @@
 import { redirect } from "next/navigation";
 
 import { PageEnter } from "@/components/page-enter";
-import { SmartWatchlistsPanel } from "@/components/smart-watchlists-panel";
 import { WatchlistPlaybookPanel } from "@/components/watchlist-playbook-panel";
+import { WatchlistWorkspace } from "@/components/watchlist-workspace";
 import { getCurrentAppUser } from "@/lib/auth/current-user";
 
 export default async function WatchlistPage() {
@@ -12,7 +12,7 @@ export default async function WatchlistPage() {
   }
 
   return (
-    <PageEnter className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-6 p-4 sm:p-5">
+    <PageEnter className="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-6 p-4 sm:p-5">
       <div className="border-b border-[var(--desk-border)] pb-4">
         <p className="font-mono text-[0.65rem] tracking-[0.2em] text-[var(--desk-live)] uppercase">
           Quiet tape
@@ -26,7 +26,7 @@ export default async function WatchlistPage() {
         </p>
       </div>
       <WatchlistPlaybookPanel />
-      <SmartWatchlistsPanel />
+      <WatchlistWorkspace />
     </PageEnter>
   );
 }
