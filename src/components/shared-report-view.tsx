@@ -63,10 +63,10 @@ export function SharedReportView({ token }: { token: string }) {
           {error ?? "This share link is invalid or was deleted."}
         </p>
         <Link
-          href="/reports"
+          href="/catalyst-feed"
           className="mt-2 font-mono text-[0.75rem] tracking-wide text-[var(--desk-live)] uppercase hover:underline"
         >
-          Back to Reports
+          Back to Catalyst Feed
         </Link>
       </div>
     );

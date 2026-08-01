@@ -9,12 +9,24 @@ describe("getPrimaryNav", () => {
     expect(keys).not.toContain("admin");
     expect(keys).toEqual([
       "live",
-      "news",
       "alerts",
       "watchlist",
       "reports",
       "analytics",
     ]);
+  });
+
+  it("marks reports and analytics as coming soon", () => {
+    const items = getPrimaryNav(false);
+    expect(items.find((item) => item.key === "reports")).toMatchObject({
+      comingSoon: true,
+      href: undefined,
+    });
+    expect(items.find((item) => item.key === "analytics")).toMatchObject({
+      comingSoon: true,
+      href: undefined,
+    });
+    expect(items.some((item) => item.label === "News Feed")).toBe(false);
   });
 
   it("appends admin-only System entry for admins", () => {
@@ -30,7 +42,7 @@ describe("navKeyFromPathname", () => {
   it("maps desk routes to nav keys", () => {
     expect(navKeyFromPathname("/catalyst-feed")).toBe("live");
     expect(navKeyFromPathname("/catalyst-feed/catalyst/12")).toBe("live");
-    expect(navKeyFromPathname("/news-feed")).toBe("news");
+    expect(navKeyFromPathname("/news-feed")).toBe("live");
     expect(navKeyFromPathname("/analytics")).toBe("analytics");
     expect(navKeyFromPathname("/admin")).toBe("admin");
     expect(navKeyFromPathname("/alerts")).toBe("alerts");
