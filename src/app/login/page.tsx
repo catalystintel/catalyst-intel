@@ -82,9 +82,17 @@ export default async function LoginPage({
                 <div className="border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive">
                   <p className="font-medium">Sign-in unavailable</p>
                   <p className="mt-1 text-destructive/90">
-                    {showOpsSetup
-                      ? "Put your real project URL and anon key in .env.local, enable Google under Authentication → Providers, add the localhost and production callback URLs to Redirect URLs, then restart the dev server."
-                      : USER_FACING.signInUnavailable}
+                    Put your real project URL and anon key in{" "}
+                    <code className="text-xs">.env.local</code>, enable Google
+                    under Authentication → Providers, add{" "}
+                    <code className="text-xs">
+                      http://localhost:3000/auth/callback
+                    </code>{" "}
+                    and{" "}
+                    <code className="text-xs">
+                      https://catalyst-intel.vercel.app/auth/callback
+                    </code>{" "}
+                    to Redirect URLs, then restart the dev server.
                   </p>
                 </div>
               ) : null}

@@ -67,26 +67,26 @@ Auth is **Google OAuth only** via Supabase. Passwords are never collected or sto
 **Supabase Auth URL allowlist (required for phone + desktop sign-in):** in the Supabase
 dashboard → **Authentication → URL Configuration**, set:
 
-| Setting                  | Exact value                                       |
-| ------------------------ | ------------------------------------------------- |
-| Site URL                 | `https://catalyst-intel.vercel.app`               |
-| Redirect URLs            | `https://catalyst-intel.vercel.app/auth/callback` |
-| Redirect URLs            | `http://localhost:3000/auth/callback`             |
-| Redirect URLs (optional) | `https://<your-preview>.vercel.app/auth/callback` |
+| Setting                  | Exact value                                             |
+| ------------------------ | ------------------------------------------------------- |
+| Site URL                 | `https://catalyst-intel-rouge.vercel.app`               |
+| Redirect URLs            | `https://catalyst-intel-rouge.vercel.app/auth/callback` |
+| Redirect URLs            | `http://localhost:3000/auth/callback`                   |
+| Redirect URLs (optional) | `https://<your-preview>.vercel.app/auth/callback`       |
 
-Also add `https://catalyst-intel.vercel.app` (and localhost) under Google Cloud → OAuth client
+Also add `https://catalyst-intel-rouge.vercel.app` (and localhost) under Google Cloud → OAuth client
 → **Authorized JavaScript origins**. Missing production redirect URLs are a common cause of
 “works on desktop / fails on phone” OAuth returns.
 
 **Phone still can’t enter after layout fixes?** Confirm the allowlist above, then on the phone:
 
 1. Open Safari (not an in-app browser from Messages/Instagram/etc.).
-2. Visit `https://catalyst-intel.vercel.app` directly.
+2. Visit `https://catalyst-intel-rouge.vercel.app` directly.
 3. Tap **Continue with Google** (sticky bar on phones, or Sign in).
 4. If it returns to `/login` with an error: **Settings → Safari → Clear History and Website Data**
-   (or per-site: Aa → Website Settings → clear data for `catalyst-intel.vercel.app`), then retry.
+   (or per-site: Aa → Website Settings → clear data for `catalyst-intel-rouge.vercel.app`), then retry.
 5. Avoid “Prevent Cross-Site Tracking” workarounds that block first-party auth cookies mid-redirect;
-   our cookies are first-party on `catalyst-intel.vercel.app` with `SameSite=Lax`.
+   our cookies are first-party on `catalyst-intel-rouge.vercel.app` with `SameSite=Lax`.
 
 OAuth start uses the browser client + `GET /auth/login` (PKCE cookies on the redirect response)
 so iOS Safari does not lose the verifier the way a Server Action `redirect()` sometimes did.
@@ -471,7 +471,7 @@ same driver and schema as local SQLite; only the URL/token change.
 **Sole prod ETL clock** is [cron-job.org](https://cron-job.org) (example title:
 `catalyst-intel prod ETL`) that POSTs:
 
-`https://catalyst-intel.vercel.app/api/admin/fetch/all`
+`https://catalyst-intel-rouge.vercel.app/api/admin/fetch/all`
 
 with header `x-cron-secret: <CRON_SECRET>` every **1 minute** (`* * * * *`).
 
