@@ -84,7 +84,7 @@ export default async function LoginPage({
                     </code>{" "}
                     and{" "}
                     <code className="text-xs">
-                      https://catalyst-intel.vercel.app/auth/callback
+                      https://catalyst-intel-rouge.vercel.app/auth/callback
                     </code>{" "}
                     to Redirect URLs, then restart the dev server.
                   </p>
