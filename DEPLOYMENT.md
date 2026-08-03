@@ -29,11 +29,11 @@ Three environments, one app:
 - **Vercel Git integration** (`vercel.json`): still may deploy on push to `dev` /
   `main` (and matching feature-branch globs). Treat it as secondary; CI deploy
   is authoritative for staging/production tip.
-- **Backup — Unblock Omer CD heal** (`.github/workflows/vercel-unblock-redeploy.yml`):
+- **Backup — Unblock zhbar CD heal** (`.github/workflows/vercel-unblock-redeploy.yml`):
   independent of CI (not gated on green checks). On every push to `main`,
   **polls the Vercel deployments API** for that commit SHA until it is
   BLOCKED/ERROR (or healthy) — no blind sleep — then heals. Also supports
-  manual `workflow_dispatch`.
+  manual `workflow_dispatch`. Targets **zhbar10** commits on Omer's Vercel team.
 - **Scheduled ETL (production):** [cron-job.org](https://cron-job.org) POSTs
   `/api/admin/fetch/all` every **1 minute** with `x-cron-secret`. See "Production scheduler"
   below for setup and the in-app self-healing backstop.
@@ -203,7 +203,7 @@ gh secret set STAGING_LIBSQL_URL --body "<same value as Vercel Preview LIBSQL_UR
 gh secret set STAGING_LIBSQL_AUTH_TOKEN --body "<same value as Vercel Preview LIBSQL_AUTH_TOKEN>"
 ```
 
-### Auto-heal Omer / access-blocked Vercel deploys (GitHub Actions)
+### Auto-heal zhbar / access-blocked Vercel deploys (GitHub Actions)
 
 **Primary path:** after CI is green, `ci.yml`’s `deploy` job runs
 `scripts/vercel-ci-deploy.mjs` (API redeploy of this SHA → API gitSource →
@@ -212,9 +212,8 @@ deploys should not stall staging or production.
 
 **Backup:** Vercel can still **Block** or **fail** a git-triggered deploy when:
 
-- the commit author is not a recognized team member (common for
-  `omer.nachshon` / `OmerNachshon` / `omer.nachshon@…` while only the Vercel
-  owner seat is linked), or
+- the commit author is not a recognized team member (common for `zhbar10` /
+  `zhbar10@gmail.com` on Omer’s Vercel Hobby team), or
 - GitHub App / private-repo / permission / unauthorized access rejects the push
 
 The always-on workflow `.github/workflows/vercel-unblock-redeploy.yml` is
@@ -223,21 +222,20 @@ The always-on workflow `.github/workflows/vercel-unblock-redeploy.yml` is
 1. **Every push to `main`** — polls `GET /v6/deployments` for this commit SHA
    (~2.5s interval, 90s cap) until Vercel shows BLOCKED/ERROR (heal) or a
    healthy/building deploy, then runs the heal script
-2. **Manual** — Actions → Unblock Omer Vercel deploys → Run workflow
+2. **Manual** — Actions → Unblock zhbar Vercel deploys → Run workflow
 
-It heals **`main` → Production** and **`dev` → Preview**
-(`catalyst-intel-git-dev-zhbar10s-projects.vercel.app`) if a blocked git deploy
-was left behind.
+It heals **`main` → Production** and **`dev` → Preview** if a blocked git
+deploy was left behind.
 
 **Author match rules** (case-insensitive): commit author name, login, email, or
-actor matching `omer.nachshon`, `Omer Nachshon`, `OmerNachshon`, or `nachshon`.
+actor matching `zhbar10` or `zhbar`.
 
 **What triggers a heal**
 
-| State     | Condition                                                       |
-| --------- | --------------------------------------------------------------- |
-| `BLOCKED` | Author matches Omer **or** access/seat wording                  |
-| `ERROR`   | Author matches Omer (access wording preferred but not required) |
+| State     | Condition                                                        |
+| --------- | ---------------------------------------------------------------- |
+| `BLOCKED` | Author matches zhbar **or** access/seat wording                  |
+| `ERROR`   | Author matches zhbar (access wording preferred but not required) |
 
 Only `main` / Production and `dev` Preview are healed (feature branches ignored).
 
@@ -254,18 +252,19 @@ Idempotent: skips if a newer healthy (`READY` / building) deploy already exists
 for the same commit SHA or the same branch after the failure.
 
 **Required GitHub Actions secrets** (shared by CI `deploy` and the unblock
-workflow — repo → Settings → Secrets and variables → Actions):
+workflow — repo → Settings → Secrets and variables → Actions). Point these at
+**Omer’s current Vercel team/project** (not the old zhbar10 Vercel IDs):
 
 | Secret              | Notes                                                                                                   |
 | ------------------- | ------------------------------------------------------------------------------------------------------- |
 | `VERCEL_TOKEN`      | Create at [vercel.com/account/tokens](https://vercel.com/account/tokens) (team-owner token recommended) |
-| `VERCEL_ORG_ID`     | Team id from `.vercel/project.json` → `orgId` (`team_IvSJt6AmTC91h24fmVeLHfDI`)                         |
-| `VERCEL_PROJECT_ID` | Project id from `.vercel/project.json` → `projectId` (`prj_bzkyprBR2Hl8TbqadquO1z0L23On`)               |
+| `VERCEL_ORG_ID`     | Team id from Vercel project settings / `.vercel/project.json` → `orgId`                                 |
+| `VERCEL_PROJECT_ID` | Project id from Vercel project settings / `.vercel/project.json` → `projectId`                          |
 
 ```bash
 gh secret set VERCEL_TOKEN --body "<token from vercel.com/account/tokens>"
-gh secret set VERCEL_ORG_ID --body "team_IvSJt6AmTC91h24fmVeLHfDI"
-gh secret set VERCEL_PROJECT_ID --body "prj_bzkyprBR2Hl8TbqadquO1z0L23On"
+gh secret set VERCEL_ORG_ID --body "<orgId from current Vercel project>"
+gh secret set VERCEL_PROJECT_ID --body "<projectId from current Vercel project>"
 ```
 
 If those secrets are missing, CI deploy and the unblock job each log a warning

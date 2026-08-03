@@ -3,31 +3,35 @@ import {
   classifyWaitForSha,
   hasNewerHealthyForSha,
   isAccessRelatedFailure,
-  isOmerAuthor,
+  isZhbarAuthor,
   matchDeploymentSha,
   needsAutoRedeploy,
   resolveBranchTarget,
   waitForShaDeployOutcome,
 } from "./vercel-unblock-redeploy.mjs";
 
-describe("isOmerAuthor", () => {
+describe("isZhbarAuthor", () => {
   it("matches common name/email/login variants", () => {
-    expect(isOmerAuthor({ githubCommitAuthorName: "Omer Nachshon" })).toBe(
-      true,
-    );
+    expect(isZhbarAuthor({ githubCommitAuthorName: "zhbar10" })).toBe(true);
     expect(
-      isOmerAuthor({ githubCommitAuthorEmail: "omer.nachshon@gmail.com" }),
+      isZhbarAuthor({ githubCommitAuthorEmail: "zhbar10@gmail.com" }),
     ).toBe(true);
-    expect(isOmerAuthor({ githubCommitAuthorLogin: "OmerNachshon" })).toBe(
-      true,
-    );
-    expect(isOmerAuthor({ actor: "omer.nachshon" })).toBe(true);
+    expect(isZhbarAuthor({ githubCommitAuthorLogin: "zhbar10" })).toBe(true);
+    expect(isZhbarAuthor({ actor: "zhbar" })).toBe(true);
   });
 
   it("rejects unrelated authors", () => {
-    expect(isOmerAuthor({ githubCommitAuthorName: "zhbar10" })).toBe(false);
-    expect(isOmerAuthor({})).toBe(false);
-    expect(isOmerAuthor(null)).toBe(false);
+    expect(isZhbarAuthor({ githubCommitAuthorName: "Omer Nachshon" })).toBe(
+      false,
+    );
+    expect(
+      isZhbarAuthor({ githubCommitAuthorEmail: "omer.nachshon@gmail.com" }),
+    ).toBe(false);
+    expect(isZhbarAuthor({ githubCommitAuthorLogin: "OmerNachshon" })).toBe(
+      false,
+    );
+    expect(isZhbarAuthor({})).toBe(false);
+    expect(isZhbarAuthor(null)).toBe(false);
   });
 });
 
@@ -64,49 +68,53 @@ describe("isAccessRelatedFailure", () => {
 });
 
 describe("needsAutoRedeploy", () => {
-  it("heals blocked Omer commits on main/dev", () => {
+  it("heals blocked zhbar commits on main/dev", () => {
     expect(
       needsAutoRedeploy({
         readyState: "BLOCKED",
         target: "production",
         meta: {
           githubCommitRef: "main",
-          githubCommitAuthorEmail: "omer.nachshon@gmail.com",
+          githubCommitAuthorEmail: "zhbar10@gmail.com",
         },
       }),
-    ).toMatchObject({ branch: "main", target: "production" });
+    ).toMatchObject({
+      branch: "main",
+      target: "production",
+      reason: "blocked-zhbar-author",
+    });
 
     expect(
       needsAutoRedeploy({
         readyState: "BLOCKED",
         meta: {
           githubCommitRef: "dev",
-          githubCommitAuthorLogin: "OmerNachshon",
+          githubCommitAuthorLogin: "zhbar10",
         },
       }),
     ).toMatchObject({ branch: "dev", target: null });
   });
 
-  it("heals Omer ERROR with access wording", () => {
+  it("heals zhbar ERROR with access wording", () => {
     expect(
       needsAutoRedeploy({
         readyState: "ERROR",
         meta: {
           githubCommitRef: "dev",
-          githubCommitAuthorName: "Omer Nachshon",
+          githubCommitAuthorName: "zhbar10",
         },
         errorMessage: "unauthorized GitHub App installation",
       }),
-    ).toMatchObject({ branch: "dev", reason: "error-omer-access" });
+    ).toMatchObject({ branch: "dev", reason: "error-zhbar-access" });
   });
 
-  it("ignores feature-branch and non-Omer build failures", () => {
+  it("ignores feature-branch and non-zhbar build failures", () => {
     expect(
       needsAutoRedeploy({
         readyState: "BLOCKED",
         meta: {
           githubCommitRef: "feat/x",
-          githubCommitAuthorLogin: "OmerNachshon",
+          githubCommitAuthorLogin: "zhbar10",
         },
       }),
     ).toBeNull();
@@ -115,7 +123,7 @@ describe("needsAutoRedeploy", () => {
         readyState: "ERROR",
         meta: {
           githubCommitRef: "main",
-          githubCommitAuthorLogin: "zhbar10",
+          githubCommitAuthorLogin: "OmerNachshon",
         },
         errorMessage: "npm run build failed",
       }),
@@ -196,7 +204,7 @@ describe("matchDeploymentSha / classifyWaitForSha", () => {
             target: "production",
             meta: {
               githubCommitSha: "abc",
-              githubCommitAuthorLogin: "OmerNachshon",
+              githubCommitAuthorLogin: "zhbar10",
             },
           },
         ],
@@ -230,7 +238,7 @@ describe("waitForShaDeployOutcome", () => {
           target: "production",
           meta: {
             githubCommitSha: "deadbeef",
-            githubCommitAuthorLogin: "OmerNachshon",
+            githubCommitAuthorLogin: "zhbar10",
           },
         },
       ];

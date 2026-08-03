@@ -1,6 +1,6 @@
-name: Unblock Omer Vercel deploys
+name: Unblock zhbar Vercel deploys
 
-# CD heal for Omer / access-blocked Vercel deploys — NOT part of CI verify.
+# CD heal for zhbar / access-blocked Vercel deploys — NOT part of CI verify.
 # Keep this out of ci.yml: it races Vercel's git integration (which may block
 # before or after CI finishes), and must run even when CI deploy fails.
 #
@@ -8,6 +8,9 @@ name: Unblock Omer Vercel deploys
 # it is BLOCKED/ERROR (heal) or healthy — no blind 60s sleep. Then heal any
 # leftover BLOCKED / access-failed Production deploys.
 # workflow_dispatch is for manual runs.
+#
+# Project lives on Omer's Vercel team — zhbar10 commits get Hobby git-author
+# BLOCKED; this Action redeploys with the team token.
 #
 # Fallback chain (see scripts/vercel-unblock-redeploy.mjs):
 #   API same-sha redeploy → API latest-commit → API gitSource tip → CLI file upload
@@ -33,7 +36,7 @@ jobs:
       - name: Install Vercel CLI (CLI fallback deploy)
         run: npm install -g vercel@56
 
-      - name: Heal blocked / access-failed Omer deploys
+      - name: Heal blocked / access-failed zhbar deploys
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}

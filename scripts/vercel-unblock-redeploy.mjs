@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Auto-heal Vercel deploys for omer.nachshon commits on `main` / `dev`.
+ * Auto-heal Vercel deploys for zhbar10 commits on `main` / `dev`.
  *
  * Triggers when a recent deployment is:
  *   - BLOCKED (unverified / non-seat git author), or
@@ -13,6 +13,7 @@
  *      bypasses git-author seat checks)
  *
  * Used by `.github/workflows/vercel-unblock-redeploy.yml`.
+ * Project lives on Omer's Vercel team — zhbar commits get Hobby git-author BLOCKED.
  */
 import { spawnSync } from "node:child_process";
 import path from "node:path";
@@ -20,12 +21,12 @@ import { fileURLToPath } from "node:url";
 
 const API = "https://api.vercel.com";
 const LOOKBACK_MS = 6 * 60 * 60 * 1000; // 6 hours
-const AUTHOR_RE = /omer\.?\s*nachshon|omer\.nachshon|nachshon/i;
+const AUTHOR_RE = /zhbar10|zhbar/i;
 const ACCESS_FAIL_RE =
   /access|permission|forbidden|unauthorized|not (a )?member|github app|git.?hub.?app|install(ation)?|author|unverified|team seat|private.?repo|denied|401|403|blocked/i;
 
 /** @param {Record<string, unknown> | null | undefined} meta */
-export function isOmerAuthor(meta) {
+export function isZhbarAuthor(meta) {
   if (!meta || typeof meta !== "object") return false;
   const fields = [
     meta.githubCommitAuthorName,
@@ -72,22 +73,22 @@ export function isAccessRelatedFailure(deployment) {
  */
 export function needsAutoRedeploy(deployment) {
   const state = deployment.readyState ?? deployment.state;
-  const omer = isOmerAuthor(deployment.meta ?? {});
+  const zhbar = isZhbarAuthor(deployment.meta ?? {});
   const access = isAccessRelatedFailure(deployment);
   const mapped = resolveBranchTarget(deployment);
   if (!mapped) return null;
 
-  if (state === "BLOCKED" && (omer || access)) {
+  if (state === "BLOCKED" && (zhbar || access)) {
     return {
       ...mapped,
-      reason: omer ? "blocked-omer-author" : "blocked-access",
+      reason: zhbar ? "blocked-zhbar-author" : "blocked-access",
     };
   }
-  if (state === "ERROR" && omer) {
-    // Omer ERROR on main/dev: heal even if dashboard omits the message.
+  if (state === "ERROR" && zhbar) {
+    // zhbar ERROR on main/dev: heal even if dashboard omits the message.
     return {
       ...mapped,
-      reason: access ? "error-omer-access" : "error-omer",
+      reason: access ? "error-zhbar-access" : "error-zhbar",
     };
   }
   return null;

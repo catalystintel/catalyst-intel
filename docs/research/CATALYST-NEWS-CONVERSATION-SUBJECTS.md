@@ -166,17 +166,17 @@ Enterprise Wire redistribute · ratings firehose · UOA/Signals tier · Finnhub 
 
 ## 9. Known limits (affect the news product)
 
-| Limit                          | Impact on tape                                                             |
-| ------------------------------ | -------------------------------------------------------------------------- |
-| **SEC timeouts**               | Serverless → EDGAR `ETIMEDOUT` common; failure cooldown on stale backstop  |
-| **GHA cron drift**             | Configured ~5 min but often 45 min–hours; self-heal poll keeps tape usable |
-| **Polygon free tier**          | ~5 REST req/min; same-day aggs often 403; soft-handle 429/403              |
-| **Vercel Hobby cron**          | Once/day only — hence GHA + read-path backstop, not Vercel Cron alone      |
-| **Hobby-safe redeploy author** | Empty-commit redeploys must use `zhbar10` / `zhbar10@gmail.com`            |
-| **Finnhub free license**       | Strong for prototype; weak redistribute rights for commercial SaaS         |
-| **Dismissals local-only**      | Not multi-device until server-side persist                                 |
-| **Push alerts**                | Stubbed (no FCM)                                                           |
-| **Historical reaction**        | Placeholder only — never invent price/prior-move numbers                   |
+| Limit                          | Impact on tape                                                                                   |
+| ------------------------------ | ------------------------------------------------------------------------------------------------ |
+| **SEC timeouts**               | Serverless → EDGAR `ETIMEDOUT` common; failure cooldown on stale backstop                        |
+| **GHA cron drift**             | Configured ~5 min but often 45 min–hours; self-heal poll keeps tape usable                       |
+| **Polygon free tier**          | ~5 REST req/min; same-day aggs often 403; soft-handle 429/403                                    |
+| **Vercel Hobby cron**          | Once/day only — hence GHA + read-path backstop, not Vercel Cron alone                            |
+| **Hobby-safe redeploy author** | Empty-commit redeploys / unblock Action target `zhbar10` (Omer’s Vercel blocks non-seat authors) |
+| **Finnhub free license**       | Strong for prototype; weak redistribute rights for commercial SaaS                               |
+| **Dismissals local-only**      | Not multi-device until server-side persist                                                       |
+| **Push alerts**                | Stubbed (no FCM)                                                                                 |
+| **Historical reaction**        | Placeholder only — never invent price/prior-move numbers                                         |
 
 ---
 

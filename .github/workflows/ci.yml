@@ -10,7 +10,7 @@ name: CI
 # After a green push to `dev`/`main`, the `deploy` job ships via
 # scripts/vercel-ci-deploy.mjs (API redeploy / gitSource, CLI fallback) using
 # the team VERCEL_* secrets so git-author Blocked deploys do not stall
-# staging/production. Omer/access-block heal is intentionally separate
+# staging/production. zhbar/access-block heal is intentionally separate
 # (vercel-unblock-redeploy.yml: push to main + API poll) so a red CI deploy
 # never skips the heal.
 on:
