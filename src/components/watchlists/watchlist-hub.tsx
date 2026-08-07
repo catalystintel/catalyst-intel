@@ -20,7 +20,11 @@ import {
   WATCHLIST_DRAFT_HANDOFF_KEY,
   type WatchlistDraftHandoff,
 } from "@/lib/watchlist/draft-handoff";
-import { WATCHLIST_TEMPLATES } from "@/lib/watchlist/templates";
+import {
+  WATCHLIST_STARTER_PACK_IDS,
+  WATCHLIST_TEMPLATES,
+  watchlistTemplateById,
+} from "@/lib/watchlist/templates";
 import {
   notifyWatchlistChanged,
   subscribeWatchlistChanged,
@@ -28,12 +32,6 @@ import {
 import { cn } from "@/lib/utils";
 
 type Tab = "watchlists" | "quiet";
-
-const QUICK_START_TEMPLATE_IDS = [
-  "material-8k",
-  "fda-regulatory",
-  "trading-halts",
-];
 
 /**
  * `/watchlist` shell. Two jobs, deliberately split into tabs so neither
@@ -158,10 +156,39 @@ export function WatchlistHub() {
     setEditorOpen(true);
   }
 
-  function createFromTemplate(templateId: string) {
-    const template = WATCHLIST_TEMPLATES.find((t) => t.id === templateId);
-    if (!template) return;
-    openCreate({ id: null, name: template.name, criteria: template.criteria });
+  async function addFromTemplates(options: {
+    templateId?: string;
+    starterPack?: boolean;
+  }) {
+    setBusy(true);
+    try {
+      const res = await fetch("/api/watchlists/templates", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(
+          options.starterPack
+            ? { starterPack: true }
+            : { templateId: options.templateId },
+        ),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Could not add watchlist.");
+      const created = Array.isArray(data.created) ? data.created : [];
+      notifyWatchlistChanged();
+      await load();
+      if (created.length === 0) {
+        toast.message("Already have those watchlists.");
+      } else if (created.length === 1) {
+        toast.success(`Added “${created[0].name}”`);
+      } else {
+        toast.success(`Added ${created.length} watchlists`);
+      }
+    } catch (err) {
+      toast.error(toUserFacingMessage(err, "Could not add watchlist."));
+    } finally {
+      setBusy(false);
+    }
   }
 
   async function deleteWatchlist(w: SavedWatchlist) {
@@ -310,22 +337,32 @@ export function WatchlistHub() {
                   No watchlists yet
                 </h2>
                 <p className="mx-auto mt-1 max-w-md text-sm text-[var(--desk-text-muted)]">
-                  A watchlist can be specific symbols, a rule (event type, SEC
-                  form, tag), or both. Start from a common one:
+                  One tap adds a ready-made rule. Or grab the starter pack and
+                  refine later.
                 </p>
               </div>
+              <Button
+                type="button"
+                disabled={busy}
+                onClick={() => void addFromTemplates({ starterPack: true })}
+                className="btn-press gap-1.5 bg-[var(--desk-live)] text-[#121212] hover:brightness-110"
+              >
+                <Plus className="size-3.5" aria-hidden />
+                Add starter pack ({WATCHLIST_STARTER_PACK_IDS.length})
+              </Button>
               <div className="flex flex-wrap justify-center gap-2">
-                {QUICK_START_TEMPLATE_IDS.map((id) => {
-                  const template = WATCHLIST_TEMPLATES.find((t) => t.id === id);
+                {WATCHLIST_STARTER_PACK_IDS.map((id) => {
+                  const template = watchlistTemplateById(id);
                   if (!template) return null;
                   return (
                     <button
                       key={id}
                       type="button"
-                      onClick={() => createFromTemplate(id)}
-                      className="rounded-full border border-[var(--desk-border-strong)] bg-[var(--desk-overlay-soft)] px-3 py-1.5 text-xs font-medium text-[var(--desk-text-secondary)] transition-colors hover:border-[var(--desk-live)]/50 hover:text-[var(--desk-text)]"
+                      disabled={busy}
+                      onClick={() => void addFromTemplates({ templateId: id })}
+                      className="rounded-full border border-[var(--desk-border-strong)] bg-[var(--desk-overlay-soft)] px-3 py-1.5 text-xs font-medium text-[var(--desk-text-secondary)] transition-colors hover:border-[var(--desk-live)]/50 hover:text-[var(--desk-text)] disabled:opacity-50"
                     >
-                      {template.name}
+                      + {template.name}
                     </button>
                   );
                 })}
@@ -341,31 +378,61 @@ export function WatchlistHub() {
               </Button>
             </section>
           ) : (
-            <div className="grid gap-3 lg:grid-cols-2">
-              {watchlists.map((w) => (
-                <WatchlistCard
-                  key={w.id}
-                  watchlist={w}
-                  isQuietSignal={selectedIds.includes(w.id)}
-                  busy={busy}
-                  onToggleQuiet={() =>
-                    void savePlaybook({
-                      watchlistIds: selectedIds.includes(w.id)
-                        ? selectedIds.filter((id) => id !== w.id)
-                        : [...selectedIds, w.id],
-                    })
-                  }
-                  onEdit={() =>
-                    openCreate({
-                      id: w.id,
-                      name: w.name,
-                      criteria: w.criteria,
-                    })
-                  }
-                  onDelete={() => void deleteWatchlist(w)}
-                />
-              ))}
-            </div>
+            <>
+              <div className="flex flex-wrap gap-2">
+                {WATCHLIST_TEMPLATES.slice(0, 6).map((template) => {
+                  const already = watchlists.some(
+                    (w) =>
+                      w.name.trim().toLowerCase() ===
+                      template.name.trim().toLowerCase(),
+                  );
+                  return (
+                    <button
+                      key={template.id}
+                      type="button"
+                      disabled={busy || already}
+                      onClick={() =>
+                        void addFromTemplates({ templateId: template.id })
+                      }
+                      className="rounded-full border border-[var(--desk-border)] bg-[var(--desk-overlay-soft)] px-2.5 py-1 text-[0.7rem] text-[var(--desk-text-muted)] transition-colors hover:border-[var(--desk-live)]/40 hover:text-[var(--desk-text)] disabled:opacity-40"
+                      title={
+                        already
+                          ? "Already in your library"
+                          : template.description
+                      }
+                    >
+                      {already ? "✓ " : "+ "}
+                      {template.name}
+                    </button>
+                  );
+                })}
+              </div>
+              <div className="grid gap-3 lg:grid-cols-2">
+                {watchlists.map((w) => (
+                  <WatchlistCard
+                    key={w.id}
+                    watchlist={w}
+                    isQuietSignal={selectedIds.includes(w.id)}
+                    busy={busy}
+                    onToggleQuiet={() =>
+                      void savePlaybook({
+                        watchlistIds: selectedIds.includes(w.id)
+                          ? selectedIds.filter((id) => id !== w.id)
+                          : [...selectedIds, w.id],
+                      })
+                    }
+                    onEdit={() =>
+                      openCreate({
+                        id: w.id,
+                        name: w.name,
+                        criteria: w.criteria,
+                      })
+                    }
+                    onDelete={() => void deleteWatchlist(w)}
+                  />
+                ))}
+              </div>
+            </>
           )}
         </div>
       ) : (

@@ -78,3 +78,18 @@ export const WATCHLIST_TEMPLATES: WatchlistTemplate[] = [
     criteria: { forms: ["424B", "S-3"], categories: ["capital"] },
   },
 ];
+
+/** Empty-state one-tap starters (subset of templates). */
+export const WATCHLIST_STARTER_PACK_IDS = [
+  "material-8k",
+  "fda-regulatory",
+  "trading-halts",
+  "earnings-surprises",
+  "ah-pm-bombs",
+] as const;
+
+export function watchlistTemplateById(
+  id: string,
+): WatchlistTemplate | undefined {
+  return WATCHLIST_TEMPLATES.find((t) => t.id === id);
+}
