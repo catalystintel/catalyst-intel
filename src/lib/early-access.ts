@@ -27,6 +27,9 @@ export const FEEDBACK_CATEGORIES = [
 
 export type FeedbackCategory = (typeof FEEDBACK_CATEGORIES)[number]["value"];
 
+/** Max length for the feedback note (UI + API). Short on purpose. */
+export const FEEDBACK_MESSAGE_MAX_CHARS = 800;
+
 export function isFeedbackCategory(value: string): value is FeedbackCategory {
   return FEEDBACK_CATEGORIES.some((c) => c.value === value);
 }

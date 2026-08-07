@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   EARLY_ACCESS,
   FEEDBACK_CATEGORIES,
+  FEEDBACK_MESSAGE_MAX_CHARS,
   isFeedbackCategory,
 } from "@/lib/early-access";
 
@@ -20,5 +21,9 @@ describe("early-access copy", () => {
     ]);
     expect(isFeedbackCategory("bug")).toBe(true);
     expect(isFeedbackCategory("spam")).toBe(false);
+  });
+
+  it("keeps feedback notes short", () => {
+    expect(FEEDBACK_MESSAGE_MAX_CHARS).toBe(800);
   });
 });

@@ -16,6 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   FEEDBACK_CATEGORIES,
+  FEEDBACK_MESSAGE_MAX_CHARS,
   type FeedbackCategory,
   isFeedbackCategory,
 } from "@/lib/early-access";
@@ -138,9 +139,11 @@ export function FeedbackDialog({
             <textarea
               id="feedback-message"
               value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              rows={5}
-              maxLength={4000}
+              onChange={(e) =>
+                setMessage(e.target.value.slice(0, FEEDBACK_MESSAGE_MAX_CHARS))
+              }
+              rows={4}
+              maxLength={FEEDBACK_MESSAGE_MAX_CHARS}
               placeholder={
                 category === "bug"
                   ? "What happened, and what did you expect?"
@@ -148,10 +151,10 @@ export function FeedbackDialog({
                     ? "What would you like to see on the desk?"
                     : "What should we improve?"
               }
-              className="w-full min-w-0 resize-y rounded-lg border border-input bg-transparent px-2.5 py-2 text-base transition-colors outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 md:text-sm dark:bg-input/30"
+              className="max-h-40 w-full min-w-0 resize-none overflow-y-auto rounded-lg border border-input bg-transparent px-2.5 py-2 text-base transition-colors outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 md:text-sm dark:bg-input/30"
             />
             <p className="font-mono text-[0.65rem] text-muted-foreground tabular-nums">
-              {message.trim().length}/4000
+              {message.trim().length}/{FEEDBACK_MESSAGE_MAX_CHARS}
             </p>
           </div>
 
