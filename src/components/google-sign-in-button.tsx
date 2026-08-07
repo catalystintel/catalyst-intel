@@ -6,11 +6,16 @@ import { Button } from "@/components/ui/button";
 import { GoogleIcon } from "@/components/google-icon";
 import { toUserFacingMessage } from "@/lib/errors/user-facing";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { googleOAuthOptions } from "@/lib/supabase/google-oauth";
 
 /**
  * Starts Google OAuth from the browser so the PKCE verifier is written to
  * first-party cookies before leaving for Google — more reliable on iOS Safari
  * than a Server Action + redirect(). Falls back to /auth/login if JS fails.
+ *
+ * Always requests Google's account chooser (`prompt=select_account`) and clears
+ * any local Supabase session first so a prior Google login cannot silently
+ * reuse the wrong address.
  */
 export function GoogleSignInButton({
   next = "/catalyst-feed",
@@ -34,22 +39,35 @@ export function GoogleSignInButton({
       try {
         const supabase = createSupabaseBrowserClient();
         const origin = window.location.origin;
-        const { error: oauthError } = await supabase.auth.signInWithOAuth({
-          provider: "google",
-          options: {
-            redirectTo: `${origin}/auth/callback?next=${encodeURIComponent(next)}`,
+        // Drop a stale local session so switching Google accounts replaces it
+        // instead of bouncing back into the previous desk session.
+        await supabase.auth.signOut({ scope: "local" });
+        const { data, error: oauthError } = await supabase.auth.signInWithOAuth(
+          {
+            provider: "google",
+            options: {
+              ...googleOAuthOptions(
+                `${origin}/auth/callback?next=${encodeURIComponent(next)}`,
+              ),
+              // We navigate explicitly after signOut so the first click always
+              // leaves for Google (avoids a no-op when auto-redirect races).
+              skipBrowserRedirect: true,
+            },
           },
-        });
+        );
 
-        if (oauthError) {
+        if (oauthError || !data?.url) {
           setError(
             toUserFacingMessage(
-              oauthError.message,
+              oauthError?.message ?? "Could not start Google sign-in.",
               "Could not start Google sign-in.",
             ),
           );
           window.location.assign(fallbackHref);
+          return;
         }
+
+        window.location.assign(data.url);
       } catch (err) {
         setError(toUserFacingMessage(err, "Could not start Google sign-in."));
         window.location.assign(fallbackHref);

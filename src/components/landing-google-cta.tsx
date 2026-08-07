@@ -8,6 +8,10 @@ import { cn } from "@/lib/utils";
  * Primary sign-up CTA — used both in the hero (with icon + subtext) and the
  * final section near the footer (plain single line).
  *
+ * Starts Google OAuth in one click via `/auth/login` (PKCE cookies on the
+ * redirect response). Previously linked to `/login`, which forced a second
+ * "Continue with Google" click.
+ *
  * Uses landing primary blue (`--landing-primary` / `#2563EB`), not LIVE green.
  * Trader emerald (`--desk-live-status`) stays reserved for LIVE status chips.
  */
@@ -16,6 +20,7 @@ export function LandingGoogleCta({
   subtext,
   showIcon = false,
   className,
+  next = "/catalyst-feed",
 }: {
   children?: React.ReactNode;
   /** Optional second line under the label — hero usage only. */
@@ -23,10 +28,12 @@ export function LandingGoogleCta({
   /** Optional leading lightning-bolt icon — hero usage only. */
   showIcon?: boolean;
   className?: string;
+  /** Post-auth destination (safe path; /auth/login re-validates). */
+  next?: string;
 }) {
   return (
     <Link
-      href="/login"
+      href={`/auth/login?next=${encodeURIComponent(next)}`}
       className={cn(
         buttonVariants({ size: "lg" }),
         "btn-press h-auto min-h-11 flex-col justify-center gap-0.5 bg-[var(--landing-primary,#2563eb)] px-6 py-2.5 text-[0.95rem] font-semibold tracking-tight text-[#f8fafc] shadow-[0_1px_2px_rgba(0,0,0,0.25),0_4px_14px_rgba(37,99,235,0.14)]",
