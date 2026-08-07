@@ -5,14 +5,16 @@ import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 /**
- * Primary sign-up CTA — hero and footer. Mint landing primary (`#00d4aa`) with
- * dark label text so it matches the Signal Fintech desk accent.
+ * Primary sign-up CTA — hero and footer. Starts Google OAuth in one click via
+ * `/auth/login` (PKCE cookies on the redirect response). Mint landing primary
+ * (`#00d4aa`) with dark label text so it matches the Signal Fintech desk accent.
  */
 export function LandingGoogleCta({
   children = "Continue with Google — free",
   subtext,
   showIcon = false,
   className,
+  next = "/catalyst-feed",
 }: {
   children?: React.ReactNode;
   /** Optional second line under the label — hero usage only. */
@@ -20,10 +22,12 @@ export function LandingGoogleCta({
   /** Optional leading lightning-bolt icon — hero usage only. */
   showIcon?: boolean;
   className?: string;
+  /** Post-auth destination (safe path; /auth/login re-validates). */
+  next?: string;
 }) {
   return (
     <Link
-      href="/login"
+      href={`/auth/login?next=${encodeURIComponent(next)}`}
       className={cn(
         buttonVariants({ size: "lg" }),
         "btn-press h-auto min-h-11 flex-col justify-center gap-0.5 bg-[var(--landing-primary,#00d4aa)] px-6 py-2.5 text-[0.95rem] font-semibold tracking-tight text-[var(--desk-accent-fg,#131722)] shadow-[0_1px_2px_rgba(0,0,0,0.25),0_4px_18px_rgba(0,212,170,0.22)]",

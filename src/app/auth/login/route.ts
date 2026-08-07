@@ -7,6 +7,7 @@ import {
   isSupabaseConfigured,
   SUPABASE_UNAVAILABLE_MESSAGE,
 } from "@/lib/supabase/env";
+import { googleOAuthOptions } from "@/lib/supabase/google-oauth";
 
 /**
  * Starts Google OAuth via a Route Handler so PKCE cookies are attached to the
@@ -66,10 +67,14 @@ export async function GET(request: NextRequest) {
     },
   );
 
+  // Clear a prior local session so account switching is not blocked by an
+  // existing desk cookie, then force Google's account chooser.
+  await supabase.auth.signOut({ scope: "local" });
+
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: "google",
     options: {
-      redirectTo,
+      ...googleOAuthOptions(redirectTo),
       skipBrowserRedirect: true,
     },
   });
