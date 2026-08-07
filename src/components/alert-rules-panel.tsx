@@ -1312,9 +1312,11 @@ function ChannelSetup({
         <Input
           value={sessionEmail}
           readOnly
-          aria-label="Email recipient (signed-in account)"
+          tabIndex={-1}
+          aria-readonly="true"
+          aria-label="Email recipient (signed-in account, locked)"
           type="email"
-          className="h-10 border-[var(--desk-border-strong)] bg-[var(--desk-overlay-soft)] font-mono text-xs opacity-90"
+          className="h-10 cursor-default border-[var(--desk-border)] bg-[var(--desk-overlay)] font-mono text-xs text-[var(--desk-text-dim)] shadow-none focus-visible:border-[var(--desk-border)] focus-visible:ring-0"
         />
         <span className="inline-flex items-center gap-1.5 text-[0.7rem] text-[var(--desk-live-status)]">
           <CheckCircle2 className="size-3" aria-hidden />
