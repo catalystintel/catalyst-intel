@@ -123,7 +123,7 @@ function PreviewActionChip({
       className={cn(
         "inline-flex items-center gap-1 rounded-sm px-2 py-0.5 font-mono text-[0.65rem] font-semibold tracking-wide uppercase",
         variant === "primary"
-          ? "bg-[var(--landing-primary,#2563eb)] text-[#f8fafc]"
+          ? "bg-[var(--landing-primary,#00d4aa)] text-[var(--desk-accent-fg,#131722)]"
           : "border border-[var(--desk-border-strong)] text-[var(--desk-text-muted)]",
       )}
     >
@@ -171,8 +171,11 @@ export default async function Home({
                 />
                 LIVE
               </span>
-              <span className="inline-flex items-center rounded-full border border-[var(--desk-border-strong)] bg-[var(--desk-overlay-soft)] px-2.5 py-1 font-mono text-[0.68rem] font-semibold tracking-[0.08em] text-[var(--desk-text-secondary)] uppercase">
-                Open Early Access · Free
+              <span className="inline-flex items-center rounded-sm bg-[var(--landing-primary,#00d4aa)] px-2 py-0.5 font-mono text-[0.65rem] font-bold tracking-[0.1em] text-[var(--desk-accent-fg,#131722)] uppercase">
+                Beta
+              </span>
+              <span className="inline-flex items-center rounded-sm bg-[var(--landing-primary,#00d4aa)] px-2 py-0.5 font-mono text-[0.65rem] font-bold tracking-[0.1em] text-[var(--desk-accent-fg,#131722)] uppercase">
+                Free
               </span>
             </div>
             <h1 className="marketing-headline mt-5 text-4xl text-balance text-[var(--desk-text)] sm:text-5xl">
@@ -204,11 +207,16 @@ export default async function Home({
               {HERO_STATS.map(({ icon: Icon, label, detail }) => (
                 <li
                   key={label}
-                  className="inline-flex items-center gap-2 rounded-lg border border-[var(--desk-border)] bg-[var(--desk-panel)] px-3 py-2"
+                  className="landing-glass-card inline-flex items-center gap-2 rounded-lg px-3 py-2"
                 >
                   <Icon
                     aria-hidden
-                    className="size-4 shrink-0 text-[var(--desk-text-muted)]"
+                    className={cn(
+                      "size-4 shrink-0",
+                      label === "FREE" || label === "LIVE"
+                        ? "text-[var(--desk-live)]"
+                        : "text-[var(--desk-text-muted)]",
+                    )}
                     strokeWidth={1.75}
                   />
                   <span className="flex flex-col leading-tight">
@@ -233,7 +241,7 @@ export default async function Home({
 
           <section
             aria-label="Feed preview"
-            className="landing-feed landing-feed-dark relative overflow-hidden rounded-lg border border-[var(--desk-border)] bg-[var(--desk-panel)] shadow-[0_24px_80px_rgba(7,11,20,0.65),0_0_0_1px_rgba(37,99,235,0.08)]"
+            className="landing-feed landing-feed-dark signal-glass relative overflow-hidden rounded-lg shadow-[0_24px_80px_rgba(0,0,0,0.55),0_0_0_1px_rgba(0,212,170,0.12)]"
           >
             <FeedPreviewChartGlow />
 
