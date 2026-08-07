@@ -9,6 +9,7 @@ import {
 } from "@/lib/ops/preview-access";
 import { supabaseCookieOptions } from "@/lib/supabase/cookie-options";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
+import { shouldForwardOAuthCodeToCallback } from "@/lib/supabase/oauth-callback-path";
 
 const PROTECTED_PREFIXES = [
   "/catalyst-feed",
@@ -47,6 +48,18 @@ function previewAdminDeniedResponse(request: NextRequest): NextResponse {
 }
 
 export async function updateSession(request: NextRequest) {
+  const pathname = request.nextUrl.pathname;
+
+  // Misconfigured Supabase Site URL / Redirect URLs often drop the PKCE code
+  // on `/` instead of `/auth/callback`. Forward so exchangeCodeForSession runs.
+  if (
+    shouldForwardOAuthCodeToCallback(pathname, request.nextUrl.searchParams)
+  ) {
+    const callbackUrl = request.nextUrl.clone();
+    callbackUrl.pathname = "/auth/callback";
+    return NextResponse.redirect(callbackUrl);
+  }
+
   // Local bypass: treat every request as authenticated so protected routes
   // render without an OAuth round-trip. Inert in production (see dev-bypass.ts).
   if (isDevAuthBypassEnabled()) {
@@ -54,8 +67,6 @@ export async function updateSession(request: NextRequest) {
   }
 
   let supabaseResponse = NextResponse.next({ request });
-
-  const pathname = request.nextUrl.pathname;
   const isProtected = isProtectedPath(pathname);
   const previewGate =
     isPreviewDeployment() && !isPreviewAccessExemptPath(pathname);
