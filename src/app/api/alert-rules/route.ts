@@ -20,6 +20,7 @@ import {
   isTelegramLinkMuted,
 } from "@/lib/telegram/link";
 import { normalizeAlertConditions } from "@/lib/alerts/normalize";
+import { deriveNotificationSettings } from "@/lib/alerts/settings-model";
 // import { validateWebhookUrl } from "@/lib/alerts/webhook-url"; // revive with webhook channel
 import { getClientIp } from "@/lib/http/client-ip";
 import { RATE_LIMITS, checkRateLimit } from "@/lib/http/rate-limit";
@@ -120,10 +121,18 @@ export async function GET(request: NextRequest) {
         handle: null,
       };
   const telegramLink = await getTelegramLinkByUserId(user.id);
+  const settings = deriveNotificationSettings(
+    rows.map((r) => ({
+      channel: r.channel,
+      enabled: Boolean(r.enabled),
+      conditions: normalizeAlertConditions(r.conditions),
+    })),
+  );
 
   return withRateLimitHeaders(
     NextResponse.json({
       rules: rows.map(serializeRule),
+      settings,
       emailConfigured: isResendConfigured(),
       sessionEmail: user.email,
       pushAvailable: isWebPushConfigured(),
