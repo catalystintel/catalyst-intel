@@ -3,6 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { getCurrentAppUser } from "@/lib/auth/current-user";
 import {
   FEEDBACK_CATEGORIES,
+  FEEDBACK_MESSAGE_MAX_CHARS,
   isFeedbackCategory,
   type FeedbackCategory,
 } from "@/lib/early-access";
@@ -83,7 +84,9 @@ export async function POST(request: NextRequest) {
   }
 
   const message =
-    typeof raw.message === "string" ? raw.message.trim().slice(0, 4000) : "";
+    typeof raw.message === "string"
+      ? raw.message.trim().slice(0, FEEDBACK_MESSAGE_MAX_CHARS)
+      : "";
   if (message.length < 10) {
     return withRateLimitHeaders(
       NextResponse.json(
