@@ -127,7 +127,7 @@ export function PreLoginLandingSections() {
             return (
               <li
                 key={step.step}
-                className="rounded-xl border border-[var(--desk-border)] bg-[var(--desk-panel)] px-5 py-6 shadow-[0_1px_0_rgba(0,0,0,0.03)]"
+                className="landing-glass-card rounded-xl px-5 py-6"
               >
                 <div className="flex items-center justify-between">
                   <FeatureIcon>
@@ -192,7 +192,7 @@ export function PreLoginLandingSections() {
             return (
               <li
                 key={feature.title}
-                className="rounded-xl border border-[var(--desk-border)] bg-[var(--desk-panel)] px-5 py-6 shadow-[0_1px_0_rgba(0,0,0,0.03)]"
+                className="landing-glass-card rounded-xl px-5 py-6"
               >
                 <FeatureIcon>
                   <Icon className="size-4" strokeWidth={1.75} />

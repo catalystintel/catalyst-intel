@@ -44,7 +44,7 @@ export function AppShell({
   useAutoFocusScrollRegion(mainRef);
 
   return (
-    <div className="desk-chrome flex h-dvh max-h-dvh min-h-0 flex-1 overflow-hidden overscroll-none bg-[var(--desk-app)]">
+    <div className="desk-chrome signal-mesh-bg flex h-dvh max-h-dvh min-h-0 flex-1 overflow-hidden overscroll-none bg-[var(--desk-app)]">
       <Toaster />
       <aside className="hidden md:block">
         <div className="sticky top-0 h-full max-h-dvh">
@@ -78,7 +78,7 @@ export function AppShell({
 
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
         <EarlyAccessBanner variant="app" defaultEmail={user.email} />
-        <header className="sticky top-0 z-40 flex items-center justify-between gap-3 border-b border-[var(--desk-border)] bg-[var(--desk-header)]/95 px-3 pt-[max(0.75rem,env(safe-area-inset-top))] pb-3 backdrop-blur-sm sm:px-5">
+        <header className="sticky top-0 z-40 flex items-center justify-between gap-3 border-b border-[var(--desk-border)] bg-[var(--desk-header)]/80 px-3 pt-[max(0.75rem,env(safe-area-inset-top))] pb-3 shadow-[0_1px_0_rgba(0,212,170,0.06)] backdrop-blur-md sm:px-5">
           <div className="flex min-w-0 items-center gap-2">
             <button
               type="button"

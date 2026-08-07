@@ -69,12 +69,7 @@ export function LandingGuestSearch({ className }: { className?: string }) {
   }
 
   return (
-    <div
-      className={cn(
-        "rounded-xl border border-[var(--desk-border)] bg-[var(--desk-panel)] p-4 sm:p-5",
-        className,
-      )}
-    >
+    <div className={cn("landing-glass-card rounded-xl p-4 sm:p-5", className)}>
       <p className="font-mono text-[0.65rem] font-semibold tracking-[0.14em] text-[var(--desk-text-dim)] uppercase">
         Instant ticker search
       </p>
@@ -98,7 +93,7 @@ export function LandingGuestSearch({ className }: { className?: string }) {
         <Button
           type="submit"
           disabled={limitHit || loading || !q.trim()}
-          className="btn-press h-9 gap-1.5 bg-[var(--desk-live)] text-[#121212] hover:brightness-110"
+          className="btn-press h-9 gap-1.5 bg-[var(--desk-live)] text-[var(--desk-accent-fg,#131722)] hover:brightness-110"
         >
           <Search className="size-3.5" />
           {loading ? "Searching…" : "Search"}
