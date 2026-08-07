@@ -6,7 +6,6 @@ import {
   Bell,
   CheckCircle2,
   CircleAlert,
-  Copy,
   ExternalLink,
   FlaskConical,
   Info,
@@ -74,7 +73,7 @@ const CHANNELS: ChannelMeta[] = [
   {
     value: "telegram",
     label: "Telegram",
-    blurb: "Open the bot, paste your chat ID, get fires on your phone",
+    blurb: "Connect the bot once — watchlist fires land on your phone",
     Icon: MessageCircle,
   },
   // Webhook paused until Slack/Discord-shaped payloads ship — revive with:
@@ -116,6 +115,13 @@ export function AlertRulesPanel() {
   const [telegramBotDeepLink, setTelegramBotDeepLink] = useState<string | null>(
     null,
   );
+  const [telegramLinked, setTelegramLinked] = useState<{
+    chatId: string;
+    username: string | null;
+    muted: boolean;
+    mutedUntil: string | null;
+  } | null>(null);
+  const [linkingTelegram, setLinkingTelegram] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const [saving, setSaving] = useState(false);
   const [testingId, setTestingId] = useState<number | null>(null);
@@ -184,6 +190,26 @@ export function AlertRulesPanel() {
       );
       setTelegramBotHandle(handle);
       setTelegramBotDeepLink(deepLink);
+      const linked =
+        data.telegramLinked && typeof data.telegramLinked === "object"
+          ? (data.telegramLinked as {
+              chatId?: string;
+              username?: string | null;
+              muted?: boolean;
+              mutedUntil?: string | null;
+            })
+          : null;
+      if (linked?.chatId) {
+        setTelegramLinked({
+          chatId: linked.chatId,
+          username: linked.username ?? null,
+          muted: Boolean(linked.muted),
+          mutedUntil: linked.mutedUntil ?? null,
+        });
+        setTelegramChatId((prev) => prev || linked.chatId!);
+      } else {
+        setTelegramLinked(null);
+      }
 
       if (watchlistsRes.ok) {
         const wData = await watchlistsRes.json();
@@ -261,9 +287,10 @@ export function AlertRulesPanel() {
       case "telegram":
         if (!telegramConfigured)
           return { state: "blocked", label: "Unavailable here" };
+        if (telegramLinked) return { state: "ready", label: "Linked" };
         return {
-          state: "ready",
-          label: telegramBotHandle ?? "Bot ready",
+          state: "action",
+          label: "Connect first",
         };
       case "webhook":
         return { state: "blocked", label: "Paused" };
@@ -302,11 +329,62 @@ export function AlertRulesPanel() {
     const ready = channelReady(channel);
     if (ready.state === "blocked") return false;
     if (channel === "webhook") return false;
-    if (channel === "telegram" && !telegramChatId.trim()) return false;
+    if (channel === "telegram" && !telegramChatId.trim() && !telegramLinked)
+      return false;
     if (channel === "push" && webPush.status !== "subscribed") return false;
     if (channel === "email" && (!emailConfigured || !sessionEmail))
       return false;
     return selectedSessions.length > 0;
+  }
+
+  async function connectTelegram() {
+    setLinkingTelegram(true);
+    try {
+      const res = await fetch("/api/telegram/link", {
+        method: "POST",
+        credentials: "same-origin",
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Could not start linking.");
+      const deepLink = typeof data.deepLink === "string" ? data.deepLink : null;
+      if (!deepLink) throw new Error("Missing Telegram deep link.");
+      window.open(deepLink, "_blank", "noopener,noreferrer");
+      toast.success("Opened Telegram — tap Start, then come back here.");
+      for (let i = 0; i < 8; i++) {
+        await new Promise((r) => setTimeout(r, 2000));
+        await load();
+        // Stop early once linked.
+        // load() updates telegramLinked asynchronously via setState — re-fetch.
+        const check = await fetch("/api/alert-rules", {
+          credentials: "same-origin",
+          cache: "no-store",
+        });
+        if (check.ok) {
+          const body = await check.json();
+          if (body.telegramLinked?.chatId) break;
+        }
+      }
+    } catch (err) {
+      toast.error(toUserFacingMessage(err, "Could not connect Telegram."));
+    } finally {
+      setLinkingTelegram(false);
+    }
+  }
+
+  async function disconnectTelegram() {
+    try {
+      const res = await fetch("/api/telegram/link", {
+        method: "DELETE",
+        credentials: "same-origin",
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Could not unlink.");
+      setTelegramLinked(null);
+      toast.success("Telegram disconnected.");
+      await load();
+    } catch (err) {
+      toast.error(toUserFacingMessage(err, "Could not unlink Telegram."));
+    }
   }
 
   async function createRule(e: React.FormEvent) {
@@ -336,7 +414,10 @@ export function AlertRulesPanel() {
         body: JSON.stringify({
           name,
           channel,
-          telegramChatId: channel === "telegram" ? telegramChatId : undefined,
+          telegramChatId:
+            channel === "telegram"
+              ? telegramChatId.trim() || telegramLinked?.chatId || undefined
+              : undefined,
           conditions,
         }),
       });
@@ -583,6 +664,10 @@ export function AlertRulesPanel() {
               telegramBotName={telegramBotName}
               telegramBotHandle={telegramBotHandle}
               telegramBotDeepLink={telegramBotDeepLink}
+              telegramLinked={telegramLinked}
+              linkingTelegram={linkingTelegram}
+              onConnectTelegram={() => void connectTelegram()}
+              onDisconnectTelegram={() => void disconnectTelegram()}
               telegramChatId={telegramChatId}
               setTelegramChatId={setTelegramChatId}
               emailConfigured={emailConfigured}
@@ -961,6 +1046,10 @@ function ChannelSetup({
   telegramBotName,
   telegramBotHandle,
   telegramBotDeepLink,
+  telegramLinked,
+  linkingTelegram,
+  onConnectTelegram,
+  onDisconnectTelegram,
   telegramChatId,
   setTelegramChatId,
   emailConfigured,
@@ -975,6 +1064,15 @@ function ChannelSetup({
   telegramBotName: string | null;
   telegramBotHandle: string | null;
   telegramBotDeepLink: string | null;
+  telegramLinked: {
+    chatId: string;
+    username: string | null;
+    muted: boolean;
+    mutedUntil: string | null;
+  } | null;
+  linkingTelegram: boolean;
+  onConnectTelegram: () => void;
+  onDisconnectTelegram: () => void;
   telegramChatId: string;
   setTelegramChatId: (v: string) => void;
   emailConfigured: boolean;
@@ -1057,7 +1155,7 @@ function ChannelSetup({
         <StatusCallout
           tone="blocked"
           title="Telegram bot isn’t configured"
-          body="This deployment is missing TELEGRAM_BOT_TOKEN. Use Push or Email for now, or ask ops to wire the bot (Admin → Setup Telegram bot). Once live: /start the bot → copy your chat ID → paste it here → Save & Test."
+          body="This deployment is missing TELEGRAM_BOT_TOKEN. Use Push or Email for now, or ask ops to wire the bot (Admin → Setup Telegram bot)."
         />
       );
     }
@@ -1066,28 +1164,15 @@ function ChannelSetup({
       (telegramBotUsername
         ? `@${telegramBotUsername.replace(/^@/, "")}`
         : null);
-    const botUrl =
-      telegramBotDeepLink ??
-      (telegramBotUsername
-        ? `https://t.me/${telegramBotUsername.replace(/^@/, "")}`
-        : null);
     const displayName = telegramBotName?.trim() || "Catalyst Intel";
-
-    async function copyHandle() {
-      if (!handle) return;
-      try {
-        await navigator.clipboard.writeText(handle);
-        toast.success(`Copied ${handle}`);
-      } catch {
-        toast.error("Could not copy — select the bot name manually.");
-      }
-    }
+    void telegramBotDeepLink;
+    void ready;
 
     return (
       <div className="flex flex-col gap-4">
         <div className="rounded-lg border border-[var(--desk-border-strong)] bg-[var(--desk-overlay-soft)] px-3.5 py-3">
           <p className="font-mono text-[0.65rem] tracking-[0.16em] text-[var(--desk-text-dim)] uppercase">
-            Find the bot
+            {telegramLinked ? "Linked" : "Connect"}
           </p>
           <div className="mt-2 flex flex-wrap items-baseline gap-x-2 gap-y-1">
             <span className="text-base font-semibold text-[var(--desk-text)]">
@@ -1097,67 +1182,84 @@ function ChannelSetup({
               <span className="font-mono text-sm text-[var(--desk-live)]">
                 {handle}
               </span>
-            ) : (
-              <span className="text-xs text-[var(--desk-text-muted)]">
-                Username loading… refresh if it stays blank
-              </span>
-            )}
-          </div>
-          <p className="mt-1 text-xs text-[var(--desk-text-muted)]">
-            Search that name in Telegram, or open it directly below, then send{" "}
-            <span className="font-mono">/start</span>.
-          </p>
-          <div className="mt-3 flex flex-wrap gap-2">
-            {botUrl ? (
-              <a
-                href={botUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="btn-press inline-flex h-8 items-center gap-2 rounded-lg bg-[var(--desk-live)] px-2.5 text-sm font-medium text-[#121212] hover:brightness-110"
-              >
-                <ExternalLink className="size-3.5" aria-hidden />
-                Open {handle ?? "bot"} in Telegram
-              </a>
-            ) : null}
-            {handle ? (
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => void copyHandle()}
-                className="btn-press gap-2 border-[var(--desk-border-strong)] bg-transparent text-[var(--desk-text)] hover:bg-[var(--desk-overlay-strong)]"
-              >
-                <Copy className="size-3.5" aria-hidden />
-                Copy {handle}
-              </Button>
             ) : null}
           </div>
+          {telegramLinked ? (
+            <>
+              <p className="mt-1 text-xs text-[var(--desk-text-muted)]">
+                Chat{" "}
+                <span className="font-mono text-[var(--desk-text)]">
+                  {telegramLinked.chatId}
+                </span>
+                {telegramLinked.username
+                  ? ` · @${telegramLinked.username}`
+                  : ""}
+                {telegramLinked.muted ? " · muted" : ""}
+              </p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={onDisconnectTelegram}
+                  className="btn-press gap-2 border-[var(--desk-border-strong)] bg-transparent text-[var(--desk-text)] hover:bg-[var(--desk-overlay-strong)]"
+                >
+                  Disconnect
+                </Button>
+              </div>
+            </>
+          ) : (
+            <>
+              <p className="mt-1 text-xs text-[var(--desk-text-muted)]">
+                One tap opens Telegram with a link token. Tap Start there — no
+                chat ID paste required.
+              </p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  onClick={onConnectTelegram}
+                  disabled={linkingTelegram}
+                  className="btn-press gap-2 bg-[var(--desk-live)] text-[#121212] hover:brightness-110"
+                >
+                  <ExternalLink className="size-3.5" aria-hidden />
+                  {linkingTelegram ? "Waiting for link…" : "Connect Telegram"}
+                </Button>
+              </div>
+            </>
+          )}
         </div>
 
-        <SetupSteps
-          steps={[
-            handle
-              ? `Open ${handle} (button above) and send /start.`
-              : "Open the Catalyst Intel bot in Telegram and send /start.",
-            "The bot replies with your numeric chat ID — long-press to copy it.",
-            "Paste the chat ID below, save the rule, then hit Test.",
-          ]}
-        />
+        {!telegramLinked ? (
+          <SetupSteps
+            steps={[
+              "Tap Connect Telegram (opens the bot with a one-time link).",
+              "In Telegram, tap Start — you’ll see “Linked”.",
+              "Save a Telegram rule here, then hit Test.",
+            ]}
+          />
+        ) : null}
 
         <label className="flex flex-col gap-1.5">
           <span className="text-xs font-medium text-[var(--desk-text-secondary)]">
-            Your Telegram chat ID
+            Chat ID override{" "}
+            <span className="font-normal text-[var(--desk-text-dim)]">
+              (optional)
+            </span>
           </span>
           <Input
             value={telegramChatId}
             onChange={(e) => setTelegramChatId(e.target.value)}
-            placeholder="e.g. 123456789"
-            aria-label="Telegram chat ID"
+            placeholder={
+              telegramLinked
+                ? `Linked ${telegramLinked.chatId}`
+                : "e.g. 123456789"
+            }
+            aria-label="Telegram chat ID override"
             inputMode="numeric"
             className="h-10 border-[var(--desk-border-strong)] bg-[var(--desk-overlay-soft)] font-mono text-xs"
           />
           <span className="text-[0.7rem] text-[var(--desk-text-dim)]">
-            /start, /id, or any message works — the bot always replies with your
-            chat ID.
+            Leave blank to use your linked chat. Paste only for a manual
+            override.
           </span>
         </label>
       </div>

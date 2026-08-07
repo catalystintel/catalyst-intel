@@ -5,7 +5,7 @@ Migrations live in [`drizzle/`](drizzle/). Keep this file in sync whenever the
 schema changes — see [`.cursor/skills/db-tables-doc/SKILL.md`](.cursor/skills/db-tables-doc/SKILL.md).
 Enforced by `npm run db:check` / husky pre-commit (`scripts/check-db-tables-doc.mjs`).
 
-**17 tables** (libSQL / SQLite via Drizzle).
+**19 tables** (libSQL / SQLite via Drizzle).
 
 ## Core market data
 
@@ -30,11 +30,13 @@ Enforced by `npm run db:check` / husky pre-commit (`scripts/check-db-tables-doc.
 
 ## Alerts
 
-| Table                | What’s stored                                                                        |
-| -------------------- | ------------------------------------------------------------------------------------ |
-| `alert_rules`        | User-defined delivery rules (email/webhook/push/telegram + conditions)               |
-| `push_subscriptions` | Browser Web Push endpoints/keys per device                                           |
-| `alert_deliveries`   | Sent/failed/skipped attempts — audit trail + dedup so a rule×catalyst isn’t re-fired |
+| Table                  | What’s stored                                                                                         |
+| ---------------------- | ----------------------------------------------------------------------------------------------------- |
+| `alert_rules`          | User-defined delivery rules (email/webhook/push/telegram + conditions)                                |
+| `push_subscriptions`   | Browser Web Push endpoints/keys per device                                                            |
+| `telegram_links`       | Desk user ↔ Telegram chat binding (optional mute); default delivery target when a rule has no chat id |
+| `telegram_link_tokens` | Short-lived `/start <token>` payloads for Connect Telegram deep-links                                 |
+| `alert_deliveries`     | Sent/failed/skipped attempts — audit trail + dedup so a rule×catalyst isn’t re-fired                  |
 
 ## Ops / ingest
 

@@ -15,6 +15,10 @@ import {
   getTelegramBotUsername,
   resolveTelegramBotIdentity,
 } from "@/lib/telegram/bot";
+import {
+  getTelegramLinkByUserId,
+  isTelegramLinkMuted,
+} from "@/lib/telegram/link";
 import { normalizeAlertConditions } from "@/lib/alerts/normalize";
 // import { validateWebhookUrl } from "@/lib/alerts/webhook-url"; // revive with webhook channel
 import { getClientIp } from "@/lib/http/client-ip";
@@ -115,6 +119,7 @@ export async function GET(request: NextRequest) {
         deepLink: null,
         handle: null,
       };
+  const telegramLink = await getTelegramLinkByUserId(user.id);
 
   return withRateLimitHeaders(
     NextResponse.json({
@@ -128,6 +133,15 @@ export async function GET(request: NextRequest) {
       telegramBotName: telegramBot.firstName,
       telegramBotHandle: telegramBot.handle,
       telegramBotDeepLink: telegramBot.deepLink,
+      telegramLinked: telegramLink
+        ? {
+            chatId: telegramLink.chatId,
+            username: telegramLink.username,
+            mutedUntil: telegramLink.mutedUntil,
+            muted: isTelegramLinkMuted(telegramLink),
+            linkedAt: telegramLink.linkedAt,
+          }
+        : null,
     }),
     limitResult,
   );
@@ -180,10 +194,15 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const telegramChatId =
+  const telegramChatIdRaw =
     typeof raw.telegramChatId === "string" && raw.telegramChatId.trim()
       ? raw.telegramChatId.trim()
       : null;
+  const linked =
+    channel === "telegram" && !telegramChatIdRaw
+      ? await getTelegramLinkByUserId(user.id)
+      : null;
+  const telegramChatId = telegramChatIdRaw ?? linked?.chatId ?? null;
   const conditions = normalizeAlertConditions(raw.conditions);
   const enabled = raw.enabled === undefined ? true : Boolean(raw.enabled);
 
@@ -207,7 +226,10 @@ export async function POST(request: NextRequest) {
   if (channel === "telegram" && !telegramChatId) {
     return withRateLimitHeaders(
       NextResponse.json(
-        { error: "telegramChatId is required for Telegram rules." },
+        {
+          error:
+            "Connect Telegram from Alerts (or paste a chat ID) before saving a Telegram rule.",
+        },
         { status: 400 },
       ),
       limitResult,

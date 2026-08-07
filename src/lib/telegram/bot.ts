@@ -5,7 +5,8 @@
  *
  * After deploy, an admin should hit POST /api/admin/telegram/setup (or the
  * Admin UI button) so we register the webhook, slash commands, description,
- * and brand profile photo. Users then /start the bot to get their chat_id.
+ * and brand profile photo. Users Connect Telegram from /alerts (deep-link
+ * `/start <token>`) or paste a chat ID manually.
  */
 
 import { readFile } from "node:fs/promises";
@@ -20,11 +21,51 @@ export type TelegramBotCommand = {
   description: string;
 };
 
+export type TelegramInlineButton =
+  { text: string; url: string } | { text: string; callback_data: string };
+
+export type TelegramInlineKeyboard = {
+  inline_keyboard: TelegramInlineButton[][];
+};
+
+export type TelegramReplyKeyboard = {
+  keyboard: { text: string }[][];
+  resize_keyboard?: boolean;
+  is_persistent?: boolean;
+};
+
+/** Persistent reply keyboard shown after /start. */
+export const MAIN_REPLY_KEYBOARD: TelegramReplyKeyboard = {
+  keyboard: [
+    [{ text: "Status" }, { text: "Recent" }],
+    [{ text: "Mute 1h" }, { text: "Unmute" }],
+    [{ text: "Help" }, { text: "Chat ID" }],
+  ],
+  resize_keyboard: true,
+  is_persistent: true,
+};
+
 /** Slash commands shown in Telegram’s “Menu” / autocomplete. */
 export const TELEGRAM_BOT_COMMANDS: TelegramBotCommand[] = [
   {
     command: "start",
-    description: "Connect and get your chat ID",
+    description: "Connect / show menu",
+  },
+  {
+    command: "status",
+    description: "Link, mute, and rule status",
+  },
+  {
+    command: "recent",
+    description: "Latest Telegram alert fires",
+  },
+  {
+    command: "mute",
+    description: "Silence alerts for 1 hour",
+  },
+  {
+    command: "unmute",
+    description: "Resume alerts",
   },
   {
     command: "id",
@@ -32,9 +73,30 @@ export const TELEGRAM_BOT_COMMANDS: TelegramBotCommand[] = [
   },
   {
     command: "help",
-    description: "How to wire Catalyst Intel alerts",
+    description: "How Catalyst Intel alerts work",
   },
 ];
+
+/** Inline actions attached to alert fire messages. */
+export function buildAlertInlineKeyboard(options: {
+  deskUrl?: string | null;
+  watchlistsUrl?: string | null;
+}): TelegramInlineKeyboard {
+  const row1: TelegramInlineButton[] = [];
+  if (options.deskUrl) {
+    row1.push({ text: "Open event", url: options.deskUrl });
+  }
+  if (options.watchlistsUrl) {
+    row1.push({ text: "Watchlist", url: options.watchlistsUrl });
+  }
+  const row2: TelegramInlineButton[] = [
+    { text: "Mute 1h", callback_data: "mute:1h" },
+  ];
+  const rows: TelegramInlineButton[][] = [];
+  if (row1.length > 0) rows.push(row1);
+  rows.push(row2);
+  return { inline_keyboard: rows };
+}
 
 export function isTelegramConfigured(): boolean {
   return Boolean(process.env.TELEGRAM_BOT_TOKEN?.trim());
@@ -189,62 +251,6 @@ export function escapeTelegramHtml(text: string): string {
     .replaceAll(">", "&gt;");
 }
 
-export function telegramChatIdReply(chatId: string | number): string {
-  return [
-    "<b>Your Telegram chat ID</b>",
-    "",
-    `<code>${escapeTelegramHtml(String(chatId))}</code>`,
-    "",
-    "Copy that number into a Telegram alert rule at /alerts, then hit Test.",
-  ].join("\n");
-}
-
-export function telegramWelcomeReply(chatId: string | number): string {
-  return [
-    "<b>Catalyst Intel</b> — bot connected.",
-    "",
-    "Your chat ID (paste this into /alerts):",
-    `<code>${escapeTelegramHtml(String(chatId))}</code>`,
-    "",
-    "Commands:",
-    "/id — show this chat ID again",
-    "/help — how alerts work",
-  ].join("\n");
-}
-
-export function telegramHelpReply(chatId: string | number): string {
-  return [
-    "<b>How Telegram alerts work</b>",
-    "",
-    "1. Copy your chat ID below",
-    "2. Open Catalyst Intel → Alerts",
-    "3. Create a Telegram rule and paste the ID",
-    "4. Save &amp; Test — you should get a fire here",
-    "",
-    `Your chat ID: <code>${escapeTelegramHtml(String(chatId))}</code>`,
-  ].join("\n");
-}
-
-/**
- * Pick the reply body for an inbound user message.
- */
-export function buildTelegramInboundReply(options: {
-  chatId: string | number;
-  text?: string | null;
-}): { text: string; parseMode: "HTML" } {
-  const parsed = parseTelegramCommand(options.text);
-  const command = parsed?.command;
-
-  if (command === "help") {
-    return { text: telegramHelpReply(options.chatId), parseMode: "HTML" };
-  }
-  if (command === "id" || command === "chatid" || command === "chat_id") {
-    return { text: telegramChatIdReply(options.chatId), parseMode: "HTML" };
-  }
-  // /start and any other message (including plain text) → welcome + chat id
-  return { text: telegramWelcomeReply(options.chatId), parseMode: "HTML" };
-}
-
 /**
  * Low-level JSON Bot API call. Never throws.
  */
@@ -305,6 +311,7 @@ export async function sendTelegramMessage(options: {
   text: string;
   parseMode?: "HTML" | "MarkdownV2";
   disableWebPagePreview?: boolean;
+  replyMarkup?: TelegramReplyKeyboard | TelegramInlineKeyboard;
 }): Promise<TelegramSendResult> {
   if (!getBotToken()) {
     return {
@@ -326,12 +333,27 @@ export async function sendTelegramMessage(options: {
   if (options.parseMode) {
     payload.parse_mode = options.parseMode;
   }
+  if (options.replyMarkup) {
+    payload.reply_markup = options.replyMarkup;
+  }
 
   const result = await callTelegramApi("sendMessage", payload);
   return {
     ok: result.ok,
     detail: result.ok ? "Telegram message sent" : result.detail,
   };
+}
+
+export async function answerTelegramCallbackQuery(options: {
+  callbackQueryId: string;
+  text?: string;
+  showAlert?: boolean;
+}): Promise<TelegramSendResult> {
+  return callTelegramApi("answerCallbackQuery", {
+    callback_query_id: options.callbackQueryId,
+    text: options.text,
+    show_alert: options.showAlert ?? false,
+  });
 }
 
 export async function getTelegramBotProfile(): Promise<
@@ -361,7 +383,7 @@ export async function setTelegramWebhook(options: {
   return callTelegramApi("setWebhook", {
     url: options.url,
     secret_token: options.secretToken,
-    allowed_updates: ["message"],
+    allowed_updates: ["message", "callback_query"],
     drop_pending_updates: false,
   });
 }
@@ -378,11 +400,11 @@ export async function setTelegramBotDescriptions(): Promise<{
 }> {
   const description = await callTelegramApi("setMyDescription", {
     description:
-      "Catalyst Intel alerts bot.\n\nSend /start to get your chat ID, then paste it into Alerts on the desk. You’ll receive catalyst fires here when your rules match.",
+      "Catalyst Intel alerts bot.\n\nConnect from Alerts on the desk (or /start), then get catalyst fires here when your watchlist rules match. Menu: /status /recent /mute /help.",
   });
   const shortDescription = await callTelegramApi("setMyShortDescription", {
     short_description:
-      "Get your chat ID and receive Catalyst Intel alert fires on Telegram.",
+      "Watchlist alert fires from Catalyst Intel — connect from /alerts.",
   });
   return { description, shortDescription };
 }

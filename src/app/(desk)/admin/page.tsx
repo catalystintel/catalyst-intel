@@ -168,8 +168,8 @@ export default async function AdminPage() {
             Telegram bot
           </h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            One-click webhook + commands + brand avatar so /start returns chat
-            IDs for alert rules.
+            One-click webhook + commands + brand avatar so users can Connect
+            Telegram from Alerts (deep-link) and receive watchlist fires.
           </p>
         </div>
         <div className="px-4 py-4 sm:px-5">

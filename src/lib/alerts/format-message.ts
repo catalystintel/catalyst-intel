@@ -146,6 +146,8 @@ function resolveAppOrigin(env: NodeJS.ProcessEnv = process.env): string | null {
 export interface FormattedAlertMessage {
   symbol: string;
   headline: string;
+  /** Optional one-line WIIM / AI takeaway under the headline */
+  takeaway: string | null;
   /** Email subject line */
   subject: string;
   /** Push notification title (short) */
@@ -156,6 +158,8 @@ export interface FormattedAlertMessage {
   text: string;
   /** Deep link into the desk event page, when origin is known */
   deskUrl: string | null;
+  /** Deep link to the desk watchlists page, when origin is known */
+  watchlistsUrl: string | null;
   sourceUrl: string | null;
 }
 
@@ -164,7 +168,11 @@ export interface FormattedAlertMessage {
  */
 export function formatAlertMessage(
   catalyst: AlertMessageCatalyst,
-  options?: { ruleName?: string; env?: NodeJS.ProcessEnv },
+  options?: {
+    ruleName?: string;
+    takeaway?: string | null;
+    env?: NodeJS.ProcessEnv;
+  },
 ): FormattedAlertMessage {
   const symbol = (catalyst.symbol?.trim() || "—").toUpperCase();
   const headline = (
@@ -172,6 +180,8 @@ export function formatAlertMessage(
     catalyst.title?.trim() ||
     "New catalyst"
   ).slice(0, 200);
+
+  const takeaway = options?.takeaway?.trim().slice(0, 220) || null;
 
   const session = classifySession(catalyst.timestamp);
   const sessionLabel = session === "any" ? null : sessionDisplayLabel(session);
@@ -183,15 +193,20 @@ export function formatAlertMessage(
   const deskUrl = origin
     ? `${origin}/catalyst-feed/catalyst/${catalyst.id}`
     : null;
+  const watchlistsUrl = origin ? `${origin}/watchlist` : null;
   const sourceUrl = catalyst.sourceUrl?.trim() || null;
 
-  const lines = [
-    `${symbol} · ${category}`,
-    headline,
+  const lines = [`${symbol} · ${category}`, headline];
+
+  if (takeaway) {
+    lines.push("", takeaway);
+  }
+
+  lines.push(
     "",
     contextParts.join(" · "),
     `Filed ${formatFiledEt(catalyst.timestamp)}`,
-  ];
+  );
 
   if (options?.ruleName?.trim()) {
     lines.push(`Rule: ${options.ruleName.trim()}`);
@@ -207,16 +222,20 @@ export function formatAlertMessage(
 
   const subject = `[Catalyst] ${symbol} · ${headline}`.slice(0, 120);
   const pushTitle = `${symbol} · ${category}`;
-  const pushBody = headline;
+  const pushBody = takeaway
+    ? `${headline} — ${takeaway}`.slice(0, 180)
+    : headline;
 
   return {
     symbol,
     headline,
+    takeaway,
     subject,
     pushTitle,
     pushBody,
     text: lines.join("\n"),
     deskUrl,
+    watchlistsUrl,
     sourceUrl,
   };
 }
