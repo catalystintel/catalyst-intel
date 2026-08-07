@@ -63,7 +63,9 @@ export async function POST(request: NextRequest) {
 
   const prompt = typeof raw.prompt === "string" ? raw.prompt.slice(0, 500) : "";
   const existingName =
-    typeof raw.existingName === "string" ? raw.existingName : undefined;
+    typeof raw.existingName === "string"
+      ? raw.existingName.slice(0, 80)
+      : undefined;
   const existingCriteria: WatchlistCriteria | undefined =
     raw.existingCriteria !== undefined
       ? normalizeWatchlistCriteria(raw.existingCriteria)

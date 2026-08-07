@@ -34,7 +34,9 @@ export function normalizeWatchlistCriteria(value: unknown): WatchlistCriteria {
     isEventCategoryKey,
   );
   const forms = stringArray(raw.forms, (s) => s).filter(isFeedFormFilter);
-  const tags = stringArray(raw.tags, (s) => s.toLowerCase(), 60);
+  // Per-tag length cap — free-form tags can otherwise carry long injection
+  // payloads into watchlist AI refine prompts and stored criteria.
+  const tags = stringArray(raw.tags, (s) => s.toLowerCase().slice(0, 64), 60);
   const sources = stringArray(raw.sources, (s) => s.toLowerCase());
   const q =
     typeof raw.q === "string" && raw.q.trim()
