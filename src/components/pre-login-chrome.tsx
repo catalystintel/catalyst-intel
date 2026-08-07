@@ -38,7 +38,7 @@ export function PreLoginChrome({
     // regardless of the signed-in app theme toggle — `.dark` + scoped tokens
     // cascade independently of next-themes' `<html>` class. Authenticated desk
     // navy stays on `.desk-chrome` and is not overridden here.
-    <div className="dark prelogin-surface relative flex min-h-dvh flex-1 flex-col overflow-x-hidden bg-[var(--desk-app)]">
+    <div className="dark prelogin-surface signal-mesh-bg relative flex min-h-dvh flex-1 flex-col overflow-x-hidden bg-[var(--desk-app)]">
       <Toaster />
       <div
         aria-hidden

@@ -81,7 +81,7 @@ export function GoogleSignInButton({
       <Button
         type="button"
         size="lg"
-        className="btn-press min-h-11 w-full gap-2.5 bg-[var(--landing-primary,#2563eb)] text-white shadow-[0_1px_2px_rgba(0,0,0,0.25),0_4px_14px_rgba(37,99,235,0.14)] hover:bg-[var(--landing-primary-hover,#1d4ed8)] focus-visible:ring-[var(--landing-primary,#2563eb)]"
+        className="btn-press min-h-11 w-full gap-2.5 bg-[var(--landing-primary,#00d4aa)] text-[var(--desk-accent-fg,#131722)] shadow-[0_1px_2px_rgba(0,0,0,0.25),0_4px_18px_rgba(0,212,170,0.22)] hover:bg-[var(--landing-primary-hover,#00b894)] focus-visible:ring-[var(--landing-primary,#00d4aa)]"
         disabled={!configured || pending}
         onClick={startOAuth}
       >
