@@ -19,9 +19,9 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
+import { AlertRulesListSkeleton } from "@/components/alerts-page-skeleton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { SkeletonCard } from "@/components/loading-skeleton";
 import type {
   AlertChannel,
   AlertRuleConditions,
@@ -404,13 +404,7 @@ export function AlertRulesPanel() {
   }
 
   if (!loaded) {
-    return (
-      <div className="flex flex-col gap-6">
-        <SkeletonCard lines={2} />
-        <SkeletonCard lines={4} />
-        <SkeletonCard lines={2} />
-      </div>
-    );
+    return <AlertRulesListSkeleton />;
   }
 
   const activeReady = channelReady(channel);
