@@ -22,7 +22,7 @@ export function PreloginRisingChart() {
       aria-hidden
       className="prelogin-rising-chart pointer-events-none absolute top-0 left-1/2 z-0 h-[min(72vh,580px)] w-screen max-w-none -translate-x-1/2 overflow-hidden"
     >
-      <div className="absolute top-[20%] right-[10%] size-64 rounded-full bg-[var(--desk-chart-accent,#2563eb)] opacity-[0.12] blur-3xl sm:size-80" />
+      <div className="absolute top-[20%] right-[10%] size-64 rounded-full bg-[var(--desk-chart-accent,#2962ff)] opacity-[0.12] blur-3xl sm:size-80" />
       <div className="absolute top-[12%] right-[22%] size-36 rounded-full bg-[var(--desk-accent,#cbd5e1)] opacity-[0.06] blur-3xl" />
 
       <svg
@@ -34,17 +34,17 @@ export function PreloginRisingChart() {
           <linearGradient id="prelogin-rising-area" x1="0" y1="0" x2="0" y2="1">
             <stop
               offset="0%"
-              stopColor="var(--desk-chart-accent, #2563eb)"
+              stopColor="var(--desk-chart-accent, #2962ff)"
               stopOpacity="0.48"
             />
             <stop
               offset="40%"
-              stopColor="var(--desk-chart-accent, #2563eb)"
+              stopColor="var(--desk-chart-accent, #2962ff)"
               stopOpacity="0.16"
             />
             <stop
               offset="100%"
-              stopColor="var(--desk-chart-accent, #2563eb)"
+              stopColor="var(--desk-chart-accent, #2962ff)"
               stopOpacity="0"
             />
           </linearGradient>
@@ -57,12 +57,12 @@ export function PreloginRisingChart() {
           >
             <stop
               offset="0%"
-              stopColor="var(--desk-chart-accent, #2563eb)"
+              stopColor="var(--desk-chart-accent, #2962ff)"
               stopOpacity="0.2"
             />
             <stop
               offset="45%"
-              stopColor="var(--desk-chart-accent, #2563eb)"
+              stopColor="var(--desk-chart-accent, #2962ff)"
               stopOpacity="0.7"
             />
             <stop

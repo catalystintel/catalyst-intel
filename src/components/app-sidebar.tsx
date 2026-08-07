@@ -34,7 +34,7 @@ export function AppSidebar({
   return (
     <nav
       className={cn(
-        "flex h-full flex-col border-r border-[var(--desk-border)] bg-[var(--desk-sidebar)] py-4",
+        "flex h-full flex-col border-r border-[var(--desk-border)] bg-[var(--desk-sidebar)]/80 py-4 backdrop-blur-md",
         collapsed ? "w-[56px] items-center px-1.5" : "w-[220px] px-3",
       )}
       aria-label="Primary navigation"
@@ -215,9 +215,9 @@ function SidebarEntry({
         base,
         active
           ? cn(
-              "bg-[var(--desk-overlay-strong)] text-[var(--desk-text)]",
-              !collapsed && "shadow-[inset_2px_0_0_var(--desk-live)]",
-              collapsed && "ring-1 ring-[var(--desk-live)]/55 ring-inset",
+              "bg-[var(--desk-nav-active)] text-[var(--desk-live)] shadow-[0_0_12px_rgba(0,212,170,0.15)]",
+              !collapsed && "shadow-[inset_3px_0_0_var(--desk-live)]",
+              collapsed && "ring-1 ring-[var(--desk-live)]/60 ring-inset",
             )
           : "text-[var(--desk-text-muted)] hover:bg-[var(--desk-overlay-soft)] hover:text-[var(--desk-text)]",
       )}

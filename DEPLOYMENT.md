@@ -74,6 +74,11 @@ dashboard → **Authentication → URL Configuration**, set:
 | Redirect URLs            | `http://localhost:3000/auth/callback`                            |
 | Redirect URLs (optional) | `https://<your-preview>.vercel.app/auth/callback`                |
 
+**Do not** set Site URL to a preview host (e.g. `catalyst-intel-rouge.vercel.app`)
+or omit `https://`. **Do not** allowlist only the site root (`…vercel.app/`) —
+Google must return to **`/auth/callback`**. A wrong Site URL / missing callback
+entry is the usual cause of landing on `/?code=…` still signed out.
+
 Also add `https://catalyst-intel-catalyst-intel.vercel.app` (and localhost) under Google Cloud → OAuth client
 → **Authorized JavaScript origins**. Missing production redirect URLs are a common cause of
 “works on desktop / fails on phone” OAuth returns.

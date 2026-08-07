@@ -105,10 +105,10 @@ export default function AboutPage() {
           </p>
           <div className="mt-6 flex flex-wrap items-center gap-3">
             <Link
-              href="/login"
+              href="/auth/login?next=%2Fcatalyst-feed"
               className={cn(
                 buttonVariants({ size: "lg" }),
-                "btn-press min-h-11 w-full justify-center bg-[var(--landing-primary,#2563eb)] text-[#f8fafc] hover:bg-[var(--landing-primary-hover,#1d4ed8)] sm:w-auto",
+                "btn-press min-h-11 w-full justify-center bg-[var(--landing-primary,#00d4aa)] text-[var(--desk-accent-fg,#131722)] hover:bg-[var(--landing-primary-hover,#00b894)] sm:w-auto",
               )}
             >
               Continue with Google — free

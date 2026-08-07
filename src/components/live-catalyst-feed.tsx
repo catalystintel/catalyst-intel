@@ -190,7 +190,6 @@ export function LiveCatalystFeed({
     nextCursor,
     loading,
     loadingMore,
-    lastFetchedAt,
     pollError,
     filterState,
     setFilterState,
@@ -790,14 +789,6 @@ export function LiveCatalystFeed({
     timeWindow: filterState.timeWindow,
   });
 
-  const refreshedLabel = lastFetchedAt
-    ? new Date(lastFetchedAt).toLocaleTimeString("en-US", {
-        hour: "numeric",
-        minute: "2-digit",
-        second: "2-digit",
-      })
-    : null;
-
   return (
     <section
       className="news-panel desk-arial flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-xl border border-[var(--desk-border)] bg-[var(--desk-panel)]"
@@ -855,14 +846,6 @@ export function LiveCatalystFeed({
               <X className="size-3.5 text-[var(--desk-text-muted)]" />
               Clear filters
             </button>
-          ) : null}
-          {refreshedLabel ? (
-            <span
-              className="hidden font-mono text-[0.78rem] text-[var(--desk-text-muted)] tabular-nums sm:inline"
-              title="When this browser last refreshed the feed — not when filings occurred"
-            >
-              Refreshed: {refreshedLabel}
-            </span>
           ) : null}
           {pendingNew > 0 ? (
             <button
