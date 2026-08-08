@@ -260,10 +260,17 @@ export function AlertRulesPanel() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Could not start linking.");
+      // Prefer Telegram Web — macOS browsers often no-op t.me "START BOT"
+      // when the desktop tg:// handler isn't installed.
+      const webDeepLink =
+        typeof data.webDeepLink === "string" ? data.webDeepLink : null;
       const deepLink = typeof data.deepLink === "string" ? data.deepLink : null;
-      if (!deepLink) throw new Error("Missing Telegram deep link.");
-      window.open(deepLink, "_blank", "noopener,noreferrer");
-      toast.success("Opened Telegram — tap Start, then come back here.");
+      const openUrl = webDeepLink || deepLink;
+      if (!openUrl) throw new Error("Missing Telegram deep link.");
+      window.open(openUrl, "_blank", "noopener,noreferrer");
+      toast.success(
+        "Opened Telegram Web — tap Start, then come back here. If nothing opens, use Open in Web on t.me.",
+      );
       for (let i = 0; i < 8; i++) {
         await new Promise((r) => setTimeout(r, 2000));
         await refreshNotifications();
@@ -800,7 +807,8 @@ function TelegramSetup({
           </p>
         ) : (
           <p className="mt-1 text-xs text-[var(--desk-text-muted)]">
-            One tap opens Telegram with a link token — tap Start there.
+            Opens Telegram Web with a link token — tap Start there. If the
+            browser&apos;s Start Bot button does nothing, use Open in Web.
           </p>
         )}
       </div>

@@ -388,6 +388,99 @@ export async function setTelegramWebhook(options: {
   });
 }
 
+export type TelegramWebhookInfo = {
+  url: string;
+  pendingUpdateCount: number;
+  lastErrorMessage: string | null;
+  lastErrorDate: number | null;
+};
+
+export async function getTelegramWebhookInfo(): Promise<
+  TelegramSendResult & { info?: TelegramWebhookInfo }
+> {
+  const result = await callTelegramApi("getWebhookInfo");
+  if (!result.ok) return { ok: false, detail: result.detail };
+  const raw =
+    result.result && typeof result.result === "object"
+      ? (result.result as Record<string, unknown>)
+      : {};
+  return {
+    ok: true,
+    detail: result.detail,
+    info: {
+      url: typeof raw.url === "string" ? raw.url : "",
+      pendingUpdateCount:
+        typeof raw.pending_update_count === "number"
+          ? raw.pending_update_count
+          : 0,
+      lastErrorMessage:
+        typeof raw.last_error_message === "string"
+          ? raw.last_error_message
+          : null,
+      lastErrorDate:
+        typeof raw.last_error_date === "number" ? raw.last_error_date : null,
+    },
+  };
+}
+
+const WEBHOOK_ENSURE_TTL_MS = 5 * 60_000;
+let lastWebhookEnsure: { url: string; at: number } | null = null;
+
+/** Test helper — clears the in-memory webhook ensure cache. */
+export function clearTelegramWebhookEnsureCache(): void {
+  lastWebhookEnsure = null;
+}
+
+/**
+ * Registers `setWebhook` when Telegram has no URL or a different URL.
+ * Idempotent within a short in-memory TTL so Connect / Admin don't spam
+ * Telegram. Requires TELEGRAM_BOT_TOKEN + TELEGRAM_WEBHOOK_SECRET.
+ */
+export async function ensureTelegramWebhook(
+  webhookUrl: string,
+): Promise<TelegramSendResult & { repaired?: boolean }> {
+  const secret = getTelegramWebhookSecret();
+  if (!isTelegramConfigured()) {
+    return { ok: false, detail: "TELEGRAM_BOT_TOKEN is not set." };
+  }
+  if (!secret) {
+    return { ok: false, detail: "TELEGRAM_WEBHOOK_SECRET is not set." };
+  }
+
+  const target = webhookUrl.trim();
+  if (!target) {
+    return { ok: false, detail: "Missing webhook URL." };
+  }
+
+  const now = Date.now();
+  if (
+    lastWebhookEnsure &&
+    lastWebhookEnsure.url === target &&
+    now - lastWebhookEnsure.at < WEBHOOK_ENSURE_TTL_MS
+  ) {
+    return {
+      ok: true,
+      detail: "Webhook already ensured recently",
+      repaired: false,
+    };
+  }
+
+  const current = await getTelegramWebhookInfo();
+  if (current.ok && current.info?.url === target) {
+    lastWebhookEnsure = { url: target, at: now };
+    return { ok: true, detail: "Webhook already registered", repaired: false };
+  }
+
+  const set = await setTelegramWebhook({
+    url: target,
+    secretToken: secret,
+  });
+  if (set.ok) {
+    lastWebhookEnsure = { url: target, at: now };
+  }
+  return { ...set, repaired: set.ok };
+}
+
 export async function setTelegramBotCommands(
   commands: TelegramBotCommand[] = TELEGRAM_BOT_COMMANDS,
 ): Promise<TelegramSendResult> {

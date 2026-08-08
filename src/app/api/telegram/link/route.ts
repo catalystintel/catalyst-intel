@@ -12,7 +12,11 @@ import {
   isSameOriginRequest,
   sameOriginForbiddenResponse,
 } from "@/lib/http/same-origin";
-import { isTelegramConfigured } from "@/lib/telegram/bot";
+import { getTelegramWebhookOrigin } from "@/lib/http/origin";
+import {
+  ensureTelegramWebhook,
+  isTelegramConfigured,
+} from "@/lib/telegram/bot";
 import {
   createTelegramLinkSession,
   getTelegramLinkByUserId,
@@ -105,8 +109,26 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  // Self-heal: point Telegram at THIS deployment so /start gets a reply.
+  // Avoids dead webhooks when NEXT_PUBLIC_APP_URL / prod host is wrong.
+  const webhookUrl = `${getTelegramWebhookOrigin(request)}/api/telegram/webhook`;
+  const webhook = await ensureTelegramWebhook(webhookUrl);
+  if (!webhook.ok) {
+    return withRateLimitHeaders(
+      NextResponse.json(
+        {
+          error:
+            "Telegram webhook is not registered. Open Admin → Setup Telegram bot (check TELEGRAM_WEBHOOK_SECRET), then try again.",
+          detail: webhook.detail,
+        },
+        { status: 503 },
+      ),
+      limitResult,
+    );
+  }
+
   const session = await createTelegramLinkSession(user.id);
-  if (!session.deepLink) {
+  if (!session.deepLink || !session.webDeepLink) {
     return withRateLimitHeaders(
       NextResponse.json(
         {
@@ -125,6 +147,8 @@ export async function POST(request: NextRequest) {
     NextResponse.json({
       ok: true,
       deepLink: session.deepLink,
+      webDeepLink: session.webDeepLink,
+      webhookRepaired: Boolean(webhook.repaired),
       expiresAt: session.expiresAt,
     }),
     limitResult,

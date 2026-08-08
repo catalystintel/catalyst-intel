@@ -23,6 +23,23 @@ export function getRequestOrigin(headerList: Headers): string {
 }
 
 /**
+ * Origin Telegram should POST updates to. Must be the deployment that is
+ * actually serving this request — not `NEXT_PUBLIC_APP_URL`, which may point
+ * at a custom domain or disabled production host while staging is live.
+ */
+export function getTelegramWebhookOrigin(request: Request): string {
+  try {
+    return getRequestOrigin(request.headers);
+  } catch {
+    try {
+      return new URL(request.url).origin;
+    } catch {
+      return getTrustedAppOrigin(request);
+    }
+  }
+}
+
+/**
  * Allowlisted public app origin for OAuth redirects. Prefer configured
  * `NEXT_PUBLIC_APP_URL`, then Vercel production/URL env — never trust a
  * bare client-controlled `X-Forwarded-Host` alone when these are set.

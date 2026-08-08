@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { getCurrentAppUser } from "@/lib/auth/current-user";
 import { getClientIp } from "@/lib/http/client-ip";
-import { getTrustedAppOrigin } from "@/lib/http/origin";
+import { getTelegramWebhookOrigin } from "@/lib/http/origin";
 import { RATE_LIMITS, checkRateLimit } from "@/lib/http/rate-limit";
 import {
   rateLimitExceededResponse,
@@ -14,6 +14,7 @@ import {
 } from "@/lib/http/same-origin";
 import {
   getTelegramBotUsername,
+  getTelegramWebhookInfo,
   isTelegramConfigured,
   setupTelegramBot,
 } from "@/lib/telegram/bot";
@@ -68,12 +69,18 @@ export async function GET(request: NextRequest) {
     limitResult: NonNullable<(typeof auth)["limitResult"]>;
   };
 
-  const origin = getTrustedAppOrigin(request);
+  const origin = getTelegramWebhookOrigin(request);
+  const expectedWebhookUrl = `${origin}/api/telegram/webhook`;
+  const live = isTelegramConfigured() ? await getTelegramWebhookInfo() : null;
   return withRateLimitHeaders(
     NextResponse.json({
       configured: isTelegramConfigured(),
       botUsername: getTelegramBotUsername() ?? null,
-      webhookUrl: `${origin}/api/telegram/webhook`,
+      webhookUrl: expectedWebhookUrl,
+      liveWebhookUrl: live?.info?.url || null,
+      webhookMatches: live?.info?.url === expectedWebhookUrl,
+      pendingUpdateCount: live?.info?.pendingUpdateCount ?? null,
+      lastWebhookError: live?.info?.lastErrorMessage ?? null,
     }),
     limitResult,
   );
@@ -86,7 +93,7 @@ export async function POST(request: NextRequest) {
     limitResult: NonNullable<(typeof auth)["limitResult"]>;
   };
 
-  const origin = getTrustedAppOrigin(request);
+  const origin = getTelegramWebhookOrigin(request);
   const webhookUrl = `${origin}/api/telegram/webhook`;
   const report = await setupTelegramBot({ webhookUrl });
 
