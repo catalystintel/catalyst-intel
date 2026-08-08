@@ -281,8 +281,12 @@ export function applyTeamScope(url, teamIdOrSlug, mode = "auto") {
 /** @param {unknown} err */
 export function isVercelAuthError(err) {
   const status = /** @type {{ status?: number }} */ (err)?.status;
-  if (status === 401 || status === 403) return true;
   const msg = err instanceof Error ? err.message : String(err ?? "");
+  // Personal-account tokens resolve GET /v2/user. Integration / bad tokens
+  // often return 404 "User not found" instead of 401/403.
+  if (status === 404 && /user not found/i.test(msg)) return true;
+  if (status === 401 || status === 403) return true;
+  if (/user not found/i.test(msg)) return true;
   return (
     /\b(401|403)\b/.test(msg) &&
     /not authorized|forbidden|unauthorized/i.test(msg)
@@ -417,7 +421,11 @@ export async function resolveVercelAccess(cfg) {
     `Vercel secret shapes: tokenLen=${shapes.tokenLen} org=${shapes.orgShape}(len=${shapes.orgLen}) project=${shapes.projectShape}(len=${shapes.projectLen})`,
   );
 
-  // Confirm the token is usable at all (401 here = bad/expired secret).
+  // /v2/user only works for personal account tokens. Integration tokens often
+  // return 404 "User not found" but can still list/deploy via the API — do not
+  // hard-fail here (CLI fallback still calls assertVercelUserToken later).
+  /** @type {boolean} */
+  let personalUserToken = false;
   try {
     const user = await vercelFetch(
       "/v2/user",
@@ -429,18 +437,18 @@ export async function resolveVercelAccess(cfg) {
     );
     const username =
       user?.user?.username ?? user?.username ?? user?.user?.id ?? user?.id;
+    personalUserToken = true;
     console.log(`Vercel token OK for user=${username ?? "?"}`);
   } catch (err) {
     if (isVercelAuthError(err)) {
-      const e = new Error(
-        `stage=TOKEN VERCEL_TOKEN rejected (GET /v2/user → ${/** @type {{ status?: number }} */ (err).status ?? "?"}). Recreate a personal token at https://vercel.com/account/tokens from the team-owner account that owns the live project, then update the GitHub secret.`,
+      console.warn(
+        `::warning::GET /v2/user failed (${err instanceof Error ? err.message : err}) — token may be integration-scoped. Continuing with project API probes; CLI fallback needs a personal token from https://vercel.com/account/tokens.`,
       );
-      // @ts-expect-error status for soft-fail
-      e.status = /** @type {{ status?: number }} */ (err).status ?? 403;
-      throw e;
+    } else {
+      throw err;
     }
-    throw err;
   }
+  void personalUserToken;
 
   /** @type {Array<"auto" | "teamId" | "slug" | "none">} */
   const modes = ["auto", "teamId", "slug", "none"];

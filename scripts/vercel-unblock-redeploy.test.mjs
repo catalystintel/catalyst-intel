@@ -271,6 +271,16 @@ describe("isVercelAuthError", () => {
     ).toBe(true);
     expect(isVercelAuthError(new Error("TypeScript build failed"))).toBe(false);
   });
+
+  it("treats 404 User not found as a bad/non-personal token", () => {
+    expect(
+      isVercelAuthError(
+        Object.assign(new Error("Vercel 404 /v2/user: User not found."), {
+          status: 404,
+        }),
+      ),
+    ).toBe(true);
+  });
 });
 
 describe("describeVercelSecretShapes", () => {
