@@ -420,9 +420,23 @@ export function AlertRulesPanel() {
 
   if (!loaded) return <AlertRulesListSkeleton />;
 
+  const methodsComplete =
+    enabledCount > 0 &&
+    NOTIFICATION_CHANNEL_IDS.every((id) => !channels[id] || methodReady(id));
+  const watchlistsComplete = selectedWatchlistIds.length > 0;
+  const reviewComplete = rules.some((r) => r.enabled);
+
   return (
     <div className="flex flex-col gap-6">
-      <StepperHeader step={step} onStepChange={setStep} />
+      <StepperHeader
+        step={step}
+        onStepChange={setStep}
+        stepComplete={{
+          1: methodsComplete,
+          2: watchlistsComplete,
+          3: reviewComplete,
+        }}
+      />
 
       <div
         className="rounded-2xl border border-[var(--desk-border)] bg-[var(--desk-panel)] p-4 sm:p-6"
@@ -532,16 +546,19 @@ const NOTIFICATION_CHANNEL_IDS: NotificationChannel[] = [
 function StepperHeader({
   step,
   onStepChange,
+  stepComplete,
 }: {
   step: StepId;
   onStepChange: (s: StepId) => void;
+  stepComplete: Record<StepId, boolean>;
 }) {
   return (
     <nav aria-label="Notification setup steps" className="w-full">
       <ol className="grid grid-cols-3 gap-2 sm:gap-3">
         {STEPS.map((s) => {
           const active = s.id === step;
-          const done = s.id < step;
+          // Checkmarks reflect real setup, not merely visiting the step.
+          const complete = stepComplete[s.id];
           return (
             <li key={s.id}>
               <button
@@ -558,12 +575,16 @@ function StepperHeader({
                   <span
                     className={cn(
                       "grid size-6 place-items-center rounded-full font-mono text-[0.65rem] font-bold",
-                      active || done
+                      active || complete
                         ? "bg-[var(--desk-live)] text-[var(--desk-accent-fg)]"
                         : "border border-[var(--desk-border-strong)] text-[var(--desk-text-dim)]",
                     )}
                   >
-                    {done ? <Check className="size-3.5" aria-hidden /> : s.id}
+                    {complete ? (
+                      <Check className="size-3.5" aria-hidden />
+                    ) : (
+                      s.id
+                    )}
                   </span>
                   <span className="text-sm font-semibold text-[var(--desk-text)]">
                     {s.label}
