@@ -79,6 +79,15 @@ or omit `https://`. **Do not** allowlist only the site root (`…vercel.app/`) �
 Google must return to **`/auth/callback`**. A wrong Site URL / missing callback
 entry is the usual cause of landing on `/?code=…` still signed out.
 
+**Vercel Deployment Protection (common “login sent me to vercel.com” cause):**
+If Preview (or Production) has **Vercel Authentication / Deployment Protection**
+enabled, the OAuth return to `/auth/callback` is intercepted and the browser
+lands on **vercel.com**’s own login — not Google, not Catalyst. Disable
+Deployment Protection for **Production**, and either disable it for Preview or
+only sign in on the stable production / `git-dev` hosts (ephemeral preview
+URLs bounce to production login automatically). Do **not** set Supabase Site URL
+to `https://vercel.com`.
+
 Also add `https://catalyst-intel-catalyst-intel.vercel.app` (and localhost) under Google Cloud → OAuth client
 → **Authorized JavaScript origins**. Missing production redirect URLs are a common cause of
 “works on desktop / fails on phone” OAuth returns.

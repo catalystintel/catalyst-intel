@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 
+import { authHostBounceUrl } from "@/lib/http/auth-origin";
 import { getRequestOrigin, safeNextPath } from "@/lib/http/origin";
 import { supabaseCookieOptions } from "@/lib/supabase/cookie-options";
 import {
@@ -17,6 +18,13 @@ import { googleOAuthOptions } from "@/lib/supabase/google-oauth";
  */
 export async function GET(request: NextRequest) {
   const next = safeNextPath(request.nextUrl.searchParams.get("next"));
+
+  // Refuse to mint a PKCE verifier on ephemeral preview hosts — bounce to
+  // the canonical production/staging login first (see auth-origin.ts).
+  const bounce = authHostBounceUrl(request.nextUrl);
+  if (bounce) {
+    return NextResponse.redirect(bounce);
+  }
 
   if (!isSupabaseConfigured()) {
     const login = request.nextUrl.clone();

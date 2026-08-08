@@ -7,7 +7,7 @@ import {
   getDevBypassEmail,
   isDevAuthBypassEnabled,
 } from "@/lib/auth/dev-bypass";
-import { isLocalDevUi } from "@/lib/dev/local-dev-ui";
+import { getPreferredAuthOrigin } from "@/lib/http/auth-origin";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { toUserFacingMessage, USER_FACING } from "@/lib/errors/user-facing";
 import { cn } from "@/lib/utils";
@@ -26,9 +26,12 @@ export default async function LoginPage({
   const configured = isSupabaseConfigured();
   const devBypass = isDevAuthBypassEnabled();
   const destination = next ?? "/catalyst-feed";
-  const showOpsSetup = isLocalDevUi();
+  const canonicalAuthOrigin = getPreferredAuthOrigin();
   const safeError = error
     ? toUserFacingMessage(error, USER_FACING.signInUnavailable)
+    : null;
+  const safeMessage = message
+    ? toUserFacingMessage(message, USER_FACING.useProductionLogin)
     : null;
 
   return (
@@ -97,14 +100,18 @@ export default async function LoginPage({
                 </div>
               ) : null}
 
-              {message ? (
-                <p className="text-sm text-muted-foreground">{message}</p>
+              {safeMessage ? (
+                <p className="text-sm text-muted-foreground">{safeMessage}</p>
               ) : null}
               {safeError ? (
                 <p className="text-sm text-destructive">{safeError}</p>
               ) : null}
 
-              <GoogleSignInButton next={destination} configured={configured} />
+              <GoogleSignInButton
+                next={destination}
+                configured={configured}
+                canonicalAuthOrigin={canonicalAuthOrigin}
+              />
             </div>
           </div>
 

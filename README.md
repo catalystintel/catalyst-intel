@@ -35,8 +35,11 @@ npm install
    - **Redirect URLs** (add all that you use):
      - `http://localhost:3000/auth/callback`
      - `https://catalyst-intel-catalyst-intel.vercel.app/auth/callback`
-     - any Vercel preview URL callback you need, e.g.
-       `https://<preview>.vercel.app/auth/callback`
+     - staging: `https://catalyst-intel-git-dev-zhbar10s-projects.vercel.app/auth/callback`
+   - Turn **off** Vercel Deployment Protection on Production (and ideally Preview).
+     If it is on, OAuth returns get intercepted and the browser shows **vercel.com**
+     login instead of finishing Google sign-in. Ephemeral preview URLs
+     (`*-rouge.vercel.app`, etc.) bounce to production login automatically.
 3. In **Authentication → Providers**, enable **Google** (this is the _only_ sign-in method - no
    passwords are ever collected or stored by this app). Follow Supabase's
    [Google OAuth guide](https://supabase.com/docs/guides/auth/social-login/auth-google):
