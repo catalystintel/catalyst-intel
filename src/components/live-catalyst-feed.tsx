@@ -250,6 +250,8 @@ export function LiveCatalystFeed({
   const [selectedId, setSelectedId] = useState<number | null>(
     initialSelectedId && initialSelectedId > 0 ? initialSelectedId : null,
   );
+  /** Last open row payload — keeps split mounted if a poll briefly omits it. */
+  const [selectedHold, setSelectedHold] = useState<FeedCatalyst | null>(null);
   const [chartRange, setChartRange] =
     useState<ChartRangeKey>(DEFAULT_CHART_RANGE);
   const isXlDesk = useIsXlDesk();
@@ -580,6 +582,7 @@ export function LiveCatalystFeed({
       // to finish - otherwise it would just vanish instantly.
       setDismissingIds((prev) => new Set(prev).add(id));
       setSelectedId((cur) => (cur === id ? null : cur));
+      setSelectedHold((hold) => (hold?.id === id ? null : hold));
       window.setTimeout(() => {
         setDismissedIds((prev) => {
           const next = new Set(prev);
@@ -603,9 +606,14 @@ export function LiveCatalystFeed({
     [undismissCatalyst],
   );
 
-  const openSplit = useCallback((id: number) => {
-    setSelectedId(id);
-  }, []);
+  const openSplit = useCallback(
+    (id: number) => {
+      setSelectedId(id);
+      const row = catalysts.find((c) => c.id === id);
+      if (row) setSelectedHold(row);
+    },
+    [catalysts],
+  );
 
   const openArticle = useCallback((id: number) => {
     setArticleId(id);
@@ -923,11 +931,19 @@ export function LiveCatalystFeed({
     return sortFeedNewestFirst(filtered);
   }, [catalysts, dismissedIds, quietMode, watchlistSymbols, signalWatchlists]);
 
-  const selectedRaw = selectedId
+  // Prefer the live list row; fall back to the row captured at open/nav so a
+  // silent poll never blanks the split out from under the user.
+  const selectedFromList = selectedId
     ? (catalysts.find((c) => c.id === selectedId) ?? null)
     : null;
+  const selectedRaw =
+    selectedFromList ??
+    (selectedId != null && selectedHold?.id === selectedId
+      ? selectedHold
+      : null);
   // Desk rule: don't open the split panel for unresolved names
   // (CPI / Jobs NFP macro exceptions may still open without a symbol).
+  // Silent polls merge (not replace) so this row is not dropped mid-triage.
   const selected =
     selectedRaw && passesSymbolFeedGate(selectedRaw) ? selectedRaw : null;
 
@@ -939,6 +955,8 @@ export function LiveCatalystFeed({
   const selectedNavIndex = selected
     ? navigable.findIndex((c) => c.id === selected.id)
     : -1;
+  // Newest is index 0 → Up disabled at top; Down disabled at bottom.
+  // When a newer row arrives, index shifts down and Up re-enables.
   const canPrevSplit = selectedNavIndex > 0;
   const canNextSplit =
     selectedNavIndex >= 0 && selectedNavIndex < navigable.length - 1;
@@ -946,9 +964,12 @@ export function LiveCatalystFeed({
   const navigateSplit = useCallback(
     (direction: -1 | 1) => {
       if (selectedNavIndex < 0) return;
-      const next = navigable[selectedNavIndex + direction];
+      const nextIndex = selectedNavIndex + direction;
+      if (nextIndex < 0 || nextIndex >= navigable.length) return;
+      const next = navigable[nextIndex];
       if (!next) return;
       setSelectedId(next.id);
+      setSelectedHold(next);
     },
     [navigable, selectedNavIndex],
   );
@@ -1190,7 +1211,10 @@ export function LiveCatalystFeed({
               type="button"
               aria-label="Close panel backdrop"
               className="fixed inset-0 z-40 bg-[var(--desk-scrim)] xl:hidden"
-              onClick={() => setSelectedId(null)}
+              onClick={() => {
+                setSelectedId(null);
+                setSelectedHold(null);
+              }}
             />
             <div
               className={cn(
@@ -1208,7 +1232,10 @@ export function LiveCatalystFeed({
                 isAdmin={isAdmin}
                 showSourceLabels={showSourceLabels}
                 chartRange={chartRange}
-                onClose={() => setSelectedId(null)}
+                onClose={() => {
+                  setSelectedId(null);
+                  setSelectedHold(null);
+                }}
                 onPrev={() => navigateSplit(-1)}
                 onNext={() => navigateSplit(1)}
                 canPrev={canPrevSplit}
