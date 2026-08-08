@@ -7,6 +7,7 @@ import {
   useMemo,
   useRef,
   useState,
+  useSyncExternalStore,
   type MutableRefObject,
   type ReactNode,
 } from "react";
@@ -26,6 +27,7 @@ import { toast } from "sonner";
 import { CatalystArticleDialog } from "@/components/catalyst-article-dialog";
 import { DeskTip } from "@/components/desk-tip";
 import { FeedFilterMultiSelect } from "@/components/feed-filter-multi-select";
+import { TapeChartPanel } from "@/components/tape-chart-panel";
 import { TapeSplitPanel } from "@/components/tape-split-panel";
 import { SymbolActionMenu } from "@/components/symbol-action-menu";
 import {
@@ -77,6 +79,10 @@ import { FEED_TIME_WINDOWS } from "@/lib/catalysts/feed-time-window";
 import { classifyFeedEmpty } from "@/lib/catalysts/feed-empty-state";
 import { passesSymbolFeedGate } from "@/lib/catalysts/symbol-feed-gate";
 import { isLocalDevUi } from "@/lib/dev/local-dev-ui";
+import {
+  DEFAULT_CHART_RANGE,
+  type ChartRangeKey,
+} from "@/lib/market/chart-range";
 import {
   DEFAULT_FEED_FILTERS,
   filtersToWatchlistCriteria,
@@ -165,6 +171,19 @@ function writeDismissedIds(ids: Set<number>) {
   );
 }
 
+/** `xl` breakpoint — docked split+chart vs mobile overlay. */
+function useIsXlDesk() {
+  return useSyncExternalStore(
+    (onStoreChange) => {
+      const mq = window.matchMedia("(min-width: 1280px)");
+      mq.addEventListener("change", onStoreChange);
+      return () => mq.removeEventListener("change", onStoreChange);
+    },
+    () => window.matchMedia("(min-width: 1280px)").matches,
+    () => true,
+  );
+}
+
 export function LiveCatalystFeed({
   initialCatalysts,
   isAdmin,
@@ -173,6 +192,7 @@ export function LiveCatalystFeed({
   initialWatchlistCriteria,
   initialSelectedId,
   onFocusSymbol,
+  onChartOpenChange,
   calendarRailHidden = false,
   onShowCalendarRail,
 }: {
@@ -192,6 +212,11 @@ export function LiveCatalystFeed({
    * whichever tape row you're triaging. Optional; no-op when omitted.
    */
   onFocusSymbol?: (symbol: string) => void;
+  /**
+   * True while a symbol-gated selection is open (sibling chart pane active).
+   * Lets the desk shell transiently collapse the calendar rail.
+   */
+  onChartOpenChange?: (open: boolean) => void;
   /**
    * When the desk Economic Calendar rail is collapsed, show a header control
    * so it can be restored without hunting for the slim edge strip.
@@ -224,6 +249,9 @@ export function LiveCatalystFeed({
   const [selectedId, setSelectedId] = useState<number | null>(
     initialSelectedId && initialSelectedId > 0 ? initialSelectedId : null,
   );
+  const [chartRange, setChartRange] =
+    useState<ChartRangeKey>(DEFAULT_CHART_RANGE);
+  const isXlDesk = useIsXlDesk();
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [filtersHydrated, setFiltersHydrated] = useState(false);
   const [filterRecalc, setFilterRecalc] = useState(false);
@@ -908,6 +936,22 @@ export function LiveCatalystFeed({
     if (selected?.symbol) onFocusSymbol?.(selected.symbol);
   }, [selected, onFocusSymbol]);
 
+  const selectedSymbol = selected?.symbol?.trim().toUpperCase() || null;
+  const chartOpen = Boolean(selectedSymbol);
+
+  useEffect(() => {
+    onChartOpenChange?.(chartOpen);
+    return () => onChartOpenChange?.(false);
+  }, [chartOpen, onChartOpenChange]);
+
+  // Reset shared chart lookback when the open symbol changes.
+  useEffect(() => {
+    const id = window.setTimeout(() => {
+      setChartRange(DEFAULT_CHART_RANGE);
+    }, 0);
+    return () => window.clearTimeout(id);
+  }, [selectedSymbol]);
+
   // Symbol-only is a header toggle — don't drive Clear / Filters badge from it.
   const panelFiltersActive = !isPanelFiltersDefault(filterState);
   const filtersActive = panelFiltersActive || quietMode;
@@ -1039,7 +1083,7 @@ export function LiveCatalystFeed({
           filterRecalc && "feed-filter-recalc",
         )}
       >
-        <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+        <div className="flex min-h-0 min-w-[220px] flex-1 flex-col">
           {emptyKind === "db" ? (
             <div className="flex flex-1 flex-col items-center justify-center gap-2 px-6 py-16 text-center">
               <p className="text-sm font-medium text-[var(--desk-text)]">
@@ -1119,29 +1163,75 @@ export function LiveCatalystFeed({
               className="fixed inset-0 z-40 bg-[var(--desk-scrim)] xl:hidden"
               onClick={() => setSelectedId(null)}
             />
-            <TapeSplitPanel
-              key={selected.id}
-              catalyst={selected}
-              isAdmin={isAdmin}
-              showSourceLabels={showSourceLabels}
-              onClose={() => setSelectedId(null)}
-              onRead={() => openArticle(selected.id)}
-              onDismiss={() => {
-                if (selectedId !== null) dismissCatalyst(selectedId);
-              }}
-              onAiAnalyzed={(analysis) => {
-                prependOrMerge([
-                  {
-                    ...selected,
-                    aiBullets: analysis.bullets,
-                    aiLean: analysis.lean,
-                    aiUncertain: analysis.uncertain,
-                  },
-                ]);
-              }}
-              mobileOverlay
-              className="fixed inset-0 z-50 w-full xl:static xl:inset-auto xl:z-auto xl:w-[min(44%,520px)] xl:max-w-[520px] xl:min-w-[340px] xl:shrink-0 xl:border-l"
-            />
+            <div
+              className={cn(
+                "z-50 flex min-h-0 bg-[var(--desk-panel)]",
+                "fixed inset-0 flex-col",
+                "xl:static xl:inset-auto xl:z-auto xl:w-auto xl:max-w-none xl:shrink-0 xl:flex-row",
+              )}
+            >
+              <TapeSplitPanel
+                key={selected.id}
+                catalyst={selected}
+                isAdmin={isAdmin}
+                showSourceLabels={showSourceLabels}
+                chartRange={chartRange}
+                onClose={() => setSelectedId(null)}
+                onRead={() => openArticle(selected.id)}
+                onDismiss={() => {
+                  if (selectedId !== null) dismissCatalyst(selectedId);
+                }}
+                onAiAnalyzed={(analysis) => {
+                  prependOrMerge([
+                    {
+                      ...selected,
+                      aiBullets: analysis.bullets,
+                      aiLean: analysis.lean,
+                      aiUncertain: analysis.uncertain,
+                    },
+                  ]);
+                }}
+                mobileOverlay
+                chartSlot={
+                  selectedSymbol && !isXlDesk ? (
+                    <TapeChartPanel
+                      symbol={selectedSymbol}
+                      range={chartRange}
+                      onRangeChange={setChartRange}
+                      eventTimeSec={
+                        selected.timestamp
+                          ? Math.floor(
+                              new Date(selected.timestamp).getTime() / 1000,
+                            )
+                          : null
+                      }
+                      className="shrink-0 border-b border-[var(--desk-border)]"
+                      chartClassName="h-[220px] max-h-[32vh] border-t-0 sm:h-[260px] sm:max-h-[34vh]"
+                    />
+                  ) : null
+                }
+                className={cn(
+                  "min-h-0 min-w-0 flex-1 border-0",
+                  "xl:w-[min(34%,360px)] xl:max-w-[360px] xl:min-w-[300px] xl:flex-none xl:border-l",
+                )}
+              />
+              {selectedSymbol && isXlDesk ? (
+                <TapeChartPanel
+                  symbol={selectedSymbol}
+                  range={chartRange}
+                  onRangeChange={setChartRange}
+                  eventTimeSec={
+                    selected.timestamp
+                      ? Math.floor(
+                          new Date(selected.timestamp).getTime() / 1000,
+                        )
+                      : null
+                  }
+                  className="min-h-0 w-[min(38%,440px)] min-w-[320px] shrink-0 border-l"
+                  chartClassName="h-full min-h-0 border-t-0"
+                />
+              ) : null}
+            </div>
           </>
         ) : null}
       </div>

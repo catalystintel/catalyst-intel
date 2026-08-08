@@ -1,13 +1,14 @@
 "use client";
 
 import { ThemeProvider as NextThemesProvider } from "next-themes";
+import { usePathname } from "next/navigation";
 import type { ComponentProps } from "react";
 
 /**
- * Wraps next-themes so `<html>` gets/loses the `.dark` class (see globals.css
- * `@custom-variant dark`) based on the user's saved preference. next-themes
- * injects a tiny blocking script before hydration that reads localStorage and
- * sets the class synchronously, so there's no flash of the wrong theme.
+ * Wraps next-themes so `<html>` gets/loses the `.dark` / `.light` class (see
+ * globals.css) based on the user's saved preference. next-themes injects a
+ * tiny blocking script before hydration that reads localStorage and sets the
+ * class synchronously, so there's no flash of the wrong theme.
  *
  * React 19 flags that inline `<script>` during client render. The script still
  * runs correctly from SSR HTML; this is a known next-themes / React 19 false
@@ -39,9 +40,31 @@ function suppressNextThemesScriptWarning() {
 
 suppressNextThemesScriptWarning();
 
-export function ThemeProvider({
-  children,
-  ...props
-}: ComponentProps<typeof NextThemesProvider>) {
-  return <NextThemesProvider {...props}>{children}</NextThemesProvider>;
+/** Marketing / auth surfaces — always dark; light theme is desk-only. */
+export function isPreloginPath(pathname: string | null): boolean {
+  if (!pathname) return false;
+  if (pathname === "/") return true;
+  if (pathname === "/about" || pathname.startsWith("/about/")) return true;
+  if (pathname === "/login" || pathname.startsWith("/login/")) return true;
+  return false;
+}
+
+type ThemeProviderProps = Omit<
+  ComponentProps<typeof NextThemesProvider>,
+  "forcedTheme"
+>;
+
+export function ThemeProvider({ children, ...props }: ThemeProviderProps) {
+  const pathname = usePathname();
+  const forceDark = isPreloginPath(pathname);
+
+  return (
+    <NextThemesProvider
+      {...props}
+      // Does not write localStorage — desk light preference is preserved.
+      forcedTheme={forceDark ? "dark" : undefined}
+    >
+      {children}
+    </NextThemesProvider>
+  );
 }

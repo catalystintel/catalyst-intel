@@ -479,7 +479,8 @@
       var(--desk-app);
   }
 
-  .light .signal-mesh-bg {
+  /* Light mesh is desk-only — prelogin keeps the dark Signal wash. */
+  .light .desk-chrome.signal-mesh-bg {
     background:
       radial-gradient(
         ellipse 90% 55% at 12% -8%,
@@ -510,7 +511,7 @@
     background-color: var(--desk-panel);
   }
 
-  .light .tape-split-panel {
+  .light .desk-chrome .tape-split-panel {
     border-left-color: color-mix(
       in srgb,
       var(--desk-live) 28%,
@@ -521,25 +522,21 @@
       -1px 0 0 var(--desk-border);
   }
 
-  .light .feed-sticky-cols,
-  .light .feed-sticky-cols > [role="columnheader"] {
+  .light .desk-chrome .feed-sticky-cols,
+  .light .desk-chrome .feed-sticky-cols > [role="columnheader"] {
     background-color: #f4f7fb;
     box-shadow: 0 1px 0 var(--desk-border);
   }
 
-  .light .landing-glass-card:hover {
-    box-shadow: 0 12px 36px rgba(15, 30, 50, 0.1);
-  }
-
   /* White blotter cards need soft elevation on cool paper, not flat navy glass. */
-  .light .news-panel {
+  .light .desk-chrome .news-panel {
     border-color: #c5ceda;
     box-shadow:
       0 1px 2px rgba(15, 30, 50, 0.04),
       0 10px 28px rgba(15, 30, 50, 0.06);
   }
 
-  .light .brand-mark::after {
+  .light .desk-chrome .brand-mark::after {
     border-right-color: #e8edf3;
     border-bottom-color: #e8edf3;
   }

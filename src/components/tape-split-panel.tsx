@@ -1,12 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { BookOpen, XIcon } from "lucide-react";
 
 import { AiAnalysisPanel } from "@/components/ai-analysis-panel";
 import { CategoryBadge } from "@/components/category-badge";
 import { EdgarProofLink } from "@/components/edgar-proof-link";
-import { DeskLightweightChart } from "@/components/desk-lightweight-chart";
 import { Button } from "@/components/ui/button";
 import {
   isAccNoMetadataBlob,
@@ -28,11 +27,7 @@ import { plainEnglishForSecForm } from "@/lib/catalysts/sec-form-plain-english";
 import { formatEventTime, formatRelativeAge } from "@/lib/format/relative-time";
 import { CATEGORY_LABELS } from "@/lib/jobs/parse-8k-items";
 import type { TriageResult } from "@/lib/jobs/llm-triage";
-import {
-  DEFAULT_CHART_RANGE,
-  chartRangeDef,
-  type ChartRangeKey,
-} from "@/lib/market/chart-range";
+import { chartRangeDef, type ChartRangeKey } from "@/lib/market/chart-range";
 import { cn } from "@/lib/utils";
 
 type QuotePayload = {
@@ -96,8 +91,10 @@ function MetaCell({
 }
 
 /**
- * Right-hand Live tape triage panel: identity, short summary / AI, then chart.
- * Fuller event text lives in the details view (`onRead`).
+ * Right-hand Live tape triage panel: identity, short summary / AI.
+ * Chart lives in a sibling pane (`TapeChartPanel`); pass `chartSlot` on
+ * narrow viewports to pin it under the header. Fuller event text lives in
+ * the details view (`onRead`).
  */
 export function TapeSplitPanel({
   catalyst,
@@ -108,6 +105,8 @@ export function TapeSplitPanel({
   className,
   mobileOverlay = false,
   showSourceLabels = false,
+  chartRange,
+  chartSlot = null,
 }: {
   catalyst: FeedCatalyst;
   onClose: () => void;
@@ -125,12 +124,14 @@ export function TapeSplitPanel({
   className?: string;
   /** Full-screen overlay on small viewports. */
   mobileOverlay?: boolean;
+  /** Shared lookback with the sibling chart pane (drives quote Δ label). */
+  chartRange: ChartRangeKey;
+  /** Optional chart pinned under the header (mobile overlay). */
+  chartSlot?: ReactNode;
 }) {
   const symbol = catalyst.symbol?.trim().toUpperCase() || null;
   const [market, setMarket] = useState<QuotePayload | null>(null);
   const [quoteLoading, setQuoteLoading] = useState(Boolean(symbol));
-  const [chartRange, setChartRange] =
-    useState<ChartRangeKey>(DEFAULT_CHART_RANGE);
   const [rangePerf, setRangePerf] = useState<{
     change: number | null;
     changePercent: number | null;
@@ -187,9 +188,6 @@ export function TapeSplitPanel({
     let cancelled = false;
     const id = window.setTimeout(() => {
       if (cancelled) return;
-      // Reset lookback when the selected row changes (async to satisfy
-      // react-hooks/set-state-in-effect — sync setState in effects is banned).
-      setChartRange(DEFAULT_CHART_RANGE);
       setRangePerf(null);
       setQuoteLoading(true);
       void (async () => {
@@ -262,10 +260,6 @@ export function TapeSplitPanel({
       window.clearTimeout(id);
     };
   }, [symbol, chartRange]);
-
-  const tvSymbol =
-    market?.tradingViewSymbol ??
-    (symbol ? toTradingViewSymbol(symbol, null) : null);
 
   const useRangeMove = chartRange !== "1D";
   const displayPrice = useRangeMove
@@ -392,6 +386,8 @@ export function TapeSplitPanel({
           <span className="sr-only">Close</span>
         </Button>
       </div>
+
+      {chartSlot}
 
       <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
         <div className="flex flex-col gap-4 border-b border-[var(--desk-border)] px-4 py-4">
@@ -537,24 +533,6 @@ export function TapeSplitPanel({
             />
           </dl>
         </div>
-
-        {symbol ? (
-          <div className="shrink-0 bg-[var(--desk-panel)]">
-            <DeskLightweightChart
-              key={symbol}
-              symbol={symbol}
-              displaySymbol={tvSymbol}
-              range={chartRange}
-              onRangeChange={setChartRange}
-              eventTimeSec={
-                catalyst.timestamp
-                  ? Math.floor(new Date(catalyst.timestamp).getTime() / 1000)
-                  : null
-              }
-              className="h-[220px] max-h-[32vh] sm:h-[260px] sm:max-h-[34vh] xl:h-[320px] xl:max-h-[38vh]"
-            />
-          </div>
-        ) : null}
       </div>
     </aside>
   );
