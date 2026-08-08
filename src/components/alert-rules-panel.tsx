@@ -19,6 +19,7 @@ import { toast } from "sonner";
 import { AlertRulesListSkeleton } from "@/components/alerts-page-skeleton";
 import { TelegramIcon } from "@/components/telegram-icon";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import type { WatchlistCriteria } from "@/db/schema";
 import {
   emptyNotificationChannels,
