@@ -1,10 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { CalendarDays, PanelRightOpen } from "lucide-react";
 
 import { DashboardEconomicCalendar } from "@/components/dashboard-economic-calendar";
-import { DashboardWatchlistRail } from "@/components/dashboard-watchlist-rail";
 import {
   LiveCatalystFeed,
   type FeedCatalyst,
@@ -15,11 +13,11 @@ import type { MacroEventDef } from "@/lib/jobs/fetch-macro-calendar";
 import { cn } from "@/lib/utils";
 
 /**
- * Trading-desk dashboard shell for `/catalyst-feed` — two-column layout
- * aligned to `docs/design/dashboard-target-reference-02.png`: a broadened
- * center Live tape plus a right rail (Economic Calendar + Watchlists).
- * When a symbol row opens the split+chart panes, the calendar rail collapses
- * transiently (saved preference untouched) so the desk stays readable.
+ * Trading-desk dashboard shell for `/catalyst-feed` — Live tape plus an
+ * optional Economic Calendar right rail. Hiding the calendar (X) collapses
+ * the rail so the tape expands; the feed-header control restores it.
+ * When a symbol row opens the split+chart panes, the rail collapses
+ * transiently (saved preference untouched).
  */
 export function DeskDashboardGrid({
   initialCatalysts,
@@ -40,19 +38,16 @@ export function DeskDashboardGrid({
   initialSelectedId?: number;
   macroEvents: MacroEventDef[];
 }) {
-  const [focusSymbol, setFocusSymbol] = useState<string | null>(
-    initialSymbolFilter?.trim().toUpperCase() || null,
-  );
   const [chartOpen, setChartOpen] = useState(false);
   const { visible: calendarVisible, setVisible: setCalendarVisible } =
     useCalendarRailVisible();
   // Transient override while the sibling chart pane is open — never writes
   // localStorage; closing the split restores the saved preference.
-  const effectiveCalendarVisible = calendarVisible && !chartOpen;
+  const railOpen = calendarVisible && !chartOpen;
 
   return (
     <div className="desk-dashboard flex min-h-0 flex-1 flex-col gap-3">
-      <div className="flex min-h-0 flex-1 flex-col gap-3 xl:flex-row">
+      <div className="flex min-h-0 flex-1 flex-col xl:flex-row">
         <LiveCatalystFeed
           initialCatalysts={initialCatalysts}
           isAdmin={isAdmin}
@@ -60,82 +55,28 @@ export function DeskDashboardGrid({
           initialSymbolFilter={initialSymbolFilter}
           initialWatchlistCriteria={initialWatchlistCriteria}
           initialSelectedId={initialSelectedId}
-          onFocusSymbol={setFocusSymbol}
           onChartOpenChange={setChartOpen}
-          calendarRailHidden={!effectiveCalendarVisible}
+          calendarRailHidden={!railOpen}
           onShowCalendarRail={
             chartOpen ? undefined : () => setCalendarVisible(true)
           }
         />
 
         <aside
+          aria-hidden={!railOpen}
           className={cn(
-            "min-h-0 shrink-0 flex-col gap-3",
-            // Sibling chart pane needs the horizontal budget — hide the rail
-            // entirely while open (preference restored on close).
-            chartOpen
-              ? "hidden"
-              : effectiveCalendarVisible
-                ? "hidden w-[240px] xl:flex 2xl:w-[300px]"
-                : "hidden w-10 xl:flex 2xl:w-[300px]",
+            "hidden min-h-0 shrink-0 flex-col overflow-hidden xl:flex",
+            "transition-[width,margin-left,opacity] duration-300 ease-in-out",
+            railOpen
+              ? "ml-3 w-[240px] opacity-100 2xl:w-[300px]"
+              : "pointer-events-none ml-0 w-0 opacity-0",
           )}
         >
-          {effectiveCalendarVisible ? (
-            <DashboardEconomicCalendar
-              events={macroEvents}
-              onHide={() => setCalendarVisible(false)}
-              className="min-h-0 flex-1 xl:max-h-none 2xl:max-h-[42%] 2xl:min-h-[200px] 2xl:flex-none 2xl:shrink-0"
-            />
-          ) : (
-            <>
-              {/* Laptop: slim edge control — secondary to the feed header button. */}
-              <button
-                type="button"
-                onClick={() => setCalendarVisible(true)}
-                title="Show economic calendar"
-                aria-label="Show economic calendar"
-                className={cn(
-                  "btn-press flex min-h-0 flex-1 flex-col items-center gap-2 rounded-xl border border-[color-mix(in_srgb,var(--desk-live)_35%,var(--desk-border))] bg-[color-mix(in_srgb,var(--desk-live)_8%,var(--desk-panel))] py-3 text-[var(--desk-live)] transition-colors",
-                  "hover:border-[color-mix(in_srgb,var(--desk-live)_55%,var(--desk-border))] hover:bg-[color-mix(in_srgb,var(--desk-live)_12%,var(--desk-panel))]",
-                  "2xl:hidden",
-                )}
-              >
-                <PanelRightOpen className="size-3.5 shrink-0" />
-                <CalendarDays className="size-3.5 shrink-0" />
-                <span
-                  className="desk-caps mt-1 font-mono text-[0.62rem] tracking-[0.14em] text-inherit uppercase"
-                  style={{ writingMode: "vertical-rl" }}
-                >
-                  Show
-                </span>
-              </button>
-
-              {/* Wide desk: compact bar above watchlists. */}
-              <button
-                type="button"
-                onClick={() => setCalendarVisible(true)}
-                title="Show economic calendar"
-                aria-label="Show economic calendar"
-                className={cn(
-                  "btn-press hidden items-center justify-between gap-2 rounded-xl border border-[color-mix(in_srgb,var(--desk-live)_35%,var(--desk-border))] bg-[color-mix(in_srgb,var(--desk-live)_8%,var(--desk-panel))] px-3 py-2.5 text-[var(--desk-live)] transition-colors 2xl:flex",
-                  "hover:border-[color-mix(in_srgb,var(--desk-live)_55%,var(--desk-border))] hover:bg-[color-mix(in_srgb,var(--desk-live)_12%,var(--desk-panel))]",
-                )}
-              >
-                <span className="desk-caps flex items-center gap-1.5 font-mono text-[0.7rem] font-semibold tracking-[0.14em] uppercase">
-                  <CalendarDays className="size-3.5" />
-                  Show calendar
-                </span>
-                <PanelRightOpen className="size-3.5 shrink-0" />
-              </button>
-            </>
-          )}
-
-          <div className="hidden min-h-0 flex-1 flex-col 2xl:flex">
-            <DashboardWatchlistRail
-              focusSymbol={focusSymbol}
-              onFocusSymbol={setFocusSymbol}
-            />
-          </div>
+          <DashboardEconomicCalendar
+            events={macroEvents}
+            onHide={() => setCalendarVisible(false)}
+            className="min-h-0 flex-1"
+          />
         </aside>
       </div>
     </div>
