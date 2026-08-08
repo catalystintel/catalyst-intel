@@ -982,7 +982,7 @@ export function LiveCatalystFeed({
               className="btn-press hidden items-center gap-1.5 rounded-lg border border-[var(--desk-live)]/45 bg-[var(--desk-live)]/10 px-2.5 py-1.5 text-[0.82rem] font-medium text-[var(--desk-live)] transition-colors hover:bg-[var(--desk-live)]/15 xl:inline-flex"
             >
               <CalendarDays className="size-3.5" />
-              Calendar
+              Economic calendar
             </button>
           ) : null}
           <button
