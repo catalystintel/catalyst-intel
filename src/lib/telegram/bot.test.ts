@@ -3,6 +3,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   buildAlertInlineKeyboard,
   clearTelegramBotIdentityCache,
+  clearTelegramWebhookEnsureCache,
+  ensureTelegramWebhook,
   escapeTelegramHtml,
   getTelegramBotUsername,
   isTelegramConfigured,
@@ -42,6 +44,7 @@ afterEach(() => {
   if (originalUsername === undefined) delete process.env.TELEGRAM_BOT_USERNAME;
   else process.env.TELEGRAM_BOT_USERNAME = originalUsername;
   clearTelegramBotIdentityCache();
+  clearTelegramWebhookEnsureCache();
   vi.restoreAllMocks();
 });
 
@@ -258,6 +261,70 @@ describe("sendTelegramMessage", () => {
     const result = await sendTelegramMessage({ chatId: "42", text: "hi" });
     expect(result.ok).toBe(false);
     expect(result.detail).toContain("Forbidden");
+  });
+});
+
+describe("ensureTelegramWebhook", () => {
+  it("registers when Telegram has no webhook yet", async () => {
+    process.env.TELEGRAM_BOT_TOKEN = "123:abc";
+    process.env.TELEGRAM_WEBHOOK_SECRET = "hook-secret";
+    const fetchMock = vi
+      .spyOn(global, "fetch")
+      .mockImplementation(async (input) => {
+        const url = String(input);
+        if (url.endsWith("/getWebhookInfo")) {
+          return new Response(
+            JSON.stringify({
+              ok: true,
+              result: { url: "", pending_update_count: 0 },
+            }),
+            { status: 200 },
+          );
+        }
+        if (url.endsWith("/setWebhook")) {
+          return new Response(JSON.stringify({ ok: true, result: true }), {
+            status: 200,
+          });
+        }
+        return new Response(JSON.stringify({ ok: false }), { status: 404 });
+      });
+
+    const result = await ensureTelegramWebhook(
+      "https://example.com/api/telegram/webhook",
+    );
+    expect(result.ok).toBe(true);
+    expect(result.repaired).toBe(true);
+    expect(
+      fetchMock.mock.calls.some((c) => String(c[0]).endsWith("/setWebhook")),
+    ).toBe(true);
+  });
+
+  it("skips setWebhook when URL already matches", async () => {
+    process.env.TELEGRAM_BOT_TOKEN = "123:abc";
+    process.env.TELEGRAM_WEBHOOK_SECRET = "hook-secret";
+    const target = "https://example.com/api/telegram/webhook";
+    const fetchMock = vi
+      .spyOn(global, "fetch")
+      .mockImplementation(async (input) => {
+        const url = String(input);
+        if (url.endsWith("/getWebhookInfo")) {
+          return new Response(
+            JSON.stringify({
+              ok: true,
+              result: { url: target, pending_update_count: 0 },
+            }),
+            { status: 200 },
+          );
+        }
+        return new Response(JSON.stringify({ ok: false }), { status: 404 });
+      });
+
+    const result = await ensureTelegramWebhook(target);
+    expect(result.ok).toBe(true);
+    expect(result.repaired).toBe(false);
+    expect(
+      fetchMock.mock.calls.some((c) => String(c[0]).endsWith("/setWebhook")),
+    ).toBe(false);
   });
 });
 

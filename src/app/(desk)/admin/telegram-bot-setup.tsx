@@ -25,6 +25,10 @@ interface TelegramStatus {
   configured: boolean;
   botUsername: string | null;
   webhookUrl: string;
+  liveWebhookUrl?: string | null;
+  webhookMatches?: boolean | null;
+  pendingUpdateCount?: number | null;
+  lastWebhookError?: string | null;
 }
 
 export function TelegramBotSetup() {
@@ -116,6 +120,22 @@ export function TelegramBotSetup() {
           <dd className="text-foreground/90">{handle ?? "—"}</dd>
           <dt className="text-muted-foreground">Webhook</dt>
           <dd className="truncate text-foreground/90">{status.webhookUrl}</dd>
+          <dt className="text-muted-foreground">Live</dt>
+          <dd className="truncate text-foreground/90">
+            {status.liveWebhookUrl || "—"}
+            {status.webhookMatches === false ? (
+              <span className="ml-2 text-destructive">mismatch</span>
+            ) : null}
+            {status.webhookMatches === true ? (
+              <span className="ml-2 text-[var(--desk-live-status)]">ok</span>
+            ) : null}
+          </dd>
+          {status.lastWebhookError ? (
+            <>
+              <dt className="text-muted-foreground">Last error</dt>
+              <dd className="text-destructive">{status.lastWebhookError}</dd>
+            </>
+          ) : null}
         </dl>
       ) : null}
       <Button
