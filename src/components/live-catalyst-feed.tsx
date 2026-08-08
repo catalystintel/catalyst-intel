@@ -14,6 +14,7 @@ import { createPortal } from "react-dom";
 import {
   ArrowUp,
   BookOpen,
+  CalendarDays,
   ChevronDown,
   ListFilter,
   Loader2,
@@ -164,6 +165,8 @@ export function LiveCatalystFeed({
   initialWatchlistCriteria,
   initialSelectedId,
   onFocusSymbol,
+  calendarRailHidden = false,
+  onShowCalendarRail,
 }: {
   initialCatalysts: FeedCatalyst[];
   isAdmin: boolean;
@@ -181,6 +184,12 @@ export function LiveCatalystFeed({
    * whichever tape row you're triaging. Optional; no-op when omitted.
    */
   onFocusSymbol?: (symbol: string) => void;
+  /**
+   * When the desk Economic Calendar rail is collapsed, show a header control
+   * so it can be restored without hunting for the slim edge strip.
+   */
+  calendarRailHidden?: boolean;
+  onShowCalendarRail?: () => void;
 }) {
   const query = useLiveFeedQuery(initialCatalysts, {
     symbolQuery: initialSymbolFilter?.trim() ?? "",
@@ -799,6 +808,18 @@ export function LiveCatalystFeed({
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--desk-border)] bg-[var(--desk-header)] px-4 py-3.5 sm:px-5">
         <h1 className="desk-heading text-[var(--desk-text)]">Catalyst Feed</h1>
         <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+          {calendarRailHidden && onShowCalendarRail ? (
+            <button
+              type="button"
+              onClick={onShowCalendarRail}
+              title="Show economic calendar"
+              aria-label="Show economic calendar"
+              className="btn-press hidden items-center gap-1.5 rounded-lg border border-[var(--desk-live)]/45 bg-[var(--desk-live)]/10 px-2.5 py-1.5 text-[0.82rem] font-medium text-[var(--desk-live)] transition-colors hover:bg-[var(--desk-live)]/15 xl:inline-flex"
+            >
+              <CalendarDays className="size-3.5" />
+              Calendar
+            </button>
+          ) : null}
           <button
             type="button"
             onClick={() => void toggleQuietMode()}
