@@ -23,6 +23,7 @@ export function criteriaToFeedFilters(
     timeWindow: "all",
     symbolOnly: true,
     earningsSurprisesOnly: false,
+    criteriaGroups: [],
     since: null,
     until: nowIso,
   };
