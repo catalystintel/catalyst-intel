@@ -43,6 +43,11 @@ export interface PersistedFeedFilters {
    * client restore always clears this.
    */
   earningsSurprisesOnly: boolean;
+  /**
+   * Saved watchlists applied as an OR'd tape filter (see `watchlistIds=` on
+   * `/api/catalysts`). Multi-select in the feed panel.
+   */
+  watchlistIds: number[];
   /** Epoch ms of last activity while these filters were in use. */
   lastActiveAt: number;
 }
@@ -62,6 +67,7 @@ export const DEFAULT_FEED_FILTERS: FeedFilterState = {
   /** Always on: tradable names only (CPI / Jobs NFP still allowed). */
   symbolOnly: true,
   earningsSurprisesOnly: false,
+  watchlistIds: [],
 };
 
 /**
@@ -76,6 +82,7 @@ export function isPanelFiltersDefault(filters: FeedFilterState): boolean {
     filters.categoryFilters.length === 0 &&
     filters.sourceFilters.length === 0 &&
     filters.tagFilters.length === 0 &&
+    filters.watchlistIds.length === 0 &&
     filters.timeWindow === "all"
   );
 }
@@ -90,6 +97,21 @@ function parseStringArray(value: unknown): string[] {
   return value.filter(
     (v): v is string => typeof v === "string" && v.trim() !== "",
   );
+}
+
+function parseWatchlistIds(value: unknown): number[] {
+  if (!Array.isArray(value)) return [];
+  const out: number[] = [];
+  const seen = new Set<number>();
+  for (const entry of value) {
+    const n = typeof entry === "number" ? entry : Number(entry);
+    if (!Number.isFinite(n) || !Number.isInteger(n) || n <= 0) continue;
+    if (seen.has(n)) continue;
+    seen.add(n);
+    out.push(n);
+    if (out.length >= 20) break;
+  }
+  return out;
 }
 
 export function readPersistedFeedFilters(
@@ -159,6 +181,7 @@ export function readPersistedFeedFilters(
       // Always enforce symbol gate (ignore legacy persisted false).
       symbolOnly: true,
       earningsSurprisesOnly: false,
+      watchlistIds: parseWatchlistIds(parsed.watchlistIds),
     };
   } catch {
     return null;
@@ -190,6 +213,7 @@ export function writePersistedFeedFilters(
     timeWindow: filters.timeWindow,
     symbolOnly: filters.symbolOnly,
     earningsSurprisesOnly: false,
+    watchlistIds: parseWatchlistIds(filters.watchlistIds),
     lastActiveAt: now,
   };
   window.localStorage.setItem(FEED_FILTER_STORAGE_KEY, JSON.stringify(payload));
@@ -244,6 +268,9 @@ export function feedApiQuery(
   params.set("symbolOnly", "1");
   if (filters.earningsSurprisesOnly) {
     params.set("earningsSurprises", "1");
+  }
+  if (filters.watchlistIds.length > 0) {
+    params.set("watchlistIds", filters.watchlistIds.join(","));
   }
   if (options?.cursor) params.set("cursor", options.cursor);
   if (typeof options?.limit === "number") {

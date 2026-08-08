@@ -20,7 +20,14 @@ import {
 } from "drizzle-orm";
 
 import { db } from "@/db/client";
-import { catalysts, companies, eventClusters, rawSources } from "@/db/schema";
+import {
+  catalysts,
+  companies,
+  eventClusters,
+  rawSources,
+  watchlists,
+  type WatchlistCriteria,
+} from "@/db/schema";
 import {
   GICS_SECTOR_KEYS,
   GICS_SECTOR_LABELS,
@@ -41,12 +48,14 @@ import {
   sinceIsoForFeedTimeWindow,
   type FeedTimeWindow,
 } from "@/lib/catalysts/feed-time-window";
+import { normalizeWatchlistIds } from "@/lib/catalysts/playbook";
 import { symbolFeedGateSql } from "@/lib/catalysts/symbol-feed-gate";
 import {
   isEventCategoryKey,
   type EventCategoryKey,
 } from "@/lib/catalysts/taxonomy";
 import { MATERIAL_EPS_SURPRISE_PCT } from "@/lib/catalysts/earnings-surprise";
+import { normalizeWatchlistCriteria } from "@/lib/watchlist/normalize-criteria";
 
 export {
   FEED_FORM_FILTERS,
@@ -82,6 +91,12 @@ export interface FeedQueryFilters {
    * Uses Finnhub raw_content figures (actual/estimate or explicit %).
    */
   earningsSurprisesOnly: boolean;
+  /**
+   * OR'd saved-watchlist rules (resolved server-side from `watchlistIds=`).
+   * Each group ANDs its own axes; empty/omitted axes are unconstrained.
+   * Combined with the flat panel filters via AND.
+   */
+  criteriaGroups: WatchlistCriteria[];
   /** ISO lower bound; overrides window when set. */
   since: string | null;
   /** Upper bound (now) — excludes future-dated calendar rows. */
@@ -215,6 +230,95 @@ function tagsSql(tags: string[]): SQL | undefined {
   return parts.length === 1 ? parts[0] : or(...parts);
 }
 
+/**
+ * AND of one watchlist's criteria axes (same semantics as
+ * `matchesWatchlistCriteria` / a single `criteriaToFeedFilters` pass).
+ * Returns `undefined` when every axis is empty (unconstrained — matches all).
+ */
+export function watchlistCriteriaSql(
+  criteria: WatchlistCriteria,
+): SQL | undefined {
+  const parts: SQL[] = [];
+
+  const q = criteria.q?.trim() ?? "";
+  if (q) {
+    const pattern = `%${q.replace(/[%_]/g, "")}%`;
+    parts.push(
+      or(
+        like(catalysts.symbol, pattern),
+        like(catalysts.companyName, pattern),
+        like(catalysts.title, pattern),
+        like(catalysts.headline, pattern),
+      )!,
+    );
+  }
+
+  const symbols = (criteria.symbols ?? [])
+    .map((s) => s.trim().toUpperCase())
+    .filter(Boolean);
+  if (symbols.length > 0) {
+    parts.push(inArray(catalysts.symbol, symbols));
+  }
+
+  const categories = (criteria.categories ?? []).filter(isEventCategoryKey);
+  if (categories.length > 0) {
+    parts.push(inArray(catalysts.eventCategory, categories));
+  }
+
+  const forms = (criteria.forms ?? []).filter(isFeedFormFilter);
+  if (forms.length > 0) {
+    const formSql = formTypeSql(forms);
+    if (formSql) parts.push(formSql);
+  }
+
+  const tags = (criteria.tags ?? [])
+    .map((t) => t.trim().toLowerCase())
+    .filter(Boolean);
+  if (tags.length > 0) {
+    const tagSql = tagsSql(tags);
+    if (tagSql) parts.push(tagSql);
+  }
+
+  const sources = (criteria.sources ?? [])
+    .map((s) => s.trim().toLowerCase())
+    .filter(Boolean);
+  if (sources.length > 0) {
+    parts.push(inArray(rawSources.provider, sources));
+  }
+
+  if (parts.length === 0) return undefined;
+  return parts.length === 1 ? parts[0] : and(...parts);
+}
+
+/**
+ * Loads the caller's saved watchlists by id and returns normalized criteria
+ * groups (request order preserved; unknown / other-user ids dropped).
+ */
+export async function resolveFeedWatchlistCriteriaGroups(
+  userId: number,
+  watchlistIds: number[],
+): Promise<WatchlistCriteria[]> {
+  const ids = normalizeWatchlistIds(watchlistIds);
+  if (ids.length === 0) return [];
+
+  const rows = await db
+    .select({
+      id: watchlists.id,
+      criteria: watchlists.criteria,
+    })
+    .from(watchlists)
+    .where(and(eq(watchlists.userId, userId), inArray(watchlists.id, ids)))
+    .all();
+
+  const byId = new Map(rows.map((row) => [row.id, row.criteria]));
+  const groups: WatchlistCriteria[] = [];
+  for (const id of ids) {
+    if (!byId.has(id)) continue;
+    groups.push(normalizeWatchlistCriteria(byId.get(id)));
+  }
+  return groups;
+}
+
 function parseCsvParam(raw: string | null): string[] {
   if (!raw?.trim()) return [];
   return raw
@@ -285,6 +389,8 @@ export function parseFeedQueryFromSearchParams(
     timeWindow,
     symbolOnly,
     earningsSurprisesOnly,
+    // Filled by the API after resolving `watchlistIds=` against the caller.
+    criteriaGroups: [],
     since,
     until: options?.nowIso ?? new Date().toISOString(),
   };
@@ -372,6 +478,20 @@ export function buildFeedWhere(
 
   if (options?.omit !== "sources" && filters.sources.length > 0) {
     parts.push(inArray(rawSources.provider, filters.sources));
+  }
+
+  // Multi-watchlist filter: OR across saved rules (Quiet mode / alerts
+  // semantics). An unconstrained group (empty criteria) matches everything,
+  // so skip the OR gate entirely in that case.
+  if (filters.criteriaGroups.length > 0) {
+    const groupSqls = filters.criteriaGroups.map(watchlistCriteriaSql);
+    const hasUnconstrained = groupSqls.some((s) => s == null);
+    const constrained = groupSqls.filter((s): s is SQL => s != null);
+    if (!hasUnconstrained && constrained.length > 0) {
+      parts.push(
+        constrained.length === 1 ? constrained[0]! : or(...constrained)!,
+      );
+    }
   }
 
   if (filters.earningsSurprisesOnly) {

@@ -20,7 +20,9 @@ import {
   queryFeedFacets,
   queryFeedPage,
   queryFeedTotal,
+  resolveFeedWatchlistCriteriaGroups,
 } from "@/lib/catalysts/feed-query";
+import { normalizeWatchlistIds } from "@/lib/catalysts/playbook";
 import { getClientIp } from "@/lib/http/client-ip";
 import { RATE_LIMITS, checkRateLimit } from "@/lib/http/rate-limit";
 import {
@@ -67,6 +69,19 @@ export async function GET(request: NextRequest) {
   // Vendor Source facet is local-dev only — ignore crafted `sources=` in deploy.
   if (!isLocalDevUi()) {
     filters.sources = [];
+  }
+  // Multi-watchlist tape filter: resolve ids → OR'd criteria (scoped to caller).
+  const watchlistIds = normalizeWatchlistIds(
+    (request.nextUrl.searchParams.get("watchlistIds") ?? "")
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean),
+  );
+  if (watchlistIds.length > 0) {
+    filters.criteriaGroups = await resolveFeedWatchlistCriteriaGroups(
+      user.id,
+      watchlistIds,
+    );
   }
   const cursor = parseFeedCursor(request.nextUrl.searchParams.get("cursor"));
   const limitParam = Number(
