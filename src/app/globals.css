@@ -90,7 +90,11 @@
   --desk-sidebar: #131722;
   --desk-panel: rgba(30, 34, 45, 0.65);
   --desk-header: rgba(30, 34, 45, 0.85);
-  /* Opaque elevated surface for tooltips / floating tips (panel is glass). */
+  /*
+   * Opaque elevated surface for tooltips / floating tips.
+   * Floating menus, toasts, and modal shells should use `bg-popover` (or this
+   * token) — not `--desk-panel`, which is intentionally glass in dark mode.
+   */
   --desk-tooltip: #1e222d;
   --desk-border: rgba(42, 46, 57, 0.9);
   --desk-border-strong: #434651;

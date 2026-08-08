@@ -60,7 +60,7 @@ export function CatalystDetailDrawer({
           catalyst ? `catalyst-drawer-${catalyst.id}` : undefined
         }
         className={cn(
-          "drawer-panel absolute inset-y-0 right-0 flex w-full max-w-md flex-col border-l border-[var(--desk-border)] bg-[var(--desk-panel)] shadow-[-12px_0_40px_rgba(0,0,0,0.55)] transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]",
+          "drawer-panel absolute inset-y-0 right-0 flex w-full max-w-md flex-col border-l border-[var(--desk-border)] bg-popover shadow-[-12px_0_40px_rgba(0,0,0,0.55)] transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]",
           open ? "translate-x-0" : "translate-x-full",
         )}
       >

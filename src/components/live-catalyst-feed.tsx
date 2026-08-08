@@ -1171,7 +1171,9 @@ export function LiveCatalystFeed({
             />
             <div
               className={cn(
-                "z-50 flex min-h-0 bg-[var(--desk-panel)]",
+                // Mobile overlay must be opaque so feed text doesn't show through.
+                // Desktop dock keeps the glass desk panel token.
+                "z-50 flex min-h-0 bg-popover xl:bg-[var(--desk-panel)]",
                 "fixed inset-0 flex-col",
                 // Desktop: dock grows so the chart pane can be the hero width.
                 "xl:static xl:inset-auto xl:z-auto xl:min-w-0 xl:flex-1 xl:flex-row",

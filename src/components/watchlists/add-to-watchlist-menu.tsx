@@ -118,7 +118,7 @@ export function AddToWatchlistSubmenu({
           </span>
         ) : null}
       </DropdownMenuSubTrigger>
-      <DropdownMenuSubContent className="min-w-56 border-[var(--desk-border)] bg-[var(--desk-panel)] text-[var(--desk-text)]">
+      <DropdownMenuSubContent className="min-w-56 border-[var(--desk-border)] bg-popover text-[var(--desk-text)]">
         <WatchlistDestinationList
           symbol={symbol}
           flatChecked={flatChecked}
@@ -162,7 +162,7 @@ export function AddToWatchlistButton({
       </DropdownMenuTrigger>
       <DropdownMenuContent
         align="end"
-        className="min-w-56 border-[var(--desk-border)] bg-[var(--desk-panel)] text-[var(--desk-text)]"
+        className="min-w-56 border-[var(--desk-border)] bg-popover text-[var(--desk-text)]"
         onClick={(e) => e.stopPropagation()}
       >
         <WatchlistDestinationList

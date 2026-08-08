@@ -279,7 +279,9 @@ export function TapeSplitPanel({
       aria-modal={mobileOverlay}
       aria-labelledby={`tape-split-${catalyst.id}`}
       className={cn(
-        "desk-arial flex min-h-0 flex-col border-[var(--desk-border)] bg-[var(--desk-panel)]",
+        "desk-arial flex min-h-0 flex-col border-[var(--desk-border)]",
+        // Overlay must be opaque so feed text doesn't show through the glass panel.
+        mobileOverlay ? "bg-popover" : "bg-[var(--desk-panel)]",
         mobileOverlay &&
           "shadow-[-12px_0_40px_var(--desk-panel-shadow)] xl:shadow-none",
         className,
