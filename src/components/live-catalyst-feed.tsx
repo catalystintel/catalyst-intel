@@ -1220,7 +1220,8 @@ export function LiveCatalystFeed({
                 }
                 className={cn(
                   "min-h-0 min-w-0 flex-1 border-0",
-                  "xl:w-[300px] xl:max-w-[320px] xl:min-w-[280px] xl:flex-none xl:border-l",
+                  // Desktop dock: split and chart share the right side 50/50.
+                  "xl:min-w-0 xl:flex-1 xl:border-l",
                 )}
               />
               {selectedSymbol && isXlDesk ? (
@@ -1236,7 +1237,7 @@ export function LiveCatalystFeed({
                       : null
                   }
                   density="compact"
-                  className="min-h-0 min-w-[360px] flex-1 border-l"
+                  className="min-h-0 min-w-0 flex-1 border-l"
                   chartClassName="h-full min-h-0 border-t-0"
                 />
               ) : null}
