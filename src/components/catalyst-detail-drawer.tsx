@@ -181,24 +181,6 @@ export function CatalystDetailDrawer({
                 </p>
               </div>
 
-              {catalyst.tags.length > 0 ? (
-                <div>
-                  <p className="font-mono text-[0.65rem] tracking-[0.14em] text-[var(--desk-text-dim)] uppercase">
-                    Tags
-                  </p>
-                  <div className="mt-2 flex flex-wrap gap-1.5">
-                    {catalyst.tags.map((tag) => (
-                      <span
-                        key={tag}
-                        className="rounded-sm border border-[var(--desk-border)] px-1.5 py-0.5 font-mono text-[0.65rem] text-[var(--desk-text-muted)]"
-                      >
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              ) : null}
-
               {catalyst.items.length > 0 ? (
                 <div>
                   <p className="font-mono text-[0.65rem] tracking-[0.14em] text-[var(--desk-text-dim)] uppercase">

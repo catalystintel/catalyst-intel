@@ -16,7 +16,6 @@ describe("deriveAutoTags", () => {
       "category:regulatory",
       "form:8-k",
       "session:AH",
-      "impact:high",
       "sentiment:bullish",
       "symbol:abcd",
     ]);
@@ -30,22 +29,22 @@ describe("deriveAutoTags", () => {
       session: "any",
       impactScore: 20,
     });
-    expect(tags).toEqual(["category:news", "form:8-k", "impact:low"]);
+    expect(tags).toEqual(["category:news", "form:8-k"]);
   });
 
-  it("buckets impact score into tiers", () => {
+  it("does not emit impact:* tags (score retired from product surface)", () => {
     const base = {
       eventCategory: "other" as const,
       type: "other",
       session: "RTH" as const,
     };
-    expect(deriveAutoTags({ ...base, impactScore: 39 })).toContain(
+    expect(deriveAutoTags({ ...base, impactScore: 39 })).not.toContain(
       "impact:low",
     );
-    expect(deriveAutoTags({ ...base, impactScore: 40 })).toContain(
+    expect(deriveAutoTags({ ...base, impactScore: 40 })).not.toContain(
       "impact:medium",
     );
-    expect(deriveAutoTags({ ...base, impactScore: 70 })).toContain(
+    expect(deriveAutoTags({ ...base, impactScore: 70 })).not.toContain(
       "impact:high",
     );
   });
