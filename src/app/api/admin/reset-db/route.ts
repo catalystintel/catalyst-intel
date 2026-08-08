@@ -8,13 +8,13 @@ import { authorizeAdminFetch, jsonWithAuth } from "@/lib/auth/admin-fetch";
 import { fetchAllCatalystSources } from "@/lib/jobs/fetch-all-sources";
 import { recordIngestionRun } from "@/lib/jobs/record-ingestion-run";
 import { clearIngestData } from "@/lib/ops/clear-ingest-data";
-import { isDbResetAllowed } from "@/lib/ops/non-production-env";
+import { DB_RESET_CONFIRM_PHRASE } from "@/lib/ops/non-production-env";
 
 /**
- * Non-production only: clear catalyst ingest tables, apply migrations, and
- * optionally re-run multi-source fetch. Always allowed on localhost; on
- * preview/staging requires ALLOW_DB_RESET=true. Blocked when
- * VERCEL_ENV=production.
+ * Admin-only: clear catalyst ingest tables, apply migrations, and optionally
+ * re-run multi-source fetch. Allowed in every environment (including
+ * production). Requires an interactive admin session (not cron) and body
+ * `confirm: "delete"`.
  */
 export async function POST(request: NextRequest) {
   const auth = await authorizeAdminFetch(request, "admin-reset-db");
@@ -22,25 +22,42 @@ export async function POST(request: NextRequest) {
     return auth.response;
   }
 
-  if (!isDbResetAllowed()) {
+  if (auth.isCron) {
     return jsonWithAuth(
       auth,
       {
         error:
-          "Clear database is blocked in production. On preview/staging set ALLOW_DB_RESET=true.",
+          "Clear database requires an interactive admin session (not cron).",
       },
       { status: 403 },
     );
   }
 
   let runIngest = true;
+  let confirm = "";
   try {
-    const body = (await request.json()) as { runIngest?: unknown };
+    const body = (await request.json()) as {
+      runIngest?: unknown;
+      confirm?: unknown;
+    };
     if (typeof body.runIngest === "boolean") {
       runIngest = body.runIngest;
     }
+    if (typeof body.confirm === "string") {
+      confirm = body.confirm;
+    }
   } catch {
-    // empty / non-JSON body → default runIngest true
+    // empty / non-JSON body
+  }
+
+  if (confirm !== DB_RESET_CONFIRM_PHRASE) {
+    return jsonWithAuth(
+      auth,
+      {
+        error: `Type "${DB_RESET_CONFIRM_PHRASE}" to confirm clearing the database.`,
+      },
+      { status: 400 },
+    );
   }
 
   try {

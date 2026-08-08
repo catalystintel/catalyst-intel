@@ -1,9 +1,19 @@
 "use client";
 
-import { useState } from "react";
+import { useId, useState } from "react";
 import posthog from "posthog-js";
 
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { DB_RESET_CONFIRM_PHRASE } from "@/lib/ops/non-production-env";
 
 interface ResetResult {
   ok: true;
@@ -29,21 +39,31 @@ interface ResetResult {
   } | null;
 }
 
+type PendingAction = { runIngest: boolean } | null;
+
 export function ResetDbTrigger() {
+  const confirmInputId = useId();
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<ResetResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [pending, setPending] = useState<PendingAction>(null);
+  const [confirmText, setConfirmText] = useState("");
 
-  async function handleReset(runIngest: boolean) {
-    const action = runIngest
-      ? "Clear ingest tables, migrate, and fetch all sources?"
-      : "Clear ingest tables and migrate (no fetch)?";
-    if (
-      !window.confirm(`${action}\n\nThis cannot be undone on this database.`)
-    ) {
-      return;
-    }
+  const confirmOpen = pending !== null;
+  const confirmMatches = confirmText === DB_RESET_CONFIRM_PHRASE;
 
+  function openConfirm(runIngest: boolean) {
+    setConfirmText("");
+    setPending({ runIngest });
+  }
+
+  function closeConfirm() {
+    if (loading) return;
+    setPending(null);
+    setConfirmText("");
+  }
+
+  async function runReset(runIngest: boolean) {
     setLoading(true);
     setError(null);
     setResult(null);
@@ -52,13 +72,18 @@ export function ResetDbTrigger() {
       const res = await fetch("/api/admin/reset-db", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ runIngest }),
+        body: JSON.stringify({
+          runIngest,
+          confirm: DB_RESET_CONFIRM_PHRASE,
+        }),
       });
       const data = (await res.json()) as ResetResult & { error?: string };
       if (!res.ok) {
         throw new Error(data.error ?? "Reset failed.");
       }
       setResult(data);
+      setPending(null);
+      setConfirmText("");
       posthog.capture("db_reset_completed", {
         run_ingest: runIngest,
         inserted: data.ingest?.totals.inserted,
@@ -75,20 +100,24 @@ export function ResetDbTrigger() {
   return (
     <div className="flex flex-col gap-3">
       <p className="max-w-xl text-sm text-[var(--desk-text-muted)]">
-        Non-production only. Wipes catalysts / raw sources / watermarks /
-        ingestion runs, applies pending migrations, then optionally re-runs
-        multi-source ingest (including PR wire when credentialed).
+        Admin only. Wipes catalysts / raw sources / watermarks / ingestion runs,
+        applies pending migrations, then optionally re-runs multi-source ingest.
+        Works in every environment — type{" "}
+        <code className="font-mono text-[var(--desk-text-secondary)]">
+          {DB_RESET_CONFIRM_PHRASE}
+        </code>{" "}
+        to confirm.
       </p>
       <div className="flex flex-wrap gap-2">
         <Button
-          onClick={() => void handleReset(true)}
+          onClick={() => openConfirm(true)}
           disabled={loading}
           className="btn-press w-fit bg-[var(--desk-live)] text-[var(--desk-accent-fg)] hover:brightness-110"
         >
           {loading ? "Working…" : "Clear DB, migrate & fetch all"}
         </Button>
         <Button
-          onClick={() => void handleReset(false)}
+          onClick={() => openConfirm(false)}
           disabled={loading}
           variant="outline"
           className="btn-press w-fit border-[var(--desk-border-strong)] bg-transparent text-[var(--desk-text)] hover:bg-[var(--desk-overlay-strong)]"
@@ -125,6 +154,80 @@ export function ResetDbTrigger() {
           ) : null}
         </div>
       ) : null}
+
+      <Dialog
+        open={confirmOpen}
+        onOpenChange={(open) => {
+          if (!open) closeConfirm();
+        }}
+      >
+        <DialogContent className="sm:max-w-md" showCloseButton={!loading}>
+          <DialogHeader>
+            <DialogTitle>Confirm clear database</DialogTitle>
+            <DialogDescription>
+              {pending?.runIngest
+                ? "This wipes ingest tables, applies migrations, then fetches all sources."
+                : "This wipes ingest tables and applies migrations (no fetch)."}{" "}
+              Cannot be undone on this database.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col gap-2">
+            <label
+              htmlFor={confirmInputId}
+              className="text-xs font-medium text-[var(--desk-text-secondary)]"
+            >
+              Type{" "}
+              <span className="font-mono text-[var(--desk-text)]">
+                {DB_RESET_CONFIRM_PHRASE}
+              </span>{" "}
+              to continue
+            </label>
+            <Input
+              id={confirmInputId}
+              value={confirmText}
+              onChange={(e) => setConfirmText(e.target.value)}
+              autoComplete="off"
+              autoFocus
+              spellCheck={false}
+              disabled={loading}
+              placeholder={DB_RESET_CONFIRM_PHRASE}
+              className="font-mono"
+              onKeyDown={(e) => {
+                if (
+                  e.key === "Enter" &&
+                  confirmMatches &&
+                  pending &&
+                  !loading
+                ) {
+                  e.preventDefault();
+                  void runReset(pending.runIngest);
+                }
+              }}
+            />
+          </div>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={loading}
+              onClick={closeConfirm}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              disabled={!confirmMatches || loading}
+              className="bg-[var(--desk-live)] text-[var(--desk-accent-fg)] hover:brightness-110 disabled:opacity-50"
+              onClick={() => {
+                if (!pending || !confirmMatches) return;
+                void runReset(pending.runIngest);
+              }}
+            >
+              {loading ? "Working…" : "Clear database"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
