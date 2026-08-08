@@ -1,6 +1,7 @@
 /**
  * Persisted desk preference: Economic Calendar right-rail visibility.
- * Default is visible; `"0"` means the user hid it.
+ * Default / unset / any value other than `"0"` → shown. Only `"0"` hides it
+ * after the user clicks X on the calendar header.
  */
 export const CALENDAR_RAIL_VISIBLE_KEY = "ci.desk.calendarRailVisible";
 

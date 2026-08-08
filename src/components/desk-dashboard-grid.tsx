@@ -21,8 +21,9 @@ import { cn } from "@/lib/utils";
  * Charting stays available in the row split/detail panel only; the former
  * Live Squawk placeholder and Market Data tab strip are removed.
  *
- * Laptop (`xl:` / 1280+): Economic Calendar rail (user-hideable, preference
- * in localStorage). Wide desktop (`2xl:`): calendar + watchlists.
+ * Economic Calendar is shown by default (`xl:`+). Users can hide it with X;
+ * preference persists in localStorage. Reopen via the feed header "Calendar"
+ * control or the slim edge / compact restore strip.
  */
 export function DeskDashboardGrid({
   initialCatalysts,
@@ -60,12 +61,14 @@ export function DeskDashboardGrid({
           initialWatchlistCriteria={initialWatchlistCriteria}
           initialSelectedId={initialSelectedId}
           onFocusSymbol={setFocusSymbol}
+          calendarRailHidden={!calendarVisible}
+          onShowCalendarRail={() => setCalendarVisible(true)}
         />
 
         <aside
           className={cn(
             "hidden min-h-0 shrink-0 flex-col gap-3 xl:flex",
-            calendarVisible ? "w-[240px] 2xl:w-[300px]" : "w-9 2xl:w-[300px]",
+            calendarVisible ? "w-[240px] 2xl:w-[300px]" : "w-10 2xl:w-[300px]",
           )}
         >
           {calendarVisible ? (
@@ -76,15 +79,15 @@ export function DeskDashboardGrid({
             />
           ) : (
             <>
-              {/* Laptop: slim edge control to restore the calendar. */}
+              {/* Laptop: slim edge control — secondary to the feed header button. */}
               <button
                 type="button"
                 onClick={() => setCalendarVisible(true)}
                 title="Show economic calendar"
                 aria-label="Show economic calendar"
                 className={cn(
-                  "btn-press flex min-h-0 flex-1 flex-col items-center gap-2 rounded-xl border border-[var(--desk-border)] bg-[var(--desk-panel)] py-3 text-[var(--desk-text-muted)] transition-colors",
-                  "hover:border-[var(--desk-border-strong)] hover:bg-[var(--desk-overlay-soft)] hover:text-[var(--desk-text)]",
+                  "btn-press flex min-h-0 flex-1 flex-col items-center gap-2 rounded-xl border border-[color-mix(in_srgb,var(--desk-live)_35%,var(--desk-border))] bg-[color-mix(in_srgb,var(--desk-live)_8%,var(--desk-panel))] py-3 text-[var(--desk-live)] transition-colors",
+                  "hover:border-[color-mix(in_srgb,var(--desk-live)_55%,var(--desk-border))] hover:bg-[color-mix(in_srgb,var(--desk-live)_12%,var(--desk-panel))]",
                   "2xl:hidden",
                 )}
               >
@@ -94,7 +97,7 @@ export function DeskDashboardGrid({
                   className="desk-caps mt-1 font-mono text-[0.62rem] tracking-[0.14em] text-inherit uppercase"
                   style={{ writingMode: "vertical-rl" }}
                 >
-                  Calendar
+                  Show
                 </span>
               </button>
 
@@ -105,13 +108,13 @@ export function DeskDashboardGrid({
                 title="Show economic calendar"
                 aria-label="Show economic calendar"
                 className={cn(
-                  "btn-press hidden items-center justify-between gap-2 rounded-xl border border-[var(--desk-border)] bg-[var(--desk-panel)] px-3 py-2.5 text-[var(--desk-text-muted)] transition-colors 2xl:flex",
-                  "hover:border-[var(--desk-border-strong)] hover:bg-[var(--desk-overlay-soft)] hover:text-[var(--desk-text)]",
+                  "btn-press hidden items-center justify-between gap-2 rounded-xl border border-[color-mix(in_srgb,var(--desk-live)_35%,var(--desk-border))] bg-[color-mix(in_srgb,var(--desk-live)_8%,var(--desk-panel))] px-3 py-2.5 text-[var(--desk-live)] transition-colors 2xl:flex",
+                  "hover:border-[color-mix(in_srgb,var(--desk-live)_55%,var(--desk-border))] hover:bg-[color-mix(in_srgb,var(--desk-live)_12%,var(--desk-panel))]",
                 )}
               >
                 <span className="desk-caps flex items-center gap-1.5 font-mono text-[0.7rem] font-semibold tracking-[0.14em] uppercase">
                   <CalendarDays className="size-3.5" />
-                  Economic Calendar
+                  Show calendar
                 </span>
                 <PanelRightOpen className="size-3.5 shrink-0" />
               </button>

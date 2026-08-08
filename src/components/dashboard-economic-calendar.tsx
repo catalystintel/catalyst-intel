@@ -1,6 +1,6 @@
 "use client";
 
-import { PanelRightClose } from "lucide-react";
+import { X } from "lucide-react";
 
 import type { MacroEventDef } from "@/lib/jobs/fetch-macro-calendar";
 import { cn } from "@/lib/utils";
@@ -78,7 +78,7 @@ export function DashboardEconomicCalendar({
               aria-label="Hide economic calendar"
               className="inline-flex size-7 items-center justify-center rounded-md text-[var(--desk-text-muted)] transition-colors hover:bg-[var(--desk-overlay-strong)] hover:text-[var(--desk-text)]"
             >
-              <PanelRightClose className="size-3.5" />
+              <X className="size-3.5" />
             </button>
           ) : null}
         </div>
