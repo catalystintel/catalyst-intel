@@ -64,6 +64,7 @@ describe("parseFeedQueryFromSearchParams", () => {
     expect(filters.timeWindow).toBe("24h");
     expect(filters.symbolOnly).toBe(true);
     expect(filters.earningsSurprisesOnly).toBe(false);
+    expect(filters.criteriaGroups).toEqual([]);
     expect(filters.since).toBeTruthy();
   });
 

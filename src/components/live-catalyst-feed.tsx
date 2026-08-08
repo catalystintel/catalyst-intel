@@ -49,9 +49,9 @@ import {
 } from "@/components/ui/dialog";
 import {
   DropdownMenu,
+  DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuGroup,
-  DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
@@ -276,10 +276,6 @@ export function LiveCatalystFeed({
   const [savedWatchlists, setSavedWatchlists] = useState<
     { id: number; name: string; criteria: WatchlistCriteria }[]
   >([]);
-  const [appliedWatchlist, setAppliedWatchlist] = useState<{
-    id: number;
-    name: string;
-  } | null>(null);
   const [watchlistEditorOpen, setWatchlistEditorOpen] = useState(false);
   const [watchlistEditorDraft, setWatchlistEditorDraft] =
     useState<WatchlistDraft | null>(null);
@@ -390,6 +386,9 @@ export function LiveCatalystFeed({
         formFilters: [],
         earningsSurprisesOnly: false,
         sourceFilters: isLocalDevUi() ? filters.sourceFilters : [],
+        watchlistIds: Array.isArray(filters.watchlistIds)
+          ? filters.watchlistIds
+          : [],
       });
 
       if (initialWatchlistCriteria) {
@@ -398,6 +397,7 @@ export function LiveCatalystFeed({
           ...prev,
           ...watchlistCriteriaToFilters(initialWatchlistCriteria),
           symbolOnly: true,
+          watchlistIds: [],
         }));
         setFiltersOpen(true);
         setFiltersHydrated(true);
@@ -415,6 +415,7 @@ export function LiveCatalystFeed({
                 tagFilters: saved.tagFilters,
                 timeWindow: saved.timeWindow,
                 symbolOnly: saved.symbolOnly,
+                watchlistIds: saved.watchlistIds,
               })
             : {}),
           symbolFilters: [urlSymbol],
@@ -810,31 +811,38 @@ export function LiveCatalystFeed({
     setSaveWatchlistOpen(true);
   }, []);
 
-  const applySavedWatchlist = useCallback(
-    (watchlist: { id: number; name: string; criteria: WatchlistCriteria }) => {
-      setFilterState((prev) => ({
-        ...DEFAULT_FEED_FILTERS,
-        ...watchlistCriteriaToFilters(watchlist.criteria),
-        timeWindow: prev.timeWindow,
-        symbolOnly: true,
-      }));
-      setAppliedWatchlist({ id: watchlist.id, name: watchlist.name });
+  const toggleAppliedWatchlist = useCallback(
+    (watchlistId: number) => {
+      setFilterState((prev) => {
+        const has = prev.watchlistIds.includes(watchlistId);
+        const watchlistIds = has
+          ? prev.watchlistIds.filter((id) => id !== watchlistId)
+          : [...prev.watchlistIds, watchlistId];
+        return { ...prev, watchlistIds };
+      });
       setFiltersOpen(true);
-      toast.success(`Applied "${watchlist.name}" filters`);
+    },
+    [setFilterState],
+  );
+
+  const removeAppliedWatchlist = useCallback(
+    (watchlistId: number) => {
+      setFilterState((prev) => ({
+        ...prev,
+        watchlistIds: prev.watchlistIds.filter((id) => id !== watchlistId),
+      }));
     },
     [setFilterState],
   );
 
   const handlePatchFilters = useCallback(
     (patch: Partial<FeedFilterState>) => {
-      setAppliedWatchlist(null);
       patchFilters(patch);
     },
     [patchFilters],
   );
 
   const handleClearFilters = useCallback(() => {
-    setAppliedWatchlist(null);
     clearFilters();
   }, [clearFilters]);
 
@@ -847,19 +855,24 @@ export function LiveCatalystFeed({
       if (!res.ok) return;
       const data = await res.json();
       const list = Array.isArray(data.watchlists) ? data.watchlists : [];
-      setSavedWatchlists(
-        list.map(
-          (w: { id: number; name: string; criteria?: WatchlistCriteria }) => ({
-            id: w.id,
-            name: w.name,
-            criteria: w.criteria ?? {},
-          }),
-        ),
+      const next = list.map(
+        (w: { id: number; name: string; criteria?: WatchlistCriteria }) => ({
+          id: w.id,
+          name: w.name,
+          criteria: w.criteria ?? {},
+        }),
       );
+      setSavedWatchlists(next);
+      const alive = new Set(next.map((w: { id: number }) => w.id));
+      setFilterState((prev) => {
+        const watchlistIds = prev.watchlistIds.filter((id) => alive.has(id));
+        if (watchlistIds.length === prev.watchlistIds.length) return prev;
+        return { ...prev, watchlistIds };
+      });
     } catch {
       // Soft-fail.
     }
-  }, []);
+  }, [setFilterState]);
 
   useEffect(
     () => subscribeWatchlistChanged(() => void reloadSavedWatchlists()),
@@ -889,7 +902,11 @@ export function LiveCatalystFeed({
       setSaveWatchlistOpen(false);
       await reloadSavedWatchlists();
       if (typeof data.id === "number") {
-        setAppliedWatchlist({ id: data.id, name });
+        setFilterState((prev) =>
+          prev.watchlistIds.includes(data.id)
+            ? prev
+            : { ...prev, watchlistIds: [...prev.watchlistIds, data.id] },
+        );
       }
     } catch (err) {
       toast.error(
@@ -898,7 +915,7 @@ export function LiveCatalystFeed({
     } finally {
       setSavingWatchlist(false);
     }
-  }, [saveWatchlistName, filterState, reloadSavedWatchlists]);
+  }, [saveWatchlistName, filterState, reloadSavedWatchlists, setFilterState]);
 
   const facetOptions = useMemo(() => buildFacetOptions(facets), [facets]);
 
@@ -955,6 +972,12 @@ export function LiveCatalystFeed({
 
   // Symbol-only is a header toggle — don't drive Clear / Filters badge from it.
   const panelFiltersActive = !isPanelFiltersDefault(filterState);
+  // "Save as watchlist" needs real panel criteria — applied watchlist ids alone
+  // are a tape filter, not a rule you can re-save.
+  const savablePanelFiltersActive = !isPanelFiltersDefault({
+    ...filterState,
+    watchlistIds: [],
+  });
   const filtersActive = panelFiltersActive || quietMode;
 
   const emptyKind = classifyFeedEmpty({
@@ -1063,11 +1086,13 @@ export function LiveCatalystFeed({
             watchlistCount={watchlistSymbols.length}
             signalWatchlistCount={signalWatchlists.length}
             panelFiltersActive={panelFiltersActive}
+            savablePanelFiltersActive={savablePanelFiltersActive}
             onClearFilters={handleClearFilters}
             onSaveWatchlist={openSaveWatchlist}
             savedWatchlists={savedWatchlists}
-            appliedWatchlist={appliedWatchlist}
-            onApplyWatchlist={applySavedWatchlist}
+            appliedWatchlistIds={filterState.watchlistIds}
+            onToggleWatchlist={toggleAppliedWatchlist}
+            onRemoveWatchlist={removeAppliedWatchlist}
           />
         </div>
       ) : null}
@@ -1361,16 +1386,18 @@ interface FeedFiltersProps {
   watchlistCount: number;
   signalWatchlistCount: number;
   panelFiltersActive: boolean;
+  savablePanelFiltersActive: boolean;
   onClearFilters: () => void;
   onSaveWatchlist: () => void;
   savedWatchlists: { id: number; name: string; criteria: WatchlistCriteria }[];
-  appliedWatchlist: { id: number; name: string } | null;
-  onApplyWatchlist: (watchlist: {
-    id: number;
-    name: string;
-    criteria: WatchlistCriteria;
-  }) => void;
+  appliedWatchlistIds: number[];
+  onToggleWatchlist: (watchlistId: number) => void;
+  onRemoveWatchlist: (watchlistId: number) => void;
 }
+
+/** ~10 checkbox rows before the menu scrolls (keeps tall libraries usable). */
+const WATCHLIST_MENU_MAX_VISIBLE = 10;
+const WATCHLIST_MENU_ITEM_REM = 2.25;
 
 function FeedFilters({
   filterState,
@@ -1382,16 +1409,34 @@ function FeedFilters({
   watchlistCount,
   signalWatchlistCount,
   panelFiltersActive,
+  savablePanelFiltersActive,
   onClearFilters,
   onSaveWatchlist,
   savedWatchlists,
-  appliedWatchlist,
-  onApplyWatchlist,
+  appliedWatchlistIds,
+  onToggleWatchlist,
+  onRemoveWatchlist,
 }: FeedFiltersProps) {
   const removeSymbolFilter = (symbol: string) =>
     onPatchFilters({
       symbolFilters: filterState.symbolFilters.filter((s) => s !== symbol),
     });
+
+  const appliedIdSet = useMemo(
+    () => new Set(appliedWatchlistIds),
+    [appliedWatchlistIds],
+  );
+  const appliedWatchlists = useMemo(
+    () => savedWatchlists.filter((w) => appliedIdSet.has(w.id)),
+    [savedWatchlists, appliedIdSet],
+  );
+
+  const watchlistTriggerText =
+    appliedWatchlists.length === 0
+      ? "Watchlists"
+      : appliedWatchlists.length === 1
+        ? appliedWatchlists[0]!.name
+        : `Watchlists ${appliedWatchlists.length}`;
 
   return (
     <div className="flex flex-col gap-2">
@@ -1431,47 +1476,47 @@ function FeedFilters({
             <DropdownMenuTrigger
               className={cn(
                 "inline-flex h-8 items-center gap-1.5 rounded-md border px-2.5 font-mono text-[0.72rem] tracking-wide transition-colors",
-                appliedWatchlist
+                appliedWatchlists.length > 0
                   ? "border-[var(--desk-border-strong)] bg-[var(--desk-overlay-strong)] text-[var(--desk-text)]"
                   : "border-[var(--desk-border)] bg-[var(--desk-overlay-soft)] text-[var(--desk-text-muted)] hover:border-[var(--desk-border-strong)] hover:text-[var(--desk-text)]",
               )}
             >
               <span className="max-w-[11rem] truncate">
-                {appliedWatchlist ? appliedWatchlist.name : "Watchlists"}
+                {watchlistTriggerText}
               </span>
               <ChevronDown className="size-3 shrink-0 opacity-60" />
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="min-w-[14rem]">
+            <DropdownMenuContent align="end" className="min-w-[14rem] p-0">
               <DropdownMenuGroup>
                 <DropdownMenuLabel className="font-mono text-[0.65rem] tracking-wide uppercase">
-                  Apply saved watchlist
+                  Filter by watchlists
                 </DropdownMenuLabel>
                 {savedWatchlists.length === 0 ? (
                   <p className="px-2 py-2 text-xs text-[var(--desk-text-muted)]">
-                    No watchlists yet — create one first.
+                    No watchlists yet — create one on Watchlists.
                   </p>
                 ) : (
-                  savedWatchlists.map((w) => (
-                    <DropdownMenuItem
-                      key={w.id}
-                      onClick={() => onApplyWatchlist(w)}
-                      className="font-mono text-xs"
-                    >
-                      {w.name}
-                    </DropdownMenuItem>
-                  ))
+                  <div
+                    className="overflow-y-auto py-1"
+                    style={{
+                      maxHeight: `calc(${WATCHLIST_MENU_ITEM_REM}rem * ${WATCHLIST_MENU_MAX_VISIBLE})`,
+                    }}
+                  >
+                    {savedWatchlists.map((w) => (
+                      <DropdownMenuCheckboxItem
+                        key={w.id}
+                        checked={appliedIdSet.has(w.id)}
+                        onCheckedChange={() => onToggleWatchlist(w.id)}
+                        className="font-mono text-xs"
+                      >
+                        <span className="truncate pr-4">{w.name}</span>
+                      </DropdownMenuCheckboxItem>
+                    ))}
+                  </div>
                 )}
               </DropdownMenuGroup>
             </DropdownMenuContent>
           </DropdownMenu>
-          <Link
-            href="/watchlist"
-            title="Create or manage watchlists"
-            className="inline-flex h-8 items-center gap-1 rounded-md border border-[var(--desk-border)] bg-[var(--desk-overlay-soft)] px-2.5 font-mono text-[0.7rem] tracking-wide text-[var(--desk-text-muted)] transition-colors hover:border-[var(--desk-border-strong)] hover:text-[var(--desk-text)]"
-          >
-            <Plus className="size-3" />
-            Create
-          </Link>
           <FeedFilterMultiSelect
             label="Event type"
             options={facetOptions.categories}
@@ -1501,7 +1546,7 @@ function FeedFilters({
               emptyLabel="All sources"
             />
           ) : null}
-          {panelFiltersActive ? (
+          {savablePanelFiltersActive ? (
             <button
               type="button"
               onClick={onSaveWatchlist}
@@ -1524,7 +1569,7 @@ function FeedFilters({
           ) : null}
         </div>
       </div>
-      {appliedWatchlist ||
+      {appliedWatchlists.length > 0 ||
       filterState.symbolFilters.length > 0 ||
       filterState.tagFilters.length > 0 ? (
         <div
@@ -1532,12 +1577,13 @@ function FeedFilters({
           role="group"
           aria-label="Active exact filters"
         >
-          {appliedWatchlist ? (
+          {appliedWatchlists.map((w) => (
             <ActiveFilterChip
-              label={`Watchlist: ${appliedWatchlist.name}`}
-              onRemove={onClearFilters}
+              key={`watchlist:${w.id}`}
+              label={`Watchlist: ${w.name}`}
+              onRemove={() => onRemoveWatchlist(w.id)}
             />
-          ) : null}
+          ))}
           {filterState.symbolFilters.map((symbol) => (
             <ActiveFilterChip
               key={`symbol:${symbol}`}

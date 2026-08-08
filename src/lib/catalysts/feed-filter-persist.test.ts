@@ -75,6 +75,7 @@ describe("feed-filter-persist", () => {
       timeWindow: "4h",
       symbolOnly: false,
       earningsSurprisesOnly: true,
+      watchlistIds: [3, 1, 1, 0, -2],
     });
     expect(readPersistedFeedFilters()).toEqual({
       symbolQuery: "TSLA",
@@ -89,6 +90,7 @@ describe("feed-filter-persist", () => {
       // Always coerced on read — desk rule is not optional.
       symbolOnly: true,
       earningsSurprisesOnly: false,
+      watchlistIds: [3, 1],
     });
     vi.unstubAllEnvs();
   });
@@ -116,6 +118,12 @@ describe("feed-filter-persist", () => {
       isPanelFiltersDefault({
         ...DEFAULT_FEED_FILTERS,
         tagFilters: ["fda"],
+      }),
+    ).toBe(false);
+    expect(
+      isPanelFiltersDefault({
+        ...DEFAULT_FEED_FILTERS,
+        watchlistIds: [2],
       }),
     ).toBe(false);
   });
@@ -179,6 +187,7 @@ describe("feed-filter-persist", () => {
       timeWindow: "24h",
       symbolOnly: false,
       earningsSurprisesOnly: true,
+      watchlistIds: [9, 4],
     });
     const params = new URLSearchParams(qs);
     expect(params.get("q")).toBe("AAPL");
@@ -191,6 +200,7 @@ describe("feed-filter-persist", () => {
     // Always sent — tape gate is not optional.
     expect(params.get("symbolOnly")).toBe("1");
     expect(params.get("earningsSurprises")).toBe("1");
+    expect(params.get("watchlistIds")).toBe("9,4");
     // Source facet is local-dev only; vitest runs with NODE_ENV=test.
     expect(params.get("sources")).toBeNull();
   });

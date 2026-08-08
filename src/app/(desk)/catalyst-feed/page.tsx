@@ -31,6 +31,7 @@ function ssrFeedFilters(nowIso: string): FeedQueryFilters {
     timeWindow: defaults.timeWindow,
     symbolOnly: true,
     earningsSurprisesOnly: defaults.earningsSurprisesOnly,
+    criteriaGroups: [],
     since: null,
     until: nowIso,
   };
