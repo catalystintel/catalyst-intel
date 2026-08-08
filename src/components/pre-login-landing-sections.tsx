@@ -89,7 +89,7 @@ const TRUSTED_LOGOS = [
 const EARLY_ACCESS_POINTS = [
   "Every feature is included — live feed, alerts, watchlists, playbook, and AI summaries.",
   "No card, no trial countdown. Sign in with Google and the full desk is yours.",
-  "Your feedback shapes what gets built next — there's a feedback button on every page.",
+  "Your feedback shapes what gets built next — send notes from the desk after you sign in.",
 ] as const;
 
 function FeatureIcon({ children }: { children: ReactNode }) {

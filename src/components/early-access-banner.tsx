@@ -29,7 +29,7 @@ function getDismissedServerSnapshot() {
 type EarlyAccessBannerProps = {
   /** Marketing pages sit above the pre-login header; desk sits above AppShell. */
   variant?: "marketing" | "app";
-  /** When false, hide the feedback CTA (e.g. login before session). */
+  /** When false, hide the feedback CTA (pre-login / marketing chrome). */
   showFeedback?: boolean;
   /** Prefills feedback reply-to when signed in. */
   defaultEmail?: string | null;
