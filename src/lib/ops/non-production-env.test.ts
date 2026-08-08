@@ -17,9 +17,9 @@ describe("isNonProductionEnv", () => {
 });
 
 describe("isDbResetAllowed", () => {
-  it("requires ALLOW_DB_RESET even locally", () => {
-    expect(isDbResetAllowed({})).toBe(false);
-    expect(isDbResetAllowed({ ALLOW_DB_RESET: "true" })).toBe(true);
+  it("allows local without ALLOW_DB_RESET", () => {
+    expect(isDbResetAllowed({})).toBe(true);
+    expect(isDbResetAllowed({ ALLOW_DB_RESET: "false" })).toBe(true);
   });
 
   it("blocks production even with ALLOW_DB_RESET", () => {

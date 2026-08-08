@@ -200,12 +200,13 @@ export default async function AdminPage() {
         <section className="overflow-hidden rounded-xl border border-[var(--desk-negative)]/40 bg-[var(--desk-panel)]">
           <div className="border-b border-border/60 px-4 py-4 sm:px-5">
             <h2 className="font-mono text-sm tracking-wide text-foreground">
-              Clear database (ALLOW_DB_RESET)
+              Clear database
             </h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              Hidden when{" "}
-              <code className="font-mono">VERCEL_ENV=production</code>. Use
-              locally or on preview to wipe the tape and re-ingest.
+              Available on localhost always, and on preview when{" "}
+              <code className="font-mono">ALLOW_DB_RESET=true</code>. Blocked
+              when <code className="font-mono">VERCEL_ENV=production</code>. Use
+              to wipe ingest tables, migrate, and optionally re-fetch.
             </p>
           </div>
           <div className="px-4 py-4 sm:px-5">
