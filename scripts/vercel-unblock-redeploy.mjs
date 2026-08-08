@@ -424,8 +424,6 @@ export async function resolveVercelAccess(cfg) {
   // /v2/user only works for personal account tokens. Integration tokens often
   // return 404 "User not found" but can still list/deploy via the API — do not
   // hard-fail here (CLI fallback still calls assertVercelUserToken later).
-  /** @type {boolean} */
-  let personalUserToken = false;
   try {
     const user = await vercelFetch(
       "/v2/user",
@@ -437,7 +435,6 @@ export async function resolveVercelAccess(cfg) {
     );
     const username =
       user?.user?.username ?? user?.username ?? user?.user?.id ?? user?.id;
-    personalUserToken = true;
     console.log(`Vercel token OK for user=${username ?? "?"}`);
   } catch (err) {
     if (isVercelAuthError(err)) {
@@ -448,7 +445,6 @@ export async function resolveVercelAccess(cfg) {
       throw err;
     }
   }
-  void personalUserToken;
 
   /** @type {Array<"auto" | "teamId" | "slug" | "none">} */
   const modes = ["auto", "teamId", "slug", "none"];
