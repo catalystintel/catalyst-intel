@@ -35,10 +35,9 @@ export function PreLoginChrome({
   ] as const;
 
   return (
-    // Prelogin always uses the landing fintech palette (`.prelogin-surface`)
-    // regardless of the signed-in app theme toggle — `.dark` + scoped tokens
-    // cascade independently of next-themes' `<html>` class. Authenticated desk
-    // navy stays on `.desk-chrome` and is not overridden here.
+    // Prelogin is always dark: ThemeProvider forces `html.dark` on these
+    // routes, and `.prelogin-surface` locks the Signal fintech tokens. Light
+    // theme is desk-only (`.desk-chrome`); do not rely on the app toggle here.
     <div className="dark prelogin-surface signal-mesh-bg relative flex min-h-dvh flex-1 flex-col overflow-x-hidden bg-[var(--desk-app)]">
       <Toaster />
       <div

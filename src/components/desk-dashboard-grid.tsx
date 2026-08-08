@@ -18,12 +18,8 @@ import { cn } from "@/lib/utils";
  * Trading-desk dashboard shell for `/catalyst-feed` — two-column layout
  * aligned to `docs/design/dashboard-target-reference-02.png`: a broadened
  * center Live tape plus a right rail (Economic Calendar + Watchlists).
- * Charting stays available in the row split/detail panel only; the former
- * Live Squawk placeholder and Market Data tab strip are removed.
- *
- * Economic Calendar is shown by default (`xl:`+). Users can hide it with X;
- * preference persists in localStorage. Reopen via the feed header "Calendar"
- * control or the slim edge / compact restore strip.
+ * When a symbol row opens the split+chart panes, the calendar rail collapses
+ * transiently (saved preference untouched) so the desk stays readable.
  */
 export function DeskDashboardGrid({
   initialCatalysts,
@@ -47,8 +43,12 @@ export function DeskDashboardGrid({
   const [focusSymbol, setFocusSymbol] = useState<string | null>(
     initialSymbolFilter?.trim().toUpperCase() || null,
   );
+  const [chartOpen, setChartOpen] = useState(false);
   const { visible: calendarVisible, setVisible: setCalendarVisible } =
     useCalendarRailVisible();
+  // Transient override while the sibling chart pane is open — never writes
+  // localStorage; closing the split restores the saved preference.
+  const effectiveCalendarVisible = calendarVisible && !chartOpen;
 
   return (
     <div className="desk-dashboard flex min-h-0 flex-1 flex-col gap-3">
@@ -61,17 +61,26 @@ export function DeskDashboardGrid({
           initialWatchlistCriteria={initialWatchlistCriteria}
           initialSelectedId={initialSelectedId}
           onFocusSymbol={setFocusSymbol}
-          calendarRailHidden={!calendarVisible}
-          onShowCalendarRail={() => setCalendarVisible(true)}
+          onChartOpenChange={setChartOpen}
+          calendarRailHidden={!effectiveCalendarVisible}
+          onShowCalendarRail={
+            chartOpen ? undefined : () => setCalendarVisible(true)
+          }
         />
 
         <aside
           className={cn(
-            "hidden min-h-0 shrink-0 flex-col gap-3 xl:flex",
-            calendarVisible ? "w-[240px] 2xl:w-[300px]" : "w-10 2xl:w-[300px]",
+            "min-h-0 shrink-0 flex-col gap-3",
+            // Sibling chart pane needs the horizontal budget — hide the rail
+            // entirely while open (preference restored on close).
+            chartOpen
+              ? "hidden"
+              : effectiveCalendarVisible
+                ? "hidden w-[240px] xl:flex 2xl:w-[300px]"
+                : "hidden w-10 xl:flex 2xl:w-[300px]",
           )}
         >
-          {calendarVisible ? (
+          {effectiveCalendarVisible ? (
             <DashboardEconomicCalendar
               events={macroEvents}
               onHide={() => setCalendarVisible(false)}
