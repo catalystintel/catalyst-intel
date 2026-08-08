@@ -16,13 +16,21 @@ import { googleOAuthOptions } from "@/lib/supabase/google-oauth";
  * Always requests Google's account chooser (`prompt=select_account`) and clears
  * any local Supabase session first so a prior Google login cannot silently
  * reuse the wrong address.
+ *
+ * If this page is somehow still open on an ephemeral Vercel preview host,
+ * bounce to the canonical production login before minting PKCE cookies
+ * (`NEXT_PUBLIC_APP_URL` / production host) — that is what stops “login sent
+ * me to vercel.com” / PKCE verifier errors.
  */
 export function GoogleSignInButton({
   next = "/catalyst-feed",
   configured,
+  canonicalAuthOrigin,
 }: {
   next?: string;
   configured: boolean;
+  /** Production (or staging) origin; when set and current host differs, bounce. */
+  canonicalAuthOrigin?: string;
 }) {
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -37,8 +45,22 @@ export function GoogleSignInButton({
       }
 
       try {
-        const supabase = createSupabaseBrowserClient();
         const origin = window.location.origin;
+        if (
+          canonicalAuthOrigin &&
+          origin !== canonicalAuthOrigin &&
+          !/^https?:\/\/(localhost|127\.0\.0\.1|0\.0\.0\.0)(:\d+)?$/i.test(
+            origin,
+          )
+        ) {
+          const login = new URL("/login", canonicalAuthOrigin);
+          login.searchParams.set("next", next);
+          login.searchParams.set("message", "use_production_login");
+          window.location.assign(login.toString());
+          return;
+        }
+
+        const supabase = createSupabaseBrowserClient();
         // Drop a stale local session so switching Google accounts replaces it
         // instead of bouncing back into the previous desk session.
         await supabase.auth.signOut({ scope: "local" });

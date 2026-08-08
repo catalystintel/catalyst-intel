@@ -64,6 +64,26 @@ describe("toUserFacingMessage", () => {
     ).toBe(USER_FACING.generic);
   });
 
+  it("maps preview_admin_only", () => {
+    expect(toUserFacingMessage("preview_admin_only")).toBe(
+      USER_FACING.previewAdminOnly,
+    );
+  });
+
+  it("maps PKCE verifier errors to polished copy", () => {
+    expect(
+      toUserFacingMessage(
+        "PKCE code verifier not found in storage. This can happen if the auth flow was initiated in a different browser…",
+      ),
+    ).toBe(USER_FACING.pkceVerifierMissing);
+  });
+
+  it("maps use_production_login", () => {
+    expect(toUserFacingMessage("use_production_login")).toBe(
+      USER_FACING.useProductionLogin,
+    );
+  });
+
   it("passes through safe product errors", () => {
     expect(toUserFacingMessage("Could not load catalysts.")).toBe(
       "Could not load catalysts.",

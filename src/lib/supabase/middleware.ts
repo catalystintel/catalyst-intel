@@ -2,6 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 import { isDevAuthBypassEnabled } from "@/lib/auth/dev-bypass";
+import { authHostBounceUrl } from "@/lib/http/auth-origin";
 import {
   canAccessPreviewDeployment,
   isPreviewAccessExemptPath,
@@ -49,6 +50,17 @@ function previewAdminDeniedResponse(request: NextRequest): NextResponse {
 
 export async function updateSession(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
+
+  // Ephemeral Vercel preview hosts (e.g. *-rouge.vercel.app) are not in the
+  // Supabase Redirect URL allowlist and often enable Deployment Protection
+  // (SSO at vercel.com). Bounce login / OAuth start to the canonical host
+  // before PKCE cookies are written on the wrong origin.
+  if (pathname === "/login" || pathname === "/auth/login") {
+    const bounce = authHostBounceUrl(request.nextUrl);
+    if (bounce) {
+      return NextResponse.redirect(bounce);
+    }
+  }
 
   // Misconfigured Supabase Site URL / Redirect URLs often drop the PKCE code
   // on `/` instead of `/auth/callback`. Forward so exchangeCodeForSession runs.
