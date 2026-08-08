@@ -116,11 +116,13 @@ type Presence = "active" | "blurred" | "hidden";
  * quiet until the row is engaged.
  */
 // Title is the scan column — Time/Actions stay fixed; Title takes the rest.
+// Tracks are sized for laptop (~1280–1512) without a right rail; avoid large
+// minmax floors that force horizontal overflow when the docked split is open.
 const FEED_GRID =
-  "grid-cols-[4.5rem_minmax(0,1fr)] sm:grid-cols-[5rem_minmax(12rem,1fr)_7.5rem] lg:grid-cols-[5rem_minmax(12rem,1fr)_7.5rem_16.5rem]";
+  "grid-cols-[4.5rem_minmax(0,1fr)] sm:grid-cols-[5rem_minmax(0,1fr)_6.5rem] lg:grid-cols-[5rem_minmax(0,1fr)_6.5rem_12.5rem]";
 /** Denser tape columns while the split panel steals horizontal space. */
 const FEED_GRID_SPLIT =
-  "grid-cols-[4.5rem_minmax(0,1fr)] sm:grid-cols-[4.5rem_minmax(10rem,1fr)_7.5rem]";
+  "grid-cols-[4.5rem_minmax(0,1fr)] sm:grid-cols-[4.5rem_minmax(0,1fr)] xl:grid-cols-[4.5rem_minmax(0,1fr)_5.75rem]";
 
 function readPresence(): Presence {
   if (typeof document === "undefined") return "active";
@@ -853,7 +855,7 @@ export function LiveCatalystFeed({
               onClick={() => jumpToLatestRef.current?.()}
               aria-label={`Jump to ${pendingNew} new catalysts`}
               title="Jump to newest catalysts"
-              className="btn-press inline-flex h-[34px] items-center gap-1.5 rounded-lg border border-[color-mix(in_srgb,var(--desk-live-status)_50%,transparent)] bg-[var(--desk-live-status)] px-2.5 font-mono text-[0.72rem] font-semibold tracking-wide text-[#04140c] uppercase transition-opacity hover:opacity-90"
+              className="btn-press inline-flex h-[34px] items-center gap-1.5 rounded-lg border border-[color-mix(in_srgb,var(--desk-live-status)_50%,transparent)] bg-[var(--desk-live-status)] px-2.5 font-mono text-[0.72rem] font-semibold tracking-wide text-[var(--desk-accent-fg)] uppercase transition-opacity hover:opacity-90"
             >
               <ArrowUp className="size-3.5" aria-hidden />
               {pendingNew} new
@@ -969,7 +971,7 @@ export function LiveCatalystFeed({
             <button
               type="button"
               aria-label="Close panel backdrop"
-              className="fixed inset-0 z-40 bg-black/55 lg:hidden"
+              className="fixed inset-0 z-40 bg-[var(--desk-scrim)] xl:hidden"
               onClick={() => setSelectedId(null)}
             />
             <TapeSplitPanel
@@ -993,7 +995,7 @@ export function LiveCatalystFeed({
                 ]);
               }}
               mobileOverlay
-              className="fixed inset-0 z-50 w-full lg:static lg:inset-auto lg:z-auto lg:w-[min(52%,640px)] lg:min-w-[420px] lg:shrink-0 lg:border-l"
+              className="fixed inset-0 z-50 w-full xl:static xl:inset-auto xl:z-auto xl:w-[min(44%,520px)] xl:max-w-[520px] xl:min-w-[340px] xl:shrink-0 xl:border-l"
             />
           </>
         ) : null}
@@ -1047,7 +1049,7 @@ export function LiveCatalystFeed({
               type="button"
               disabled={savingWatchlist}
               onClick={() => void submitSaveWatchlist()}
-              className="bg-[var(--desk-live)] text-[#121212] hover:brightness-110"
+              className="bg-[var(--desk-live)] text-[var(--desk-accent-fg)] hover:brightness-110"
             >
               {savingWatchlist ? "Saving…" : "Save watchlist"}
             </Button>
@@ -1505,7 +1507,7 @@ function CatalystFeedList({
       <div
         role="row"
         className={cn(
-          "feed-sticky-cols desk-caps sticky top-0 z-10 grid h-10 items-center gap-2 border-b border-[var(--desk-border-strong)] px-4 font-mono text-[0.62rem] font-medium text-[var(--desk-text-muted)] uppercase shadow-[0_1px_0_rgba(0,0,0,0.35)] sm:gap-3 sm:px-5 lg:gap-4",
+          "feed-sticky-cols desk-caps sticky top-0 z-10 grid h-10 items-center gap-2 border-b border-[var(--desk-border)] px-4 font-mono text-[0.62rem] font-medium text-[var(--desk-text-muted)] uppercase sm:gap-3 sm:px-5 lg:gap-4",
           feedGrid,
         )}
       >
@@ -1517,7 +1519,11 @@ function CatalystFeedList({
         </div>
         <div
           role="columnheader"
-          className="hidden min-w-0 sm:block"
+          className={cn(
+            "hidden min-w-0",
+            // Split mode drops Time until xl so titles keep a readable track.
+            splitOpen ? "xl:block" : "sm:block",
+          )}
           title="When the event occurred (your local time) — not when we fetched it"
         >
           Time
@@ -1661,7 +1667,10 @@ function CatalystFeedList({
 
               <div
                 role="cell"
-                className="relative z-[2] hidden min-w-0 overflow-hidden pr-1 sm:block"
+                className={cn(
+                  "relative z-[2] hidden min-w-0 overflow-hidden pr-1",
+                  splitOpen ? "xl:block" : "sm:block",
+                )}
               >
                 <FeedTimeStamp iso={catalyst.timestamp} />
               </div>
@@ -1854,7 +1863,7 @@ function FeedTitleWithTooltip({
               className={cn(
                 "desk-arial pointer-events-none fixed z-[80] w-max",
                 "rounded-md border border-[var(--desk-border-strong)] bg-[var(--desk-panel)] px-2.5 py-2",
-                "shadow-[0_12px_32px_rgba(0,0,0,0.5)]",
+                "shadow-[0_12px_32px_var(--desk-panel-shadow)]",
               )}
             >
               <span className="desk-card-title block leading-snug break-words whitespace-normal text-[var(--desk-text)]">
@@ -1895,7 +1904,7 @@ function FeedActionButton({
         className={cn(
           "inline-flex shrink-0 items-center gap-1 rounded-sm px-1.5 py-0.5 font-mono text-[0.65rem] font-semibold tracking-wide uppercase transition-[background-color,border-color,color,filter,opacity] duration-100",
           variant === "primary"
-            ? "bg-[var(--desk-live)] text-[#121212] hover:brightness-110"
+            ? "bg-[var(--desk-live)] text-[var(--desk-accent-fg)] hover:brightness-110"
             : "border border-[var(--desk-border-strong)] text-[var(--desk-text-muted)] hover:border-[var(--desk-text-dim)] hover:bg-[var(--desk-overlay-strong)] hover:text-[var(--desk-text)]",
           disabled &&
             "cursor-default opacity-45 hover:bg-transparent hover:brightness-100",

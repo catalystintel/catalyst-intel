@@ -184,7 +184,7 @@ export function FeedbackDialog({
           </Button>
           <Button
             type="button"
-            className="btn-press bg-[var(--desk-live)] text-[#121212] hover:brightness-110"
+            className="btn-press bg-[var(--desk-live)] text-[var(--desk-accent-fg)] hover:brightness-110"
             onClick={() => {
               if (!isFeedbackCategory(category)) {
                 return;

@@ -255,7 +255,7 @@ export function WatchlistEditorDialog({
                   type="button"
                   disabled={aiLoading}
                   onClick={() => void runAi()}
-                  className="shrink-0 gap-1.5 bg-[var(--desk-live)] text-[#121212] hover:brightness-110"
+                  className="shrink-0 gap-1.5 bg-[var(--desk-live)] text-[var(--desk-accent-fg)] hover:brightness-110"
                 >
                   {aiLoading ? (
                     <Loader2 className="size-3.5 animate-spin" />
@@ -490,7 +490,7 @@ export function WatchlistEditorDialog({
                   type="button"
                   disabled={saving}
                   onClick={() => void save()}
-                  className="bg-[var(--desk-live)] text-[#121212] hover:brightness-110"
+                  className="bg-[var(--desk-live)] text-[var(--desk-accent-fg)] hover:brightness-110"
                 >
                   {saving
                     ? "Saving…"

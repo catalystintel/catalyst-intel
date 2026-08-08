@@ -181,14 +181,14 @@ export function TradingViewAdvancedChart({
 
       {fullscreen && fullSrc ? (
         <div
-          className="fixed inset-0 z-[90] flex flex-col bg-black/70 p-3 sm:p-5"
+          className="fixed inset-0 z-[90] flex flex-col bg-[var(--desk-scrim)] p-3 sm:p-5"
           role="dialog"
           aria-modal="true"
           aria-label={`${trimmed} chart full screen`}
           onClick={() => setFullscreen(false)}
         >
           <div
-            className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-[var(--desk-border-strong)] bg-[var(--desk-panel)] shadow-[0_24px_80px_rgba(0,0,0,0.55)]"
+            className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-[var(--desk-border-strong)] bg-[var(--desk-panel)] shadow-[0_24px_80px_var(--desk-panel-shadow)]"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex shrink-0 items-center justify-between gap-3 border-b border-[var(--desk-border)] bg-[var(--desk-header)] px-4 py-2.5">
@@ -235,7 +235,7 @@ export function TradingViewAdvancedChart({
                 })}
               </div>
             ) : null}
-            <div className="min-h-0 flex-1 bg-[#0b0d10]">
+            <div className="min-h-0 flex-1 bg-[var(--desk-app)]">
               <iframe
                 key={`full-${trimmed}-${range}`}
                 title={`${trimmed} chart full screen`}

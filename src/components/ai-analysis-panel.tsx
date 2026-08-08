@@ -190,7 +190,7 @@ export function AiAnalysisPanel({
               <button
                 type="button"
                 onClick={() => void runAnalyze()}
-                className="btn-press inline-flex items-center gap-1.5 rounded-sm bg-[var(--desk-live)] px-3 py-1.5 font-mono text-xs font-semibold tracking-wide text-[#121212] uppercase hover:brightness-110"
+                className="btn-press inline-flex items-center gap-1.5 rounded-sm bg-[var(--desk-live)] px-3 py-1.5 font-mono text-xs font-semibold tracking-wide text-[var(--desk-accent-fg)] uppercase hover:brightness-110"
               >
                 <Sparkles className="size-3.5" aria-hidden />
                 See AI analysis

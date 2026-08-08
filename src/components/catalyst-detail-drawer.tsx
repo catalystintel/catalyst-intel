@@ -48,7 +48,7 @@ export function CatalystDetailDrawer({
         type="button"
         aria-label="Close catalyst detail"
         className={cn(
-          "absolute inset-0 bg-black/55 transition-opacity duration-200",
+          "absolute inset-0 bg-[var(--desk-scrim)] transition-opacity duration-200",
           open ? "opacity-100" : "opacity-0",
         )}
         onClick={onClose}
@@ -106,7 +106,7 @@ export function CatalystDetailDrawer({
                 <Link
                   href={`/catalyst-feed/catalyst/${catalyst.id}`}
                   onClick={onClose}
-                  className="inline-flex items-center gap-1.5 rounded-sm bg-[var(--desk-live)] px-3 py-1.5 font-mono text-xs font-semibold tracking-wide text-[#121212] uppercase hover:brightness-110"
+                  className="inline-flex items-center gap-1.5 rounded-sm bg-[var(--desk-live)] px-3 py-1.5 font-mono text-xs font-semibold tracking-wide text-[var(--desk-accent-fg)] uppercase hover:brightness-110"
                 >
                   <BookOpen className="size-3.5" />
                   Details
