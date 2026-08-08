@@ -78,6 +78,8 @@ export const RATE_LIMITS = {
   adminWrite: { limit: 6, windowMs: 60_000 },
   /** Watchlist / playbook / alert-rule mutations. */
   userWrite: { limit: 30, windowMs: 60_000 },
+  /** Telegram link status / health probes (polled ~every 45s on /alerts). */
+  telegramLinkRead: { limit: 60, windowMs: 60_000 },
   /** Alert test-fire (webhook/email). */
   alertTest: { limit: 10, windowMs: 60_000 },
   /** AI watchlist drafting/refining — LLM call is expensive; keep tight. */
