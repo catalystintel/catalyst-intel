@@ -60,15 +60,21 @@ function DropdownMenuGroup({ ...props }: MenuPrimitive.Group.Props) {
   return <MenuPrimitive.Group data-slot="dropdown-menu-group" {...props} />;
 }
 
+/**
+ * Visual section header inside a menu. Rendered as a plain div (not Base UI
+ * `GroupLabel`) so call sites don't crash with MenuGroupContext when they
+ * omit `<DropdownMenuGroup>` — labels here are decorative, not a11y group
+ * titles.
+ */
 function DropdownMenuLabel({
   className,
   inset,
   ...props
-}: MenuPrimitive.GroupLabel.Props & {
+}: React.ComponentProps<"div"> & {
   inset?: boolean;
 }) {
   return (
-    <MenuPrimitive.GroupLabel
+    <div
       data-slot="dropdown-menu-label"
       data-inset={inset}
       className={cn(

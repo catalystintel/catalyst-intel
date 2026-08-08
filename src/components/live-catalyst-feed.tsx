@@ -50,6 +50,7 @@ import {
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuTrigger,
@@ -1440,24 +1441,26 @@ function FeedFilters({
               <ChevronDown className="size-3 shrink-0 opacity-60" />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="min-w-[14rem]">
-              <DropdownMenuLabel className="font-mono text-[0.65rem] tracking-wide uppercase">
-                Apply saved watchlist
-              </DropdownMenuLabel>
-              {savedWatchlists.length === 0 ? (
-                <p className="px-2 py-2 text-xs text-[var(--desk-text-muted)]">
-                  No watchlists yet — create one first.
-                </p>
-              ) : (
-                savedWatchlists.map((w) => (
-                  <DropdownMenuItem
-                    key={w.id}
-                    onClick={() => onApplyWatchlist(w)}
-                    className="font-mono text-xs"
-                  >
-                    {w.name}
-                  </DropdownMenuItem>
-                ))
-              )}
+              <DropdownMenuGroup>
+                <DropdownMenuLabel className="font-mono text-[0.65rem] tracking-wide uppercase">
+                  Apply saved watchlist
+                </DropdownMenuLabel>
+                {savedWatchlists.length === 0 ? (
+                  <p className="px-2 py-2 text-xs text-[var(--desk-text-muted)]">
+                    No watchlists yet — create one first.
+                  </p>
+                ) : (
+                  savedWatchlists.map((w) => (
+                    <DropdownMenuItem
+                      key={w.id}
+                      onClick={() => onApplyWatchlist(w)}
+                      className="font-mono text-xs"
+                    >
+                      {w.name}
+                    </DropdownMenuItem>
+                  ))
+                )}
+              </DropdownMenuGroup>
             </DropdownMenuContent>
           </DropdownMenu>
           <Link

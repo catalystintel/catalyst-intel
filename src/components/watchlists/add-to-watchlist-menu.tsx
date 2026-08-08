@@ -6,6 +6,7 @@ import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
@@ -49,34 +50,36 @@ function WatchlistDestinationList({
 }) {
   return (
     <>
-      <DropdownMenuLabel className="font-mono text-[0.62rem] tracking-[0.1em] text-[var(--desk-text-dim)] uppercase">
-        Add {symbol} to…
-      </DropdownMenuLabel>
-      <DropdownMenuCheckboxItem
-        className="font-mono text-[0.72rem]"
-        checked={flatChecked}
-        onCheckedChange={onToggleFlat}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <Star className="size-3.5" />
-        My symbols
-      </DropdownMenuCheckboxItem>
-      {destinations.length > 0 ? (
-        <>
-          <DropdownMenuSeparator className="bg-[var(--desk-border)]" />
-          {destinations.map((d) => (
-            <DropdownMenuCheckboxItem
-              key={d.id}
-              className="font-mono text-[0.72rem]"
-              checked={d.checked}
-              onCheckedChange={() => onToggleSaved(d)}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <span className="min-w-0 truncate">{d.name}</span>
-            </DropdownMenuCheckboxItem>
-          ))}
-        </>
-      ) : null}
+      <DropdownMenuGroup>
+        <DropdownMenuLabel className="font-mono text-[0.62rem] tracking-[0.1em] text-[var(--desk-text-dim)] uppercase">
+          Add {symbol} to…
+        </DropdownMenuLabel>
+        <DropdownMenuCheckboxItem
+          className="font-mono text-[0.72rem]"
+          checked={flatChecked}
+          onCheckedChange={onToggleFlat}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <Star className="size-3.5" />
+          My symbols
+        </DropdownMenuCheckboxItem>
+        {destinations.length > 0 ? (
+          <>
+            <DropdownMenuSeparator className="bg-[var(--desk-border)]" />
+            {destinations.map((d) => (
+              <DropdownMenuCheckboxItem
+                key={d.id}
+                className="font-mono text-[0.72rem]"
+                checked={d.checked}
+                onCheckedChange={() => onToggleSaved(d)}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <span className="min-w-0 truncate">{d.name}</span>
+              </DropdownMenuCheckboxItem>
+            ))}
+          </>
+        ) : null}
+      </DropdownMenuGroup>
       <DropdownMenuSeparator className="bg-[var(--desk-border)]" />
       <DropdownMenuItem
         className="font-mono text-[0.72rem]"
