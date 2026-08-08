@@ -19,12 +19,15 @@ import {
 } from "@/lib/telegram/bot";
 import {
   createTelegramLinkSession,
-  getTelegramLinkByUserId,
-  isTelegramLinkMuted,
+  probeTelegramLinkHealth,
   unlinkTelegramForUser,
 } from "@/lib/telegram/link";
 
-async function requireUser(request: NextRequest, mutate: boolean) {
+async function requireUser(
+  request: NextRequest,
+  mutate: boolean,
+  limit: { limit: number; windowMs: number } = RATE_LIMITS.userWrite,
+) {
   if (!isLibsqlConfigured()) {
     return {
       error: NextResponse.json(
@@ -40,8 +43,8 @@ async function requireUser(request: NextRequest, mutate: boolean) {
 
   const ip = getClientIp(request);
   const limitResult = checkRateLimit({
-    key: `telegram-link:${ip}`,
-    ...RATE_LIMITS.userWrite,
+    key: mutate ? `telegram-link:${ip}` : `telegram-link-read:${ip}`,
+    ...limit,
   });
   if (!limitResult.ok) {
     return { error: rateLimitExceededResponse(limitResult) };
@@ -60,28 +63,26 @@ async function requireUser(request: NextRequest, mutate: boolean) {
   return { user, limitResult };
 }
 
-/** Current link status for the signed-in user. */
+/**
+ * Current link status + quiet Bot API health (getChat) for the signed-in user.
+ * Safe to poll from /alerts — never sends a Telegram message.
+ */
 export async function GET(request: NextRequest) {
-  const auth = await requireUser(request, false);
+  const auth = await requireUser(request, false, RATE_LIMITS.telegramLinkRead);
   if ("error" in auth && auth.error) return auth.error;
   const { user, limitResult } = auth as {
     user: NonNullable<(typeof auth)["user"]>;
     limitResult: NonNullable<(typeof auth)["limitResult"]>;
   };
 
-  const link = await getTelegramLinkByUserId(user.id);
+  const health = await probeTelegramLinkHealth(user.id);
   return withRateLimitHeaders(
     NextResponse.json({
       configured: isTelegramConfigured(),
-      linked: link
-        ? {
-            chatId: link.chatId,
-            username: link.username,
-            mutedUntil: link.mutedUntil,
-            muted: isTelegramLinkMuted(link),
-            linkedAt: link.linkedAt,
-          }
-        : null,
+      linked: health.linked,
+      status: health.status,
+      detail: health.detail,
+      checkedAt: health.checkedAt,
     }),
     limitResult,
   );

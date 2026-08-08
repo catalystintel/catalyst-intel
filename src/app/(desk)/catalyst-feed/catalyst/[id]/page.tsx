@@ -13,12 +13,12 @@ import {
   resolveArticleDetailCards,
 } from "@/lib/catalysts/article-detail";
 import {
-  deriveTakeaways,
   deriveWhyMoving,
   extractArticleThumbUrl,
   extractRelatedSymbols,
   parseDeltaSincePublish,
 } from "@/lib/catalysts/article-funnel";
+import { deriveSubjectTakeaways } from "@/lib/catalysts/subject-article-content";
 import {
   getCatalystArticleMeta,
   getCatalystRawContent,
@@ -154,7 +154,17 @@ export default async function CatalystArticlePage({ params }: PageProps) {
     detailCards,
     delta: deltaSincePublish,
   });
-  const takeaways = deriveTakeaways(summary, body);
+  const takeaways = deriveSubjectTakeaways({
+    eventCategory: row.eventCategory,
+    summary,
+    body,
+    headline: row.headline,
+    title: row.title,
+    keyFacts: catalyst.keyFacts,
+    companyName: row.companyName,
+    symbol: row.symbol,
+    maxLines: 6,
+  });
   const relatedSymbols = extractRelatedSymbols(
     row.rawContent,
     row.symbol,

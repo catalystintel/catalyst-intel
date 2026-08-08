@@ -7,7 +7,11 @@ import { and, eq, gt, inArray, isNull } from "drizzle-orm";
 
 import { db } from "@/db/client";
 import { telegramLinkTokens, telegramLinks, users } from "@/db/schema";
-import { getTelegramBotUsername } from "@/lib/telegram/bot";
+import {
+  getTelegramBotUsername,
+  getTelegramChat,
+  isTelegramConfigured,
+} from "@/lib/telegram/bot";
 
 export const TELEGRAM_LINK_TOKEN_TTL_MS = 15 * 60_000;
 export const TELEGRAM_MUTE_DEFAULT_MS = 60 * 60_000;
@@ -237,4 +241,74 @@ export async function telegramChatIdsByUserIds(
     map.set(row.userId, row.chatId);
   }
   return map;
+}
+
+export type TelegramLinkHealthStatus =
+  "bot_not_configured" | "not_linked" | "live" | "unreachable";
+
+export type TelegramLinkHealth = {
+  status: TelegramLinkHealthStatus;
+  detail: string | null;
+  checkedAt: string;
+  linked: {
+    chatId: string;
+    username: string | null;
+    mutedUntil: string | null;
+    muted: boolean;
+    linkedAt: string;
+  } | null;
+};
+
+/**
+ * Desk-side liveness for a user's linked Telegram chat. Uses getChat so we
+ * never send a visible message while polling.
+ */
+export async function probeTelegramLinkHealth(
+  userId: number,
+): Promise<TelegramLinkHealth> {
+  const checkedAt = new Date().toISOString();
+
+  if (!isTelegramConfigured()) {
+    return {
+      status: "bot_not_configured",
+      detail: "Telegram bot is not configured on this deployment.",
+      checkedAt,
+      linked: null,
+    };
+  }
+
+  const link = await getTelegramLinkByUserId(userId);
+  if (!link) {
+    return {
+      status: "not_linked",
+      detail: null,
+      checkedAt,
+      linked: null,
+    };
+  }
+
+  const linked = {
+    chatId: link.chatId,
+    username: link.username,
+    mutedUntil: link.mutedUntil,
+    muted: isTelegramLinkMuted(link),
+    linkedAt: link.linkedAt,
+  };
+
+  const chat = await getTelegramChat(link.chatId);
+  if (!chat.ok) {
+    return {
+      status: "unreachable",
+      detail: chat.detail || "Bot cannot reach this chat.",
+      checkedAt,
+      linked,
+    };
+  }
+
+  return {
+    status: "live",
+    detail: null,
+    checkedAt,
+    linked,
+  };
 }

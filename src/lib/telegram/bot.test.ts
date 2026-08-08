@@ -264,6 +264,33 @@ describe("sendTelegramMessage", () => {
   });
 });
 
+describe("getTelegramChat", () => {
+  it("calls getChat and surfaces type", async () => {
+    process.env.TELEGRAM_BOT_TOKEN = "123:abc";
+    vi.spyOn(global, "fetch").mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          ok: true,
+          result: { id: 1193066531, type: "private", first_name: "Omer" },
+        }),
+        { status: 200 },
+      ),
+    );
+    const { getTelegramChat } = await import("./bot");
+    const result = await getTelegramChat("1193066531");
+    expect(result.ok).toBe(true);
+    expect(result.chatType).toBe("private");
+    expect(result.title).toBe("Omer");
+  });
+
+  it("fails closed on empty chat id", async () => {
+    process.env.TELEGRAM_BOT_TOKEN = "123:abc";
+    const { getTelegramChat } = await import("./bot");
+    const result = await getTelegramChat("  ");
+    expect(result.ok).toBe(false);
+  });
+});
+
 describe("ensureTelegramWebhook", () => {
   it("registers when Telegram has no webhook yet", async () => {
     process.env.TELEGRAM_BOT_TOKEN = "123:abc";

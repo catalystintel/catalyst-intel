@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState, type ComponentType } from "react";
+import { useCallback, useEffect, useState, type ComponentType } from "react";
 import {
   ArrowLeft,
   ArrowRight,
@@ -19,7 +19,6 @@ import { toast } from "sonner";
 import { AlertRulesListSkeleton } from "@/components/alerts-page-skeleton";
 import { TelegramIcon } from "@/components/telegram-icon";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import type { WatchlistCriteria } from "@/db/schema";
 import {
   emptyNotificationChannels,
@@ -29,6 +28,12 @@ import {
 } from "@/lib/alerts/settings-model";
 import { useWebPush } from "@/hooks/use-web-push";
 import { toUserFacingMessage } from "@/lib/errors/user-facing";
+import {
+  detectPushBrowser,
+  detectPushPlatform,
+  pushOsBlockedHint,
+  pushSiteBlockedHint,
+} from "@/lib/push/client-guidance";
 import { cn } from "@/lib/utils";
 import { criteriaSummary } from "@/lib/watchlist/criteria-display";
 
@@ -54,6 +59,11 @@ interface TelegramLinked {
   mutedUntil: string | null;
 }
 
+type TelegramHealthStatus =
+  "checking" | "bot_not_configured" | "not_linked" | "live" | "unreachable";
+
+const TELEGRAM_HEALTH_POLL_MS = 45_000;
+
 const STEPS: { id: StepId; label: string; blurb: string }[] = [
   { id: 1, label: "Methods", blurb: "How you get pinged" },
   { id: 2, label: "Watchlists", blurb: "What can fire" },
@@ -69,7 +79,7 @@ const METHOD_META: {
   {
     id: "push",
     label: "Push",
-    blurb: "Browser notifications — even with the tab closed",
+    blurb: "System banner on this device — even with the tab closed",
     Icon: Bell,
   },
   {
@@ -115,10 +125,72 @@ export function AlertRulesPanel() {
   const [telegramLinked, setTelegramLinked] = useState<TelegramLinked | null>(
     null,
   );
+  const [telegramHealth, setTelegramHealth] =
+    useState<TelegramHealthStatus>("checking");
+  const [telegramHealthDetail, setTelegramHealthDetail] = useState<
+    string | null
+  >(null);
   const [linkingTelegram, setLinkingTelegram] = useState(false);
-  const [telegramChatOverride, setTelegramChatOverride] = useState("");
 
   const webPush = useWebPush(pushPublicKey);
+
+  const refreshTelegramHealth = useCallback(async () => {
+    try {
+      const res = await fetch("/api/telegram/link", {
+        credentials: "same-origin",
+        cache: "no-store",
+      });
+      const data = (await res.json().catch(() => ({}))) as {
+        error?: string;
+        status?: TelegramHealthStatus;
+        detail?: string | null;
+        linked?: (TelegramLinked & { linkedAt?: string }) | null;
+        configured?: boolean;
+      };
+      if (!res.ok) {
+        setTelegramHealth((prev) =>
+          prev === "live" || prev === "unreachable" || prev === "checking"
+            ? "unreachable"
+            : "not_linked",
+        );
+        setTelegramHealthDetail(data.error ?? "Could not check Telegram.");
+        return;
+      }
+      if (typeof data.configured === "boolean") {
+        setTelegramConfigured(data.configured);
+      }
+      if (data.linked?.chatId) {
+        setTelegramLinked({
+          chatId: data.linked.chatId,
+          username: data.linked.username ?? null,
+          muted: Boolean(data.linked.muted),
+          mutedUntil: data.linked.mutedUntil ?? null,
+        });
+      } else {
+        setTelegramLinked(null);
+      }
+      const status =
+        data.status === "live" ||
+        data.status === "unreachable" ||
+        data.status === "not_linked" ||
+        data.status === "bot_not_configured"
+          ? data.status
+          : data.linked?.chatId
+            ? "live"
+            : "not_linked";
+      setTelegramHealth(status);
+      setTelegramHealthDetail(
+        typeof data.detail === "string" ? data.detail : null,
+      );
+    } catch {
+      setTelegramHealth((prev) =>
+        prev === "not_linked" || prev === "bot_not_configured"
+          ? prev
+          : "unreachable",
+      );
+      setTelegramHealthDetail("Could not check Telegram connection.");
+    }
+  }, []);
 
   async function refreshNotifications() {
     const [rulesRes, watchlistsRes] = await Promise.all([
@@ -200,6 +272,7 @@ export function AlertRulesPanel() {
     void (async () => {
       try {
         await refreshNotifications();
+        if (!cancelled) await refreshTelegramHealth();
       } catch (err) {
         if (!cancelled) {
           toast.error(
@@ -213,7 +286,29 @@ export function AlertRulesPanel() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [refreshTelegramHealth]);
+
+  // Quiet health poll while Telegram is configured and the tab is visible.
+  useEffect(() => {
+    if (!telegramConfigured) return;
+
+    let timer: number | null = null;
+
+    const tick = () => {
+      if (document.hidden) return;
+      void refreshTelegramHealth();
+    };
+
+    timer = window.setInterval(tick, TELEGRAM_HEALTH_POLL_MS);
+    const onVisibility = () => {
+      if (!document.hidden) tick();
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      if (timer !== null) window.clearInterval(timer);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
+  }, [telegramConfigured, refreshTelegramHealth]);
 
   function methodAvailable(id: NotificationChannel): boolean {
     if (id === "push") return pushAvailable;
@@ -224,7 +319,12 @@ export function AlertRulesPanel() {
   function methodReady(id: NotificationChannel): boolean {
     if (!methodAvailable(id)) return false;
     if (id === "push") return webPush.status === "subscribed";
-    if (id === "telegram") return Boolean(telegramLinked);
+    if (id === "telegram") {
+      if (!telegramLinked) return false;
+      // Keep Ready while the first probe runs; only fail closed on unreachable.
+      if (telegramHealth === "unreachable") return false;
+      return true;
+    }
     return true;
   }
 
@@ -274,14 +374,17 @@ export function AlertRulesPanel() {
       for (let i = 0; i < 8; i++) {
         await new Promise((r) => setTimeout(r, 2000));
         await refreshNotifications();
-        const check = await fetch("/api/alert-rules", {
+        await refreshTelegramHealth();
+        const check = await fetch("/api/telegram/link", {
           credentials: "same-origin",
           cache: "no-store",
         });
-        if (check.ok) {
-          const body = await check.json();
-          if (body.telegramLinked?.chatId) break;
-        }
+        if (!check.ok) continue;
+        const body = (await check.json()) as {
+          linked?: { chatId?: string } | null;
+          status?: string;
+        };
+        if (body.linked?.chatId) break;
       }
     } catch (err) {
       toast.error(toUserFacingMessage(err, "Could not connect Telegram."));
@@ -299,6 +402,8 @@ export function AlertRulesPanel() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Could not unlink.");
       setTelegramLinked(null);
+      setTelegramHealth("not_linked");
+      setTelegramHealthDetail(null);
       setChannels((prev) => ({ ...prev, telegram: false }));
       toast.success("Telegram disconnected.");
       await refreshNotifications();
@@ -344,9 +449,6 @@ export function AlertRulesPanel() {
         body: JSON.stringify({
           channels,
           watchlistIds: selectedWatchlistIds,
-          ...(telegramChatOverride.trim()
-            ? { telegramChatId: telegramChatOverride.trim() }
-            : {}),
         }),
       });
       const data = await res.json();
@@ -384,19 +486,37 @@ export function AlertRulesPanel() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Test failed.");
-      const results = Array.isArray(data.results) ? data.results : [];
-      const ok = results.filter(
-        (r: { ok?: boolean; skipped?: boolean }) => r.ok && !r.skipped,
-      ).length;
-      const failed = results.filter(
-        (r: { ok?: boolean; skipped?: boolean }) => !r.ok && !r.skipped,
-      ).length;
-      if (failed > 0) {
-        toast.error(`Test: ${failed} failed, ${ok} delivered.`);
-      } else if (ok === 0) {
-        toast.message("Nothing delivered — enable a method and save first.");
+      const results = Array.isArray(data.results)
+        ? (data.results as {
+            channel?: string;
+            ok?: boolean;
+            skipped?: boolean;
+            detail?: string;
+          }[])
+        : [];
+      const delivered = results.filter((r) => r.ok && !r.skipped);
+      const failed = results.filter((r) => !r.ok && !r.skipped);
+      const summarize = (
+        rows: { channel?: string; detail?: string }[],
+      ): string =>
+        rows
+          .map((r) => {
+            const channel = r.channel ?? "channel";
+            return r.detail ? `${channel} (${r.detail})` : channel;
+          })
+          .join(" · ");
+      if (failed.length > 0) {
+        toast.error(
+          `Test: ${failed.length} failed, ${delivered.length} delivered. ${summarize(failed)}`,
+        );
+      } else if (delivered.length === 0) {
+        toast.message(
+          "Nothing delivered — turn a method on, finish setup, save, then test.",
+        );
       } else {
-        toast.success(`Test fired — ${ok} delivery(ies).`);
+        toast.success(
+          `Test fired — ${summarize(delivered) || `${delivered.length} delivery(ies)`}.`,
+        );
       }
     } catch (err) {
       toast.error(toUserFacingMessage(err, "Test failed."));
@@ -407,9 +527,23 @@ export function AlertRulesPanel() {
 
   if (!loaded) return <AlertRulesListSkeleton />;
 
+  const methodsComplete =
+    enabledCount > 0 &&
+    NOTIFICATION_CHANNEL_IDS.every((id) => !channels[id] || methodReady(id));
+  const watchlistsComplete = selectedWatchlistIds.length > 0;
+  const reviewComplete = rules.some((r) => r.enabled);
+
   return (
     <div className="flex flex-col gap-6">
-      <StepperHeader step={step} onStepChange={setStep} />
+      <StepperHeader
+        step={step}
+        onStepChange={setStep}
+        stepComplete={{
+          1: methodsComplete,
+          2: watchlistsComplete,
+          3: reviewComplete,
+        }}
+      />
 
       <div
         className="rounded-2xl border border-[var(--desk-border)] bg-[var(--desk-panel)] p-4 sm:p-6"
@@ -423,15 +557,21 @@ export function AlertRulesPanel() {
             methodReady={methodReady}
             pushAvailable={pushAvailable}
             webPush={webPush}
+            onPushSubscribed={() =>
+              setChannels((prev) =>
+                prev.push ? prev : { ...prev, push: true },
+              )
+            }
             telegramConfigured={telegramConfigured}
             telegramBotHandle={telegramBotHandle}
             telegramBotName={telegramBotName}
             telegramLinked={telegramLinked}
+            telegramHealth={telegramHealth}
+            telegramHealthDetail={telegramHealthDetail}
             linkingTelegram={linkingTelegram}
             onConnectTelegram={() => void connectTelegram()}
             onDisconnectTelegram={() => void disconnectTelegram()}
-            telegramChatOverride={telegramChatOverride}
-            setTelegramChatOverride={setTelegramChatOverride}
+            onRecheckTelegram={() => void refreshTelegramHealth()}
             emailConfigured={emailConfigured}
             sessionEmail={sessionEmail}
           />
@@ -453,7 +593,6 @@ export function AlertRulesPanel() {
             savedWatchlists={savedWatchlists}
             methodReady={methodReady}
             rules={rules}
-            sessionEmail={sessionEmail}
             telegramLinked={telegramLinked}
             saving={saving}
             testing={testing}
@@ -517,16 +656,19 @@ const NOTIFICATION_CHANNEL_IDS: NotificationChannel[] = [
 function StepperHeader({
   step,
   onStepChange,
+  stepComplete,
 }: {
   step: StepId;
   onStepChange: (s: StepId) => void;
+  stepComplete: Record<StepId, boolean>;
 }) {
   return (
     <nav aria-label="Notification setup steps" className="w-full">
       <ol className="grid grid-cols-3 gap-2 sm:gap-3">
         {STEPS.map((s) => {
           const active = s.id === step;
-          const done = s.id < step;
+          // Checkmarks reflect real setup, not merely visiting the step.
+          const complete = stepComplete[s.id];
           return (
             <li key={s.id}>
               <button
@@ -543,12 +685,16 @@ function StepperHeader({
                   <span
                     className={cn(
                       "grid size-6 place-items-center rounded-full font-mono text-[0.65rem] font-bold",
-                      active || done
+                      active || complete
                         ? "bg-[var(--desk-live)] text-[var(--desk-accent-fg)]"
                         : "border border-[var(--desk-border-strong)] text-[var(--desk-text-dim)]",
                     )}
                   >
-                    {done ? <Check className="size-3.5" aria-hidden /> : s.id}
+                    {complete ? (
+                      <Check className="size-3.5" aria-hidden />
+                    ) : (
+                      s.id
+                    )}
                   </span>
                   <span className="text-sm font-semibold text-[var(--desk-text)]">
                     {s.label}
@@ -573,15 +719,17 @@ function MethodsStep(props: {
   methodReady: (id: NotificationChannel) => boolean;
   pushAvailable: boolean;
   webPush: ReturnType<typeof useWebPush>;
+  onPushSubscribed: () => void;
   telegramConfigured: boolean;
   telegramBotHandle: string | null;
   telegramBotName: string | null;
   telegramLinked: TelegramLinked | null;
+  telegramHealth: TelegramHealthStatus;
+  telegramHealthDetail: string | null;
   linkingTelegram: boolean;
   onConnectTelegram: () => void;
   onDisconnectTelegram: () => void;
-  telegramChatOverride: string;
-  setTelegramChatOverride: (v: string) => void;
+  onRecheckTelegram: () => void;
   emailConfigured: boolean;
   sessionEmail: string;
 }) {
@@ -602,6 +750,11 @@ function MethodsStep(props: {
           const on = props.channels[id];
           const available = props.methodAvailable(id);
           const ready = props.methodReady(id);
+          const telegramUnreachable =
+            id === "telegram" && props.telegramHealth === "unreachable";
+          // Email needs no recipient UI when ready — only show setup errors.
+          const showSetup =
+            available && (id === "email" ? !ready : on || !ready);
           return (
             <div
               key={id}
@@ -635,10 +788,17 @@ function MethodsStep(props: {
                       <span className="font-mono text-[0.6rem] tracking-wide text-[var(--desk-text-dim)] uppercase">
                         Unavailable
                       </span>
+                    ) : telegramUnreachable ? (
+                      <span className="inline-flex items-center gap-1 font-mono text-[0.6rem] tracking-wide text-destructive uppercase">
+                        <CircleAlert className="size-2.5" aria-hidden />
+                        Unreachable
+                      </span>
                     ) : ready ? (
                       <span className="inline-flex items-center gap-1 font-mono text-[0.6rem] tracking-wide text-[var(--desk-live-status)] uppercase">
                         <CheckCircle2 className="size-2.5" aria-hidden />
-                        Ready
+                        {id === "telegram" && props.telegramHealth === "live"
+                          ? "Live"
+                          : "Ready"}
                       </span>
                     ) : (
                       <span className="inline-flex items-center gap-1 font-mono text-[0.6rem] tracking-wide text-[var(--desk-live)] uppercase">
@@ -677,12 +837,13 @@ function MethodsStep(props: {
                 </button>
               </div>
 
-              {(on || !ready) && available ? (
+              {showSetup ? (
                 <div className="border-t border-[var(--desk-border)] px-4 py-3">
                   {id === "push" ? (
                     <PushSetup
                       available={props.pushAvailable}
                       webPush={props.webPush}
+                      onSubscribed={props.onPushSubscribed}
                     />
                   ) : null}
                   {id === "telegram" ? (
@@ -691,11 +852,12 @@ function MethodsStep(props: {
                       botHandle={props.telegramBotHandle}
                       botName={props.telegramBotName}
                       linked={props.telegramLinked}
+                      health={props.telegramHealth}
+                      healthDetail={props.telegramHealthDetail}
                       linking={props.linkingTelegram}
                       onConnect={props.onConnectTelegram}
                       onDisconnect={props.onDisconnectTelegram}
-                      chatOverride={props.telegramChatOverride}
-                      setChatOverride={props.setTelegramChatOverride}
+                      onRecheck={props.onRecheckTelegram}
                     />
                   ) : null}
                   {id === "email" ? (
@@ -714,13 +876,44 @@ function MethodsStep(props: {
   );
 }
 
+type PushProbeOutcome = "unknown" | "seen" | "missed";
+
 function PushSetup({
   available,
   webPush,
+  onSubscribed,
 }: {
   available: boolean;
   webPush: ReturnType<typeof useWebPush>;
+  onSubscribed: () => void;
 }) {
+  const [probing, setProbing] = useState(false);
+  const [probeAsked, setProbeAsked] = useState(false);
+  const [probeOutcome, setProbeOutcome] = useState<PushProbeOutcome>("unknown");
+
+  const ua = typeof navigator !== "undefined" ? navigator.userAgent : "";
+  const platformHint =
+    typeof navigator !== "undefined" ? navigator.platform || "" : "";
+  const platform = detectPushPlatform(ua, platformHint);
+  const browser = detectPushBrowser(ua);
+
+  async function runProbe() {
+    setProbing(true);
+    setProbeAsked(false);
+    setProbeOutcome("unknown");
+    try {
+      const result = await webPush.showProbe();
+      if (!result.ok) {
+        toast.error(result.detail);
+        return;
+      }
+      setProbeAsked(true);
+      toast.message("Look for a system banner (not inside this page).");
+    } finally {
+      setProbing(false);
+    }
+  }
+
   if (!available) {
     return (
       <p className="text-xs text-[var(--desk-text-muted)]">
@@ -728,23 +921,150 @@ function PushSetup({
       </p>
     );
   }
-  if (webPush.status === "subscribed") {
+
+  if (webPush.status === "unsupported") {
     return (
-      <p className="inline-flex items-center gap-1.5 text-xs text-[var(--desk-live-status)]">
-        <CheckCircle2 className="size-3.5" aria-hidden />
-        This browser is subscribed.
+      <p className="text-xs text-[var(--desk-text-muted)]">
+        This browser can’t receive push. Use Chrome or Edge on desktop.
       </p>
     );
   }
+
+  if (webPush.status === "denied") {
+    return (
+      <div className="flex flex-col gap-2">
+        <p className="inline-flex items-start gap-1.5 text-xs text-destructive">
+          <CircleAlert className="mt-0.5 size-3.5 shrink-0" aria-hidden />
+          Blocked for this site
+        </p>
+        <p className="text-[0.7rem] leading-snug text-[var(--desk-text-muted)]">
+          {pushSiteBlockedHint(browser)}
+        </p>
+        {platform === "mac" || platform === "windows" ? (
+          <p className="text-[0.7rem] leading-snug text-[var(--desk-text-muted)]">
+            {pushOsBlockedHint(platform, browser)}
+          </p>
+        ) : null}
+      </div>
+    );
+  }
+
+  if (webPush.status === "subscribed") {
+    return (
+      <div className="flex flex-col gap-2.5">
+        <ul className="space-y-1 text-[0.7rem] leading-snug">
+          <li className="inline-flex items-center gap-1.5 text-[var(--desk-live-status)]">
+            <CheckCircle2 className="size-3 shrink-0" aria-hidden />
+            Site permission allowed
+          </li>
+          <li className="inline-flex items-center gap-1.5 text-[var(--desk-live-status)]">
+            <CheckCircle2 className="size-3 shrink-0" aria-hidden />
+            This browser is subscribed
+          </li>
+          <li
+            className={cn(
+              "inline-flex items-center gap-1.5",
+              probeOutcome === "seen"
+                ? "text-[var(--desk-live-status)]"
+                : probeOutcome === "missed"
+                  ? "text-destructive"
+                  : "text-[var(--desk-text-muted)]",
+            )}
+          >
+            {probeOutcome === "seen" ? (
+              <CheckCircle2 className="size-3 shrink-0" aria-hidden />
+            ) : probeOutcome === "missed" ? (
+              <CircleAlert className="size-3 shrink-0" aria-hidden />
+            ) : (
+              <Bell className="size-3 shrink-0 opacity-70" aria-hidden />
+            )}
+            {probeOutcome === "seen"
+              ? "System banners work on this device"
+              : probeOutcome === "missed"
+                ? "System is blocking banners"
+                : "System banners not verified yet"}
+          </li>
+        </ul>
+
+        <p className="text-[0.7rem] leading-snug text-[var(--desk-text-muted)]">
+          Banners come from the OS (menu bar / Notification Center), not this
+          page. On Mac, Chrome can be allowed here but still blocked in System
+          Settings. Save on Review when ready.
+        </p>
+
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => void runProbe()}
+          disabled={probing}
+          className="btn-press h-8 w-fit gap-1.5 border-[var(--desk-border)] bg-[var(--desk-overlay)] px-3 text-xs"
+        >
+          <Bell className="size-3.5" aria-hidden />
+          {probing ? "Sending…" : "Show test banner"}
+        </Button>
+
+        {probeAsked && probeOutcome === "unknown" ? (
+          <div className="flex flex-col gap-2 rounded-lg border border-[var(--desk-border)] bg-[var(--desk-overlay)]/60 px-3 py-2.5">
+            <p className="text-xs text-[var(--desk-text-secondary)]">
+              Did a system notification appear?
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                onClick={() => setProbeOutcome("seen")}
+                className="btn-press h-8 gap-1.5 bg-[var(--desk-live)] px-3 text-xs text-[var(--desk-accent-fg)] hover:brightness-110"
+              >
+                <Check className="size-3.5" aria-hidden />
+                Yes, I saw it
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setProbeOutcome("missed")}
+                className="btn-press h-8 border-[var(--desk-border)] bg-transparent px-3 text-xs"
+              >
+                No
+              </Button>
+            </div>
+          </div>
+        ) : null}
+
+        {probeOutcome === "missed" ? (
+          <p className="text-[0.7rem] leading-snug text-destructive">
+            {pushOsBlockedHint(platform, browser)}
+          </p>
+        ) : null}
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-2">
-      <p className="text-xs text-[var(--desk-text-muted)]">
-        Allow notifications in this browser so push can deliver.
-      </p>
+      <ol className="list-decimal space-y-1 pl-4 text-[0.7rem] leading-snug text-[var(--desk-text-muted)]">
+        <li>Click Enable and choose Allow when the browser asks.</li>
+        <li>
+          {platform === "mac"
+            ? "On Mac: System Settings → Notifications → your browser → Allow."
+            : platform === "windows"
+              ? "On Windows: Settings → System → Notifications → allow your browser."
+              : "Allow this browser in system notification settings if banners don’t appear."}
+        </li>
+        <li>
+          Then use “Show test banner” to confirm the OS isn’t blocking them.
+        </li>
+      </ol>
       <Button
         type="button"
-        onClick={() => void webPush.subscribe()}
-        disabled={webPush.status === "loading" || webPush.status === "denied"}
+        onClick={() => {
+          void (async () => {
+            const ok = await webPush.subscribe();
+            if (!ok) return;
+            onSubscribed();
+            // Immediately prove OS delivery — Chrome Allow ≠ macOS Allow.
+            await runProbe();
+          })();
+        }}
+        disabled={webPush.status === "loading"}
         className="btn-press w-fit gap-2 bg-[var(--desk-live)] text-[var(--desk-accent-fg)] hover:brightness-110"
       >
         <Bell className="size-3.5" aria-hidden />
@@ -762,21 +1082,23 @@ function TelegramSetup({
   botHandle,
   botName,
   linked,
+  health,
+  healthDetail,
   linking,
   onConnect,
   onDisconnect,
-  chatOverride,
-  setChatOverride,
+  onRecheck,
 }: {
   configured: boolean;
   botHandle: string | null;
   botName: string | null;
   linked: TelegramLinked | null;
+  health: TelegramHealthStatus;
+  healthDetail: string | null;
   linking: boolean;
   onConnect: () => void;
   onDisconnect: () => void;
-  chatOverride: string;
-  setChatOverride: (v: string) => void;
+  onRecheck: () => void;
 }) {
   if (!configured) {
     return (
@@ -811,17 +1133,47 @@ function TelegramSetup({
             browser&apos;s Start Bot button does nothing, use Open in Web.
           </p>
         )}
+        {linked && health === "checking" ? (
+          <p className="mt-1.5 text-xs text-[var(--desk-text-dim)]">
+            Checking connection…
+          </p>
+        ) : null}
+        {linked && health === "live" ? (
+          <p className="mt-1.5 inline-flex items-center gap-1.5 text-xs text-[var(--desk-live-status)]">
+            <CheckCircle2 className="size-3.5" aria-hidden />
+            Connection live — bot can reach this chat
+          </p>
+        ) : null}
+        {linked && health === "unreachable" ? (
+          <p className="mt-1.5 text-xs text-destructive">
+            Can&apos;t reach this chat
+            {healthDetail
+              ? ` — ${toUserFacingMessage(healthDetail, "connection failed")}`
+              : ""}
+            . Open the bot and tap Start, or Disconnect &amp; reconnect.
+          </p>
+        ) : null}
       </div>
       <div className="flex flex-wrap gap-2">
         {linked ? (
-          <Button
-            type="button"
-            variant="outline"
-            onClick={onDisconnect}
-            className="btn-press gap-2 border-[var(--desk-border-strong)]"
-          >
-            Disconnect
-          </Button>
+          <>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onRecheck}
+              className="btn-press gap-2 border-[var(--desk-border-strong)]"
+            >
+              Recheck
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onDisconnect}
+              className="btn-press gap-2 border-[var(--desk-border-strong)]"
+            >
+              Disconnect
+            </Button>
+          </>
         ) : (
           <Button
             type="button"
@@ -834,18 +1186,6 @@ function TelegramSetup({
           </Button>
         )}
       </div>
-      <label className="flex flex-col gap-1">
-        <span className="text-[0.7rem] text-[var(--desk-text-dim)]">
-          Chat ID override (optional)
-        </span>
-        <Input
-          value={chatOverride}
-          onChange={(e) => setChatOverride(e.target.value)}
-          placeholder={linked ? `Linked ${linked.chatId}` : "e.g. 123456789"}
-          inputMode="numeric"
-          className="h-9 border-[var(--desk-border)] bg-[var(--desk-overlay)] font-mono text-xs"
-        />
-      </label>
     </div>
   );
 }
@@ -997,7 +1337,6 @@ function ReviewStep({
   savedWatchlists,
   methodReady,
   rules,
-  sessionEmail,
   telegramLinked,
   saving,
   testing,
@@ -1010,7 +1349,6 @@ function ReviewStep({
   savedWatchlists: SavedWatchlistOption[];
   methodReady: (id: NotificationChannel) => boolean;
   rules: AlertRuleRow[];
-  sessionEmail: string;
   telegramLinked: TelegramLinked | null;
   saving: boolean;
   testing: boolean;

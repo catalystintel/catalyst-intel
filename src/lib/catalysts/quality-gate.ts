@@ -11,8 +11,10 @@
 
 import type { ParsedItem } from "@/lib/jobs/parse-8k-items";
 import { RETENTION_DAYS } from "@/lib/jobs/data-retention";
+import { isAccNoMetadataBlob } from "@/lib/catalysts/article-content";
 import {
   CATEGORY_PRIORITY,
+  GOLD_SUBJECT_SET,
   type EventCategoryKey,
 } from "@/lib/catalysts/taxonomy";
 
@@ -35,19 +37,8 @@ export interface QualityGateInput {
   timestamp?: string | null;
 }
 
-/** Categories that are never "thin news" — they are the desk's job. */
-const GOLD_CATEGORIES = new Set<EventCategoryKey>([
-  "distress",
-  "trading_halt",
-  "cyber",
-  "earnings",
-  "regulatory",
-  "deals",
-  "macro",
-  "clinical",
-  "restructuring",
-  "capital",
-]);
+/** @deprecated Use GOLD_SUBJECT_SET from taxonomy — kept for local call sites. */
+const GOLD_CATEGORIES = GOLD_SUBJECT_SET;
 
 /**
  * 8-K items that, alone (or only with other members of this set), are not
@@ -86,6 +77,40 @@ function hasGoldItem(itemCodes: ParsedItem[] | null | undefined): boolean {
 }
 
 /**
+ * Thin news / disclosure / other may stay only when the row carries
+ * investor-usable facts (numbers, catalyst verbs + prose, or gold 8-K items).
+ */
+export function hasSubstantiveCatalystFacts(item: QualityGateInput): boolean {
+  if (hasGoldItem(item.itemCodes)) return true;
+
+  const text = `${item.headline ?? ""} ${item.summary ?? ""}`
+    .replace(/\s+/g, " ")
+    .trim();
+  if (!text || isAccNoMetadataBlob(text)) return false;
+
+  // Explicit quantities / periods from the source.
+  if (
+    /\$[\d,.]+|\b\d+(\.\d+)?\s*%|\bEPS\b|\bQ[1-4]\b|\bphase\s*[123]\b|\b\d{1,3}(,\d{3})+\b/i.test(
+      text,
+    )
+  ) {
+    return true;
+  }
+
+  // Real prose with a catalyst verb (not a taxonomy chip).
+  if (
+    text.length >= 72 &&
+    /\b(announc(?:e|ed|es)|report(?:ed|s)?|fil(?:e|ed|es)|approv(?:e|ed|es)|acquir(?:e|ed|es)|rais(?:e|ed|es)|cut|halt(?:ed|s)?|resum(?:e|ed|es)|beat|miss(?:ed|es)?|upgrade[sd]?|downgrade[sd]?)\b/i.test(
+      text,
+    )
+  ) {
+    return true;
+  }
+
+  return false;
+}
+
+/**
  * Decide whether a normalized catalyst is gold enough for the Live tape.
  * Fail closed on thin news / unresolved entities / boilerplate filings.
  */
@@ -98,11 +123,15 @@ export function evaluateCatalystQuality(
   const symbol = item.symbol?.trim() || null;
 
   // Generic firehose news with no catalyst classification.
-  // PR-wire press releases are intentional Must ingest even when the headline
-  // classifier cannot map a finer category — keep them on the tape.
+  // PR-wire may stay only when it carries real facts (not empty AccNo chrome).
   if (category === "news") {
     if (provider === "pr-wire" || subcategory === "pr_wire") {
-      // keep
+      if (!hasSubstantiveCatalystFacts(item)) {
+        return {
+          decision: "drop",
+          reason: "Thin PR-wire / news row — no substantive facts",
+        };
+      }
     } else {
       return {
         decision: "drop",
@@ -117,6 +146,17 @@ export function evaluateCatalystQuality(
       decision: "drop",
       reason:
         "Boilerplate disclosure (7.01/8.01/9.01-only) — no tradeable item",
+    };
+  }
+
+  // Disclosure / other with a gold item still need readable facts on the tape.
+  if (
+    (category === "disclosure" || category === "other") &&
+    !hasSubstantiveCatalystFacts(item)
+  ) {
+    return {
+      decision: "drop",
+      reason: `Thin ${category} row — no substantive extracted facts`,
     };
   }
 

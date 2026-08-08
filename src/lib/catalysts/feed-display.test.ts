@@ -92,9 +92,9 @@ describe("sectorLabel", () => {
 });
 
 describe("titleLine", () => {
-  it("formats SEC earnings catalog rows as Company - Earnings Report Qn", () => {
+  it("formats SEC earnings catalog rows as Company Qn earnings report", () => {
     // Filing date 2026-07-20 → calendar Q3 heuristic when Finnhub quarter absent.
-    expect(titleLine(base())).toBe("NVIDIA Corp - Earnings Report Q3");
+    expect(titleLine(base())).toBe("NVIDIA Corp Q3 earnings report");
     expect(
       titleLine(
         base({
@@ -127,7 +127,7 @@ describe("titleLine", () => {
     ).toMatch(/Acme Corp - .+Change/);
   });
 
-  it("rewrites Results of Operations blurbs to Company - Earnings Report Qn", () => {
+  it("rewrites Results of Operations blurbs to Company Qn earnings report", () => {
     expect(
       titleLine(
         base({
@@ -147,7 +147,7 @@ describe("titleLine", () => {
             "Item 9.01: Financial Statements and Exhibits",
         }),
       ),
-    ).toBe("Liberty Global Ltd - Earnings Report Q3");
+    ).toBe("Liberty Global Ltd Q3 earnings report");
   });
 
   it("uses ground-rule 8-K titles instead of raw Item blurbs", () => {
@@ -380,7 +380,7 @@ describe("titleLine", () => {
           companyName: "Acme Corp",
         }),
       ),
-    ).toBe("Acme Corp - Shelf Registration (S-3)");
+    ).toBe("Acme Corp files shelf registration (S-3)");
 
     expect(
       titleLine(
@@ -393,7 +393,7 @@ describe("titleLine", () => {
           companyName: "Acme Corp",
         }),
       ),
-    ).toBe("Acme Corp - New Stock Offering Filed (Potential Dilution Ahead)");
+    ).toBe("Acme Corp files stock offering (dilution watch)");
 
     expect(
       titleLine(
@@ -449,7 +449,7 @@ describe("titleLine", () => {
           companyName: "Acme Corp",
         }),
       ),
-    ).toBe("Acme Corp - Schedule 13D");
+    ).toBe("Acme Corp reports active stake (13D)");
 
     expect(
       titleLine(
@@ -462,7 +462,7 @@ describe("titleLine", () => {
           companyName: "Pfizer Inc",
         }),
       ),
-    ).toBe("Pfizer Inc - Clinical Trial");
+    ).toBe("Pfizer Inc — Study of drug X");
 
     expect(
       titleLine(
@@ -492,7 +492,7 @@ describe("titleLine", () => {
           symbol: "AAPL",
         }),
       ),
-    ).toBe("Apple Inc. - Price Target");
+    ).toBe("Apple Inc. price target update");
   });
 
   it("prefers ground-rule Halt / FDA / Earnings titles over generic chips", () => {
@@ -550,7 +550,7 @@ describe("titleLine", () => {
           symbol: "AAPL",
         }),
       ),
-    ).toBe("Apple Inc. - Earnings Report Q1");
+    ).toBe("Apple Inc. Q1 earnings report");
   });
 });
 

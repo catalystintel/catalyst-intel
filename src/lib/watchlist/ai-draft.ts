@@ -7,6 +7,12 @@
  */
 
 import type { WatchlistCriteria } from "@/db/schema";
+import {
+  fenceUntrustedBlock,
+  joinPromptSections,
+  sanitizeUntrustedText,
+  UNTRUSTED_DATA_SYSTEM_RULES,
+} from "@/lib/ai/prompt-safety";
 import { FEED_FORM_LABELS } from "@/lib/catalysts/feed-form-filters";
 import { CATEGORY_LABELS } from "@/lib/catalysts/taxonomy";
 import {
@@ -15,6 +21,10 @@ import {
   openRouterChatCompletion,
 } from "@/lib/jobs/llm-provider";
 import { normalizeWatchlistCriteria } from "@/lib/watchlist/normalize-criteria";
+
+const PROMPT_CHARS = 500;
+const EXISTING_NAME_CHARS = 80;
+const EXISTING_CRITERIA_CHARS = 2_000;
 
 export interface WatchlistDraft {
   name: string;
@@ -50,20 +60,38 @@ Field rules (all optional — omit any axis you don't need; empty criteria is in
 "name": a short (<=6 word) human title for the rule.
 "rationale": one sentence, plain English, explaining what the rule matches and why you chose those fields.
 
-When given an "Existing rule" in the user message, treat the new instruction as a refinement: keep whatever the existing rule already got right and only change what the instruction asks for.`;
+When given an existing rule inside <UNTRUSTED_EXISTING_RULE>, treat the new instruction as a refinement: keep whatever the existing rule already got right and only change what the instruction asks for.
 
-function buildUserPrompt(
+${UNTRUSTED_DATA_SYSTEM_RULES}`;
+
+/** Exported for unit tests — production callers use `draftWatchlistWithAI`. */
+export function buildUserPrompt(
   prompt: string,
   existing?: { name?: string; criteria?: WatchlistCriteria },
 ): string {
-  const lines = [`Request: ${prompt.trim()}`];
+  const request = sanitizeUntrustedText(prompt, PROMPT_CHARS);
+  const sections = [
+    "Draft or refine a watchlist rule from the untrusted request below. Respond with JSON only.",
+    fenceUntrustedBlock("USER_REQUEST", request, PROMPT_CHARS),
+  ];
   if (existing?.criteria && Object.keys(existing.criteria).length > 0) {
-    lines.push(
-      `Existing rule name: ${existing.name ?? "Untitled"}`,
-      `Existing rule criteria: ${JSON.stringify(existing.criteria)}`,
+    const name = sanitizeUntrustedText(
+      existing.name ?? "Untitled",
+      EXISTING_NAME_CHARS,
+    );
+    const criteriaJson = sanitizeUntrustedText(
+      JSON.stringify(existing.criteria),
+      EXISTING_CRITERIA_CHARS,
+    );
+    sections.push(
+      fenceUntrustedBlock(
+        "EXISTING_RULE",
+        `name: ${name || "Untitled"}\ncriteria: ${criteriaJson}`,
+        EXISTING_NAME_CHARS + EXISTING_CRITERIA_CHARS + 32,
+      ),
     );
   }
-  return lines.join("\n");
+  return joinPromptSections(sections);
 }
 
 export function parseWatchlistDraftResponse(

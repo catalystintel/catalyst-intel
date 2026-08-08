@@ -35,4 +35,10 @@ describe("normalizeWatchlistCriteria", () => {
     });
     expect(criteria).toEqual({});
   });
+
+  it("caps free-form tag length", () => {
+    const long = `fda:${"x".repeat(120)}`;
+    const criteria = normalizeWatchlistCriteria({ tags: [long] });
+    expect(criteria.tags?.[0]?.length).toBe(64);
+  });
 });

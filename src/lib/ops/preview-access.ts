@@ -34,6 +34,8 @@ export function isPreviewAccessExemptPath(pathname: string): boolean {
   ) {
     return true;
   }
+  // Service worker script must stay cacheable without an admin session.
+  if (pathname === "/sw.js") return true;
   return false;
 }
 

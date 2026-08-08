@@ -16,13 +16,14 @@ describe("isPreviewDeployment", () => {
 });
 
 describe("isPreviewAccessExemptPath", () => {
-  it("allows auth, health, admin APIs, and telegram webhook", () => {
+  it("allows auth, health, admin APIs, telegram webhook, and sw.js", () => {
     expect(isPreviewAccessExemptPath("/login")).toBe(true);
     expect(isPreviewAccessExemptPath("/auth/callback")).toBe(true);
     expect(isPreviewAccessExemptPath("/auth/login")).toBe(true);
     expect(isPreviewAccessExemptPath("/api/health")).toBe(true);
     expect(isPreviewAccessExemptPath("/api/admin/fetch/all")).toBe(true);
     expect(isPreviewAccessExemptPath("/api/telegram/webhook")).toBe(true);
+    expect(isPreviewAccessExemptPath("/sw.js")).toBe(true);
   });
 
   it("does not exempt desk or share surfaces", () => {
