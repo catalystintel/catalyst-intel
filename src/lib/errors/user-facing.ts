@@ -15,6 +15,10 @@ export const USER_FACING = {
     "Sign-in is temporarily unavailable. Please try again shortly.",
   previewAdminOnly:
     "This preview / staging link is restricted to admins. Use the production site to sign in.",
+  useProductionLogin:
+    "Sign-in only works on the main Catalyst Intel site — not on temporary preview links. Continue below on this page, or open the production URL.",
+  pkceVerifierMissing:
+    "Sign-in was interrupted (browser storage was cleared or the login started on a different link). Open the main Catalyst Intel site and try Continue with Google again.",
   aiUnavailable:
     "AI analysis is not available at the moment. You can try again shortly.",
   pushUnavailable: "Browser push is not available right now.",
@@ -87,6 +91,16 @@ export function toUserFacingMessage(
   }
   if (/preview_admin_only|Preview deployments are admin-only/i.test(message)) {
     return USER_FACING.previewAdminOnly;
+  }
+  if (/use_production_login/i.test(message)) {
+    return USER_FACING.useProductionLogin;
+  }
+  if (
+    /PKCE code verifier not found|code verifier not found in storage|both auth code and code verifier must be non-empty/i.test(
+      message,
+    )
+  ) {
+    return USER_FACING.pkceVerifierMissing;
   }
   if (/AI analysis is not configured|OpenRouter/i.test(message)) {
     return USER_FACING.aiUnavailable;
