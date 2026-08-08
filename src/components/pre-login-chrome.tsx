@@ -64,7 +64,7 @@ export function PreLoginChrome({
         className="pointer-events-none absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-[var(--desk-app)] to-transparent"
       />
 
-      <EarlyAccessBanner variant="marketing" />
+      <EarlyAccessBanner variant="marketing" showFeedback={false} />
 
       <header className="relative z-10 flex items-center justify-between gap-2 px-4 pt-[max(1rem,env(safe-area-inset-top))] pb-4 sm:gap-4 sm:px-8 sm:py-5">
         <Link

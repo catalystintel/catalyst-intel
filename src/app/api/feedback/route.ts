@@ -33,7 +33,7 @@ function categoryLabel(category: FeedbackCategory): string {
 
 /**
  * Accepts product feedback and emails it to FEEDBACK_TO_EMAIL via Resend.
- * Auth is optional — signed-in users are attributed; guests must supply email.
+ * Signed-in only — pre-login / guest submissions are rejected.
  */
 export async function POST(request: NextRequest) {
   if (!isSameOriginRequest(request)) {
@@ -47,6 +47,14 @@ export async function POST(request: NextRequest) {
   });
   if (!limitResult.ok) {
     return rateLimitExceededResponse(limitResult);
+  }
+
+  const user = await getCurrentAppUser().catch(() => null);
+  if (!user) {
+    return withRateLimitHeaders(
+      NextResponse.json({ error: "Not authenticated." }, { status: 401 }),
+      limitResult,
+    );
   }
 
   if (!isResendConfigured()) {
@@ -97,10 +105,9 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const user = await getCurrentAppUser().catch(() => null);
-  const guestEmail =
+  const bodyEmail =
     typeof raw.email === "string" ? raw.email.trim().slice(0, 254) : "";
-  const fromEmail = user?.email?.trim() || guestEmail;
+  const fromEmail = user.email?.trim() || bodyEmail;
   if (!fromEmail || !EMAIL_RE.test(fromEmail)) {
     return withRateLimitHeaders(
       NextResponse.json(
@@ -116,8 +123,8 @@ export async function POST(request: NextRequest) {
   const text = [
     `Type: ${label}`,
     `From: ${fromEmail}`,
-    user ? `User id: ${user.id}` : "User: guest (not signed in)",
-    user?.displayName ? `Display name: ${user.displayName}` : null,
+    `User id: ${user.id}`,
+    user.displayName ? `Display name: ${user.displayName}` : null,
     `IP: ${ip}`,
     "",
     message,
