@@ -14,6 +14,9 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    // Keep /sw.js out of the session/preview gate — browsers fetch/update the
+    // service worker without a user navigation, and a login redirect would
+    // break Web Push after subscribe already looked successful.
+    "/((?!_next/static|_next/image|favicon.ico|sw\\.js$|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };
