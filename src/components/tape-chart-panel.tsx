@@ -15,6 +15,7 @@ export function TapeChartPanel({
   range,
   onRangeChange,
   eventTimeSec = null,
+  density = "compact",
   className,
   chartClassName,
 }: {
@@ -24,6 +25,8 @@ export function TapeChartPanel({
   range: ChartRangeKey;
   onRangeChange: (range: ChartRangeKey) => void;
   eventTimeSec?: number | null;
+  /** Pane default is compact so the plot keeps height beside triage. */
+  density?: "default" | "compact";
   className?: string;
   chartClassName?: string;
 }) {
@@ -46,6 +49,7 @@ export function TapeChartPanel({
         range={range}
         onRangeChange={onRangeChange}
         eventTimeSec={eventTimeSec}
+        density={density}
         className={cn("min-h-0 flex-1", chartClassName)}
       />
     </aside>
