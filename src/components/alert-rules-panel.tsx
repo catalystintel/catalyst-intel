@@ -1211,7 +1211,29 @@ function EmailSetup({
       </p>
     );
   }
-  return null;
+  return (
+    <label className="flex flex-col gap-1.5">
+      <span className="text-xs font-medium text-[var(--desk-text-secondary)]">
+        Delivers to
+      </span>
+      <Input
+        value={sessionEmail}
+        readOnly
+        tabIndex={-1}
+        aria-readonly="true"
+        type="email"
+        className="h-10 cursor-default border-[var(--desk-border)] bg-[var(--desk-overlay)] font-mono text-xs text-[var(--desk-text-dim)] shadow-none focus-visible:border-[var(--desk-border)] focus-visible:ring-0"
+      />
+      <span className="inline-flex items-center gap-1.5 text-[0.7rem] text-[var(--desk-live-status)]">
+        <CheckCircle2 className="size-3" aria-hidden />
+        Recipient locked to your account email
+      </span>
+      <span className="text-[0.7rem] leading-snug text-[var(--desk-text-muted)]">
+        First alerts often land in Spam or Promotions — mark as not spam so
+        later ones reach your inbox.
+      </span>
+    </label>
+  );
 }
 
 function WatchlistsStep({
@@ -1384,6 +1406,16 @@ function ReviewStep({
               ))}
             </ul>
           )}
+          {channels.email && sessionEmail ? (
+            <div className="mt-2 space-y-1">
+              <p className="font-mono text-[0.7rem] text-[var(--desk-text-dim)]">
+                {sessionEmail}
+              </p>
+              <p className="text-[0.7rem] leading-snug text-[var(--desk-text-muted)]">
+                Check Spam/Promotions if the first alert doesn’t show up.
+              </p>
+            </div>
+          ) : null}
           {channels.telegram && telegramLinked ? (
             <p className="mt-2 font-mono text-[0.7rem] text-[var(--desk-text-dim)]">
               Chat {telegramLinked.chatId}
