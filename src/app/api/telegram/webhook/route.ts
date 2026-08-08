@@ -1,7 +1,10 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import {
-  buildTelegramInboundReply,
+  buildTelegramMessageReply,
+  handleTelegramCallback,
+} from "@/lib/telegram/handlers";
+import {
   isValidTelegramWebhookSecret,
   sendTelegramMessage,
 } from "@/lib/telegram/bot";
@@ -14,10 +17,9 @@ import {
  *     -H "Content-Type: application/json" \
  *     -d '{"url":"https://<your-domain>/api/telegram/webhook","secret_token":"<TELEGRAM_WEBHOOK_SECRET>"}'
  *
- * Handles /start, /id, /help (and any other text) by replying with the user's
- * chat_id so they can paste it into an alert rule. Always returns 200 for
- * authenticated updates so Telegram doesn't retry/disable the hook;
- * unauthenticated requests get 401.
+ * Handles /start (optional link token), menu commands, reply-keyboard labels,
+ * and inline mute callbacks. Always returns 200 for authenticated updates so
+ * Telegram doesn't retry/disable the hook; unauthenticated requests get 401.
  */
 export async function POST(request: NextRequest) {
   const provided = request.headers.get("x-telegram-bot-api-secret-token");
@@ -32,29 +34,51 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: true });
   }
 
-  const message =
+  const root =
     typeof body === "object" && body !== null
-      ? (
-          body as {
-            message?: {
-              chat?: { id?: number | string };
-              text?: string;
-            };
-          }
-        ).message
+      ? (body as Record<string, unknown>)
+      : null;
+
+  const callback =
+    root && typeof root.callback_query === "object" && root.callback_query
+      ? (root.callback_query as {
+          id?: string;
+          data?: string;
+          message?: { chat?: { id?: number | string } };
+        })
+      : undefined;
+
+  if (callback?.id && callback.message?.chat?.id !== undefined) {
+    await handleTelegramCallback({
+      callbackQueryId: callback.id,
+      chatId: String(callback.message.chat.id),
+      data: callback.data,
+    });
+    return NextResponse.json({ ok: true });
+  }
+
+  const message =
+    root && typeof root.message === "object" && root.message
+      ? (root.message as {
+          chat?: { id?: number | string };
+          text?: string;
+          from?: { id?: number; username?: string };
+        })
       : undefined;
   const chatId = message?.chat?.id;
 
   if (chatId !== undefined) {
-    const reply = buildTelegramInboundReply({
-      chatId,
+    const reply = await buildTelegramMessageReply({
+      chatId: String(chatId),
       text: message?.text,
+      from: message?.from ?? null,
     });
     await sendTelegramMessage({
       chatId: String(chatId),
       text: reply.text,
       parseMode: reply.parseMode,
-      disableWebPagePreview: true,
+      replyMarkup: reply.replyMarkup,
+      disableWebPagePreview: reply.disableWebPagePreview ?? true,
     });
   }
 

@@ -1,10 +1,7 @@
 import { SkeletonCard } from "@/components/loading-skeleton";
 
 /**
- * Instant alerts-route placeholder. Matches the real page chrome (Away desk /
- * Alert rules copy) plus the same three cards `AlertRulesPanel` shows while
- * fetching — so route `loading.tsx` and the client fetch state look identical
- * and do not flash a different skeleton.
+ * Instant alerts-route placeholder. Matches the notifications stepper chrome.
  */
 export function AlertsPageSkeleton() {
   return (
@@ -14,15 +11,11 @@ export function AlertsPageSkeleton() {
           Away desk
         </p>
         <h1 className="mt-1 text-xl font-semibold tracking-tight text-[var(--desk-text)] sm:text-2xl">
-          Alert rules
+          Notifications
         </h1>
         <p className="mt-2 max-w-2xl text-sm leading-relaxed text-[var(--desk-text-muted)]">
-          Get material catalysts when you are away from the tape. Pick Push,
-          Telegram, or email — each channel has a short setup checklist. Choose
-          which sessions (pre-market, regular hours, after-hours) can fire.
-          After you save a rule, use{" "}
-          <span className="text-[var(--desk-text)]">Test</span> to fire against
-          the latest catalyst and confirm delivery.
+          Pick how you want to be reached, attach the watchlists that matter,
+          and we&apos;ll fire when matching catalysts hit.
         </p>
       </div>
       <AlertRulesListSkeleton />
@@ -30,13 +23,16 @@ export function AlertsPageSkeleton() {
   );
 }
 
-/** Card stack used while alert rules are fetching. */
+/** Card stack used while notification settings are fetching. */
 export function AlertRulesListSkeleton() {
   return (
     <div className="flex flex-col gap-6">
-      <SkeletonCard lines={2} />
-      <SkeletonCard lines={4} />
-      <SkeletonCard lines={2} />
+      <div className="grid grid-cols-3 gap-2 sm:gap-3">
+        <SkeletonCard lines={1} />
+        <SkeletonCard lines={1} />
+        <SkeletonCard lines={1} />
+      </div>
+      <SkeletonCard lines={5} />
     </div>
   );
 }

@@ -343,6 +343,45 @@ export const pushSubscriptions = sqliteTable("push_subscriptions", {
 });
 
 /**
+ * Linked Telegram chat for a desk user. One chat ↔ one user. Alert rules can
+ * omit `telegram_chat_id` and deliver here; mute is chat-scoped.
+ */
+export const telegramLinks = sqliteTable("telegram_links", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  userId: integer("user_id")
+    .notNull()
+    .unique()
+    .references(() => users.id),
+  /** Telegram `message.chat.id` (stringified; may be negative for groups). */
+  chatId: text("chat_id").notNull().unique(),
+  /** Telegram `message.from.id` when available. */
+  telegramUserId: text("telegram_user_id"),
+  username: text("username"),
+  /** ISO timestamp — while in the future, Telegram alert fires are skipped. */
+  mutedUntil: text("muted_until"),
+  linkedAt: text("linked_at")
+    .notNull()
+    .default(sql`(current_timestamp)`),
+});
+
+/**
+ * Short-lived tokens for `t.me/<bot>?start=<token>` account linking.
+ * Redeemed once by the Telegram webhook.
+ */
+export const telegramLinkTokens = sqliteTable("telegram_link_tokens", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  token: text("token").notNull().unique(),
+  userId: integer("user_id")
+    .notNull()
+    .references(() => users.id),
+  expiresAt: text("expires_at").notNull(),
+  usedAt: text("used_at"),
+  createdAt: text("created_at")
+    .notNull()
+    .default(sql`(current_timestamp)`),
+});
+
+/**
  * One row per multi-source `/api/admin/fetch/all` orchestration.
  * Written after each cron / admin trigger so ops can audit cadence and results.
  */

@@ -32,6 +32,8 @@ describe("formatAlertMessage", () => {
     expect(message.deskUrl).toBe(
       "https://app.example/catalyst-feed/catalyst/42",
     );
+    expect(message.watchlistsUrl).toBe("https://app.example/watchlist");
+    expect(message.takeaway).toBeNull();
     expect(message.text).toContain("NVDA · Disclosure");
     expect(message.text).toContain("Disclosure");
     expect(message.text).toContain("After-hours");
@@ -40,6 +42,16 @@ describe("formatAlertMessage", () => {
     expect(message.text).toContain("Open on desk:");
     expect(message.text).toContain("Original source:");
     expect(message.text).not.toMatch(/🔔|🔥|🚀/);
+  });
+
+  it("includes an optional takeaway line", () => {
+    const message = formatAlertMessage(catalyst, {
+      takeaway: "Guidance cut after inventory build.",
+      env: { NEXT_PUBLIC_APP_URL: "https://app.example" },
+    });
+    expect(message.takeaway).toBe("Guidance cut after inventory build.");
+    expect(message.text).toContain("Guidance cut after inventory build.");
+    expect(message.pushBody).toContain("Guidance cut");
   });
 });
 
