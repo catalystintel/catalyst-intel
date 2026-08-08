@@ -95,10 +95,7 @@ export async function GET(request: NextRequest) {
   if (!error && data.user) {
     // Preview / staging: drop the session immediately for non-admins so a
     // successful Google OAuth cannot leave a usable cookie on the host.
-    if (
-      isPreviewDeployment() &&
-      !canAccessPreviewDeployment(data.user.email)
-    ) {
+    if (isPreviewDeployment() && !canAccessPreviewDeployment(data.user.email)) {
       await supabase.auth.signOut();
       return redirectWithCookies(
         `${redirectOrigin}/login?error=${encodeURIComponent("preview_admin_only")}`,

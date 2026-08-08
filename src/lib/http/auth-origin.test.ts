@@ -60,7 +60,9 @@ describe("isAllowedAuthOrigin", () => {
 describe("authHostBounceUrl", () => {
   it("returns null on safe hosts", () => {
     expect(
-      authHostBounceUrl("https://catalyst-intel-catalyst-intel.vercel.app/login"),
+      authHostBounceUrl(
+        "https://catalyst-intel-catalyst-intel.vercel.app/login",
+      ),
     ).toBeNull();
     expect(authHostBounceUrl("http://localhost:3000/login")).toBeNull();
   });
