@@ -1398,7 +1398,7 @@ interface FeedFiltersProps {
 /** ~10 checkbox rows before the menu scrolls (keeps tall libraries usable). */
 const WATCHLIST_MENU_MAX_VISIBLE = 10;
 /** Approx row height for `DropdownMenuCheckboxItem` + `text-xs` / `py-1`. */
-const WATCHLIST_MENU_ITEM_REM = 1.75;
+const WATCHLIST_MENU_ITEM_REM = 1.65;
 
 function FeedFilters({
   filterState,
