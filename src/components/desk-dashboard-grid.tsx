@@ -16,8 +16,8 @@ import { cn } from "@/lib/utils";
  * Trading-desk dashboard shell for `/catalyst-feed` — Live tape plus an
  * optional Economic Calendar right rail. Hiding the calendar (X) collapses
  * the rail so the tape expands; the feed-header control restores it.
- * When a symbol row opens the split+chart panes, the rail collapses
- * transiently (saved preference untouched).
+ * When a feed row opens the split, the rail collapses transiently (saved
+ * preference untouched) so triage / chart can use the right side.
  */
 export function DeskDashboardGrid({
   initialCatalysts,
@@ -38,12 +38,12 @@ export function DeskDashboardGrid({
   initialSelectedId?: number;
   macroEvents: MacroEventDef[];
 }) {
-  const [chartOpen, setChartOpen] = useState(false);
+  const [splitOpen, setSplitOpen] = useState(false);
   const { visible: calendarVisible, setVisible: setCalendarVisible } =
     useCalendarRailVisible();
-  // Transient override while the sibling chart pane is open — never writes
-  // localStorage; closing the split restores the saved preference.
-  const railOpen = calendarVisible && !chartOpen;
+  // Transient override while split is open — never writes localStorage;
+  // closing the split restores the saved preference.
+  const railOpen = calendarVisible && !splitOpen;
 
   return (
     <div className="desk-dashboard flex min-h-0 flex-1 flex-col gap-3">
@@ -55,10 +55,10 @@ export function DeskDashboardGrid({
           initialSymbolFilter={initialSymbolFilter}
           initialWatchlistCriteria={initialWatchlistCriteria}
           initialSelectedId={initialSelectedId}
-          onChartOpenChange={setChartOpen}
+          onSplitOpenChange={setSplitOpen}
           calendarRailHidden={!railOpen}
           onShowCalendarRail={
-            chartOpen ? undefined : () => setCalendarVisible(true)
+            splitOpen ? undefined : () => setCalendarVisible(true)
           }
         />
 

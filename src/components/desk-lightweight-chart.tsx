@@ -98,6 +98,7 @@ export function DeskLightweightChart({
   range = DEFAULT_CHART_RANGE,
   onRangeChange,
   eventTimeSec = null,
+  density = "default",
 }: {
   /** Bare vendor ticker used for `/api/market/candles` (never `EXCHANGE:SYM`). */
   symbol: string;
@@ -109,9 +110,15 @@ export function DeskLightweightChart({
   onRangeChange?: (range: ChartRangeKey) => void;
   /** Catalyst timestamp (unix seconds) — draws an event marker when in range. */
   eventTimeSec?: number | null;
+  /**
+   * `compact` — sibling desk pane: slim header (no duplicate price), single-row
+   * horizontally scrollable range chips so the plot gets the height.
+   */
+  density?: "default" | "compact";
 }) {
   const trimmed = symbol.trim().toUpperCase();
   const label = (displaySymbol?.trim() || trimmed).toUpperCase();
+  const compact = density === "compact";
   const hostRef = useRef<HTMLDivElement | null>(null);
   const fullHostRef = useRef<HTMLDivElement | null>(null);
   const [fullscreen, setFullscreen] = useState(false);
@@ -227,11 +234,21 @@ export function DeskLightweightChart({
 
   const rangeChips = onRangeChange ? (
     <div
-      className="flex flex-wrap items-center gap-0.5 border-b border-[var(--desk-border)] bg-[var(--desk-header)] px-2 py-1.5"
+      className={cn(
+        "flex items-center gap-1.5 border-b border-[var(--desk-border)] bg-[var(--desk-header)] px-2",
+        compact ? "flex-nowrap py-1" : "flex-wrap py-1.5",
+      )}
       role="group"
       aria-label="Chart time range"
     >
-      <div className="inline-flex flex-wrap items-center gap-0.5 rounded-md border border-[var(--desk-border)] bg-[var(--desk-overlay-soft)] p-0.5">
+      <div
+        className={cn(
+          "min-w-0 rounded-md border border-[var(--desk-border)] bg-[var(--desk-overlay-soft)] p-0.5",
+          compact
+            ? "flex flex-1 flex-nowrap items-center gap-0.5 overflow-x-auto"
+            : "inline-flex flex-wrap items-center gap-0.5",
+        )}
+      >
         {CHART_RANGES.map((r) => {
           const active = r.key === range;
           return (
@@ -242,7 +259,7 @@ export function DeskLightweightChart({
               aria-pressed={active}
               className={cn(
                 // No CSS uppercase — `1m` (minutes) must stay distinct from `1M` (month).
-                "rounded-sm px-2 py-0.5 font-mono text-[0.65rem] tracking-wide transition-colors",
+                "shrink-0 rounded-sm px-2 py-0.5 font-mono text-[0.65rem] tracking-wide transition-colors",
                 active
                   ? "bg-[var(--desk-panel)] text-[var(--desk-text)] shadow-[0_1px_2px_rgba(0,0,0,0.12)]"
                   : "text-[var(--desk-text-muted)] hover:text-[var(--desk-text)]",
@@ -254,7 +271,7 @@ export function DeskLightweightChart({
         })}
       </div>
       {hasEventMarker ? (
-        <span className="ml-auto inline-flex items-center gap-1.5 font-mono text-[0.62rem] tracking-wide text-[var(--desk-warn-text,#F59E0B)] uppercase">
+        <span className="ml-auto inline-flex shrink-0 items-center gap-1.5 font-mono text-[0.62rem] tracking-wide text-[var(--desk-warn-text,#F59E0B)] uppercase">
           <span
             aria-hidden
             className="size-1.5 rounded-full bg-[var(--desk-warn,#F59E0B)]"
@@ -266,7 +283,12 @@ export function DeskLightweightChart({
   ) : null;
 
   const header = (
-    <div className="flex items-center justify-between gap-3 border-b border-[var(--desk-border)] bg-[var(--desk-panel)] px-3 py-2.5">
+    <div
+      className={cn(
+        "flex items-center justify-between gap-3 border-b border-[var(--desk-border)] bg-[var(--desk-panel)] px-3",
+        compact ? "py-1.5" : "py-2.5",
+      )}
+    >
       <div className="min-w-0">
         <div className="flex flex-wrap items-center gap-2">
           <p className="font-mono text-[0.7rem] font-semibold tracking-[0.16em] text-[var(--desk-text)] uppercase">
@@ -281,33 +303,40 @@ export function DeskLightweightChart({
             </span>
           ) : null}
         </div>
-        <p className="mt-1 flex flex-wrap items-baseline gap-2 font-mono">
-          {isDemo ? (
-            <span className="text-xs text-[var(--desk-warn-text)]">
-              Placeholder series — not live market data
-            </span>
-          ) : (
-            <>
-              <span className="text-lg font-semibold text-[var(--desk-text)] tabular-nums">
-                {last ? last.close.toFixed(2) : loading ? "…" : "—"}
+        {/* Compact pane: split header owns the quote — skip duplicate price/Δ. */}
+        {!compact ? (
+          <p className="mt-1 flex flex-wrap items-baseline gap-2 font-mono">
+            {isDemo ? (
+              <span className="text-xs text-[var(--desk-warn-text)]">
+                Placeholder series — not live market data
               </span>
-              {safeChange != null && safeChangePct != null ? (
-                <span
-                  className={cn(
-                    "text-xs tabular-nums",
-                    up === true && "text-[var(--desk-positive)]",
-                    up === false && "text-[var(--desk-negative)]",
-                    up == null && "text-[var(--desk-text-muted)]",
-                  )}
-                >
-                  {safeChange > 0 ? "+" : ""}
-                  {safeChange.toFixed(2)} ({safeChangePct > 0 ? "+" : ""}
-                  {safeChangePct.toFixed(2)}%)
+            ) : (
+              <>
+                <span className="text-lg font-semibold text-[var(--desk-text)] tabular-nums">
+                  {last ? last.close.toFixed(2) : loading ? "…" : "—"}
                 </span>
-              ) : null}
-            </>
-          )}
-        </p>
+                {safeChange != null && safeChangePct != null ? (
+                  <span
+                    className={cn(
+                      "text-xs tabular-nums",
+                      up === true && "text-[var(--desk-positive)]",
+                      up === false && "text-[var(--desk-negative)]",
+                      up == null && "text-[var(--desk-text-muted)]",
+                    )}
+                  >
+                    {safeChange > 0 ? "+" : ""}
+                    {safeChange.toFixed(2)} ({safeChangePct > 0 ? "+" : ""}
+                    {safeChangePct.toFixed(2)}%)
+                  </span>
+                ) : null}
+              </>
+            )}
+          </p>
+        ) : isDemo ? (
+          <p className="mt-0.5 font-mono text-[0.62rem] text-[var(--desk-warn-text)]">
+            Sample series
+          </p>
+        ) : null}
       </div>
       {allowFullscreen ? (
         <button
