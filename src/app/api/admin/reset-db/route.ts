@@ -12,8 +12,9 @@ import { isDbResetAllowed } from "@/lib/ops/non-production-env";
 
 /**
  * Non-production only: clear catalyst ingest tables, apply migrations, and
- * optionally re-run multi-source fetch. Requires ALLOW_DB_RESET=true and is
- * blocked when VERCEL_ENV=production.
+ * optionally re-run multi-source fetch. Always allowed on localhost; on
+ * preview/staging requires ALLOW_DB_RESET=true. Blocked when
+ * VERCEL_ENV=production.
  */
 export async function POST(request: NextRequest) {
   const auth = await authorizeAdminFetch(request, "admin-reset-db");
@@ -26,7 +27,7 @@ export async function POST(request: NextRequest) {
       auth,
       {
         error:
-          "Clear database requires ALLOW_DB_RESET=true on a non-production environment.",
+          "Clear database is blocked in production. On preview/staging set ALLOW_DB_RESET=true.",
       },
       { status: 403 },
     );

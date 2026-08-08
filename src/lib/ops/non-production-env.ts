@@ -10,12 +10,16 @@ export function isNonProductionEnv(
 }
 
 /**
- * Explicit opt-in for wipe/rebuild of ingest tables. Requires both a
- * non-production Vercel env (or local) and `ALLOW_DB_RESET=true` so shared
- * staging Turso is not wiped by accident.
+ * Wipe/rebuild of ingest tables:
+ * - Production: never.
+ * - Local (`VERCEL_ENV` unset): always — only hits `local.db`.
+ * - Preview/staging: requires `ALLOW_DB_RESET=true` so shared Turso is not
+ *   wiped by accident.
  */
 export function isDbResetAllowed(
   env: Record<string, string | undefined> = process.env,
 ): boolean {
-  return isNonProductionEnv(env) && env.ALLOW_DB_RESET === "true";
+  if (!isNonProductionEnv(env)) return false;
+  if (!env.VERCEL_ENV) return true;
+  return env.ALLOW_DB_RESET === "true";
 }

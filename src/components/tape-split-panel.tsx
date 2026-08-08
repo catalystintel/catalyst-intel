@@ -11,7 +11,7 @@ import {
   isAccNoMetadataBlob,
   isWeakSummary,
 } from "@/lib/catalysts/article-content";
-import { deriveTakeaways } from "@/lib/catalysts/article-funnel";
+import { deriveSubjectTakeaways } from "@/lib/catalysts/subject-article-content";
 import type { FeedCatalyst } from "@/lib/catalysts/feed-catalyst";
 import type {
   ArticleCompanyProfile,
@@ -164,11 +164,16 @@ export function TapeSplitPanel({
     catalyst.headline?.trim() ||
     catalyst.title.trim();
   const formBlurb = plainEnglishForSecForm(catalyst.type);
-  const takeaways = deriveTakeaways(
-    rawSummary && !isAccNoMetadataBlob(rawSummary) ? rawSummary : null,
-    null,
-    3,
-  ).filter((t) => !isAccNoMetadataBlob(t));
+  const takeaways = deriveSubjectTakeaways({
+    eventCategory: catalyst.eventCategory,
+    summary: rawSummary && !isAccNoMetadataBlob(rawSummary) ? rawSummary : null,
+    headline: catalyst.headline,
+    title: catalyst.title,
+    keyFacts: catalyst.keyFacts,
+    companyName: catalyst.companyName,
+    symbol: catalyst.symbol,
+    maxLines: 6,
+  }).filter((t) => !isAccNoMetadataBlob(t));
   const companyName =
     market?.profile?.name?.trim() || catalyst.companyName?.trim() || null;
 

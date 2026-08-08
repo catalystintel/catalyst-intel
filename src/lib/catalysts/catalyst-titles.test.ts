@@ -105,24 +105,24 @@ describe("earningsQuarterLabel + formatEarningsReportTitle", () => {
     expect(earningsQuarterLabel(null, "2026-11-20")).toBe("Q4");
   });
 
-  it("formats Company - Earnings Report Qn", () => {
+  it("formats Company Qn earnings report", () => {
     expect(formatEarningsReportTitle("Q1", "Apple Inc.")).toBe(
-      "Apple Inc. - Earnings Report Q1",
+      "Apple Inc. Q1 earnings report",
     );
     expect(
       formatEarningsReportTitle(
         earningsQuarterLabel(2, "2026-04-01"),
         "Microsoft Corporation",
       ),
-    ).toBe("Microsoft Corporation - Earnings Report Q2");
+    ).toBe("Microsoft Corporation Q2 earnings report");
   });
 
   it("falls back to symbol / Unknown company, not a bare empty name", () => {
     expect(formatEarningsReportTitle("Q4", "AAPL")).toBe(
-      "AAPL - Earnings Report Q4",
+      "AAPL Q4 earnings report",
     );
     expect(formatEarningsReportTitle("Q1", null)).toBe(
-      "Unknown company - Earnings Report Q1",
+      "Unknown company Q1 earnings report",
     );
   });
 
@@ -243,13 +243,13 @@ describe("formatSec8kItemTitle / formatForm4InsiderTitle", () => {
 
   it("builds Form 4 buy/sell/mixed titles", () => {
     expect(formatForm4InsiderTitle("buy", "Tesla, Inc.")).toBe(
-      "Tesla, Inc. - Form 4 Insider Buy",
+      "Tesla, Inc. insider buy filed",
     );
     expect(formatForm4InsiderTitle("sell", "Nvidia Corporation")).toBe(
-      "Nvidia Corporation - Form 4 Insider Sell",
+      "Nvidia Corporation insider sale filed",
     );
     expect(formatForm4InsiderTitle("mixed", "Acme Corp")).toBe(
-      "Acme Corp - Form 4 Insider Buy & Sell",
+      "Acme Corp Form 4 buy and sell",
     );
     expect(form4TitleKindFromSubcategory("insider_buy")).toBe("buy");
     expect(form4TitleKindFromSubcategory("form4_mixed")).toBe("mixed");
@@ -259,25 +259,25 @@ describe("formatSec8kItemTitle / formatForm4InsiderTitle", () => {
 describe("offering / ownership / clinical / macro / analyst titles", () => {
   it("formats S-3 / 424B / 425 / 13D / 13G ground-rule titles", () => {
     expect(formatShelfRegistrationTitle("Acme Corp")).toBe(
-      "Acme Corp - Shelf Registration (S-3)",
+      "Acme Corp files shelf registration (S-3)",
     );
     expect(formatProspectusOfferingTitle("Acme Corp")).toBe(
-      "Acme Corp - New Stock Offering Filed (Potential Dilution Ahead)",
+      "Acme Corp files stock offering (dilution watch)",
     );
     expect(format425MergerTitle("Acme Corp")).toBe(
       "Acme Corp Announces Acquisition — Deal in Play",
     );
     expect(formatSchedule13DTitle("Acme Corp")).toBe(
-      "Acme Corp - Schedule 13D",
+      "Acme Corp reports active stake (13D)",
     );
     expect(formatSchedule13GTitle("Acme Corp")).toBe(
-      "Acme Corp - Schedule 13G",
+      "Acme Corp reports passive stake (13G)",
     );
   });
 
   it("formats clinical / macro / analyst ground-rule titles", () => {
     expect(formatClinicalTrialTitle("Pfizer Inc")).toBe(
-      "Pfizer Inc - Clinical Trial",
+      "Pfizer Inc clinical trial update",
     );
     expect(formatCpiTitle("July 2026")).toBe("CPI — July 2026");
     expect(formatJobsReportTitle("July 2026")).toBe(
@@ -285,8 +285,8 @@ describe("offering / ownership / clinical / macro / analyst titles", () => {
     );
     expect(formatFomcRateDecisionTitle()).toBe("FOMC Rate Decision");
     expect(formatPriceTargetTitle("Apple Inc.")).toBe(
-      "Apple Inc. - Price Target",
+      "Apple Inc. price target update",
     );
-    expect(formatAnalystRatingTitle("NVDA")).toBe("NVDA - Analyst Rating");
+    expect(formatAnalystRatingTitle("NVDA")).toBe("NVDA Street rating change");
   });
 });

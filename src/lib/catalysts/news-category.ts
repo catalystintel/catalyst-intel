@@ -89,6 +89,42 @@ const RULES: Array<{
     subcategory: "clinical_news",
     tags: ["clinical"],
   },
+  {
+    test: /\b(ceo|cfo|coo|cto)\b.*\b(resign(?:s|ed|ing)?|appoint(?:s|ed|ing)?|depart(?:s|ed|ing)?|step(?:s|ping)? down|named|hire[sd]?)\b|\b(resign(?:s|ed|ing)?|appoint(?:s|ed|ing)?|depart(?:s|ed|ing)?|step(?:s|ping)? down|named)\b.*\b(ceo|cfo|coo|cto|chief)\b/i,
+    eventCategory: "management",
+    subcategory: "management_news",
+    tags: ["management"],
+  },
+  {
+    test: /\b(bankrupt(?:cy|t)?|chapter\s*11|delist(?:ing|ed)?|going concern|covenant breach)\b/i,
+    eventCategory: "distress",
+    subcategory: "distress_news",
+    tags: ["distress"],
+  },
+  {
+    test: /\b(restructur(?:e|ing)|layoff|job cut|exit cost|severance charge)\b/i,
+    eventCategory: "restructuring",
+    subcategory: "restructuring_news",
+    tags: ["restructuring"],
+  },
+  {
+    test: /\b(cyber(?:security)?|ransomware|data breach|material cybersecurity)\b/i,
+    eventCategory: "cyber",
+    subcategory: "cyber_news",
+    tags: ["cyber"],
+  },
+  {
+    test: /\b(form\s*4|insider (?:buy|sell|purchase|sale)|director (?:bought|sold))\b/i,
+    eventCategory: "insider",
+    subcategory: "insider_news",
+    tags: ["insider"],
+  },
+  {
+    test: /\b(auditor (?:change|resign)|change of control|shareholder vote)\b/i,
+    eventCategory: "governance",
+    subcategory: "governance_news",
+    tags: ["governance"],
+  },
 ];
 
 /**
