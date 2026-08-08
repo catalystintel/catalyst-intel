@@ -80,7 +80,7 @@ export function FeedFilterMultiSelect({
       </DropdownMenuTrigger>
       <DropdownMenuContent
         align="start"
-        className="w-64 border-[var(--desk-border)] bg-[var(--desk-panel)] p-0 text-[var(--desk-text)]"
+        className="w-64 border-[var(--desk-border)] bg-popover p-0 text-[var(--desk-text)]"
       >
         <div
           className="border-b border-[var(--desk-border)] p-2"

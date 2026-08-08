@@ -406,7 +406,7 @@ export function DeskLightweightChart({
           onClick={() => setFullscreen(false)}
         >
           <div
-            className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-[var(--desk-border-strong)] bg-[var(--desk-panel)] shadow-[0_24px_80px_var(--desk-panel-shadow)]"
+            className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-[var(--desk-border-strong)] bg-popover shadow-[0_24px_80px_var(--desk-panel-shadow)]"
             style={{ background: theme.bg }}
             onClick={(e) => e.stopPropagation()}
           >

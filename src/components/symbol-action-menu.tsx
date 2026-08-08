@@ -86,7 +86,7 @@ export function SymbolActionMenu({
       </DropdownMenuTrigger>
       <DropdownMenuContent
         align="start"
-        className="min-w-52 border-[var(--desk-border)] bg-[var(--desk-panel)] text-[var(--desk-text)]"
+        className="min-w-52 border-[var(--desk-border)] bg-popover text-[var(--desk-text)]"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="px-2.5 py-2">
