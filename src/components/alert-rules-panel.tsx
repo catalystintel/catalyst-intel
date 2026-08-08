@@ -28,6 +28,12 @@ import {
 } from "@/lib/alerts/settings-model";
 import { useWebPush } from "@/hooks/use-web-push";
 import { toUserFacingMessage } from "@/lib/errors/user-facing";
+import {
+  detectPushBrowser,
+  detectPushPlatform,
+  pushOsBlockedHint,
+  pushSiteBlockedHint,
+} from "@/lib/push/client-guidance";
 import { cn } from "@/lib/utils";
 import { criteriaSummary } from "@/lib/watchlist/criteria-display";
 
@@ -73,7 +79,7 @@ const METHOD_META: {
   {
     id: "push",
     label: "Push",
-    blurb: "Browser notifications — even with the tab closed",
+    blurb: "System banner on this device — even with the tab closed",
     Icon: Bell,
   },
   {
@@ -870,6 +876,8 @@ function MethodsStep(props: {
   );
 }
 
+type PushProbeOutcome = "unknown" | "seen" | "missed";
+
 function PushSetup({
   available,
   webPush,
@@ -879,6 +887,33 @@ function PushSetup({
   webPush: ReturnType<typeof useWebPush>;
   onSubscribed: () => void;
 }) {
+  const [probing, setProbing] = useState(false);
+  const [probeAsked, setProbeAsked] = useState(false);
+  const [probeOutcome, setProbeOutcome] = useState<PushProbeOutcome>("unknown");
+
+  const ua = typeof navigator !== "undefined" ? navigator.userAgent : "";
+  const platformHint =
+    typeof navigator !== "undefined" ? navigator.platform || "" : "";
+  const platform = detectPushPlatform(ua, platformHint);
+  const browser = detectPushBrowser(ua);
+
+  async function runProbe() {
+    setProbing(true);
+    setProbeAsked(false);
+    setProbeOutcome("unknown");
+    try {
+      const result = await webPush.showProbe();
+      if (!result.ok) {
+        toast.error(result.detail);
+        return;
+      }
+      setProbeAsked(true);
+      toast.message("Look for a system banner (not inside this page).");
+    } finally {
+      setProbing(false);
+    }
+  }
+
   if (!available) {
     return (
       <p className="text-xs text-[var(--desk-text-muted)]">
@@ -886,28 +921,150 @@ function PushSetup({
       </p>
     );
   }
-  if (webPush.status === "subscribed") {
+
+  if (webPush.status === "unsupported") {
     return (
-      <p className="inline-flex items-center gap-1.5 text-xs text-[var(--desk-live-status)]">
-        <CheckCircle2 className="size-3.5" aria-hidden />
-        This browser is subscribed — save on Review to start receiving.
+      <p className="text-xs text-[var(--desk-text-muted)]">
+        This browser can’t receive push. Use Chrome or Edge on desktop.
       </p>
     );
   }
+
+  if (webPush.status === "denied") {
+    return (
+      <div className="flex flex-col gap-2">
+        <p className="inline-flex items-start gap-1.5 text-xs text-destructive">
+          <CircleAlert className="mt-0.5 size-3.5 shrink-0" aria-hidden />
+          Blocked for this site
+        </p>
+        <p className="text-[0.7rem] leading-snug text-[var(--desk-text-muted)]">
+          {pushSiteBlockedHint(browser)}
+        </p>
+        {platform === "mac" || platform === "windows" ? (
+          <p className="text-[0.7rem] leading-snug text-[var(--desk-text-muted)]">
+            {pushOsBlockedHint(platform, browser)}
+          </p>
+        ) : null}
+      </div>
+    );
+  }
+
+  if (webPush.status === "subscribed") {
+    return (
+      <div className="flex flex-col gap-2.5">
+        <ul className="space-y-1 text-[0.7rem] leading-snug">
+          <li className="inline-flex items-center gap-1.5 text-[var(--desk-live-status)]">
+            <CheckCircle2 className="size-3 shrink-0" aria-hidden />
+            Site permission allowed
+          </li>
+          <li className="inline-flex items-center gap-1.5 text-[var(--desk-live-status)]">
+            <CheckCircle2 className="size-3 shrink-0" aria-hidden />
+            This browser is subscribed
+          </li>
+          <li
+            className={cn(
+              "inline-flex items-center gap-1.5",
+              probeOutcome === "seen"
+                ? "text-[var(--desk-live-status)]"
+                : probeOutcome === "missed"
+                  ? "text-destructive"
+                  : "text-[var(--desk-text-muted)]",
+            )}
+          >
+            {probeOutcome === "seen" ? (
+              <CheckCircle2 className="size-3 shrink-0" aria-hidden />
+            ) : probeOutcome === "missed" ? (
+              <CircleAlert className="size-3 shrink-0" aria-hidden />
+            ) : (
+              <Bell className="size-3 shrink-0 opacity-70" aria-hidden />
+            )}
+            {probeOutcome === "seen"
+              ? "System banners work on this device"
+              : probeOutcome === "missed"
+                ? "System is blocking banners"
+                : "System banners not verified yet"}
+          </li>
+        </ul>
+
+        <p className="text-[0.7rem] leading-snug text-[var(--desk-text-muted)]">
+          Banners come from the OS (menu bar / Notification Center), not this
+          page. On Mac, Chrome can be allowed here but still blocked in System
+          Settings. Save on Review when ready.
+        </p>
+
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => void runProbe()}
+          disabled={probing}
+          className="btn-press h-8 w-fit gap-1.5 border-[var(--desk-border)] bg-[var(--desk-overlay)] px-3 text-xs"
+        >
+          <Bell className="size-3.5" aria-hidden />
+          {probing ? "Sending…" : "Show test banner"}
+        </Button>
+
+        {probeAsked && probeOutcome === "unknown" ? (
+          <div className="flex flex-col gap-2 rounded-lg border border-[var(--desk-border)] bg-[var(--desk-overlay)]/60 px-3 py-2.5">
+            <p className="text-xs text-[var(--desk-text-secondary)]">
+              Did a system notification appear?
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                onClick={() => setProbeOutcome("seen")}
+                className="btn-press h-8 gap-1.5 bg-[var(--desk-live)] px-3 text-xs text-[var(--desk-accent-fg)] hover:brightness-110"
+              >
+                <Check className="size-3.5" aria-hidden />
+                Yes, I saw it
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setProbeOutcome("missed")}
+                className="btn-press h-8 border-[var(--desk-border)] bg-transparent px-3 text-xs"
+              >
+                No
+              </Button>
+            </div>
+          </div>
+        ) : null}
+
+        {probeOutcome === "missed" ? (
+          <p className="text-[0.7rem] leading-snug text-destructive">
+            {pushOsBlockedHint(platform, browser)}
+          </p>
+        ) : null}
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-2">
-      <p className="text-xs text-[var(--desk-text-muted)]">
-        Allow notifications in this browser so push can deliver.
-      </p>
+      <ol className="list-decimal space-y-1 pl-4 text-[0.7rem] leading-snug text-[var(--desk-text-muted)]">
+        <li>Click Enable and choose Allow when the browser asks.</li>
+        <li>
+          {platform === "mac"
+            ? "On Mac: System Settings → Notifications → your browser → Allow."
+            : platform === "windows"
+              ? "On Windows: Settings → System → Notifications → allow your browser."
+              : "Allow this browser in system notification settings if banners don’t appear."}
+        </li>
+        <li>
+          Then use “Show test banner” to confirm the OS isn’t blocking them.
+        </li>
+      </ol>
       <Button
         type="button"
         onClick={() => {
           void (async () => {
             const ok = await webPush.subscribe();
-            if (ok) onSubscribed();
+            if (!ok) return;
+            onSubscribed();
+            // Immediately prove OS delivery — Chrome Allow ≠ macOS Allow.
+            await runProbe();
           })();
         }}
-        disabled={webPush.status === "loading" || webPush.status === "denied"}
+        disabled={webPush.status === "loading"}
         className="btn-press w-fit gap-2 bg-[var(--desk-live)] text-[var(--desk-accent-fg)] hover:brightness-110"
       >
         <Bell className="size-3.5" aria-hidden />
