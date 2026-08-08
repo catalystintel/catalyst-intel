@@ -38,13 +38,20 @@ function countdownLabel(days: number): string {
  */
 export function DashboardEconomicCalendar({
   events,
+  className,
 }: {
   events: MacroEventDef[];
+  className?: string;
 }) {
   const nextId = events[0]?.id ?? null;
 
   return (
-    <section className="flex max-h-[42%] min-h-[200px] shrink-0 flex-col overflow-hidden rounded-xl border border-[var(--desk-border)] bg-[var(--desk-panel)]">
+    <section
+      className={cn(
+        "flex max-h-[42%] min-h-[200px] shrink-0 flex-col overflow-hidden rounded-xl border border-[var(--desk-border)] bg-[var(--desk-panel)]",
+        className,
+      )}
+    >
       <div className="flex items-center justify-between gap-2 border-b border-[var(--desk-border)] bg-[var(--desk-header)] px-3 py-2.5">
         <h2 className="desk-caps font-mono text-[0.7rem] font-semibold tracking-[0.14em] text-[var(--desk-text)] uppercase">
           Economic Calendar
