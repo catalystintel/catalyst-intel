@@ -108,7 +108,7 @@ export default async function AdminPage() {
           </h2>
           <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
             Alert delivery volume from the last day / week, against soft caps
-            (email) and vendor rate-limit status. Helps catch Resend / API
+            (email) and vendor rate-limit status. Helps catch SMTP / API
             exhaustion before users do.
           </p>
         </div>

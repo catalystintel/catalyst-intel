@@ -165,7 +165,9 @@ env vars are required today.
 | `PR_WIRE_API_KEY` / `PR_WIRE_API_BASE` | No          | Optional full-feed upgrade; public PR wire scrape needs no key   |
 | `POLYGON_API_KEY`                      | No          | Enables Polygon/Benzinga news + price enrichment                 |
 | `FORM4_API_KEY`                        | No          | Optional Form4API enrichment                                     |
-| `RESEND_API_KEY`                       | No          | Enables email alert delivery + feedback emails                   |
+| `SMTP_HOST` / `SMTP_USER` / `SMTP_PASS` | No       | Enables notification email (Gmail App Password ok)               |
+| `SMTP_PORT` / `SMTP_FROM` / `SMTP_SECURE` | No     | Optional SMTP overrides (port default 587)                       |
+| `RESEND_API_KEY`                       | No          | Enables product feedback emails via Resend                       |
 | `RESEND_FROM_EMAIL`                    | No          | Optional From for Resend (defaults to onboarding sender)         |
 | `FEEDBACK_TO_EMAIL`                    | No          | Feedback inbox (defaults to `catalyst.intel.feedback@gmail.com`) |
 | `OPENROUTER_API_KEY`                   | No          | On-demand AI analysis (or `OPENROUTER_API_KEYS` comma pool)      |
@@ -187,7 +189,9 @@ env vars are required today.
 | `PR_WIRE_API_KEY` / `PR_WIRE_API_BASE` | No          | Optional full-feed upgrade; public PR wire scrape needs no key   |
 | `POLYGON_API_KEY`                      | No          | Enables Polygon/Benzinga news + price enrichment                 |
 | `FORM4_API_KEY`                        | No          | Optional Form4API enrichment                                     |
-| `RESEND_API_KEY`                       | No          | Enables email alert delivery + feedback emails                   |
+| `SMTP_HOST` / `SMTP_USER` / `SMTP_PASS` | No       | Enables notification email (Gmail App Password ok)               |
+| `SMTP_PORT` / `SMTP_FROM` / `SMTP_SECURE` | No     | Optional SMTP overrides (port default 587)                       |
+| `RESEND_API_KEY`                       | No          | Enables product feedback emails via Resend                       |
 | `RESEND_FROM_EMAIL`                    | No          | Optional From for Resend                                         |
 | `FEEDBACK_TO_EMAIL`                    | No          | Feedback inbox (defaults to `catalyst.intel.feedback@gmail.com`) |
 | `OPENROUTER_API_KEY`                   | No          | On-demand AI analysis (or `OPENROUTER_API_KEYS` comma pool)      |

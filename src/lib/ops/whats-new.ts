@@ -14,6 +14,14 @@ export type WhatsNewEntry = {
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
     date: "2026-08-08",
+    title: "Notification email via SMTP",
+    bullets: [
+      "Alert Email channel sends through SMTP (Gmail App Password) — no purchased domain required.",
+      "Product feedback still uses Resend → FEEDBACK_TO_EMAIL.",
+    ],
+  },
+  {
+    date: "2026-08-08",
     title: "Feedback is signed-in only",
     bullets: [
       "Feedback CTA removed from the pre-login / marketing banner — use the desk banner or account menu after sign-in.",

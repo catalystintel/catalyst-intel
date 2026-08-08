@@ -42,7 +42,7 @@ Sign in with Google before checking authenticated surfaces.
 ## JTBD 4 — Away → webhook / email rules (push stub)
 
 - [ ] `/alerts` can create a **webhook** rule (URL required) and list/delete it.
-- [ ] `/alerts` can create an **email** rule (recipient required). If `RESEND_API_KEY` is unset, Test shows a clear failure mentioning Resend; if set (+ optional `RESEND_FROM_EMAIL`), Test can send.
+- [ ] `/alerts` can create an **email** rule (recipient required). If SMTP (`SMTP_HOST`/`SMTP_USER`/`SMTP_PASS`) is unset, Test shows a clear failure; if set (+ optional `SMTP_FROM`), Test can send.
 - [ ] **Push** channel can be saved but Test reports **coming soon** (no FCM).
 - [ ] **Test** on a rule POSTs to `/api/alert-rules/test` and returns per-channel result detail against the latest catalyst (force-fire).
 - [ ] Default rule UI supports AH/PM session filter + minimum impact score.
@@ -52,8 +52,9 @@ Sign in with Google before checking authenticated surfaces.
 
 | Variable            | Required for        | Notes                                |
 | ------------------- | ------------------- | ------------------------------------ |
-| `RESEND_API_KEY`    | Email delivery      | Optional; webhook works without it   |
-| `RESEND_FROM_EMAIL` | Email From override | Defaults to Resend onboarding sender |
+| `SMTP_HOST` / `SMTP_USER` / `SMTP_PASS` | Notification email | Optional; webhook works without it |
+| `SMTP_FROM`         | Email From override | Defaults to `Catalyst Intel <SMTP_USER>` |
+| `RESEND_API_KEY`    | Feedback email      | Optional; product feedback only      |
 | `FINNHUB_API_KEY`   | NYSE listings       | Optional; soft-fail empty UI         |
 
 ### NYSE stock data (Finnhub)

@@ -5,7 +5,7 @@ import { databaseUnavailableMessage, isLibsqlConfigured } from "@/db/env";
 import { db } from "@/db/client";
 import { alertRules } from "@/db/schema";
 import {
-  isResendConfigured,
+  isSmtpConfigured,
   isTelegramConfigured,
   isWebPushConfigured,
 } from "@/lib/alerts/deliver";
@@ -98,7 +98,7 @@ export async function PUT(request: NextRequest) {
       limitResult,
     );
   }
-  if (parsed.settings.channels.email && !isResendConfigured()) {
+  if (parsed.settings.channels.email && !isSmtpConfigured()) {
     return withRateLimitHeaders(
       NextResponse.json(
         { error: "Email isn’t configured on this deployment." },

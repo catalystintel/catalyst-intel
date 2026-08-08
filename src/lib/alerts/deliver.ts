@@ -7,7 +7,7 @@ import { formatAlertMessage } from "@/lib/alerts/format-message";
 import { classifySession, sessionMatches } from "@/lib/alerts/session";
 import { resolveAlertTakeaway } from "@/lib/alerts/takeaway";
 import { assertWebhookUrlSafeForFetch } from "@/lib/alerts/webhook-url";
-import { sendResendEmail } from "@/lib/email/resend";
+import { sendSmtpEmail } from "@/lib/email/smtp";
 import { sendWebPush, type PushSubscriptionRecord } from "@/lib/push/web-push";
 import {
   buildAlertInlineKeyboard,
@@ -153,7 +153,7 @@ async function deliverEmail(
   ruleName: string,
 ): Promise<{ ok: boolean; detail: string }> {
   const message = formatAlertMessage(catalyst, { ruleName });
-  return sendResendEmail({
+  return sendSmtpEmail({
     to,
     subject: message.subject,
     text: message.text,
@@ -435,6 +435,6 @@ export async function deliverAlertRules(options: {
   return results;
 }
 
-export { isResendConfigured } from "@/lib/email/resend";
+export { isSmtpConfigured } from "@/lib/email/smtp";
 export { isWebPushConfigured, webPushPublicKey } from "@/lib/push/web-push";
 export { isTelegramConfigured } from "@/lib/telegram/bot";
