@@ -164,7 +164,6 @@ export function LiveCatalystFeed({
   initialWatchlistCriteria,
   initialSelectedId,
   onFocusSymbol,
-  onSplitOpenChange,
 }: {
   initialCatalysts: FeedCatalyst[];
   isAdmin: boolean;
@@ -182,11 +181,6 @@ export function LiveCatalystFeed({
    * whichever tape row you're triaging. Optional; no-op when omitted.
    */
   onFocusSymbol?: (symbol: string) => void;
-  /**
-   * Fired when the row split panel opens/closes so the dashboard can yield
-   * the right rail on laptops (calendar returns when the split closes).
-   */
-  onSplitOpenChange?: (open: boolean) => void;
 }) {
   const query = useLiveFeedQuery(initialCatalysts, {
     symbolQuery: initialSymbolFilter?.trim() ?? "",
@@ -783,10 +777,6 @@ export function LiveCatalystFeed({
   useEffect(() => {
     if (selected?.symbol) onFocusSymbol?.(selected.symbol);
   }, [selected, onFocusSymbol]);
-
-  useEffect(() => {
-    onSplitOpenChange?.(Boolean(selected));
-  }, [selected, onSplitOpenChange]);
 
   // Symbol-only is a header toggle — don't drive Clear / Filters badge from it.
   const panelFiltersActive = !isPanelFiltersDefault(filterState);
