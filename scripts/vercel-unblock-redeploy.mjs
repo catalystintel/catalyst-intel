@@ -250,15 +250,63 @@ export async function waitForShaDeployOutcome(cfg, sha, opts = {}) {
 }
 
 /**
+ * Attach team scope to a Vercel API URL.
+ * `team_*` ids use `teamId`; bare slugs (e.g. `zhbar10s-projects`) use `slug`
+ * so a mis-copied org secret still resolves.
+ * @param {URL} url
+ * @param {string} [teamIdOrSlug]
+ * @param {"auto" | "teamId" | "slug" | "none"} [mode]
+ */
+export function applyTeamScope(url, teamIdOrSlug, mode = "auto") {
+  if (!teamIdOrSlug || mode === "none") return;
+  if (mode === "teamId") {
+    url.searchParams.set("teamId", teamIdOrSlug);
+    return;
+  }
+  if (mode === "slug") {
+    url.searchParams.set("slug", teamIdOrSlug);
+    return;
+  }
+  if (teamIdOrSlug.startsWith("team_")) {
+    url.searchParams.set("teamId", teamIdOrSlug);
+  } else if (/^[a-z0-9]+(?:-[a-z0-9]+)+$/i.test(teamIdOrSlug)) {
+    // Dashboard slugs contain hyphens (e.g. `zhbar10s-projects`). Opaque
+    // account ids are alphanumeric with no hyphens — those stay as teamId.
+    url.searchParams.set("slug", teamIdOrSlug);
+  } else {
+    url.searchParams.set("teamId", teamIdOrSlug);
+  }
+}
+
+/** @param {unknown} err */
+export function isVercelAuthError(err) {
+  const status = /** @type {{ status?: number }} */ (err)?.status;
+  if (status === 401 || status === 403) return true;
+  const msg = err instanceof Error ? err.message : String(err ?? "");
+  return (
+    /\b(401|403)\b/.test(msg) &&
+    /not authorized|forbidden|unauthorized/i.test(msg)
+  );
+}
+
+/**
  * @param {string} apiPath
  * @param {string} token
  * @param {string} [teamId]
  * @param {RequestInit} [init]
  * @param {Record<string, string>} [extraQuery]
+ * @param {"auto" | "teamId" | "slug" | "none"} [teamMode]
  */
-async function vercelFetch(apiPath, token, teamId, init = {}, extraQuery = {}) {
+async function vercelFetch(
+  apiPath,
+  token,
+  teamId,
+  init = {},
+  extraQuery = {},
+  teamMode = "auto",
+) {
   const url = new URL(apiPath, API);
-  if (teamId) url.searchParams.set("teamId", teamId);
+  applyTeamScope(url, teamId, teamMode);
   for (const [k, v] of Object.entries(extraQuery)) {
     if (v != null && v !== "") url.searchParams.set(k, v);
   }
@@ -312,21 +360,140 @@ export function isAccessErrorMessage(err) {
 }
 
 /**
+ * List recent deployments. Retries with alternate team scope forms when the
+ * first attempt is 401/403 (wrong teamId vs slug, or stale org secret).
  * @param {{ token: string, teamId: string, projectId: string }} cfg
  */
 export async function listRecentDeployments(cfg) {
   const since = Date.now() - LOOKBACK_MS;
-  const qs = new URLSearchParams({
+  const qs = {
     projectId: cfg.projectId,
     limit: "50",
     since: String(since),
-  });
-  const data = await vercelFetch(
-    `/v6/deployments?${qs}`,
-    cfg.token,
-    cfg.teamId,
+  };
+  /** @type {Array<"auto" | "teamId" | "slug" | "none">} */
+  const modes = ["auto"];
+  if (cfg.teamId && !cfg.teamId.startsWith("team_")) {
+    modes.push("teamId", "slug");
+  } else if (cfg.teamId) {
+    modes.push("none");
+  }
+  // Always allow a final no-scope attempt — personal tokens sometimes only
+  // see the project without an explicit team query.
+  if (!modes.includes("none")) modes.push("none");
+
+  /** @type {unknown} */
+  let lastErr = null;
+  for (const mode of modes) {
+    try {
+      const data = await vercelFetch(
+        "/v6/deployments",
+        cfg.token,
+        mode === "none" ? undefined : cfg.teamId,
+        {},
+        qs,
+        mode,
+      );
+      return Array.isArray(data?.deployments) ? data.deployments : [];
+    } catch (err) {
+      lastErr = err;
+      if (!isVercelAuthError(err)) throw err;
+    }
+  }
+  throw lastErr instanceof Error
+    ? lastErr
+    : new Error(String(lastErr ?? "listRecentDeployments failed"));
+}
+
+/**
+ * Probe token + org + project and return a cfg with a working team scope.
+ * Auto-corrects swapped/stale VERCEL_ORG_ID when the token can still see the
+ * project under another team (or with no team query).
+ * @param {{ token: string, teamId: string, projectId: string, projectName?: string }} cfg
+ */
+export async function resolveVercelAccess(cfg) {
+  // Confirm the token is usable at all (401 here = bad/expired secret).
+  try {
+    await vercelFetch("/v2/user", cfg.token, undefined, {}, {}, "none");
+  } catch (err) {
+    if (isVercelAuthError(err)) {
+      const e = new Error(
+        `VERCEL_TOKEN is not authorized (GET /v2/user → ${/** @type {{ status?: number }} */ (err).status ?? "?"}). Create a personal token at https://vercel.com/account/tokens (team-owner account that owns the project) and update the GitHub secret.`,
+      );
+      // @ts-expect-error status for soft-fail
+      e.status = /** @type {{ status?: number }} */ (err).status ?? 403;
+      throw e;
+    }
+    throw err;
+  }
+
+  /** @type {Array<"auto" | "teamId" | "slug" | "none">} */
+  const modes = ["auto", "teamId", "slug", "none"];
+  for (const mode of modes) {
+    try {
+      const project = await vercelFetch(
+        `/v9/projects/${encodeURIComponent(cfg.projectId)}`,
+        cfg.token,
+        mode === "none" ? undefined : cfg.teamId,
+        {},
+        {},
+        mode,
+      );
+      const accountId =
+        typeof project?.accountId === "string" ? project.accountId : null;
+      const resolvedTeamId = accountId || cfg.teamId;
+      if (resolvedTeamId !== cfg.teamId) {
+        console.warn(
+          `::warning::VERCEL_ORG_ID did not match project accountId — using ${resolvedTeamId} for API calls. Update the GitHub secret to this value.`,
+        );
+      }
+      return { ...cfg, teamId: resolvedTeamId };
+    } catch (err) {
+      if (!isVercelAuthError(err)) throw err;
+    }
+  }
+
+  // Last resort: walk teams the token can access and find the project.
+  try {
+    const teamsBody = await vercelFetch(
+      "/v2/teams",
+      cfg.token,
+      undefined,
+      {},
+      { limit: "100" },
+      "none",
+    );
+    const teams = Array.isArray(teamsBody?.teams) ? teamsBody.teams : [];
+    for (const team of teams) {
+      const id = typeof team?.id === "string" ? team.id : null;
+      if (!id) continue;
+      try {
+        await vercelFetch(
+          `/v9/projects/${encodeURIComponent(cfg.projectId)}`,
+          cfg.token,
+          id,
+          {},
+          {},
+          "teamId",
+        );
+        console.warn(
+          `::warning::VERCEL_ORG_ID=${cfg.teamId} cannot see project ${cfg.projectId}; found it under team ${id}${typeof team?.slug === "string" ? ` (${team.slug})` : ""}. Update VERCEL_ORG_ID.`,
+        );
+        return { ...cfg, teamId: id };
+      } catch (err) {
+        if (!isVercelAuthError(err)) throw err;
+      }
+    }
+  } catch (err) {
+    if (!isVercelAuthError(err)) throw err;
+  }
+
+  const e = new Error(
+    `VERCEL_TOKEN cannot access project ${cfg.projectId} with VERCEL_ORG_ID=${cfg.teamId} (403/404). Point VERCEL_ORG_ID / VERCEL_PROJECT_ID at the current Vercel team/project (see .vercel/project.json or Project → Settings) and recreate VERCEL_TOKEN from a team-owner account. See DEPLOYMENT.md.`,
   );
-  return Array.isArray(data?.deployments) ? data.deployments : [];
+  // @ts-expect-error status for soft-fail
+  e.status = 403;
+  throw e;
 }
 
 /**
@@ -583,17 +750,32 @@ export async function runUnblock(cfg) {
   };
 }
 
-/** Strip accidental quotes / whitespace from `gh secret set` values. */
+/** Strip accidental quotes / whitespace / Bearer prefix from `gh secret set` values. */
 export function stripSecret(value) {
-  const v = value?.trim() ?? "";
+  let v = (value ?? "")
+    .replace(/^\uFEFF/, "")
+    .replace(/\r/g, "")
+    .trim();
   // Accidental quotes from `gh secret set --body '"…"'` break Bearer auth / CLI.
   if (
     (v.startsWith('"') && v.endsWith('"')) ||
     (v.startsWith("'") && v.endsWith("'"))
   ) {
-    return v.slice(1, -1).trim();
+    v = v.slice(1, -1).trim();
+  }
+  // Some folks paste "Bearer xyz" into the secret; Authorization already adds it.
+  if (/^bearer\s+/i.test(v)) {
+    v = v.replace(/^bearer\s+/i, "").trim();
   }
   return v;
+}
+
+/** Actionable warning + exit 0 when secrets are present but not authorized. */
+export function warnAndSkipUnauthorized(context, err) {
+  const msg = err instanceof Error ? err.message : String(err);
+  console.warn(
+    `::warning::${context} skipped — Vercel API not authorized (${msg}). Re-check GitHub secrets VERCEL_TOKEN / VERCEL_ORG_ID / VERCEL_PROJECT_ID against the current Vercel team/project (Project Settings or .vercel/project.json). Token must be a personal token from a team-owner account: https://vercel.com/account/tokens — see DEPLOYMENT.md.`,
+  );
 }
 
 /**
@@ -662,13 +844,25 @@ async function main() {
     process.exit(0);
   }
 
-  const cfg = {
-    token,
-    teamId,
-    projectId,
-    projectName,
-    allowCli,
-  };
+  /** @type {{ token: string, teamId: string, projectId: string, projectName: string, allowCli: boolean }} */
+  let cfg;
+  try {
+    cfg = {
+      ...(await resolveVercelAccess({
+        token,
+        teamId,
+        projectId,
+        projectName,
+      })),
+      allowCli,
+    };
+  } catch (err) {
+    if (isVercelAuthError(err)) {
+      warnAndSkipUnauthorized("Unblock redeploy", err);
+      process.exit(0);
+    }
+    throw err;
+  }
 
   // After a main push, poll Vercel for this SHA instead of sleeping blindly.
   const waitSha = stripSecret(process.env.VERCEL_UNBLOCK_WAIT_SHA);
@@ -680,17 +874,33 @@ async function main() {
     console.log(
       `Polling Vercel for deploy decision on ${waitSha.slice(0, 8)}… (timeout ${timeoutMs}ms)`,
     );
-    const waited = await waitForShaDeployOutcome(cfg, waitSha, {
-      timeoutMs: Number.isFinite(timeoutMs) ? timeoutMs : 90_000,
-      intervalMs: Number.isFinite(intervalMs) ? intervalMs : 2_500,
-    });
-    console.log(
-      `Wait done: outcome=${waited.outcome} waitedMs=${waited.waitedMs}`,
-    );
+    try {
+      const waited = await waitForShaDeployOutcome(cfg, waitSha, {
+        timeoutMs: Number.isFinite(timeoutMs) ? timeoutMs : 90_000,
+        intervalMs: Number.isFinite(intervalMs) ? intervalMs : 2_500,
+      });
+      console.log(
+        `Wait done: outcome=${waited.outcome} waitedMs=${waited.waitedMs}`,
+      );
+    } catch (err) {
+      if (isVercelAuthError(err)) {
+        warnAndSkipUnauthorized("Unblock wait/poll", err);
+        process.exit(0);
+      }
+      throw err;
+    }
   }
 
-  const out = await runUnblock(cfg);
-  console.log(JSON.stringify(out, null, 2));
+  try {
+    const out = await runUnblock(cfg);
+    console.log(JSON.stringify(out, null, 2));
+  } catch (err) {
+    if (isVercelAuthError(err)) {
+      warnAndSkipUnauthorized("Unblock redeploy", err);
+      process.exit(0);
+    }
+    throw err;
+  }
 }
 
 const isDirectRun =

@@ -1,12 +1,15 @@
 import { describe, expect, it } from "vitest";
 import {
+  applyTeamScope,
   classifyWaitForSha,
   hasNewerHealthyForSha,
   isAccessRelatedFailure,
+  isVercelAuthError,
   isZhbarAuthor,
   matchDeploymentSha,
   needsAutoRedeploy,
   resolveBranchTarget,
+  stripSecret,
   waitForShaDeployOutcome,
 } from "./vercel-unblock-redeploy.mjs";
 
@@ -223,6 +226,49 @@ describe("matchDeploymentSha / classifyWaitForSha", () => {
         "abc",
       ),
     ).toBe("healthy");
+  });
+});
+
+describe("stripSecret", () => {
+  it("strips quotes, BOM, CR, and Bearer prefix", () => {
+    expect(stripSecret('  "abc"  ')).toBe("abc");
+    expect(stripSecret("Bearer tok_123")).toBe("tok_123");
+    expect(stripSecret("\uFEFFteam_x\r\n")).toBe("team_x");
+  });
+});
+
+describe("applyTeamScope", () => {
+  it("uses teamId for team_ ids and opaque account ids", () => {
+    const a = new URL("https://api.vercel.com/v6/deployments");
+    applyTeamScope(a, "team_abc");
+    expect(a.searchParams.get("teamId")).toBe("team_abc");
+    expect(a.searchParams.get("slug")).toBeNull();
+
+    const b = new URL("https://api.vercel.com/v6/deployments");
+    applyTeamScope(b, "AbCdEfGhIjKlMnOp123456");
+    expect(b.searchParams.get("teamId")).toBe("AbCdEfGhIjKlMnOp123456");
+    expect(b.searchParams.get("slug")).toBeNull();
+  });
+
+  it("uses slug for hyphenated dashboard slugs", () => {
+    const u = new URL("https://api.vercel.com/v6/deployments");
+    applyTeamScope(u, "zhbar10s-projects");
+    expect(u.searchParams.get("slug")).toBe("zhbar10s-projects");
+    expect(u.searchParams.get("teamId")).toBeNull();
+  });
+});
+
+describe("isVercelAuthError", () => {
+  it("detects 401/403 status and Not authorized wording", () => {
+    expect(
+      isVercelAuthError(Object.assign(new Error("x"), { status: 403 })),
+    ).toBe(true);
+    expect(
+      isVercelAuthError(
+        new Error("Vercel 403 /v6/deployments: Not authorized"),
+      ),
+    ).toBe(true);
+    expect(isVercelAuthError(new Error("TypeScript build failed"))).toBe(false);
   });
 });
 
