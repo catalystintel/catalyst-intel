@@ -376,6 +376,40 @@ export async function getTelegramBotProfile(): Promise<
   };
 }
 
+/**
+ * Quiet chat probe — proves the bot can still see this chat (not blocked /
+ * deleted) without sending a visible message.
+ */
+export async function getTelegramChat(
+  chatId: string,
+): Promise<TelegramSendResult & { chatType?: string; title?: string }> {
+  const id = chatId.trim();
+  if (!id) {
+    return { ok: false, detail: "Missing Telegram chat id." };
+  }
+  const result = await callTelegramApi("getChat", { chat_id: id });
+  if (!result.ok) return { ok: false, detail: result.detail };
+  const chat =
+    result.result && typeof result.result === "object"
+      ? (result.result as {
+          type?: string;
+          title?: string;
+          first_name?: string;
+        })
+      : {};
+  return {
+    ok: true,
+    detail: "getChat ok",
+    chatType: typeof chat.type === "string" ? chat.type : undefined,
+    title:
+      typeof chat.title === "string"
+        ? chat.title
+        : typeof chat.first_name === "string"
+          ? chat.first_name
+          : undefined,
+  };
+}
+
 export async function setTelegramWebhook(options: {
   url: string;
   secretToken: string;

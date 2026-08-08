@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState, type ComponentType } from "react";
+import { useCallback, useEffect, useState, type ComponentType } from "react";
 import {
   ArrowLeft,
   ArrowRight,
@@ -52,6 +52,11 @@ interface TelegramLinked {
   muted: boolean;
   mutedUntil: string | null;
 }
+
+type TelegramHealthStatus =
+  "checking" | "bot_not_configured" | "not_linked" | "live" | "unreachable";
+
+const TELEGRAM_HEALTH_POLL_MS = 45_000;
 
 const STEPS: { id: StepId; label: string; blurb: string }[] = [
   { id: 1, label: "Methods", blurb: "How you get pinged" },
@@ -114,9 +119,72 @@ export function AlertRulesPanel() {
   const [telegramLinked, setTelegramLinked] = useState<TelegramLinked | null>(
     null,
   );
+  const [telegramHealth, setTelegramHealth] =
+    useState<TelegramHealthStatus>("checking");
+  const [telegramHealthDetail, setTelegramHealthDetail] = useState<
+    string | null
+  >(null);
   const [linkingTelegram, setLinkingTelegram] = useState(false);
 
   const webPush = useWebPush(pushPublicKey);
+
+  const refreshTelegramHealth = useCallback(async () => {
+    try {
+      const res = await fetch("/api/telegram/link", {
+        credentials: "same-origin",
+        cache: "no-store",
+      });
+      const data = (await res.json().catch(() => ({}))) as {
+        error?: string;
+        status?: TelegramHealthStatus;
+        detail?: string | null;
+        linked?: (TelegramLinked & { linkedAt?: string }) | null;
+        configured?: boolean;
+      };
+      if (!res.ok) {
+        setTelegramHealth((prev) =>
+          prev === "live" || prev === "unreachable" || prev === "checking"
+            ? "unreachable"
+            : "not_linked",
+        );
+        setTelegramHealthDetail(data.error ?? "Could not check Telegram.");
+        return;
+      }
+      if (typeof data.configured === "boolean") {
+        setTelegramConfigured(data.configured);
+      }
+      if (data.linked?.chatId) {
+        setTelegramLinked({
+          chatId: data.linked.chatId,
+          username: data.linked.username ?? null,
+          muted: Boolean(data.linked.muted),
+          mutedUntil: data.linked.mutedUntil ?? null,
+        });
+      } else {
+        setTelegramLinked(null);
+      }
+      const status =
+        data.status === "live" ||
+        data.status === "unreachable" ||
+        data.status === "not_linked" ||
+        data.status === "bot_not_configured"
+          ? data.status
+          : data.linked?.chatId
+            ? "live"
+            : "not_linked";
+      setTelegramHealth(status);
+      setTelegramHealthDetail(
+        typeof data.detail === "string" ? data.detail : null,
+      );
+    } catch {
+      setTelegramHealth((prev) =>
+        prev === "not_linked" || prev === "bot_not_configured"
+          ? prev
+          : "unreachable",
+      );
+      setTelegramHealthDetail("Could not check Telegram connection.");
+    }
+  }, []);
 
   async function refreshNotifications() {
     const [rulesRes, watchlistsRes] = await Promise.all([
@@ -198,6 +266,7 @@ export function AlertRulesPanel() {
     void (async () => {
       try {
         await refreshNotifications();
+        if (!cancelled) await refreshTelegramHealth();
       } catch (err) {
         if (!cancelled) {
           toast.error(
@@ -211,7 +280,29 @@ export function AlertRulesPanel() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [refreshTelegramHealth]);
+
+  // Quiet health poll while Telegram is configured and the tab is visible.
+  useEffect(() => {
+    if (!telegramConfigured) return;
+
+    let timer: number | null = null;
+
+    const tick = () => {
+      if (document.hidden) return;
+      void refreshTelegramHealth();
+    };
+
+    timer = window.setInterval(tick, TELEGRAM_HEALTH_POLL_MS);
+    const onVisibility = () => {
+      if (!document.hidden) tick();
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      if (timer !== null) window.clearInterval(timer);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
+  }, [telegramConfigured, refreshTelegramHealth]);
 
   function methodAvailable(id: NotificationChannel): boolean {
     if (id === "push") return pushAvailable;
@@ -222,7 +313,12 @@ export function AlertRulesPanel() {
   function methodReady(id: NotificationChannel): boolean {
     if (!methodAvailable(id)) return false;
     if (id === "push") return webPush.status === "subscribed";
-    if (id === "telegram") return Boolean(telegramLinked);
+    if (id === "telegram") {
+      if (!telegramLinked) return false;
+      // Keep Ready while the first probe runs; only fail closed on unreachable.
+      if (telegramHealth === "unreachable") return false;
+      return true;
+    }
     return true;
   }
 
@@ -272,14 +368,17 @@ export function AlertRulesPanel() {
       for (let i = 0; i < 8; i++) {
         await new Promise((r) => setTimeout(r, 2000));
         await refreshNotifications();
-        const check = await fetch("/api/alert-rules", {
+        await refreshTelegramHealth();
+        const check = await fetch("/api/telegram/link", {
           credentials: "same-origin",
           cache: "no-store",
         });
-        if (check.ok) {
-          const body = await check.json();
-          if (body.telegramLinked?.chatId) break;
-        }
+        if (!check.ok) continue;
+        const body = (await check.json()) as {
+          linked?: { chatId?: string } | null;
+          status?: string;
+        };
+        if (body.linked?.chatId) break;
       }
     } catch (err) {
       toast.error(toUserFacingMessage(err, "Could not connect Telegram."));
@@ -297,6 +396,8 @@ export function AlertRulesPanel() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Could not unlink.");
       setTelegramLinked(null);
+      setTelegramHealth("not_linked");
+      setTelegramHealthDetail(null);
       setChannels((prev) => ({ ...prev, telegram: false }));
       toast.success("Telegram disconnected.");
       await refreshNotifications();
@@ -459,9 +560,12 @@ export function AlertRulesPanel() {
             telegramBotHandle={telegramBotHandle}
             telegramBotName={telegramBotName}
             telegramLinked={telegramLinked}
+            telegramHealth={telegramHealth}
+            telegramHealthDetail={telegramHealthDetail}
             linkingTelegram={linkingTelegram}
             onConnectTelegram={() => void connectTelegram()}
             onDisconnectTelegram={() => void disconnectTelegram()}
+            onRecheckTelegram={() => void refreshTelegramHealth()}
             emailConfigured={emailConfigured}
             sessionEmail={sessionEmail}
           />
@@ -614,9 +718,12 @@ function MethodsStep(props: {
   telegramBotHandle: string | null;
   telegramBotName: string | null;
   telegramLinked: TelegramLinked | null;
+  telegramHealth: TelegramHealthStatus;
+  telegramHealthDetail: string | null;
   linkingTelegram: boolean;
   onConnectTelegram: () => void;
   onDisconnectTelegram: () => void;
+  onRecheckTelegram: () => void;
   emailConfigured: boolean;
   sessionEmail: string;
 }) {
@@ -637,6 +744,8 @@ function MethodsStep(props: {
           const on = props.channels[id];
           const available = props.methodAvailable(id);
           const ready = props.methodReady(id);
+          const telegramUnreachable =
+            id === "telegram" && props.telegramHealth === "unreachable";
           // Email needs no recipient UI when ready — only show setup errors.
           const showSetup =
             available && (id === "email" ? !ready : on || !ready);
@@ -673,10 +782,17 @@ function MethodsStep(props: {
                       <span className="font-mono text-[0.6rem] tracking-wide text-[var(--desk-text-dim)] uppercase">
                         Unavailable
                       </span>
+                    ) : telegramUnreachable ? (
+                      <span className="inline-flex items-center gap-1 font-mono text-[0.6rem] tracking-wide text-destructive uppercase">
+                        <CircleAlert className="size-2.5" aria-hidden />
+                        Unreachable
+                      </span>
                     ) : ready ? (
                       <span className="inline-flex items-center gap-1 font-mono text-[0.6rem] tracking-wide text-[var(--desk-live-status)] uppercase">
                         <CheckCircle2 className="size-2.5" aria-hidden />
-                        Ready
+                        {id === "telegram" && props.telegramHealth === "live"
+                          ? "Live"
+                          : "Ready"}
                       </span>
                     ) : (
                       <span className="inline-flex items-center gap-1 font-mono text-[0.6rem] tracking-wide text-[var(--desk-live)] uppercase">
@@ -730,9 +846,12 @@ function MethodsStep(props: {
                       botHandle={props.telegramBotHandle}
                       botName={props.telegramBotName}
                       linked={props.telegramLinked}
+                      health={props.telegramHealth}
+                      healthDetail={props.telegramHealthDetail}
                       linking={props.linkingTelegram}
                       onConnect={props.onConnectTelegram}
                       onDisconnect={props.onDisconnectTelegram}
+                      onRecheck={props.onRecheckTelegram}
                     />
                   ) : null}
                   {id === "email" ? (
@@ -806,17 +925,23 @@ function TelegramSetup({
   botHandle,
   botName,
   linked,
+  health,
+  healthDetail,
   linking,
   onConnect,
   onDisconnect,
+  onRecheck,
 }: {
   configured: boolean;
   botHandle: string | null;
   botName: string | null;
   linked: TelegramLinked | null;
+  health: TelegramHealthStatus;
+  healthDetail: string | null;
   linking: boolean;
   onConnect: () => void;
   onDisconnect: () => void;
+  onRecheck: () => void;
 }) {
   if (!configured) {
     return (
@@ -851,17 +976,47 @@ function TelegramSetup({
             browser&apos;s Start Bot button does nothing, use Open in Web.
           </p>
         )}
+        {linked && health === "checking" ? (
+          <p className="mt-1.5 text-xs text-[var(--desk-text-dim)]">
+            Checking connection…
+          </p>
+        ) : null}
+        {linked && health === "live" ? (
+          <p className="mt-1.5 inline-flex items-center gap-1.5 text-xs text-[var(--desk-live-status)]">
+            <CheckCircle2 className="size-3.5" aria-hidden />
+            Connection live — bot can reach this chat
+          </p>
+        ) : null}
+        {linked && health === "unreachable" ? (
+          <p className="mt-1.5 text-xs text-destructive">
+            Can&apos;t reach this chat
+            {healthDetail
+              ? ` — ${toUserFacingMessage(healthDetail, "connection failed")}`
+              : ""}
+            . Open the bot and tap Start, or Disconnect &amp; reconnect.
+          </p>
+        ) : null}
       </div>
       <div className="flex flex-wrap gap-2">
         {linked ? (
-          <Button
-            type="button"
-            variant="outline"
-            onClick={onDisconnect}
-            className="btn-press gap-2 border-[var(--desk-border-strong)]"
-          >
-            Disconnect
-          </Button>
+          <>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onRecheck}
+              className="btn-press gap-2 border-[var(--desk-border-strong)]"
+            >
+              Recheck
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onDisconnect}
+              className="btn-press gap-2 border-[var(--desk-border-strong)]"
+            >
+              Disconnect
+            </Button>
+          </>
         ) : (
           <Button
             type="button"
