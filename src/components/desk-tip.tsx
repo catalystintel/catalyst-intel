@@ -13,15 +13,28 @@ import { createPortal } from "react-dom";
 
 import { cn } from "@/lib/utils";
 
-type TipSide = "top" | "bottom";
+type TipSide = "top" | "bottom" | "left" | "right";
 
-const GAP_PX = 6;
+const GAP_PX = 8;
 const PAD_PX = 10;
 
+function tipTransform(placed: TipSide): string {
+  switch (placed) {
+    case "top":
+      return "translate(-50%, -100%)";
+    case "bottom":
+      return "translate(-50%, 0)";
+    case "left":
+      return "translate(-100%, -50%)";
+    case "right":
+      return "translate(0, -50%)";
+  }
+}
+
 /**
- * Fast desk-styled hover tip (replaces delayed native `title=` tooltips).
- * Portals above/below the anchor so feed rows and sticky headers don't clip it.
- * Clamps horizontally so edge controls (e.g. Quiet) don't cut the tip off-screen.
+ * Instant desk-styled hover tip (replaces delayed native `title=` tooltips).
+ * Portals so feed rows / sticky headers / the sidebar don't clip it.
+ * Clamps to the viewport so edge controls stay fully readable.
  */
 export function DeskTip({
   content,
@@ -55,8 +68,8 @@ export function DeskTip({
     if (!el) return;
     const r = el.getBoundingClientRect();
     const maxWidth = Math.min(320, window.innerWidth - PAD_PX * 2);
+    const tipClearance = 40;
 
-    const tipClearance = 36;
     let placed: TipSide = side;
     if (placed === "top" && r.top - tipClearance < PAD_PX) {
       placed = "bottom";
@@ -65,22 +78,64 @@ export function DeskTip({
       r.bottom + tipClearance > window.innerHeight - PAD_PX
     ) {
       placed = "top";
+    } else if (
+      placed === "right" &&
+      r.right + tipClearance > window.innerWidth - PAD_PX
+    ) {
+      placed = "left";
+    } else if (placed === "left" && r.left - tipClearance < PAD_PX) {
+      placed = "right";
     }
 
-    // Prefer centering under the anchor; useLayoutEffect will clamp once
-    // the tip width is known so right-edge buttons stay fully readable.
-    const left = r.left + r.width / 2;
-    const top = placed === "top" ? r.top - GAP_PX : r.bottom + GAP_PX;
+    const horizontal = placed === "left" || placed === "right";
+    const left = horizontal
+      ? placed === "right"
+        ? r.right + GAP_PX
+        : r.left - GAP_PX
+      : r.left + r.width / 2;
+    const top = horizontal
+      ? r.top + r.height / 2
+      : placed === "top"
+        ? r.top - GAP_PX
+        : r.bottom + GAP_PX;
+
     setCoords({ top, left, placed, maxWidth });
   }, [content, disabled, side]);
 
   useLayoutEffect(() => {
     if (!coords || !tipRef.current) return;
-    const tipWidth = tipRef.current.getBoundingClientRect().width;
-    const half = tipWidth / 2;
-    const minLeft = PAD_PX + half;
-    const maxLeft = window.innerWidth - PAD_PX - half;
-    const clampedLeft = Math.min(Math.max(coords.left, minLeft), maxLeft);
+    const tipRect = tipRef.current.getBoundingClientRect();
+    const horizontal = coords.placed === "left" || coords.placed === "right";
+
+    if (horizontal) {
+      const half = tipRect.height / 2;
+      const clampedTop = Math.min(
+        Math.max(coords.top, PAD_PX + half),
+        window.innerHeight - PAD_PX - half,
+      );
+      let nextLeft = coords.left;
+      // Visual left/right after transform — nudge the anchor point if clipped.
+      if (tipRect.left < PAD_PX) {
+        nextLeft += PAD_PX - tipRect.left;
+      } else if (tipRect.right > window.innerWidth - PAD_PX) {
+        nextLeft -= tipRect.right - (window.innerWidth - PAD_PX);
+      }
+      if (
+        Math.abs(clampedTop - coords.top) > 0.5 ||
+        Math.abs(nextLeft - coords.left) > 0.5
+      ) {
+        setCoords((prev) =>
+          prev ? { ...prev, top: clampedTop, left: nextLeft } : prev,
+        );
+      }
+      return;
+    }
+
+    const half = tipRect.width / 2;
+    const clampedLeft = Math.min(
+      Math.max(coords.left, PAD_PX + half),
+      window.innerWidth - PAD_PX - half,
+    );
     if (Math.abs(clampedLeft - coords.left) > 0.5) {
       setCoords((prev) => (prev ? { ...prev, left: clampedLeft } : prev));
     }
@@ -118,10 +173,7 @@ export function DeskTip({
                 top: coords.top,
                 left: coords.left,
                 maxWidth: coords.maxWidth,
-                transform:
-                  coords.placed === "top"
-                    ? "translate(-50%, -100%)"
-                    : "translate(-50%, 0)",
+                transform: tipTransform(coords.placed),
               }}
               className={cn(
                 "pointer-events-none fixed z-[90] w-max",

@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useSyncExternalStore, type ReactNode } from "react";
+import { useRef, useState, type ReactNode } from "react";
 import { usePathname } from "next/navigation";
 import { Menu, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 
@@ -12,19 +12,6 @@ import { HeaderThemeToggle } from "@/components/theme-toggle";
 import { Toaster } from "@/components/ui/toaster";
 import { useAutoFocusScrollRegion } from "@/hooks/use-auto-focus-scroll-region";
 import { navKeyFromPathname, type NavKey } from "@/lib/nav/nav-items";
-
-/** Below 2xl, prefer icon-rail so the tape keeps horizontal room on laptops. */
-const LAPTOP_SIDEBAR_MQ = "(max-width: 1535px)";
-
-function subscribeLaptopSidebar(onChange: () => void) {
-  const mq = window.matchMedia(LAPTOP_SIDEBAR_MQ);
-  mq.addEventListener("change", onChange);
-  return () => mq.removeEventListener("change", onChange);
-}
-
-function preferCollapsedSidebar() {
-  return window.matchMedia(LAPTOP_SIDEBAR_MQ).matches;
-}
 
 interface AppShellUser {
   email: string;
@@ -43,6 +30,8 @@ interface AppShellProps {
 /**
  * App chrome for authenticated pages: collapsible left sidebar, LIVE top bar,
  * account menu, and a scrollable content region.
+ *
+ * Sidebar starts expanded; the user can collapse it to an icon rail.
  */
 export function AppShell({
   user,
@@ -51,16 +40,7 @@ export function AppShell({
 }: AppShellProps) {
   const pathname = usePathname();
   const active = activeProp ?? navKeyFromPathname(pathname);
-  const preferCollapsed = useSyncExternalStore(
-    subscribeLaptopSidebar,
-    preferCollapsedSidebar,
-    () => false,
-  );
-  /** `null` = follow viewport preference; boolean = user override. */
-  const [collapsedOverride, setCollapsedOverride] = useState<boolean | null>(
-    null,
-  );
-  const collapsed = collapsedOverride ?? preferCollapsed;
+  const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const mainRef = useRef<HTMLElement | null>(null);
   useAutoFocusScrollRegion(mainRef);
@@ -74,9 +54,7 @@ export function AppShell({
             active={active}
             isAdmin={user.isAdmin}
             collapsed={collapsed}
-            onCollapseToggle={() =>
-              setCollapsedOverride((prev) => !(prev ?? preferCollapsed))
-            }
+            onCollapseToggle={() => setCollapsed((prev) => !prev)}
           />
         </div>
       </aside>
@@ -115,9 +93,7 @@ export function AppShell({
             <button
               type="button"
               aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-              onClick={() =>
-                setCollapsedOverride((prev) => !(prev ?? preferCollapsed))
-              }
+              onClick={() => setCollapsed((prev) => !prev)}
               className="hidden rounded-lg p-1.5 text-[var(--desk-text-muted)] transition-colors hover:bg-[var(--desk-overlay-strong)] hover:text-[var(--desk-text)] md:block"
             >
               {collapsed ? (
