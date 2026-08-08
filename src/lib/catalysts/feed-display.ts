@@ -337,24 +337,29 @@ function prefersStoredGroundRuleTitle(c: FeedCatalyst, title: string): boolean {
   }
   if (
     /^Earnings Report\s+Q/i.test(title) ||
-    /(?::|\s-)\s*Earnings Report\s+Q/i.test(title)
+    /(?::|\s-)\s*Earnings Report\s+Q/i.test(title) ||
+    /\bQ[1-4\?]\s+earnings report$/i.test(title)
   ) {
     return true;
   }
   if (
     /^Form 4 Insider\b/i.test(title) ||
-    /(?::|\s-)\s*Form 4 Insider\b/i.test(title)
+    /(?::|\s-)\s*Form 4 Insider\b/i.test(title) ||
+    /\binsider (?:buy|sale) filed$/i.test(title) ||
+    /\bForm 4 (?:buy and sell|insider filing)$/i.test(title)
   ) {
     return true;
   }
   if (
     /^Shelf Registration \(S-3\)\s*-/i.test(title) ||
-    /(?::|\s-)\s*Shelf Registration \(S-3\)$/i.test(title)
+    /(?::|\s-)\s*Shelf Registration \(S-3\)$/i.test(title) ||
+    /\bfiles shelf registration \(S-3\)$/i.test(title)
   ) {
     return true;
   }
   // Legacy and narrative 424B / 425 titles.
   if (/New Stock Offering Filed/i.test(title)) return true;
+  if (/\bfiles stock offering \(dilution watch\)$/i.test(title)) return true;
   if (/^Prospectus \/ Offering \(424B\)\s*-/i.test(title)) return true;
   if (/—\s*Structured note/i.test(title)) return true;
   if (/Structured note pricing supplement/i.test(title)) return true;
@@ -364,7 +369,8 @@ function prefersStoredGroundRuleTitle(c: FeedCatalyst, title: string): boolean {
   }
   if (
     /^Schedule 13[DG]\s*-/i.test(title) ||
-    /(?::|\s-)\s*Schedule 13[DG]$/i.test(title)
+    /(?::|\s-)\s*Schedule 13[DG]$/i.test(title) ||
+    /\breports (?:active|passive) stake \(13[DG]\)$/i.test(title)
   ) {
     return true;
   }
@@ -375,19 +381,22 @@ function prefersStoredGroundRuleTitle(c: FeedCatalyst, title: string): boolean {
   if (looksLikeOfficerDirectorChangeTitle(title)) return true;
   if (
     /^Clinical Trial\s*-/i.test(title) ||
-    /(?::|\s-)\s*Clinical Trial$/i.test(title)
+    /(?::|\s-)\s*Clinical Trial$/i.test(title) ||
+    /\bclinical trial update$/i.test(title)
   ) {
     return true;
   }
   if (
     /^Price Target\s*-/i.test(title) ||
-    /(?::|\s-)\s*Price Target$/i.test(title)
+    /(?::|\s-)\s*Price Target$/i.test(title) ||
+    /\bprice target update$/i.test(title)
   ) {
     return true;
   }
   if (
     /^Analyst Rating\s*-/i.test(title) ||
-    /(?::|\s-)\s*Analyst Rating$/i.test(title)
+    /(?::|\s-)\s*Analyst Rating$/i.test(title) ||
+    /\bStreet rating change$/i.test(title)
   ) {
     return true;
   }
@@ -443,11 +452,11 @@ function canonicalizeGroundRuleTitle(c: FeedCatalyst, title: string): string {
 
   // Earnings / FDA / Form 4 / shelf / ownership / clinical / analyst.
   const earningsQ = title.match(
-    /(?:^Earnings Report\s+(Q\d|\?)\s*-\s*(.+)$)|(?:^(.+?)(?::|\s-)\s*Earnings Report\s+(Q\d|\?)$)/i,
+    /(?:^Earnings Report\s+(Q\d|\?)\s*-\s*(.+)$)|(?:^(.+?)(?::|\s-)\s*Earnings Report\s+(Q\d|\?)$)|(?:^(.+?)\s+(Q\d|\?)\s+earnings report$)/i,
   );
   if (earningsQ) {
-    const q = earningsQ[1] ?? earningsQ[4];
-    const company = earningsQ[2] ?? earningsQ[3] ?? subject;
+    const q = earningsQ[1] ?? earningsQ[4] ?? earningsQ[6];
+    const company = earningsQ[2] ?? earningsQ[3] ?? earningsQ[5] ?? subject;
     return formatEarningsReportTitle(q, company);
   }
   if (
@@ -462,51 +471,61 @@ function canonicalizeGroundRuleTitle(c: FeedCatalyst, title: string): string {
       subject;
     return formatFdaApprovalTitle(company);
   }
-  if (/Form 4 Insider\b/i.test(title)) {
-    if (/Buy\s*&\s*Sell/i.test(title)) {
+  if (
+    /Form 4 Insider\b/i.test(title) ||
+    /\binsider (?:buy|sale) filed$/i.test(title) ||
+    /\bForm 4 (?:buy and sell|insider filing)$/i.test(title)
+  ) {
+    if (/Buy\s*&\s*Sell|buy and sell/i.test(title)) {
       return formatForm4InsiderTitle("mixed", subject);
     }
-    if (/\bBuy\b/i.test(title) && !/\bSell\b/i.test(title)) {
+    if (/\bbuy\b/i.test(title) && !/\b(sell|sale)\b/i.test(title)) {
       return formatForm4InsiderTitle("buy", subject);
     }
-    if (/\bSell\b/i.test(title) && !/\bBuy\b/i.test(title)) {
+    if (/\b(sell|sale)\b/i.test(title) && !/\bbuy\b/i.test(title)) {
       return formatForm4InsiderTitle("sell", subject);
     }
     return formatForm4InsiderTitle("transaction", subject);
   }
   if (
     /^Shelf Registration \(S-3\)\s*-/i.test(title) ||
-    /(?::|\s-)\s*Shelf Registration \(S-3\)$/i.test(title)
+    /(?::|\s-)\s*Shelf Registration \(S-3\)$/i.test(title) ||
+    /\bfiles shelf registration \(S-3\)$/i.test(title)
   ) {
     return formatShelfRegistrationTitle(subject);
   }
   if (
     /^Schedule 13D\s*-/i.test(title) ||
-    /(?::|\s-)\s*Schedule 13D$/i.test(title)
+    /(?::|\s-)\s*Schedule 13D$/i.test(title) ||
+    /\breports active stake \(13D\)$/i.test(title)
   ) {
     return formatSchedule13DTitle(subject);
   }
   if (
     /^Schedule 13G\s*-/i.test(title) ||
-    /(?::|\s-)\s*Schedule 13G$/i.test(title)
+    /(?::|\s-)\s*Schedule 13G$/i.test(title) ||
+    /\breports passive stake \(13G\)$/i.test(title)
   ) {
     return formatSchedule13GTitle(subject);
   }
   if (
     /^Clinical Trial\s*-/i.test(title) ||
-    /(?::|\s-)\s*Clinical Trial$/i.test(title)
+    /(?::|\s-)\s*Clinical Trial$/i.test(title) ||
+    /\bclinical trial update$/i.test(title)
   ) {
     return formatClinicalTrialTitle(subject);
   }
   if (
     /^Price Target\s*-/i.test(title) ||
-    /(?::|\s-)\s*Price Target$/i.test(title)
+    /(?::|\s-)\s*Price Target$/i.test(title) ||
+    /\bprice target update$/i.test(title)
   ) {
     return formatPriceTargetTitle(subject);
   }
   if (
     /^Analyst Rating\s*-/i.test(title) ||
-    /(?::|\s-)\s*Analyst Rating$/i.test(title)
+    /(?::|\s-)\s*Analyst Rating$/i.test(title) ||
+    /\bStreet rating change$/i.test(title)
   ) {
     return formatAnalystRatingTitle(subject);
   }
@@ -514,7 +533,8 @@ function canonicalizeGroundRuleTitle(c: FeedCatalyst, title: string): string {
   // Narrative / legacy 424B + 425 → current ground-rule titles.
   if (
     /New Stock Offering Filed/i.test(title) ||
-    /^Prospectus \/ Offering \(424B\)\s*-/i.test(title)
+    /^Prospectus \/ Offering \(424B\)\s*-/i.test(title) ||
+    /\bfiles stock offering \(dilution watch\)$/i.test(title)
   ) {
     return formatProspectusOfferingTitle(subject);
   }
@@ -621,20 +641,23 @@ function earningsReportDisplayTitle(c: FeedCatalyst): string | null {
     !isGenericEventHeadline(headline) &&
     !looksLikeResultsOfOperationsTitle(headline) &&
     !/^Earnings Report\s+Q/i.test(headline) &&
-    !/(?::|\s-)\s*Earnings Report\s+Q/i.test(headline)
+    !/(?::|\s-)\s*Earnings Report\s+Q/i.test(headline) &&
+    !/\bQ[1-4\?]\s+earnings report$/i.test(headline)
   ) {
     return null;
   }
 
   if (
     /^Earnings Report\s+Q/i.test(title) ||
-    /(?::|\s-)\s*Earnings Report\s+Q/i.test(title)
+    /(?::|\s-)\s*Earnings Report\s+Q/i.test(title) ||
+    /\bQ[1-4\?]\s+earnings report$/i.test(title)
   ) {
     return canonicalizeGroundRuleTitle(c, title);
   }
   if (
     /^Earnings Report\s+Q/i.test(headline) ||
-    /(?::|\s-)\s*Earnings Report\s+Q/i.test(headline)
+    /(?::|\s-)\s*Earnings Report\s+Q/i.test(headline) ||
+    /\bQ[1-4\?]\s+earnings report$/i.test(headline)
   ) {
     return canonicalizeGroundRuleTitle(c, headline);
   }
@@ -824,13 +847,36 @@ function secOfferingOwnershipDisplayTitle(c: FeedCatalyst): string | null {
   return null;
 }
 
-/** Clinical rows → `{Company} - Clinical Trial` (status stays in Event chip). */
+/** Clinical rows → subject voice; keep specific study headlines/titles when present. */
 function clinicalDisplayTitle(c: FeedCatalyst): string | null {
   const isClinical =
     c.sourceProvider === "clinicaltrials" ||
     c.eventCategory === "clinical" ||
     /^clinical\s*trial/i.test(c.type ?? "");
   if (!isClinical) return null;
+
+  const headline = normalizeDisplayText(c.headline ?? "");
+  if (
+    headline &&
+    !looksLikeSourceLabel(headline) &&
+    !isGenericEventHeadline(headline) &&
+    !CLINICAL_STATUS_HEADLINES.has(headline.toLowerCase()) &&
+    !/\bclinical trial update$/i.test(headline)
+  ) {
+    return null;
+  }
+
+  const title = normalizeDisplayText(c.title ?? "");
+  if (
+    title &&
+    !looksLikeSourceLabel(title) &&
+    !isGenericEventHeadline(title) &&
+    !CLINICAL_STATUS_HEADLINES.has(title.toLowerCase()) &&
+    !/\bclinical trial(?: update)?$/i.test(title) &&
+    !/(?:Clinical Trial).*filing$/i.test(title)
+  ) {
+    return stripSourceNames(title) || title;
+  }
 
   return formatClinicalTrialTitle(tapeSubject(c) ?? c.companyName ?? c.symbol);
 }

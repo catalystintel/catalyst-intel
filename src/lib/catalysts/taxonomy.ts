@@ -72,6 +72,46 @@ export const VALID_EVENT_CATEGORIES = new Set<string>(
   Object.keys(CATEGORY_LABELS),
 );
 
+/**
+ * High-signal catalyst subjects — always welcome on the desk tape.
+ * Thin `news` / `disclosure` / `other` rows need extracted facts to stay.
+ */
+export const GOLD_SUBJECTS: readonly EventCategoryKey[] = [
+  "distress",
+  "trading_halt",
+  "cyber",
+  "earnings",
+  "regulatory",
+  "deals",
+  "macro",
+  "clinical",
+  "restructuring",
+  "capital",
+] as const;
+
+/**
+ * Default Live-feed category chips: gold subjects plus common desk secondaries.
+ * Excludes thin `news` / `disclosure` / `other` / routine `governance`.
+ */
+export const DEFAULT_FEED_SUBJECTS: readonly EventCategoryKey[] = [
+  ...GOLD_SUBJECTS,
+  "analyst",
+  "insider",
+  "management",
+] as const;
+
+export const GOLD_SUBJECT_SET = new Set<EventCategoryKey>(GOLD_SUBJECTS);
+
 export function isEventCategoryKey(value: string): value is EventCategoryKey {
   return VALID_EVENT_CATEGORIES.has(value);
+}
+
+/** Order-insensitive equality for category chip lists. */
+export function sameCategorySet(
+  a: readonly string[],
+  b: readonly string[],
+): boolean {
+  if (a.length !== b.length) return false;
+  const set = new Set(a);
+  return b.every((c) => set.has(c));
 }

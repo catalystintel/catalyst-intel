@@ -15,13 +15,43 @@ describe("evaluateCatalystQuality", () => {
     ).toBe("drop");
   });
 
-  it("keeps PR-wire press releases even when category is news", () => {
+  it("keeps PR-wire press releases with substantive facts even when category is news", () => {
     expect(
       evaluateCatalystQuality({
         provider: "pr-wire",
         eventCategory: "news",
         subcategory: "pr_wire",
         symbol: "AAPL",
+        headline: "Apple announces $2B share repurchase authorization",
+        summary:
+          "Apple Inc. announced a new $2 billion share repurchase program after the close.",
+      }).decision,
+    ).toBe("keep");
+  });
+
+  it("drops thin PR-wire / news without facts", () => {
+    expect(
+      evaluateCatalystQuality({
+        provider: "pr-wire",
+        eventCategory: "news",
+        subcategory: "pr_wire",
+        symbol: "AAPL",
+      }).decision,
+    ).toBe("drop");
+  });
+
+  it("keeps SEC disclosure with a gold item even when Atom summary is AccNo-thin", () => {
+    // Enrichment fills body later — do not drop pre-enrich gold filings.
+    expect(
+      evaluateCatalystQuality({
+        provider: "sec-edgar",
+        eventCategory: "disclosure",
+        symbol: "ACME",
+        itemCodes: [
+          { code: "1.01", label: "Material agreement", category: "deals" },
+        ],
+        headline: "8-K filing",
+        summary: "Filed: 2026-07-24 AccNo: 0000950103-26-011123 Size: 12 KB",
       }).decision,
     ).toBe("keep");
   });

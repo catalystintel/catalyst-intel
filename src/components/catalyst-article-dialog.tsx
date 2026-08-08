@@ -18,11 +18,11 @@ import type { ArticleBodySource } from "@/lib/catalysts/article-content";
 import type { ArticleDetailCard } from "@/lib/catalysts/article-detail";
 import type { ArticleEnrichment } from "@/lib/catalysts/enrich-article";
 import {
-  deriveTakeaways,
   deriveWhyMoving,
   parseDeltaSincePublish,
 } from "@/lib/catalysts/article-funnel";
 import { titleLine } from "@/lib/catalysts/feed-display";
+import { deriveSubjectTakeaways } from "@/lib/catalysts/subject-article-content";
 import { cn } from "@/lib/utils";
 import { toUserFacingMessage } from "@/lib/errors/user-facing";
 
@@ -201,10 +201,17 @@ export function CatalystArticleDialog({
                 detailCards: ready.article.detailCards ?? [],
                 delta: parseDeltaSincePublish(ready.catalyst.historicalImpact),
               })}
-              takeaways={deriveTakeaways(
-                ready.article.summary,
-                ready.article.body,
-              )}
+              takeaways={deriveSubjectTakeaways({
+                eventCategory: ready.catalyst.eventCategory,
+                summary: ready.article.summary,
+                body: ready.article.body,
+                headline: ready.catalyst.headline,
+                title: ready.catalyst.title,
+                keyFacts: ready.catalyst.keyFacts,
+                companyName: ready.catalyst.companyName,
+                symbol: ready.catalyst.symbol,
+                maxLines: 6,
+              })}
               relatedSymbols={[]}
               thumbUrl={ready.article.thumbUrl ?? null}
               deltaSincePublish={parseDeltaSincePublish(
