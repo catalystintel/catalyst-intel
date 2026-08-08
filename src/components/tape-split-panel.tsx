@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, type ReactNode } from "react";
-import { BookOpen, XIcon } from "lucide-react";
+import { BookOpen, ChevronDown, ChevronUp, XIcon } from "lucide-react";
 
 import { AiAnalysisPanel } from "@/components/ai-analysis-panel";
 import { CategoryBadge } from "@/components/category-badge";
@@ -99,6 +99,10 @@ function MetaCell({
 export function TapeSplitPanel({
   catalyst,
   onClose,
+  onPrev,
+  onNext,
+  canPrev = false,
+  canNext = false,
   onRead,
   onDismiss,
   onAiAnalyzed,
@@ -110,6 +114,12 @@ export function TapeSplitPanel({
 }: {
   catalyst: FeedCatalyst;
   onClose: () => void;
+  /** Move to the previous (newer) tape row without closing the split. */
+  onPrev?: () => void;
+  /** Move to the next (older) tape row without closing the split. */
+  onNext?: () => void;
+  canPrev?: boolean;
+  canNext?: boolean;
   onRead?: () => void;
   onDismiss?: () => void;
   /** Persist AI triage into the Live tape row so reopen stays instant. */
@@ -168,7 +178,29 @@ export function TapeSplitPanel({
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") {
+        onClose();
+        return;
+      }
+      const target = e.target;
+      if (
+        target instanceof HTMLElement &&
+        (target.isContentEditable ||
+          target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.tagName === "SELECT")
+      ) {
+        return;
+      }
+      if (e.key === "ArrowUp" && canPrev) {
+        e.preventDefault();
+        onPrev?.();
+        return;
+      }
+      if (e.key === "ArrowDown" && canNext) {
+        e.preventDefault();
+        onNext?.();
+      }
     };
     document.addEventListener("keydown", onKey);
     const prev = document.body.style.overflow;
@@ -180,7 +212,7 @@ export function TapeSplitPanel({
       document.removeEventListener("keydown", onKey);
       document.body.style.overflow = prev;
     };
-  }, [onClose, mobileOverlay]);
+  }, [onClose, onPrev, onNext, canPrev, canNext, mobileOverlay]);
 
   useEffect(() => {
     if (!symbol) return;
@@ -377,16 +409,42 @@ export function TapeSplitPanel({
             </dl>
           ) : null}
         </div>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon-sm"
-          className="btn-press shrink-0 text-[var(--desk-text-muted)] hover:text-[var(--desk-text)]"
-          onClick={onClose}
-        >
-          <XIcon />
-          <span className="sr-only">Close</span>
-        </Button>
+        <div className="flex shrink-0 items-center gap-0.5">
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            disabled={!canPrev}
+            className="btn-press text-[var(--desk-text-muted)] hover:text-[var(--desk-text)] disabled:opacity-30"
+            onClick={onPrev}
+            aria-keyshortcuts="ArrowUp"
+          >
+            <ChevronUp />
+            <span className="sr-only">Previous catalyst</span>
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            disabled={!canNext}
+            className="btn-press text-[var(--desk-text-muted)] hover:text-[var(--desk-text)] disabled:opacity-30"
+            onClick={onNext}
+            aria-keyshortcuts="ArrowDown"
+          >
+            <ChevronDown />
+            <span className="sr-only">Next catalyst</span>
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            className="btn-press text-[var(--desk-text-muted)] hover:text-[var(--desk-text)]"
+            onClick={onClose}
+          >
+            <XIcon />
+            <span className="sr-only">Close</span>
+          </Button>
+        </div>
       </div>
 
       {chartSlot}
