@@ -5,8 +5,12 @@
 
 /** EDGAR max page size for browse-edgar getcurrent. */
 export const SEC_ATOM_PAGE_SIZE = 100;
-/** Hard cap so one tick cannot burn the RPS budget. 5 × 100 = 500 filings/form. */
-export const SEC_ATOM_MAX_PAGES = 5;
+/**
+ * Hard cap so one tick cannot burn the RPS budget.
+ * 10 × 100 = 1000 filings/form — sized for hourly cron catch-up bursts
+ * (Form 4 spikes); deeper gaps still reconcile via daily-index.
+ */
+export const SEC_ATOM_MAX_PAGES = 10;
 
 export function secFormVendorSourceId(formType: string): string {
   return `sec-edgar:${formType}`;
