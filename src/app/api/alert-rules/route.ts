@@ -6,7 +6,7 @@ import { db } from "@/db/client";
 import { alertRules, type AlertChannel } from "@/db/schema";
 import { getCurrentAppUser } from "@/lib/auth/current-user";
 import {
-  isResendConfigured,
+  isSmtpConfigured,
   isTelegramConfigured,
   isWebPushConfigured,
   webPushPublicKey,
@@ -133,7 +133,7 @@ export async function GET(request: NextRequest) {
     NextResponse.json({
       rules: rows.map(serializeRule),
       settings,
-      emailConfigured: isResendConfigured(),
+      emailConfigured: isSmtpConfigured(),
       sessionEmail: user.email,
       pushAvailable: isWebPushConfigured(),
       pushPublicKey: webPushPublicKey(),

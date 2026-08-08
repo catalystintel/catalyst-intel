@@ -12,7 +12,7 @@ import {
   type AlertChannel,
 } from "@/db/schema";
 import { RATE_LIMITS } from "@/lib/http/rate-limit";
-import { isResendConfigured } from "@/lib/email/resend";
+import { isSmtpConfigured } from "@/lib/email/smtp";
 import { isTelegramConfigured } from "@/lib/telegram/bot";
 import { isWebPushConfigured } from "@/lib/push/web-push";
 import { isOpenRouterConfigured } from "@/lib/jobs/llm-provider";
@@ -111,10 +111,10 @@ export async function getUsageStats(): Promise<UsageStats> {
     vendorsRateLimited: Number(rateLimitedRow?.value ?? 0),
     softLimits: {
       emailDaily,
-      note: "Email soft cap defaults to 100/day (typical Resend free-tier order of magnitude). Override with EMAIL_DAILY_SOFT_LIMIT.",
+      note: "Email soft cap defaults to 100/day (Gmail SMTP personal accounts are ~500/day). Override with EMAIL_DAILY_SOFT_LIMIT.",
     },
     configured: {
-      email: isResendConfigured(),
+      email: isSmtpConfigured(),
       telegram: isTelegramConfigured(),
       push: isWebPushConfigured(),
       openRouter: isOpenRouterConfigured(),
