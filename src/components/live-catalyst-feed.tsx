@@ -14,6 +14,7 @@ import { createPortal } from "react-dom";
 import {
   ArrowUp,
   BookOpen,
+  CalendarDays,
   ChevronDown,
   ListFilter,
   Loader2,
@@ -109,9 +110,9 @@ type Presence = "active" | "blurred" | "hidden";
  * Time = event occurrence in the viewer's local timezone.
  *
  * Time is two lines (`3:58 PM` / `Jul 29, 2026`) so the stamp stays inside
- * its track; zone stays on the hover title. Actions track is wide enough for
- * Details + Dismiss + Watch and is clipped (`overflow-hidden` + `max-w-full`)
- * so buttons cannot paint over Time.
+ * its track; zone stays on the hover title. Actions track fits Details +
+ * Dismiss + Watch; if space is tight, secondary actions clip first so the
+ * primary Details label never reads as “ETAILS”.
  * Desktop Action buttons stay hover/focus/selected-only so the tape stays
  * quiet until the row is engaged.
  */
@@ -119,7 +120,7 @@ type Presence = "active" | "blurred" | "hidden";
 // Tracks are sized for laptop (~1280–1512) without a right rail; avoid large
 // minmax floors that force horizontal overflow when the docked split is open.
 const FEED_GRID =
-  "grid-cols-[4.5rem_minmax(0,1fr)] sm:grid-cols-[5rem_minmax(0,1fr)_6.5rem] lg:grid-cols-[5rem_minmax(0,1fr)_6.5rem_12.5rem]";
+  "grid-cols-[4.5rem_minmax(0,1fr)] sm:grid-cols-[5rem_minmax(0,1fr)_6.5rem] lg:grid-cols-[5rem_minmax(0,1fr)_6.5rem_15rem]";
 /** Denser tape columns while the split panel steals horizontal space. */
 const FEED_GRID_SPLIT =
   "grid-cols-[4.5rem_minmax(0,1fr)] sm:grid-cols-[4.5rem_minmax(0,1fr)] xl:grid-cols-[4.5rem_minmax(0,1fr)_5.75rem]";
@@ -164,6 +165,8 @@ export function LiveCatalystFeed({
   initialWatchlistCriteria,
   initialSelectedId,
   onFocusSymbol,
+  calendarRailHidden = false,
+  onShowCalendarRail,
 }: {
   initialCatalysts: FeedCatalyst[];
   isAdmin: boolean;
@@ -181,6 +184,12 @@ export function LiveCatalystFeed({
    * whichever tape row you're triaging. Optional; no-op when omitted.
    */
   onFocusSymbol?: (symbol: string) => void;
+  /**
+   * When the desk Economic Calendar rail is collapsed, show a header control
+   * so it can be restored without hunting for the slim edge strip.
+   */
+  calendarRailHidden?: boolean;
+  onShowCalendarRail?: () => void;
 }) {
   const query = useLiveFeedQuery(initialCatalysts, {
     symbolQuery: initialSymbolFilter?.trim() ?? "",
@@ -799,6 +808,18 @@ export function LiveCatalystFeed({
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--desk-border)] bg-[var(--desk-header)] px-4 py-3.5 sm:px-5">
         <h1 className="desk-heading text-[var(--desk-text)]">Catalyst Feed</h1>
         <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+          {calendarRailHidden && onShowCalendarRail ? (
+            <button
+              type="button"
+              onClick={onShowCalendarRail}
+              title="Show economic calendar"
+              aria-label="Show economic calendar"
+              className="btn-press hidden items-center gap-1.5 rounded-lg border border-[var(--desk-live)]/45 bg-[var(--desk-live)]/10 px-2.5 py-1.5 text-[0.82rem] font-medium text-[var(--desk-live)] transition-colors hover:bg-[var(--desk-live)]/15 xl:inline-flex"
+            >
+              <CalendarDays className="size-3.5" />
+              Calendar
+            </button>
+          ) : null}
           <button
             type="button"
             onClick={() => void toggleQuietMode()}
@@ -1680,13 +1701,15 @@ function CatalystFeedList({
               {!splitOpen ? (
                 <div
                   role="cell"
-                  className="relative z-0 hidden min-w-0 overflow-hidden pl-2 lg:block"
+                  className="relative z-0 hidden min-w-0 pl-2 lg:block"
                   onClick={(e) => e.stopPropagation()}
                   onKeyDown={(e) => e.stopPropagation()}
                 >
+                  {/* Details stays shrink-0 on the left of the cluster; if the
+                      track is tight, Dismiss/Watch clip first — never “ETAILS”. */}
                   <div
                     className={cn(
-                      "ml-auto flex w-max max-w-full flex-nowrap items-center justify-end gap-1 overflow-hidden transition-opacity duration-100",
+                      "ml-auto flex max-w-full flex-nowrap items-center justify-end gap-1 transition-opacity duration-100",
                       "opacity-0 group-focus-within:opacity-100 group-hover:opacity-100",
                       selected && "opacity-100",
                     )}
@@ -1699,27 +1722,29 @@ function CatalystFeedList({
                       <BookOpen className="size-3" />
                       Details
                     </FeedActionButton>
-                    <FeedActionButton
-                      onClick={() => onDismiss(catalyst.id)}
-                      tip="Hide from results"
-                    >
-                      <X className="size-3" />
-                      Dismiss
-                    </FeedActionButton>
-                    {catalyst.symbol ? (
+                    <div className="flex min-w-0 flex-nowrap items-center justify-end gap-1 overflow-hidden">
                       <FeedActionButton
-                        onClick={() => onQuiet(catalyst.symbol)}
-                        tip={
-                          onWatchlist
-                            ? "Already on your watchlist"
-                            : "Add to watchlist"
-                        }
-                        disabled={onWatchlist}
+                        onClick={() => onDismiss(catalyst.id)}
+                        tip="Hide from results"
                       >
-                        <Plus className="size-3" />
-                        Watch
+                        <X className="size-3" />
+                        Dismiss
                       </FeedActionButton>
-                    ) : null}
+                      {catalyst.symbol ? (
+                        <FeedActionButton
+                          onClick={() => onQuiet(catalyst.symbol)}
+                          tip={
+                            onWatchlist
+                              ? "Already on your watchlist"
+                              : "Add to watchlist"
+                          }
+                          disabled={onWatchlist}
+                        >
+                          <Plus className="size-3" />
+                          Watch
+                        </FeedActionButton>
+                      ) : null}
+                    </div>
                   </div>
                 </div>
               ) : null}
@@ -1862,7 +1887,7 @@ function FeedTitleWithTooltip({
               }}
               className={cn(
                 "desk-arial pointer-events-none fixed z-[80] w-max",
-                "rounded-md border border-[var(--desk-border-strong)] bg-[var(--desk-panel)] px-2.5 py-2",
+                "rounded-md border border-[var(--desk-border-strong)] bg-[var(--desk-tooltip)] px-2.5 py-2",
                 "shadow-[0_12px_32px_var(--desk-panel-shadow)]",
               )}
             >

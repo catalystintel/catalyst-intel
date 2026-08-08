@@ -90,6 +90,8 @@
   --desk-sidebar: #131722;
   --desk-panel: rgba(30, 34, 45, 0.65);
   --desk-header: rgba(30, 34, 45, 0.85);
+  /* Opaque elevated surface for tooltips / floating tips (panel is glass). */
+  --desk-tooltip: #1e222d;
   --desk-border: rgba(42, 46, 57, 0.9);
   --desk-border-strong: #434651;
   --desk-text: #d1d4dc;
@@ -166,6 +168,7 @@
   --desk-sidebar: #131722;
   --desk-panel: rgba(30, 34, 45, 0.65);
   --desk-header: rgba(30, 34, 45, 0.85);
+  --desk-tooltip: #1e222d;
   --desk-border: rgba(42, 46, 57, 0.9);
   --desk-border-strong: #434651;
   --desk-text: #d1d4dc;
@@ -240,6 +243,7 @@
   --desk-sidebar: #f4f7fb;
   --desk-panel: #ffffff;
   --desk-header: rgba(244, 247, 251, 0.92);
+  --desk-tooltip: #ffffff;
   --desk-border: #cdd6e2;
   --desk-border-strong: #b4bfd0;
   --desk-text: #0f1419;
@@ -300,6 +304,7 @@
   --desk-sidebar: #131722;
   --desk-panel: rgba(30, 34, 45, 0.65);
   --desk-header: rgba(30, 34, 45, 0.85);
+  --desk-tooltip: #1e222d;
   --desk-border: rgba(42, 46, 57, 0.9);
   --desk-border-strong: #434651;
   --desk-text: #d1d4dc;
@@ -350,6 +355,7 @@
   --desk-sidebar: #f4f7fb;
   --desk-panel: #ffffff;
   --desk-header: rgba(244, 247, 251, 0.92);
+  --desk-tooltip: #ffffff;
   --desk-border: #cdd6e2;
   --desk-border-strong: #b4bfd0;
   --desk-text: #0f1419;
