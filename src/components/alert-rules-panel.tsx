@@ -595,6 +595,7 @@ export function AlertRulesPanel() {
             methodReady={methodReady}
             rules={rules}
             telegramLinked={telegramLinked}
+            sessionEmail={sessionEmail}
             saving={saving}
             testing={testing}
             canSave={canSave()}
@@ -1339,6 +1340,7 @@ function ReviewStep({
   methodReady,
   rules,
   telegramLinked,
+  sessionEmail,
   saving,
   testing,
   canSave,
@@ -1351,6 +1353,7 @@ function ReviewStep({
   methodReady: (id: NotificationChannel) => boolean;
   rules: AlertRuleRow[];
   telegramLinked: TelegramLinked | null;
+  sessionEmail: string;
   saving: boolean;
   testing: boolean;
   canSave: boolean;
