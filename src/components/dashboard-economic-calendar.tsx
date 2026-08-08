@@ -55,7 +55,7 @@ export function DashboardEconomicCalendar({
   return (
     <section
       className={cn(
-        "flex max-h-[42%] min-h-[200px] shrink-0 flex-col overflow-hidden rounded-xl border border-[var(--desk-border)] bg-[var(--desk-panel)]",
+        "flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-[var(--desk-border)] bg-[var(--desk-panel)]",
         className,
       )}
     >
@@ -63,25 +63,17 @@ export function DashboardEconomicCalendar({
         <h2 className="desk-caps min-w-0 truncate font-mono text-[0.7rem] font-semibold tracking-[0.14em] text-[var(--desk-text)] uppercase">
           Economic Calendar
         </h2>
-        <div className="flex shrink-0 items-center gap-1">
-          <span
-            className="desk-data hidden tracking-wide text-[var(--desk-text-dim)] uppercase min-[1700px]:inline"
-            title="CPI · NFP · PPI · FOMC"
+        {onHide ? (
+          <button
+            type="button"
+            onClick={onHide}
+            title="Hide economic calendar"
+            aria-label="Hide economic calendar"
+            className="inline-flex size-7 shrink-0 items-center justify-center rounded-md text-[var(--desk-text-muted)] transition-colors hover:bg-[var(--desk-overlay-strong)] hover:text-[var(--desk-text)]"
           >
-            CPI · NFP · PPI · FOMC
-          </span>
-          {onHide ? (
-            <button
-              type="button"
-              onClick={onHide}
-              title="Hide economic calendar"
-              aria-label="Hide economic calendar"
-              className="inline-flex size-7 items-center justify-center rounded-md text-[var(--desk-text-muted)] transition-colors hover:bg-[var(--desk-overlay-strong)] hover:text-[var(--desk-text)]"
-            >
-              <X className="size-3.5" />
-            </button>
-          ) : null}
-        </div>
+            <X className="size-3.5" />
+          </button>
+        ) : null}
       </div>
 
       <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
