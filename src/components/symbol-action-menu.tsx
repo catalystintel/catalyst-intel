@@ -1,8 +1,12 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { BookOpen, Filter, PanelRight, Plus, X } from "lucide-react";
+import { BookOpen, Filter, PanelRight, X } from "lucide-react";
 
+import {
+  AddToWatchlistSubmenu,
+  type WatchlistDestination,
+} from "@/components/watchlists/add-to-watchlist-menu";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -20,23 +24,31 @@ export function SymbolActionMenu({
   symbol,
   companyName = null,
   catalystId,
-  onWatchlist,
+  watchlistFlatChecked,
+  watchlistDestinations,
+  onToggleFlatWatchlist,
+  onToggleSavedWatchlist,
+  onCreateWatchlist,
   onFilterToSymbol,
   onOpenPanel,
   onOpenArticle,
-  onAddWatchlist,
   onDismiss,
 }: {
   symbol: string;
   /** Display name for hover + menu header (optional). */
   companyName?: string | null;
   catalystId: number;
-  onWatchlist: boolean;
+  /** Whether symbol is on the legacy flat "My symbols" quick list. */
+  watchlistFlatChecked: boolean;
+  /** Every saved (rule-based) watchlist + whether symbol is already a member. */
+  watchlistDestinations: WatchlistDestination[];
+  onToggleFlatWatchlist: () => void;
+  onToggleSavedWatchlist: (destination: WatchlistDestination) => void;
+  onCreateWatchlist: () => void;
   onFilterToSymbol: () => void;
   onOpenPanel: () => void;
   /** Prefer in-place details modal over navigating away. */
   onOpenArticle?: () => void;
-  onAddWatchlist: () => void;
   onDismiss: () => void;
 }) {
   const router = useRouter();
@@ -117,14 +129,14 @@ export function SymbolActionMenu({
           Open details
         </DropdownMenuItem>
         <DropdownMenuSeparator className="bg-[var(--desk-border)]" />
-        <DropdownMenuItem
-          className="font-mono text-[0.72rem]"
-          disabled={onWatchlist}
-          onClick={onAddWatchlist}
-        >
-          <Plus className="size-3.5" />
-          {onWatchlist ? "On watchlist" : "Add to watchlist"}
-        </DropdownMenuItem>
+        <AddToWatchlistSubmenu
+          symbol={symbol}
+          flatChecked={watchlistFlatChecked}
+          destinations={watchlistDestinations}
+          onToggleFlat={onToggleFlatWatchlist}
+          onToggleSaved={onToggleSavedWatchlist}
+          onCreateNew={onCreateWatchlist}
+        />
         <DropdownMenuItem
           className="font-mono text-[0.72rem]"
           variant="destructive"
