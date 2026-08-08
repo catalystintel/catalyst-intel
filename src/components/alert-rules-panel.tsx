@@ -888,6 +888,10 @@ function EmailSetup({
         <CheckCircle2 className="size-3" aria-hidden />
         Recipient locked to your account email
       </span>
+      <span className="text-[0.7rem] leading-snug text-[var(--desk-text-muted)]">
+        First alerts often land in Spam or Promotions — mark as not spam so
+        later ones reach your inbox.
+      </span>
     </label>
   );
 }
@@ -1065,9 +1069,14 @@ function ReviewStep({
             </ul>
           )}
           {channels.email && sessionEmail ? (
-            <p className="mt-2 font-mono text-[0.7rem] text-[var(--desk-text-dim)]">
-              {sessionEmail}
-            </p>
+            <div className="mt-2 space-y-1">
+              <p className="font-mono text-[0.7rem] text-[var(--desk-text-dim)]">
+                {sessionEmail}
+              </p>
+              <p className="text-[0.7rem] leading-snug text-[var(--desk-text-muted)]">
+                Check Spam/Promotions if the first alert doesn’t show up.
+              </p>
+            </div>
           ) : null}
           {channels.telegram && telegramLinked ? (
             <p className="mt-2 font-mono text-[0.7rem] text-[var(--desk-text-dim)]">
