@@ -115,6 +115,8 @@
   --desk-shimmer: rgba(255, 255, 255, 0.06);
   --desk-glow: rgba(0, 212, 170, 0.12);
   --desk-glow-chart: rgba(41, 98, 255, 0.1);
+  --desk-panel-shadow: rgba(0, 0, 0, 0.45);
+  --desk-scrim: rgba(0, 0, 0, 0.55);
 
   /* Desk type scale — dense trading UI. Marketing heroes stay larger. */
   --desk-type-heading: 1.5rem; /* 24px */
@@ -189,74 +191,82 @@
   --desk-shimmer: rgba(255, 255, 255, 0.06);
   --desk-glow: rgba(0, 212, 170, 0.12);
   --desk-glow-chart: rgba(41, 98, 255, 0.1);
+  --desk-panel-shadow: rgba(0, 0, 0, 0.45);
+  --desk-scrim: rgba(0, 0, 0, 0.55);
   color-scheme: dark;
 }
 
-/* Opt-in light theme (Appearance toggle) — mint primary on paper surfaces. */
+/*
+ * Opt-in light theme — cool slate paper desk with crisp white panels.
+ * Same mint + steel language as dark, tuned for daylight contrast (dark ink
+ * on mint CTAs, soft cool elevation instead of navy glass).
+ */
 .light {
-  --background: #f4f6f8;
-  --foreground: #131722;
+  --background: #e8edf3;
+  --foreground: #0f1419;
   --card: #ffffff;
-  --card-foreground: #131722;
+  --card-foreground: #0f1419;
   --popover: #ffffff;
-  --popover-foreground: #131722;
-  --primary: #00b894;
-  --primary-foreground: #ffffff;
-  --secondary: #e8ecf1;
-  --secondary-foreground: #131722;
-  --muted: #e8ecf1;
-  --muted-foreground: #5d606b;
-  --accent: #eef2f6;
-  --accent-foreground: #131722;
-  --destructive: #f23645;
-  --border: #d7dce3;
+  --popover-foreground: #0f1419;
+  --primary: #00c4a0;
+  --primary-foreground: #0f1419;
+  --secondary: #dde4ed;
+  --secondary-foreground: #0f1419;
+  --muted: #e2e8f0;
+  --muted-foreground: #5a6573;
+  --accent: #e6ecf4;
+  --accent-foreground: #0f1419;
+  --destructive: #e11d48;
+  --border: #cdd6e2;
   --input: #ffffff;
-  --ring: #00b894;
-  --steel: #787b86;
-  --steel-foreground: #434651;
-  --chart-1: #00b894;
-  --chart-2: #2962ff;
-  --chart-3: #787b86;
-  --chart-4: #5d606b;
-  --chart-5: #434651;
-  --sidebar: #ffffff;
-  --sidebar-foreground: #131722;
-  --sidebar-primary: #00b894;
-  --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #eef2f6;
-  --sidebar-accent-foreground: #131722;
-  --sidebar-border: #d7dce3;
-  --sidebar-ring: #00b894;
+  --ring: #00c4a0;
+  --steel: #64748b;
+  --steel-foreground: #334155;
+  --chart-1: #00c4a0;
+  --chart-2: #2563eb;
+  --chart-3: #64748b;
+  --chart-4: #94a3b8;
+  --chart-5: #475569;
+  --sidebar: #f4f7fb;
+  --sidebar-foreground: #0f1419;
+  --sidebar-primary: #00c4a0;
+  --sidebar-primary-foreground: #0f1419;
+  --sidebar-accent: #e6ecf4;
+  --sidebar-accent-foreground: #0f1419;
+  --sidebar-border: #cdd6e2;
+  --sidebar-ring: #00c4a0;
 
-  --desk-app: #f4f6f8;
-  --desk-sidebar: #ffffff;
+  --desk-app: #e8edf3;
+  --desk-sidebar: #f4f7fb;
   --desk-panel: #ffffff;
-  --desk-header: #ffffff;
-  --desk-border: #d7dce3;
-  --desk-border-strong: #c2c8d1;
-  --desk-text: #131722;
-  --desk-text-secondary: #434651;
-  --desk-text-muted: #5d606b;
-  --desk-text-dim: #787b86;
-  --desk-accent: #00b894;
-  --desk-accent-fg: #ffffff;
-  --desk-live: #00b894;
-  --desk-live-status: #00b894;
-  --desk-interactive: #2962ff;
-  --desk-link: #2962ff;
-  --desk-chart-accent: #2962ff;
-  --desk-positive: #089981;
-  --desk-negative: #f23645;
-  --desk-warn-bg: rgba(255, 152, 0, 0.12);
-  --desk-warn-border: rgba(255, 152, 0, 0.4);
-  --desk-warn-text: #e67e00;
-  --desk-nav-active: rgba(0, 184, 148, 0.1);
-  --desk-overlay-soft: rgba(19, 23, 34, 0.04);
-  --desk-overlay-strong: rgba(19, 23, 34, 0.08);
-  --desk-grid-line: rgba(19, 23, 34, 0.05);
-  --desk-shimmer: rgba(19, 23, 34, 0.06);
-  --desk-glow: rgba(0, 184, 148, 0.1);
-  --desk-glow-chart: rgba(41, 98, 255, 0.08);
+  --desk-header: rgba(244, 247, 251, 0.92);
+  --desk-border: #cdd6e2;
+  --desk-border-strong: #b4bfd0;
+  --desk-text: #0f1419;
+  --desk-text-secondary: #3d4654;
+  --desk-text-muted: #5a6573;
+  --desk-text-dim: #8b95a5;
+  --desk-accent: #00c4a0;
+  --desk-accent-fg: #0f1419;
+  --desk-live: #00c4a0;
+  --desk-live-status: #00a884;
+  --desk-interactive: #2563eb;
+  --desk-link: #2563eb;
+  --desk-chart-accent: #2563eb;
+  --desk-positive: #059669;
+  --desk-negative: #e11d48;
+  --desk-warn-bg: rgba(217, 119, 6, 0.1);
+  --desk-warn-border: rgba(217, 119, 6, 0.35);
+  --desk-warn-text: #c2410c;
+  --desk-nav-active: rgba(0, 196, 160, 0.12);
+  --desk-overlay-soft: rgba(15, 20, 25, 0.035);
+  --desk-overlay-strong: rgba(15, 20, 25, 0.07);
+  --desk-grid-line: rgba(15, 30, 50, 0.055);
+  --desk-shimmer: rgba(15, 30, 50, 0.07);
+  --desk-glow: rgba(0, 196, 160, 0.14);
+  --desk-glow-chart: rgba(37, 99, 235, 0.1);
+  --desk-panel-shadow: rgba(15, 30, 50, 0.16);
+  --desk-scrim: rgba(15, 20, 25, 0.4);
   color-scheme: light;
 }
 
@@ -306,7 +316,65 @@
   --desk-overlay-strong: rgba(255, 255, 255, 0.08);
   --desk-grid-line: rgba(255, 255, 255, 0.03);
   --desk-nav-active: rgba(0, 212, 170, 0.1);
+  --desk-panel-shadow: rgba(0, 0, 0, 0.45);
+  --desk-scrim: rgba(0, 0, 0, 0.55);
   color-scheme: dark;
+}
+
+/*
+ * Authenticated desk shell in light mode — lock paper-desk tokens so sidebar,
+ * header, and feed share one daylight palette (mirrors `.dark .desk-chrome`).
+ */
+.light .desk-chrome {
+  --background: #e8edf3;
+  --foreground: #0f1419;
+  --card: #ffffff;
+  --card-foreground: #0f1419;
+  --popover: #ffffff;
+  --popover-foreground: #0f1419;
+  --secondary: #dde4ed;
+  --secondary-foreground: #0f1419;
+  --muted: #e2e8f0;
+  --muted-foreground: #5a6573;
+  --accent: #e6ecf4;
+  --accent-foreground: #0f1419;
+  --border: #cdd6e2;
+  --input: #ffffff;
+  --sidebar: #f4f7fb;
+  --sidebar-foreground: #0f1419;
+  --sidebar-accent: #e6ecf4;
+  --sidebar-accent-foreground: #0f1419;
+  --sidebar-border: #cdd6e2;
+
+  --desk-app: #e8edf3;
+  --desk-sidebar: #f4f7fb;
+  --desk-panel: #ffffff;
+  --desk-header: rgba(244, 247, 251, 0.92);
+  --desk-border: #cdd6e2;
+  --desk-border-strong: #b4bfd0;
+  --desk-text: #0f1419;
+  --desk-text-secondary: #3d4654;
+  --desk-text-muted: #5a6573;
+  --desk-text-dim: #8b95a5;
+  --desk-accent: #00c4a0;
+  --desk-accent-fg: #0f1419;
+  --desk-live: #00c4a0;
+  --desk-live-status: #00a884;
+  --desk-interactive: #2563eb;
+  --desk-link: #2563eb;
+  --desk-chart-accent: #2563eb;
+  --desk-positive: #059669;
+  --desk-negative: #e11d48;
+  --desk-nav-active: rgba(0, 196, 160, 0.12);
+  --desk-overlay-soft: rgba(15, 20, 25, 0.035);
+  --desk-overlay-strong: rgba(15, 20, 25, 0.07);
+  --desk-grid-line: rgba(15, 30, 50, 0.055);
+  --desk-shimmer: rgba(15, 30, 50, 0.07);
+  --desk-glow: rgba(0, 196, 160, 0.14);
+  --desk-glow-chart: rgba(37, 99, 235, 0.1);
+  --desk-panel-shadow: rgba(15, 30, 50, 0.16);
+  --desk-scrim: rgba(15, 20, 25, 0.4);
+  color-scheme: light;
 }
 
 @layer base {
@@ -365,39 +433,59 @@
 
 @layer utilities {
   .brand-mark {
-    background: linear-gradient(135deg, #00d4aa 0%, #2962ff 100%);
-    box-shadow: 0 0 20px rgba(0, 212, 170, 0.35);
+    background: linear-gradient(
+      135deg,
+      var(--desk-accent) 0%,
+      var(--desk-interactive) 100%
+    );
+    box-shadow: 0 0 20px var(--desk-glow);
   }
 
   .brand-mark::after {
     content: "";
     position: absolute;
     inset: 7px 6px 7px 12px;
-    border-right: 2.5px solid #131722;
-    border-bottom: 2.5px solid #131722;
+    border-right: 2.5px solid var(--desk-app);
+    border-bottom: 2.5px solid var(--desk-app);
     transform: skewX(-12deg);
   }
 
   .signal-glass {
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
-    background: rgba(30, 34, 45, 0.72);
-    border: 1px solid rgba(42, 46, 57, 0.8);
+    background: var(--card);
+    border: 1px solid var(--border);
   }
 
+  /* Dark default; `.light` overrides to cool paper wash (see below). */
   .signal-mesh-bg {
     background:
       radial-gradient(
         ellipse 80% 50% at 20% -10%,
-        rgba(0, 212, 170, 0.15),
+        color-mix(in srgb, var(--desk-accent) 15%, transparent),
         transparent 50%
       ),
       radial-gradient(
         ellipse 60% 40% at 80% 10%,
-        rgba(41, 98, 255, 0.12),
+        color-mix(in srgb, var(--desk-interactive) 12%, transparent),
         transparent 50%
       ),
-      #131722;
+      var(--desk-app);
+  }
+
+  .light .signal-mesh-bg {
+    background:
+      radial-gradient(
+        ellipse 90% 55% at 12% -8%,
+        rgba(0, 196, 160, 0.11),
+        transparent 55%
+      ),
+      radial-gradient(
+        ellipse 65% 45% at 88% 5%,
+        rgba(37, 99, 235, 0.08),
+        transparent 52%
+      ),
+      linear-gradient(165deg, #eef2f7 0%, #e8edf3 42%, #e4eaf1 100%);
   }
 
   .signal-panel-glow {
@@ -412,7 +500,42 @@
     backdrop-filter: blur(14px);
     -webkit-backdrop-filter: blur(14px);
     border-left: 1px solid color-mix(in srgb, var(--desk-live) 22%, transparent);
-    box-shadow: -12px 0 40px rgba(0, 0, 0, 0.45);
+    box-shadow: -12px 0 40px var(--desk-panel-shadow);
+    background-color: var(--desk-panel);
+  }
+
+  .light .tape-split-panel {
+    border-left-color: color-mix(
+      in srgb,
+      var(--desk-live) 28%,
+      var(--desk-border)
+    );
+    box-shadow:
+      -16px 0 48px rgba(15, 30, 50, 0.12),
+      -1px 0 0 var(--desk-border);
+  }
+
+  .light .feed-sticky-cols,
+  .light .feed-sticky-cols > [role="columnheader"] {
+    background-color: #f4f7fb;
+    box-shadow: 0 1px 0 var(--desk-border);
+  }
+
+  .light .landing-glass-card:hover {
+    box-shadow: 0 12px 36px rgba(15, 30, 50, 0.1);
+  }
+
+  /* White blotter cards need soft elevation on cool paper, not flat navy glass. */
+  .light .news-panel {
+    border-color: #c5ceda;
+    box-shadow:
+      0 1px 2px rgba(15, 30, 50, 0.04),
+      0 10px 28px rgba(15, 30, 50, 0.06);
+  }
+
+  .light .brand-mark::after {
+    border-right-color: #e8edf3;
+    border-bottom-color: #e8edf3;
   }
 
   .feed-row-selected {
@@ -794,11 +917,15 @@
     animation: marketing-brand-pulse 4.2s ease-in-out infinite;
   }
 
-  /* Authenticated `/catalyst-feed` dashboard grid — fills the navy desk
-     chrome from `.desk-chrome`. Token overrides live on the shell so sidebar
-     / header / feed share one palette; light theme uses `:root` desk tokens. */
+  /* Authenticated `/catalyst-feed` dashboard grid — fills desk chrome from
+     `.desk-chrome`. Token overrides live on the shell so sidebar / header /
+     feed share one palette (dark or light via `.dark` / `.light`). */
   .desk-dashboard {
     background-color: var(--desk-app);
+  }
+
+  .light .desk-dashboard {
+    background-color: transparent;
   }
 
   .btn-press {

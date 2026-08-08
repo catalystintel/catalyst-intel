@@ -482,7 +482,7 @@ export function AlertRulesPanel() {
               }
               setStep((s) => (s < 3 ? ((s + 1) as StepId) : s));
             }}
-            className="btn-press gap-1.5 bg-[var(--desk-live)] text-[#121212] hover:brightness-110"
+            className="btn-press gap-1.5 bg-[var(--desk-live)] text-[var(--desk-accent-fg)] hover:brightness-110"
           >
             Continue
             <ArrowRight className="size-3.5" aria-hidden />
@@ -492,7 +492,7 @@ export function AlertRulesPanel() {
             type="button"
             disabled={saving || !canSave()}
             onClick={() => void saveSettings()}
-            className="btn-press gap-1.5 bg-[var(--desk-live)] text-[#121212] hover:brightness-110"
+            className="btn-press gap-1.5 bg-[var(--desk-live)] text-[var(--desk-accent-fg)] hover:brightness-110"
           >
             {saving ? "Saving…" : "Save notifications"}
           </Button>
@@ -538,7 +538,7 @@ function StepperHeader({
                     className={cn(
                       "grid size-6 place-items-center rounded-full font-mono text-[0.65rem] font-bold",
                       active || done
-                        ? "bg-[var(--desk-live)] text-[#121212]"
+                        ? "bg-[var(--desk-live)] text-[var(--desk-accent-fg)]"
                         : "border border-[var(--desk-border-strong)] text-[var(--desk-text-dim)]",
                     )}
                   >
@@ -612,7 +612,7 @@ function MethodsStep(props: {
                   className={cn(
                     "mt-0.5 grid size-9 shrink-0 place-items-center rounded-lg border",
                     on
-                      ? "border-[var(--desk-live)] bg-[var(--desk-live)] text-[#121212]"
+                      ? "border-[var(--desk-live)] bg-[var(--desk-live)] text-[var(--desk-accent-fg)]"
                       : "border-[var(--desk-border-strong)] text-[var(--desk-text-muted)]",
                   )}
                 >
@@ -659,7 +659,7 @@ function MethodsStep(props: {
                 >
                   <span
                     className={cn(
-                      "absolute top-0.5 left-0.5 size-5 rounded-full bg-[#121212] transition-transform",
+                      "absolute top-0.5 left-0.5 size-5 rounded-full bg-[var(--desk-accent-fg)] transition-transform",
                       on && "translate-x-5",
                     )}
                   />
@@ -737,7 +737,7 @@ function PushSetup({
         type="button"
         onClick={() => void webPush.subscribe()}
         disabled={webPush.status === "loading" || webPush.status === "denied"}
-        className="btn-press w-fit gap-2 bg-[var(--desk-live)] text-[#121212] hover:brightness-110"
+        className="btn-press w-fit gap-2 bg-[var(--desk-live)] text-[var(--desk-accent-fg)] hover:brightness-110"
       >
         <Bell className="size-3.5" aria-hidden />
         {webPush.status === "loading" ? "Working…" : "Enable browser push"}
@@ -818,7 +818,7 @@ function TelegramSetup({
             type="button"
             onClick={onConnect}
             disabled={linking}
-            className="btn-press gap-2 bg-[var(--desk-live)] text-[#121212] hover:brightness-110"
+            className="btn-press gap-2 bg-[var(--desk-live)] text-[var(--desk-accent-fg)] hover:brightness-110"
           >
             <ExternalLink className="size-3.5" aria-hidden />
             {linking ? "Waiting for link…" : "Connect Telegram"}
@@ -928,7 +928,7 @@ function WatchlistsStep({
           </p>
           <Link
             href="/watchlist"
-            className="btn-press mt-4 inline-flex h-9 items-center gap-1.5 rounded-lg bg-[var(--desk-live)] px-3 text-sm font-medium text-[#121212] hover:brightness-110"
+            className="btn-press mt-4 inline-flex h-9 items-center gap-1.5 rounded-lg bg-[var(--desk-live)] px-3 text-sm font-medium text-[var(--desk-accent-fg)] hover:brightness-110"
           >
             Go to Watchlists
             <ArrowRight className="size-3.5" aria-hidden />
@@ -954,7 +954,7 @@ function WatchlistsStep({
                     className={cn(
                       "mt-0.5 grid size-5 shrink-0 place-items-center rounded-md border",
                       selected
-                        ? "border-[var(--desk-live)] bg-[var(--desk-live)] text-[#121212]"
+                        ? "border-[var(--desk-live)] bg-[var(--desk-live)] text-[var(--desk-accent-fg)]"
                         : "border-[var(--desk-border-strong)]",
                     )}
                   >
@@ -1092,7 +1092,7 @@ function ReviewStep({
           type="button"
           disabled={saving || !canSave}
           onClick={onSave}
-          className="btn-press gap-1.5 bg-[var(--desk-live)] text-[#121212] hover:brightness-110"
+          className="btn-press gap-1.5 bg-[var(--desk-live)] text-[var(--desk-accent-fg)] hover:brightness-110"
         >
           {saving ? "Saving…" : "Save notifications"}
         </Button>

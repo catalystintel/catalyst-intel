@@ -54,7 +54,7 @@ export function ThemeToggle() {
             className={cn(
               "btn-press inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
               active
-                ? "bg-[var(--desk-panel)] text-[var(--desk-text)] shadow-[0_1px_2px_rgba(0,0,0,0.08)]"
+                ? "bg-[var(--desk-panel)] text-[var(--desk-text)] shadow-[0_1px_2px_var(--desk-panel-shadow)]"
                 : "text-[var(--desk-text-muted)] hover:text-[var(--desk-text)]",
             )}
           >
@@ -121,7 +121,7 @@ export function HeaderThemeToggle({ className }: { className?: string }) {
       </span>
       <span
         role="tooltip"
-        className="pointer-events-none absolute top-full right-0 z-50 mt-2 rounded-md border border-[var(--desk-border-strong)] bg-[var(--desk-panel)] px-2 py-1 font-mono text-[0.68rem] whitespace-nowrap text-[var(--desk-text-secondary)] opacity-0 shadow-[0_8px_24px_rgba(0,0,0,0.28)] transition-opacity duration-150 group-hover:opacity-100 group-focus-visible:opacity-100"
+        className="pointer-events-none absolute top-full right-0 z-50 mt-2 rounded-md border border-[var(--desk-border-strong)] bg-[var(--desk-panel)] px-2 py-1 font-mono text-[0.68rem] whitespace-nowrap text-[var(--desk-text-secondary)] opacity-0 shadow-[0_8px_24px_var(--desk-panel-shadow)] transition-opacity duration-150 group-hover:opacity-100 group-focus-visible:opacity-100"
       >
         {nextLabel}
       </span>

@@ -18,10 +18,11 @@ export function Toaster() {
       toastOptions={{
         classNames: {
           toast:
-            "!rounded-lg !border !border-[var(--desk-border-strong)] !bg-[var(--desk-panel)] !text-[var(--desk-text)] !shadow-[0_12px_32px_rgba(0,0,0,0.28)]",
+            "!rounded-lg !border !border-[var(--desk-border-strong)] !bg-[var(--desk-panel)] !text-[var(--desk-text)] !shadow-[0_12px_32px_var(--desk-panel-shadow)]",
           title: "!text-[var(--desk-text)] !font-medium",
           description: "!text-[var(--desk-text-muted)]",
-          actionButton: "!bg-[var(--desk-live)] !text-[#121212] !font-semibold",
+          actionButton:
+            "!bg-[var(--desk-live)] !text-[var(--desk-accent-fg)] !font-semibold",
           cancelButton:
             "!bg-transparent !text-[var(--desk-text-muted)] !border !border-[var(--desk-border-strong)]",
           error: "!border-[var(--destructive)]/45",

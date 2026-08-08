@@ -320,7 +320,7 @@ export function WatchlistHub() {
             <Button
               type="button"
               onClick={() => openCreate()}
-              className="btn-press gap-1.5 bg-[var(--desk-live)] text-[#121212] hover:brightness-110"
+              className="btn-press gap-1.5 bg-[var(--desk-live)] text-[var(--desk-accent-fg)] hover:brightness-110"
             >
               <Plus className="size-3.5" />
               New watchlist
@@ -345,7 +345,7 @@ export function WatchlistHub() {
                 type="button"
                 disabled={busy}
                 onClick={() => void addFromTemplates({ starterPack: true })}
-                className="btn-press gap-1.5 bg-[var(--desk-live)] text-[#121212] hover:brightness-110"
+                className="btn-press gap-1.5 bg-[var(--desk-live)] text-[var(--desk-accent-fg)] hover:brightness-110"
               >
                 <Plus className="size-3.5" aria-hidden />
                 Add starter pack ({WATCHLIST_STARTER_PACK_IDS.length})

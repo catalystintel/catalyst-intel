@@ -83,7 +83,7 @@ export function ResetDbTrigger() {
         <Button
           onClick={() => void handleReset(true)}
           disabled={loading}
-          className="btn-press w-fit bg-[var(--desk-live)] text-[#121212] hover:brightness-110"
+          className="btn-press w-fit bg-[var(--desk-live)] text-[var(--desk-accent-fg)] hover:brightness-110"
         >
           {loading ? "Working…" : "Clear DB, migrate & fetch all"}
         </Button>

@@ -65,7 +65,7 @@ export function LiveHeaderStatus() {
         />
         {label}
       </span>
-      <span className="hidden truncate text-[0.86rem] text-[var(--desk-text-muted)] md:inline">
+      <span className="hidden truncate text-[0.86rem] text-[var(--desk-text-muted)] xl:inline">
         {copy}
       </span>
     </div>

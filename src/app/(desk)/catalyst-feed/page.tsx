@@ -96,7 +96,7 @@ export default async function CatalystFeedPage({
   const macroEvents = await loadDeskMacroEvents();
 
   return (
-    <PageEnter className="flex min-h-0 flex-1 flex-col p-4 sm:p-5">
+    <PageEnter className="flex min-h-0 flex-1 flex-col p-3 sm:p-4 2xl:p-5">
       <DeskDashboardGrid
         initialCatalysts={recentCatalysts.map(toPublicFeedCatalyst)}
         isAdmin={user.isAdmin}

@@ -287,7 +287,7 @@ export function TapeSplitPanel({
       className={cn(
         "desk-arial flex min-h-0 flex-col border-[var(--desk-border)] bg-[var(--desk-panel)]",
         mobileOverlay &&
-          "shadow-[-12px_0_40px_rgba(0,0,0,0.55)] lg:shadow-none",
+          "shadow-[-12px_0_40px_var(--desk-panel-shadow)] xl:shadow-none",
         className,
       )}
     >
@@ -298,7 +298,7 @@ export function TapeSplitPanel({
           </p>
           <h2
             id={`tape-split-${catalyst.id}`}
-            className="mt-1 line-clamp-3 text-base font-semibold tracking-tight text-[var(--desk-text)] sm:text-lg"
+            className="mt-1 line-clamp-2 text-base font-semibold tracking-tight text-[var(--desk-text)] sm:text-lg"
           >
             {eventTitle}
           </h2>
@@ -414,7 +414,7 @@ export function TapeSplitPanel({
             <button
               type="button"
               onClick={() => onRead?.()}
-              className="inline-flex items-center gap-1.5 rounded-sm bg-[var(--desk-live)] px-3 py-1.5 font-mono text-xs font-semibold tracking-wide text-[#121212] uppercase hover:brightness-110"
+              className="inline-flex items-center gap-1.5 rounded-sm bg-[var(--desk-live)] px-3 py-1.5 font-mono text-xs font-semibold tracking-wide text-[var(--desk-accent-fg)] uppercase hover:brightness-110"
             >
               <BookOpen className="size-3.5" />
               Details
@@ -539,7 +539,7 @@ export function TapeSplitPanel({
         </div>
 
         {symbol ? (
-          <div className="shrink-0 bg-[var(--desk-bg,#0b0f19)]">
+          <div className="shrink-0 bg-[var(--desk-panel)]">
             <DeskLightweightChart
               key={symbol}
               symbol={symbol}
@@ -551,7 +551,7 @@ export function TapeSplitPanel({
                   ? Math.floor(new Date(catalyst.timestamp).getTime() / 1000)
                   : null
               }
-              className="h-[320px] sm:h-[400px]"
+              className="h-[220px] max-h-[32vh] sm:h-[260px] sm:max-h-[34vh] xl:h-[320px] xl:max-h-[38vh]"
             />
           </div>
         ) : null}

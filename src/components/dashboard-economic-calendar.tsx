@@ -49,7 +49,10 @@ export function DashboardEconomicCalendar({
         <h2 className="desk-caps font-mono text-[0.7rem] font-semibold tracking-[0.14em] text-[var(--desk-text)] uppercase">
           Economic Calendar
         </h2>
-        <span className="desk-data tracking-wide text-[var(--desk-text-dim)] uppercase">
+        <span
+          className="desk-data hidden tracking-wide text-[var(--desk-text-dim)] uppercase min-[1700px]:inline"
+          title="CPI · NFP · PPI · FOMC"
+        >
           CPI · NFP · PPI · FOMC
         </span>
       </div>

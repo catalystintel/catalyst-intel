@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, type ReactNode } from "react";
+import { useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { usePathname } from "next/navigation";
 import { Menu, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 
@@ -12,6 +12,19 @@ import { HeaderThemeToggle } from "@/components/theme-toggle";
 import { Toaster } from "@/components/ui/toaster";
 import { useAutoFocusScrollRegion } from "@/hooks/use-auto-focus-scroll-region";
 import { navKeyFromPathname, type NavKey } from "@/lib/nav/nav-items";
+
+/** Below 2xl, prefer icon-rail so the tape keeps horizontal room on laptops. */
+const LAPTOP_SIDEBAR_MQ = "(max-width: 1535px)";
+
+function subscribeLaptopSidebar(onChange: () => void) {
+  const mq = window.matchMedia(LAPTOP_SIDEBAR_MQ);
+  mq.addEventListener("change", onChange);
+  return () => mq.removeEventListener("change", onChange);
+}
+
+function preferCollapsedSidebar() {
+  return window.matchMedia(LAPTOP_SIDEBAR_MQ).matches;
+}
 
 interface AppShellUser {
   email: string;
@@ -38,7 +51,16 @@ export function AppShell({
 }: AppShellProps) {
   const pathname = usePathname();
   const active = activeProp ?? navKeyFromPathname(pathname);
-  const [collapsed, setCollapsed] = useState(false);
+  const preferCollapsed = useSyncExternalStore(
+    subscribeLaptopSidebar,
+    preferCollapsedSidebar,
+    () => false,
+  );
+  /** `null` = follow viewport preference; boolean = user override. */
+  const [collapsedOverride, setCollapsedOverride] = useState<boolean | null>(
+    null,
+  );
+  const collapsed = collapsedOverride ?? preferCollapsed;
   const [mobileOpen, setMobileOpen] = useState(false);
   const mainRef = useRef<HTMLElement | null>(null);
   useAutoFocusScrollRegion(mainRef);
@@ -52,7 +74,9 @@ export function AppShell({
             active={active}
             isAdmin={user.isAdmin}
             collapsed={collapsed}
-            onCollapseToggle={() => setCollapsed((prev) => !prev)}
+            onCollapseToggle={() =>
+              setCollapsedOverride((prev) => !(prev ?? preferCollapsed))
+            }
           />
         </div>
       </aside>
@@ -62,7 +86,7 @@ export function AppShell({
           <button
             type="button"
             aria-label="Close navigation"
-            className="absolute inset-0 bg-black/55"
+            className="absolute inset-0 bg-[var(--desk-scrim)]"
             onClick={() => setMobileOpen(false)}
           />
           <div className="absolute inset-y-0 left-0 max-w-[min(212px,85vw)] pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
@@ -78,7 +102,7 @@ export function AppShell({
 
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
         <EarlyAccessBanner variant="app" defaultEmail={user.email} />
-        <header className="sticky top-0 z-40 flex items-center justify-between gap-3 border-b border-[var(--desk-border)] bg-[var(--desk-header)]/80 px-3 pt-[max(0.75rem,env(safe-area-inset-top))] pb-3 shadow-[0_1px_0_rgba(0,212,170,0.06)] backdrop-blur-md sm:px-5">
+        <header className="sticky top-0 z-40 flex items-center justify-between gap-3 border-b border-[var(--desk-border)] bg-[var(--desk-header)] px-3 pt-[max(0.75rem,env(safe-area-inset-top))] pb-3 shadow-[0_1px_0_color-mix(in_srgb,var(--desk-live)_12%,transparent)] backdrop-blur-md sm:px-5">
           <div className="flex min-w-0 items-center gap-2">
             <button
               type="button"
@@ -91,7 +115,9 @@ export function AppShell({
             <button
               type="button"
               aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-              onClick={() => setCollapsed((prev) => !prev)}
+              onClick={() =>
+                setCollapsedOverride((prev) => !(prev ?? preferCollapsed))
+              }
               className="hidden rounded-lg p-1.5 text-[var(--desk-text-muted)] transition-colors hover:bg-[var(--desk-overlay-strong)] hover:text-[var(--desk-text)] md:block"
             >
               {collapsed ? (
