@@ -931,6 +931,28 @@ export function LiveCatalystFeed({
   const selected =
     selectedRaw && passesSymbolFeedGate(selectedRaw) ? selectedRaw : null;
 
+  /** Visible rows the split can open — same gate as row click. */
+  const navigable = useMemo(
+    () => visible.filter((c) => passesSymbolFeedGate(c)),
+    [visible],
+  );
+  const selectedNavIndex = selected
+    ? navigable.findIndex((c) => c.id === selected.id)
+    : -1;
+  const canPrevSplit = selectedNavIndex > 0;
+  const canNextSplit =
+    selectedNavIndex >= 0 && selectedNavIndex < navigable.length - 1;
+
+  const navigateSplit = useCallback(
+    (direction: -1 | 1) => {
+      if (selectedNavIndex < 0) return;
+      const next = navigable[selectedNavIndex + direction];
+      if (!next) return;
+      setSelectedId(next.id);
+    },
+    [navigable, selectedNavIndex],
+  );
+
   // Keep the dashboard Watchlist rail highlight in sync with the open row —
   // additive, no-op without `onFocusSymbol`.
   useEffect(() => {
@@ -1187,6 +1209,10 @@ export function LiveCatalystFeed({
                 showSourceLabels={showSourceLabels}
                 chartRange={chartRange}
                 onClose={() => setSelectedId(null)}
+                onPrev={() => navigateSplit(-1)}
+                onNext={() => navigateSplit(1)}
+                canPrev={canPrevSplit}
+                canNext={canNextSplit}
                 onRead={() => openArticle(selected.id)}
                 onDismiss={() => {
                   if (selectedId !== null) dismissCatalyst(selectedId);
@@ -1680,9 +1706,19 @@ function CatalystFeedList({
   // Up/Down/Home/End scroll it immediately, without requiring a prior click.
   useAutoFocusScrollRegion(listRef);
 
+  const prevSelectedIdRef = useRef<number | null>(selectedId);
+
   useEffect(() => {
-    if (!restoreScrollToSelected || selectedId == null) return;
-    if (didRestoreScrollRef.current) return;
+    if (selectedId == null) {
+      prevSelectedIdRef.current = null;
+      return;
+    }
+    const selectionChanged = prevSelectedIdRef.current !== selectedId;
+    prevSelectedIdRef.current = selectedId;
+    // One-shot restore when arriving via `?c=`; always scroll on nav/select.
+    if (!selectionChanged) {
+      if (!restoreScrollToSelected || didRestoreScrollRef.current) return;
+    }
     const row = listRef.current?.querySelector<HTMLElement>(
       `[data-catalyst-id="${selectedId}"]`,
     );
