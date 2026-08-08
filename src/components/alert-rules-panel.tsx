@@ -379,19 +379,37 @@ export function AlertRulesPanel() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Test failed.");
-      const results = Array.isArray(data.results) ? data.results : [];
-      const ok = results.filter(
-        (r: { ok?: boolean; skipped?: boolean }) => r.ok && !r.skipped,
-      ).length;
-      const failed = results.filter(
-        (r: { ok?: boolean; skipped?: boolean }) => !r.ok && !r.skipped,
-      ).length;
-      if (failed > 0) {
-        toast.error(`Test: ${failed} failed, ${ok} delivered.`);
-      } else if (ok === 0) {
-        toast.message("Nothing delivered — enable a method and save first.");
+      const results = Array.isArray(data.results)
+        ? (data.results as {
+            channel?: string;
+            ok?: boolean;
+            skipped?: boolean;
+            detail?: string;
+          }[])
+        : [];
+      const delivered = results.filter((r) => r.ok && !r.skipped);
+      const failed = results.filter((r) => !r.ok && !r.skipped);
+      const summarize = (
+        rows: { channel?: string; detail?: string }[],
+      ): string =>
+        rows
+          .map((r) => {
+            const channel = r.channel ?? "channel";
+            return r.detail ? `${channel} (${r.detail})` : channel;
+          })
+          .join(" · ");
+      if (failed.length > 0) {
+        toast.error(
+          `Test: ${failed.length} failed, ${delivered.length} delivered. ${summarize(failed)}`,
+        );
+      } else if (delivered.length === 0) {
+        toast.message(
+          "Nothing delivered — turn a method on, finish setup, save, then test.",
+        );
       } else {
-        toast.success(`Test fired — ${ok} delivery(ies).`);
+        toast.success(
+          `Test fired — ${summarize(delivered) || `${delivered.length} delivery(ies)`}.`,
+        );
       }
     } catch (err) {
       toast.error(toUserFacingMessage(err, "Test failed."));
@@ -418,6 +436,11 @@ export function AlertRulesPanel() {
             methodReady={methodReady}
             pushAvailable={pushAvailable}
             webPush={webPush}
+            onPushSubscribed={() =>
+              setChannels((prev) =>
+                prev.push ? prev : { ...prev, push: true },
+              )
+            }
             telegramConfigured={telegramConfigured}
             telegramBotHandle={telegramBotHandle}
             telegramBotName={telegramBotName}
@@ -565,6 +588,7 @@ function MethodsStep(props: {
   methodReady: (id: NotificationChannel) => boolean;
   pushAvailable: boolean;
   webPush: ReturnType<typeof useWebPush>;
+  onPushSubscribed: () => void;
   telegramConfigured: boolean;
   telegramBotHandle: string | null;
   telegramBotName: string | null;
@@ -676,6 +700,7 @@ function MethodsStep(props: {
                     <PushSetup
                       available={props.pushAvailable}
                       webPush={props.webPush}
+                      onSubscribed={props.onPushSubscribed}
                     />
                   ) : null}
                   {id === "telegram" ? (
@@ -708,9 +733,11 @@ function MethodsStep(props: {
 function PushSetup({
   available,
   webPush,
+  onSubscribed,
 }: {
   available: boolean;
   webPush: ReturnType<typeof useWebPush>;
+  onSubscribed: () => void;
 }) {
   if (!available) {
     return (
@@ -723,7 +750,7 @@ function PushSetup({
     return (
       <p className="inline-flex items-center gap-1.5 text-xs text-[var(--desk-live-status)]">
         <CheckCircle2 className="size-3.5" aria-hidden />
-        This browser is subscribed.
+        This browser is subscribed — save on Review to start receiving.
       </p>
     );
   }
@@ -734,7 +761,12 @@ function PushSetup({
       </p>
       <Button
         type="button"
-        onClick={() => void webPush.subscribe()}
+        onClick={() => {
+          void (async () => {
+            const ok = await webPush.subscribe();
+            if (ok) onSubscribed();
+          })();
+        }}
         disabled={webPush.status === "loading" || webPush.status === "denied"}
         className="btn-press w-fit gap-2 bg-[var(--desk-live)] text-[var(--desk-accent-fg)] hover:brightness-110"
       >
