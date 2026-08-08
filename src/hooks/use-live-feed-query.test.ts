@@ -11,7 +11,7 @@ function row(id: number, timestamp: string, symbol = "AAPL"): FeedCatalyst {
     timestamp,
     sourceProvider: "sec_edgar",
     eventCategory: "filing",
-  } as FeedCatalyst;
+  } as unknown as FeedCatalyst;
 }
 
 describe("mergeFeedRows", () => {
