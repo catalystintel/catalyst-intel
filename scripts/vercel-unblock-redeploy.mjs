@@ -412,13 +412,28 @@ export async function listRecentDeployments(cfg) {
  * @param {{ token: string, teamId: string, projectId: string, projectName?: string }} cfg
  */
 export async function resolveVercelAccess(cfg) {
+  const shapes = describeVercelSecretShapes(cfg);
+  console.log(
+    `Vercel secret shapes: tokenLen=${shapes.tokenLen} org=${shapes.orgShape}(len=${shapes.orgLen}) project=${shapes.projectShape}(len=${shapes.projectLen})`,
+  );
+
   // Confirm the token is usable at all (401 here = bad/expired secret).
   try {
-    await vercelFetch("/v2/user", cfg.token, undefined, {}, {}, "none");
+    const user = await vercelFetch(
+      "/v2/user",
+      cfg.token,
+      undefined,
+      {},
+      {},
+      "none",
+    );
+    const username =
+      user?.user?.username ?? user?.username ?? user?.user?.id ?? user?.id;
+    console.log(`Vercel token OK for user=${username ?? "?"}`);
   } catch (err) {
     if (isVercelAuthError(err)) {
       const e = new Error(
-        `VERCEL_TOKEN is not authorized (GET /v2/user → ${/** @type {{ status?: number }} */ (err).status ?? "?"}). Create a personal token at https://vercel.com/account/tokens (team-owner account that owns the project) and update the GitHub secret.`,
+        `stage=TOKEN VERCEL_TOKEN rejected (GET /v2/user → ${/** @type {{ status?: number }} */ (err).status ?? "?"}). Recreate a personal token at https://vercel.com/account/tokens from the team-owner account that owns the live project, then update the GitHub secret.`,
       );
       // @ts-expect-error status for soft-fail
       e.status = /** @type {{ status?: number }} */ (err).status ?? 403;
@@ -489,7 +504,7 @@ export async function resolveVercelAccess(cfg) {
   }
 
   const e = new Error(
-    `VERCEL_TOKEN cannot access project ${cfg.projectId} with VERCEL_ORG_ID=${cfg.teamId} (403/404). Point VERCEL_ORG_ID / VERCEL_PROJECT_ID at the current Vercel team/project (see .vercel/project.json or Project → Settings) and recreate VERCEL_TOKEN from a team-owner account. See DEPLOYMENT.md.`,
+    `stage=ORG_PROJECT token is valid but cannot see VERCEL_PROJECT_ID under VERCEL_ORG_ID (403/404; shapes org=${shapes.orgShape} project=${shapes.projectShape}). Re-copy Team ID + Project ID from the *active* Vercel project Settings → General (not an old/disabled team). Live staging alias under zhbar10s-projects is currently DEPLOYMENT_DISABLED.`,
   );
   // @ts-expect-error status for soft-fail
   e.status = 403;
@@ -770,11 +785,41 @@ export function stripSecret(value) {
   return v;
 }
 
+/**
+ * Non-secret fingerprints so Actions logs show *what kind* of values were
+ * pasted without printing the secrets themselves (GHA would mask them anyway).
+ * @param {{ token?: string, teamId?: string, projectId?: string }} cfg
+ */
+export function describeVercelSecretShapes(cfg) {
+  const token = cfg.token ?? "";
+  const teamId = cfg.teamId ?? "";
+  const projectId = cfg.projectId ?? "";
+  const orgShape = !teamId
+    ? "empty"
+    : teamId.startsWith("team_")
+      ? "team_…"
+      : /^[a-z0-9]+(?:-[a-z0-9]+)+$/i.test(teamId)
+        ? "slug-with-hyphens"
+        : "opaque-id";
+  const projectShape = !projectId
+    ? "empty"
+    : projectId.startsWith("prj_")
+      ? "prj_…"
+      : "not-prj_-prefix";
+  return {
+    tokenLen: token.length,
+    orgShape,
+    orgLen: teamId.length,
+    projectShape,
+    projectLen: projectId.length,
+  };
+}
+
 /** Actionable warning + exit 0 when secrets are present but not authorized. */
 export function warnAndSkipUnauthorized(context, err) {
   const msg = err instanceof Error ? err.message : String(err);
   console.warn(
-    `::warning::${context} skipped — Vercel API not authorized (${msg}). Re-check GitHub secrets VERCEL_TOKEN / VERCEL_ORG_ID / VERCEL_PROJECT_ID against the current Vercel team/project (Project Settings or .vercel/project.json). Token must be a personal token from a team-owner account: https://vercel.com/account/tokens — see DEPLOYMENT.md.`,
+    `::warning::${context} skipped — Vercel API not authorized (${msg}). The three repo secrets exist, but this token cannot access that org/project (403). Open the live Vercel project → Settings → General and re-paste Project ID + Team ID into VERCEL_PROJECT_ID / VERCEL_ORG_ID; recreate VERCEL_TOKEN from that same team-owner account (https://vercel.com/account/tokens). Staging host zhbar10s-projects currently returns DEPLOYMENT_DISABLED — confirm you are targeting the active project, not a disabled/old one. See DEPLOYMENT.md.`,
   );
 }
 

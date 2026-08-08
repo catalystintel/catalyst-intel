@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   applyTeamScope,
   classifyWaitForSha,
+  describeVercelSecretShapes,
   hasNewerHealthyForSha,
   isAccessRelatedFailure,
   isVercelAuthError,
@@ -269,6 +270,31 @@ describe("isVercelAuthError", () => {
       ),
     ).toBe(true);
     expect(isVercelAuthError(new Error("TypeScript build failed"))).toBe(false);
+  });
+});
+
+describe("describeVercelSecretShapes", () => {
+  it("classifies team_/prj_/slug without exposing values", () => {
+    expect(
+      describeVercelSecretShapes({
+        token: "x".repeat(24),
+        teamId: "team_abc",
+        projectId: "prj_abc",
+      }),
+    ).toEqual({
+      tokenLen: 24,
+      orgShape: "team_…",
+      orgLen: 8,
+      projectShape: "prj_…",
+      projectLen: 7,
+    });
+    expect(
+      describeVercelSecretShapes({
+        token: "tok",
+        teamId: "zhbar10s-projects",
+        projectId: "not-a-prj",
+      }).orgShape,
+    ).toBe("slug-with-hyphens");
   });
 });
 
