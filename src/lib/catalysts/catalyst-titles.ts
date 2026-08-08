@@ -213,7 +213,7 @@ export function earningsDateForQuarterInference(options: {
   return null;
 }
 
-/** `{Company Name} - Earnings Report {Qn}` */
+/** `{Company} {Qn} earnings report` — distinct from Form 4 / shelf hyphen chips. */
 export function formatEarningsReportTitle(
   quarterLabel: string,
   companyName: string | null | undefined,
@@ -221,7 +221,7 @@ export function formatEarningsReportTitle(
   const q = quarterLabel.trim().toUpperCase().startsWith("Q")
     ? quarterLabel.trim().toUpperCase()
     : `Q${quarterLabel.trim()}`;
-  return `${resolveDisplayCompanyName(companyName)} - Earnings Report ${q}`;
+  return `${resolveDisplayCompanyName(companyName)} ${q} earnings report`;
 }
 
 /** True for SEC Item 2.02 / “Results of Operations…” style earnings subjects. */
@@ -349,8 +349,8 @@ export function looksLikeOfficerDirectorChangeTitle(
 export type Form4TitleKind = "buy" | "sell" | "mixed" | "transaction";
 
 /**
- * Ground-rule Form 4 titles.
- * Examples: `Acme Corp - Form 4 Insider Buy`, `Acme Corp - Form 4 Insider Sell`
+ * Form 4 titles — buy/sell voice, not identical `{Company} - Form 4 Insider …`.
+ * Examples: `Acme Corp insider buy filed`, `Acme Corp insider sale filed`
  */
 export function formatForm4InsiderTitle(
   kind: Form4TitleKind,
@@ -359,13 +359,13 @@ export function formatForm4InsiderTitle(
   const company = resolveDisplayCompanyName(companyName);
   switch (kind) {
     case "buy":
-      return `${company} - Form 4 Insider Buy`;
+      return `${company} insider buy filed`;
     case "sell":
-      return `${company} - Form 4 Insider Sell`;
+      return `${company} insider sale filed`;
     case "mixed":
-      return `${company} - Form 4 Insider Buy & Sell`;
+      return `${company} Form 4 buy and sell`;
     default:
-      return `${company} - Form 4 Insider Transaction`;
+      return `${company} Form 4 insider filing`;
   }
 }
 
@@ -385,18 +385,18 @@ export function form4TitleKindFromSubcategory(
   }
 }
 
-/** `{Company Name} - Shelf Registration (S-3)` */
+/** `{Company} files shelf registration (S-3)` */
 export function formatShelfRegistrationTitle(
   companyName: string | null | undefined,
 ): string {
-  return `${resolveDisplayCompanyName(companyName)} - Shelf Registration (S-3)`;
+  return `${resolveDisplayCompanyName(companyName)} files shelf registration (S-3)`;
 }
 
-/** `{Company} - New Stock Offering Filed (Potential Dilution Ahead)` (424B) */
+/** `{Company} files stock offering (dilution watch)` (424B) */
 export function formatProspectusOfferingTitle(
   companyName: string | null | undefined,
 ): string {
-  return `${resolveDisplayCompanyName(companyName)} - New Stock Offering Filed (Potential Dilution Ahead)`;
+  return `${resolveDisplayCompanyName(companyName)} files stock offering (dilution watch)`;
 }
 
 /** `{Company Name} Announces Acquisition — Deal in Play` (Form 425) */
@@ -406,25 +406,25 @@ export function format425MergerTitle(
   return `${resolveDisplayCompanyName(companyName)} Announces Acquisition — Deal in Play`;
 }
 
-/** `{Company Name} - Schedule 13D` */
+/** `{Company} reports active stake (13D)` */
 export function formatSchedule13DTitle(
   companyName: string | null | undefined,
 ): string {
-  return `${resolveDisplayCompanyName(companyName)} - Schedule 13D`;
+  return `${resolveDisplayCompanyName(companyName)} reports active stake (13D)`;
 }
 
-/** `{Company Name} - Schedule 13G` */
+/** `{Company} reports passive stake (13G)` */
 export function formatSchedule13GTitle(
   companyName: string | null | undefined,
 ): string {
-  return `${resolveDisplayCompanyName(companyName)} - Schedule 13G`;
+  return `${resolveDisplayCompanyName(companyName)} reports passive stake (13G)`;
 }
 
-/** `{Company Name} - Clinical Trial` */
+/** `{Company} clinical trial update` */
 export function formatClinicalTrialTitle(
   companyName: string | null | undefined,
 ): string {
-  return `${resolveDisplayCompanyName(companyName)} - Clinical Trial`;
+  return `${resolveDisplayCompanyName(companyName)} clinical trial update`;
 }
 
 /** `CPI — {Month Year}` */
@@ -446,16 +446,16 @@ export function formatFomcRateDecisionTitle(): string {
   return "FOMC Rate Decision";
 }
 
-/** `{Company Name} - Price Target` */
+/** `{Company} price target update` */
 export function formatPriceTargetTitle(
   companyName: string | null | undefined,
 ): string {
-  return `${resolveDisplayCompanyName(companyName)} - Price Target`;
+  return `${resolveDisplayCompanyName(companyName)} price target update`;
 }
 
-/** `{Company Name} - Analyst Rating` */
+/** `{Company} Street rating change` */
 export function formatAnalystRatingTitle(
   companyName: string | null | undefined,
 ): string {
-  return `${resolveDisplayCompanyName(companyName)} - Analyst Rating`;
+  return `${resolveDisplayCompanyName(companyName)} Street rating change`;
 }

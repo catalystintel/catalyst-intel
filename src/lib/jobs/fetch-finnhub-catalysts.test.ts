@@ -12,7 +12,7 @@ import {
 } from "./fetch-finnhub-catalysts";
 
 describe("earningsToNormalized", () => {
-  it("formats Earnings Report Qn - Company Name", () => {
+  it("formats Company Qn earnings report", () => {
     const item = earningsToNormalized(
       {
         symbol: "AAPL",
@@ -29,8 +29,8 @@ describe("earningsToNormalized", () => {
       symbol: "AAPL",
       companyName: "Apple Inc.",
       type: "Earnings",
-      title: "Apple Inc. - Earnings Report Q1",
-      headline: "Apple Inc. - Earnings Report Q1",
+      title: "Apple Inc. Q1 earnings report",
+      headline: "Apple Inc. Q1 earnings report",
       eventCategory: "earnings",
       subcategory: "amc",
     });
@@ -42,7 +42,7 @@ describe("earningsToNormalized", () => {
       date: "2026-04-24",
       hour: "bmo",
     });
-    expect(item?.title).toBe("MSFT - Earnings Report Q2");
+    expect(item?.title).toBe("MSFT Q2 earnings report");
     expect(item?.companyName).toBe("MSFT");
   });
 });

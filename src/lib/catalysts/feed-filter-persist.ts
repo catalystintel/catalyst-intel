@@ -5,7 +5,11 @@ import {
   type FeedTimeWindow,
 } from "@/lib/catalysts/feed-time-window";
 import type { GicsSectorKey } from "@/lib/companies/gics-sectors";
-import { isEventCategoryKey } from "@/lib/catalysts/taxonomy";
+import {
+  DEFAULT_FEED_SUBJECTS,
+  isEventCategoryKey,
+  sameCategorySet,
+} from "@/lib/catalysts/taxonomy";
 import { isLocalDevUi } from "@/lib/dev/local-dev-ui";
 import type { EventCategoryKey } from "@/lib/jobs/parse-8k-items";
 
@@ -14,7 +18,7 @@ import type { EventCategoryKey } from "@/lib/jobs/parse-8k-items";
  * {@link FEED_FILTER_IDLE_MS} of idle time, then falls back to product
  * defaults so a forgotten session doesn't haunt the next day.
  */
-export const FEED_FILTER_STORAGE_KEY = "ci.feed-filters.v4";
+export const FEED_FILTER_STORAGE_KEY = "ci.feed-filters.v5";
 export const FEED_FILTER_IDLE_MS = 60 * 60 * 1000; // 1 hour
 
 export interface PersistedFeedFilters {
@@ -58,7 +62,8 @@ export type FeedFilterState = Omit<PersistedFeedFilters, "lastActiveAt">;
 export const DEFAULT_FEED_FILTERS: FeedFilterState = {
   symbolQuery: "",
   symbolFilters: [],
-  categoryFilters: [],
+  /** Gold + desk-secondary subjects — hide thin news/disclosure/other by default. */
+  categoryFilters: [...DEFAULT_FEED_SUBJECTS],
   sectorFilters: [],
   formFilters: [],
   sourceFilters: [],
@@ -79,7 +84,7 @@ export function isPanelFiltersDefault(filters: FeedFilterState): boolean {
   return (
     !filters.symbolQuery.trim() &&
     filters.symbolFilters.length === 0 &&
-    filters.categoryFilters.length === 0 &&
+    sameCategorySet(filters.categoryFilters, DEFAULT_FEED_SUBJECTS) &&
     filters.sourceFilters.length === 0 &&
     filters.tagFilters.length === 0 &&
     filters.watchlistIds.length === 0 &&
@@ -122,6 +127,7 @@ export function readPersistedFeedFilters(
     // Prefer v3; fall back to prior keys once.
     const raw =
       window.localStorage.getItem(FEED_FILTER_STORAGE_KEY) ??
+      window.localStorage.getItem("ci.feed-filters.v4") ??
       window.localStorage.getItem("ci.feed-filters.v3") ??
       window.localStorage.getItem("ci.feed-filters.v2") ??
       window.localStorage.getItem("ci.feed-filters.v1");
@@ -134,6 +140,7 @@ export function readPersistedFeedFilters(
       typeof parsed.lastActiveAt === "number" ? parsed.lastActiveAt : 0;
     if (!lastActiveAt || now - lastActiveAt > FEED_FILTER_IDLE_MS) {
       window.localStorage.removeItem(FEED_FILTER_STORAGE_KEY);
+      window.localStorage.removeItem("ci.feed-filters.v4");
       window.localStorage.removeItem("ci.feed-filters.v3");
       window.localStorage.removeItem("ci.feed-filters.v2");
       window.localStorage.removeItem("ci.feed-filters.v1");
@@ -155,6 +162,11 @@ export function readPersistedFeedFilters(
       isEventCategoryKey(parsed.categoryFilter)
     ) {
       categoryFilters = [parsed.categoryFilter];
+    }
+    // Pre-v5 defaults used an empty category list (= show all). Map that to
+    // the gold-subject default chips so thin news/disclosure/other stay off.
+    if (categoryFilters.length === 0) {
+      categoryFilters = [...DEFAULT_FEED_SUBJECTS];
     }
     const sourceFilters = isLocalDevUi()
       ? parseStringArray(parsed.sourceFilters).map((s) => s.toLowerCase())
@@ -195,6 +207,7 @@ export function writePersistedFeedFilters(
   if (typeof window === "undefined") return;
   if (isFiltersDefault(filters)) {
     window.localStorage.removeItem(FEED_FILTER_STORAGE_KEY);
+    window.localStorage.removeItem("ci.feed-filters.v4");
     window.localStorage.removeItem("ci.feed-filters.v3");
     window.localStorage.removeItem("ci.feed-filters.v2");
     window.localStorage.removeItem("ci.feed-filters.v1");
@@ -217,6 +230,7 @@ export function writePersistedFeedFilters(
     lastActiveAt: now,
   };
   window.localStorage.setItem(FEED_FILTER_STORAGE_KEY, JSON.stringify(payload));
+  window.localStorage.removeItem("ci.feed-filters.v4");
   window.localStorage.removeItem("ci.feed-filters.v3");
   window.localStorage.removeItem("ci.feed-filters.v2");
   window.localStorage.removeItem("ci.feed-filters.v1");
@@ -225,6 +239,7 @@ export function writePersistedFeedFilters(
 export function clearPersistedFeedFilters(): void {
   if (typeof window === "undefined") return;
   window.localStorage.removeItem(FEED_FILTER_STORAGE_KEY);
+  window.localStorage.removeItem("ci.feed-filters.v4");
   window.localStorage.removeItem("ci.feed-filters.v3");
   window.localStorage.removeItem("ci.feed-filters.v2");
   window.localStorage.removeItem("ci.feed-filters.v1");

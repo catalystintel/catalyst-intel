@@ -62,4 +62,16 @@ describe("categorizeNewsHeadline", () => {
       subcategory: "company_news",
     });
   });
+
+  it("classifies management / distress / cyber headlines out of generic news", () => {
+    expect(
+      categorizeNewsHeadline("Acme CEO resigns effective immediately"),
+    ).toMatchObject({ eventCategory: "management" });
+    expect(
+      categorizeNewsHeadline("Widget Corp files for Chapter 11 bankruptcy"),
+    ).toMatchObject({ eventCategory: "distress" });
+    expect(
+      categorizeNewsHeadline("Firm discloses material cybersecurity incident"),
+    ).toMatchObject({ eventCategory: "cyber" });
+  });
 });
