@@ -32,6 +32,7 @@ import {
   type DeliverableRule,
 } from "@/lib/alerts/deliver";
 import { normalizeAlertConditions } from "@/lib/alerts/normalize";
+import { telegramChatIdsByUserIds } from "@/lib/telegram/link";
 
 export interface AutoFireResult {
   evaluated: number;
@@ -53,6 +54,8 @@ export async function runAlertAutoFire(options: {
       timestamp: catalysts.timestamp,
       type: catalysts.type,
       companyName: catalysts.companyName,
+      summary: catalysts.summary,
+      aiBullets: catalysts.aiBullets,
       sourceUrl: rawSources.url,
       sourceProvider: rawSources.provider,
       tags: catalysts.tags,
@@ -146,6 +149,7 @@ export async function runAlertAutoFire(options: {
   }
 
   const rulesByUser = new Map<number, DeliverableRule[]>();
+  const linkedChats = await telegramChatIdsByUserIds(userIds);
   for (const r of ruleRows) {
     const rule: DeliverableRule = {
       id: r.id,
@@ -153,7 +157,8 @@ export async function runAlertAutoFire(options: {
       channel: r.channel,
       webhookUrl: r.webhookUrl,
       emailTo: r.emailTo,
-      telegramChatId: r.telegramChatId,
+      telegramChatId:
+        r.telegramChatId?.trim() || linkedChats.get(r.userId) || null,
       conditions: normalizeAlertConditions(r.conditions),
     };
     const list = rulesByUser.get(r.userId) ?? [];
@@ -177,6 +182,12 @@ export async function runAlertAutoFire(options: {
       type: catalyst.type,
       companyName: catalyst.companyName,
       sourceProvider: catalyst.sourceProvider,
+      summary: catalyst.summary,
+      aiBullets: Array.isArray(catalyst.aiBullets)
+        ? (catalyst.aiBullets as unknown[]).filter(
+            (t): t is string => typeof t === "string",
+          )
+        : null,
       tags: Array.isArray(catalyst.tags)
         ? (catalyst.tags as unknown[]).filter(
             (t): t is string => typeof t === "string",

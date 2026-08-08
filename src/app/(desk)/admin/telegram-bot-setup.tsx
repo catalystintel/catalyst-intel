@@ -102,9 +102,9 @@ export function TelegramBotSetup() {
   return (
     <div className="flex flex-col gap-3">
       <p className="max-w-2xl text-sm text-muted-foreground">
-        Registers the webhook, slash commands (/start, /id, /help), bot
-        description, and the Catalyst Intel brand avatar. Users then message the
-        bot once to get a chat ID for Telegram alert rules.
+        Registers the webhook, slash commands (/start, /status, /mute, …), bot
+        description, and the Catalyst Intel brand avatar. Users then Connect
+        Telegram from /alerts (or paste a chat ID).
       </p>
       {status ? (
         <dl className="grid max-w-xl grid-cols-[auto_1fr] gap-x-4 gap-y-1 font-mono text-xs">

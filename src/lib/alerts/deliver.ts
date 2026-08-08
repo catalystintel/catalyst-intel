@@ -5,10 +5,19 @@ import type {
 } from "@/db/schema";
 import { formatAlertMessage } from "@/lib/alerts/format-message";
 import { classifySession, sessionMatches } from "@/lib/alerts/session";
+import { resolveAlertTakeaway } from "@/lib/alerts/takeaway";
 import { assertWebhookUrlSafeForFetch } from "@/lib/alerts/webhook-url";
 import { sendResendEmail } from "@/lib/email/resend";
 import { sendWebPush, type PushSubscriptionRecord } from "@/lib/push/web-push";
-import { escapeTelegramHtml, sendTelegramMessage } from "@/lib/telegram/bot";
+import {
+  buildAlertInlineKeyboard,
+  escapeTelegramHtml,
+  sendTelegramMessage,
+} from "@/lib/telegram/bot";
+import {
+  getTelegramLinkByChatId,
+  isTelegramLinkMuted,
+} from "@/lib/telegram/link";
 import { matchesWatchlistCriteria } from "@/lib/watchlist/match-criteria";
 
 export interface AlertCatalystPayload {
@@ -26,6 +35,10 @@ export interface AlertCatalystPayload {
   type?: string | null;
   companyName?: string | null;
   sourceProvider?: string | null;
+  /** Optional body summary for deterministic WIIM takeaway. */
+  summary?: string | null;
+  /** Cached on-demand AI bullets when already analyzed. */
+  aiBullets?: string[] | null;
 }
 
 export interface DeliverableRule {
@@ -151,20 +164,46 @@ async function deliverTelegram(
   chatId: string,
   catalyst: AlertCatalystPayload,
   ruleName: string,
-): Promise<{ ok: boolean; detail: string }> {
-  const message = formatAlertMessage(catalyst, { ruleName });
-  const bodyLines = message.text.split("\n");
-  const impactLine = bodyLines[0] ?? message.pushTitle;
-  const impactSuffix = impactLine.includes(" · ")
-    ? impactLine.slice(impactLine.indexOf(" · ") + 3)
-    : impactLine;
+): Promise<{ ok: boolean; detail: string; skipped?: boolean }> {
+  const link = await getTelegramLinkByChatId(chatId);
+  if (isTelegramLinkMuted(link)) {
+    return {
+      ok: true,
+      skipped: true,
+      detail: `Telegram muted until ${link?.mutedUntil ?? "later"}`,
+    };
+  }
+
+  const takeaway = resolveAlertTakeaway({
+    aiBullets: catalyst.aiBullets,
+    summary: catalyst.summary,
+    headline: catalyst.headline,
+    title: catalyst.title,
+  });
+  const message = formatAlertMessage(catalyst, { ruleName, takeaway });
 
   const htmlParts: string[] = [
-    `<b>${escapeTelegramHtml(message.symbol)}</b> · ${escapeTelegramHtml(impactSuffix)}`,
+    `<b>${escapeTelegramHtml(message.symbol)}</b> · ${escapeTelegramHtml(
+      message.pushTitle.includes(" · ")
+        ? message.pushTitle.slice(message.pushTitle.indexOf(" · ") + 3)
+        : message.pushTitle,
+    )}`,
     escapeTelegramHtml(message.headline),
   ];
 
-  for (const line of bodyLines.slice(2)) {
+  if (message.takeaway) {
+    htmlParts.push("");
+    htmlParts.push(`<i>${escapeTelegramHtml(message.takeaway)}</i>`);
+  }
+
+  // Reuse the plain-text context/meta/footer lines (skip lead + optional takeaway).
+  const bodyLines = message.text.split("\n");
+  let startIdx = 2; // after symbol line + headline
+  if (message.takeaway) {
+    // "", takeaway
+    startIdx = 4;
+  }
+  for (const line of bodyLines.slice(startIdx)) {
     if (!line) {
       htmlParts.push("");
       continue;
@@ -184,14 +223,24 @@ async function deliverTelegram(
     htmlParts.push(escapeTelegramHtml(line));
   }
 
+  const replyMarkup = buildAlertInlineKeyboard({
+    deskUrl: message.deskUrl,
+    watchlistsUrl: message.watchlistsUrl,
+  });
+
   const htmlResult = await sendTelegramMessage({
     chatId,
     text: htmlParts.join("\n"),
     parseMode: "HTML",
-    disableWebPagePreview: false,
+    disableWebPagePreview: true,
+    replyMarkup,
   });
   if (htmlResult.ok) return htmlResult;
-  return sendTelegramMessage({ chatId, text: message.text });
+  return sendTelegramMessage({
+    chatId,
+    text: message.text,
+    replyMarkup,
+  });
 }
 
 async function deliverPush(
@@ -317,6 +366,7 @@ export async function deliverAlertRules(options: {
         ruleId: rule.id,
         channel: "telegram",
         ok: delivered.ok,
+        skipped: delivered.skipped,
         detail: delivered.detail,
       });
       continue;

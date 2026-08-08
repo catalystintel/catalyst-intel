@@ -1,6 +1,11 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { deliverAlertRules, type AlertCatalystPayload } from "./deliver";
+
+vi.mock("@/lib/telegram/link", () => ({
+  getTelegramLinkByChatId: vi.fn(async () => null),
+  isTelegramLinkMuted: vi.fn(() => false),
+}));
 
 const catalyst: AlertCatalystPayload = {
   id: 1,

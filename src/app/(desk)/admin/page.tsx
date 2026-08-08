@@ -9,6 +9,7 @@ import { withDbRetry } from "@/lib/db/with-db-retry";
 import { isFinnhubConfigured } from "@/lib/jobs/finnhub-env";
 
 import { isDbResetAllowed } from "@/lib/ops/non-production-env";
+import { getUsageStats } from "@/lib/ops/usage-stats";
 
 import { FetchTrigger } from "./fetch-trigger";
 import { IngestionAuditSection } from "./ingestion-audit-section";
@@ -16,6 +17,7 @@ import { MigrateTrigger } from "./migrate-trigger";
 import { ResetDbTrigger } from "./reset-db-trigger";
 import { ShowArticleSourceToggle } from "./show-article-source-toggle";
 import { TelegramBotSetup } from "./telegram-bot-setup";
+import { UsageConsumptionPanel } from "./usage-consumption-panel";
 import { WhatsNewPanel } from "./whats-new-panel";
 
 export default async function AdminPage() {
@@ -32,7 +34,7 @@ export default async function AdminPage() {
   // Independent reads - run them concurrently instead of one round-trip at a
   // time. Each await here is a network hop to Turso, and sequencing them was
   // a meaningful chunk of this page's load latency.
-  const [lastFetch, sourceCountRow, providerCounts, nyseCountRow] =
+  const [lastFetch, sourceCountRow, providerCounts, nyseCountRow, usageStats] =
     await withDbRetry(() =>
       Promise.all([
         db
@@ -52,6 +54,7 @@ export default async function AdminPage() {
           .orderBy(sql`count(*) desc`)
           .all(),
         db.select({ value: count() }).from(nyseListings).get(),
+        getUsageStats(),
       ]),
     );
   const sourceCount = sourceCountRow?.value ?? 0;
@@ -95,6 +98,22 @@ export default async function AdminPage() {
         </div>
         <div className="px-4 py-4 sm:px-5">
           <ShowArticleSourceToggle />
+        </div>
+      </section>
+
+      <section className="overflow-hidden rounded-xl border border-[var(--desk-border)] bg-[var(--desk-panel)]">
+        <div className="border-b border-border/60 px-4 py-4 sm:px-5">
+          <h2 className="font-mono text-sm tracking-wide text-foreground">
+            Usage &amp; soft limits
+          </h2>
+          <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
+            Alert delivery volume from the last day / week, against soft caps
+            (email) and vendor rate-limit status. Helps catch Resend / API
+            exhaustion before users do.
+          </p>
+        </div>
+        <div className="px-4 py-4 sm:px-5">
+          <UsageConsumptionPanel stats={usageStats} />
         </div>
       </section>
 
@@ -168,8 +187,8 @@ export default async function AdminPage() {
             Telegram bot
           </h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            One-click webhook + commands + brand avatar so /start returns chat
-            IDs for alert rules.
+            One-click webhook + commands + brand avatar so users can Connect
+            Telegram from Alerts (deep-link) and receive watchlist fires.
           </p>
         </div>
         <div className="px-4 py-4 sm:px-5">

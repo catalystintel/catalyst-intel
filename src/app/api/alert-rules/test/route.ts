@@ -29,6 +29,7 @@ import {
   isSameOriginRequest,
   sameOriginForbiddenResponse,
 } from "@/lib/http/same-origin";
+import { getTelegramLinkByUserId } from "@/lib/telegram/link";
 
 /**
  * Test-fires alert rules against the latest catalyst (or a specific id).
@@ -98,6 +99,8 @@ export async function POST(request: NextRequest) {
     timestamp: catalysts.timestamp,
     type: catalysts.type,
     companyName: catalysts.companyName,
+    summary: catalysts.summary,
+    aiBullets: catalysts.aiBullets,
     sourceUrl: rawSources.url,
     sourceProvider: rawSources.provider,
     tags: catalysts.tags,
@@ -148,6 +151,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  const linked = await getTelegramLinkByUserId(user.id);
   const deliverable: DeliverableRule[] = ruleRows
     .filter((r) => r.enabled)
     .map((r) => ({
@@ -156,7 +160,7 @@ export async function POST(request: NextRequest) {
       channel: r.channel,
       webhookUrl: r.webhookUrl,
       emailTo: r.emailTo,
-      telegramChatId: r.telegramChatId,
+      telegramChatId: r.telegramChatId?.trim() || linked?.chatId || null,
       conditions: normalizeAlertConditions(r.conditions),
     }));
 
@@ -204,6 +208,11 @@ export async function POST(request: NextRequest) {
       ...catalystRow,
       tags: Array.isArray(catalystRow.tags)
         ? (catalystRow.tags as unknown[]).filter(
+            (t): t is string => typeof t === "string",
+          )
+        : null,
+      aiBullets: Array.isArray(catalystRow.aiBullets)
+        ? (catalystRow.aiBullets as unknown[]).filter(
             (t): t is string => typeof t === "string",
           )
         : null,

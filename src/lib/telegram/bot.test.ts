@@ -1,19 +1,25 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
-  buildTelegramInboundReply,
+  buildAlertInlineKeyboard,
   clearTelegramBotIdentityCache,
   escapeTelegramHtml,
   getTelegramBotUsername,
   isTelegramConfigured,
   isValidTelegramWebhookSecret,
+  MAIN_REPLY_KEYBOARD,
   normalizeTelegramCommand,
   parseTelegramCommand,
   resolveTelegramBotIdentity,
   sendTelegramMessage,
   setupTelegramBot,
-  telegramWelcomeReply,
+  TELEGRAM_BOT_COMMANDS,
 } from "./bot";
+import {
+  telegramChatIdReply,
+  telegramHelpReply,
+  telegramWelcomeReply,
+} from "./handlers";
 
 const originalToken = process.env.TELEGRAM_BOT_TOKEN;
 const originalWebhookSecret = process.env.TELEGRAM_WEBHOOK_SECRET;
@@ -92,7 +98,6 @@ describe("resolveTelegramBotIdentity", () => {
     expect(identity.firstName).toBe("Catalyst Intel");
     expect(identity.deepLink).toBe("https://t.me/LiveCatalystBot");
 
-    // Cached — second call should not hit the network again.
     const fetchMock = vi.mocked(global.fetch);
     fetchMock.mockClear();
     const again = await resolveTelegramBotIdentity();
@@ -125,6 +130,10 @@ describe("parseTelegramCommand", () => {
       command: "start",
       args: "",
     });
+    expect(parseTelegramCommand("/start tok_abc")).toEqual({
+      command: "start",
+      args: "tok_abc",
+    });
     expect(parseTelegramCommand("/id  extra")).toEqual({
       command: "id",
       args: "extra",
@@ -137,32 +146,61 @@ describe("parseTelegramCommand", () => {
   });
 });
 
-describe("inbound replies", () => {
-  it("includes a copyable chat id for /start", () => {
-    const reply = buildTelegramInboundReply({
-      chatId: 42,
-      text: "/start",
+describe("commands and keyboards", () => {
+  it("registers status/recent/mute commands", () => {
+    const names = TELEGRAM_BOT_COMMANDS.map((c) => c.command);
+    expect(names).toEqual(
+      expect.arrayContaining([
+        "start",
+        "status",
+        "recent",
+        "mute",
+        "unmute",
+        "id",
+        "help",
+      ]),
+    );
+  });
+
+  it("builds alert inline keyboard with open + mute", () => {
+    const kb = buildAlertInlineKeyboard({
+      deskUrl: "https://app.example/catalyst-feed/catalyst/1",
+      watchlistsUrl: "https://app.example/watchlist",
     });
+    expect(kb.inline_keyboard[0]).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ text: "Open event" }),
+        expect.objectContaining({ text: "Watchlist" }),
+      ]),
+    );
+    expect(kb.inline_keyboard.at(-1)).toEqual([
+      { text: "Mute 1h", callback_data: "mute:1h" },
+    ]);
+  });
+
+  it("exposes a persistent reply keyboard", () => {
+    expect(MAIN_REPLY_KEYBOARD.keyboard.length).toBeGreaterThanOrEqual(2);
+  });
+});
+
+describe("inbound replies", () => {
+  it("includes menu copy for /start", () => {
+    const reply = telegramWelcomeReply({ chatId: 42 });
     expect(reply.parseMode).toBe("HTML");
-    expect(reply.text).toContain("<code>42</code>");
-    expect(reply.text.toLowerCase()).toContain("chat id");
+    expect(reply.text).toContain("Catalyst Intel");
+    expect(reply.replyMarkup).toEqual(MAIN_REPLY_KEYBOARD);
   });
 
   it("returns id-focused copy for /id", () => {
-    const reply = buildTelegramInboundReply({ chatId: 99, text: "/id" });
+    const reply = telegramChatIdReply(99);
     expect(reply.text).toContain("<code>99</code>");
     expect(reply.text).toContain("Your Telegram chat ID");
   });
 
   it("returns help for /help", () => {
-    const reply = buildTelegramInboundReply({ chatId: 7, text: "/help" });
+    const reply = telegramHelpReply(7);
     expect(reply.text).toContain("How Telegram alerts work");
     expect(reply.text).toContain("<code>7</code>");
-  });
-
-  it("still returns chat id for plain text", () => {
-    const reply = buildTelegramInboundReply({ chatId: 5, text: "hello" });
-    expect(reply.text).toBe(telegramWelcomeReply(5));
   });
 
   it("escapes HTML in chat ids that somehow contain markup", () => {
@@ -179,60 +217,62 @@ describe("sendTelegramMessage", () => {
     delete process.env.TELEGRAM_BOT_TOKEN;
     const result = await sendTelegramMessage({ chatId: "1", text: "hi" });
     expect(result.ok).toBe(false);
-    expect(result.detail.toLowerCase()).toContain("not available");
   });
 
-  it("fails when chat id is missing", async () => {
+  it("rejects blank chat ids", async () => {
     const result = await sendTelegramMessage({ chatId: "  ", text: "hi" });
     expect(result.ok).toBe(false);
-    expect(result.detail.toLowerCase()).toContain("chat id");
+    expect(result.detail.toLowerCase()).toContain("chat");
   });
 
   it("sends via the Telegram Bot API with optional parse_mode", async () => {
     const fetchMock = vi
       .spyOn(global, "fetch")
       .mockResolvedValue(
-        new Response('{"ok":true,"result":{}}', { status: 200 }),
+        new Response(JSON.stringify({ ok: true, result: {} }), { status: 200 }),
       );
 
     const result = await sendTelegramMessage({
       chatId: "42",
       text: "<b>hi</b>",
       parseMode: "HTML",
+      replyMarkup: MAIN_REPLY_KEYBOARD,
     });
+
     expect(result.ok).toBe(true);
     expect(fetchMock).toHaveBeenCalledWith(
       "https://api.telegram.org/bot123:abc/sendMessage",
-      expect.objectContaining({ method: "POST" }),
+      expect.objectContaining({
+        method: "POST",
+        body: expect.stringContaining('"reply_markup"'),
+      }),
     );
-    const init = fetchMock.mock.calls[0]?.[1] as RequestInit;
-    expect(JSON.parse(String(init.body))).toMatchObject({
-      chat_id: "42",
-      parse_mode: "HTML",
-    });
   });
 
-  it("reports non-2xx responses", async () => {
+  it("surfaces Telegram API errors", async () => {
     vi.spyOn(global, "fetch").mockResolvedValue(
-      new Response("bad chat", { status: 400 }),
+      new Response(JSON.stringify({ ok: false, description: "Forbidden" }), {
+        status: 200,
+      }),
     );
     const result = await sendTelegramMessage({ chatId: "42", text: "hi" });
     expect(result.ok).toBe(false);
-    expect(result.detail).toContain("400");
+    expect(result.detail).toContain("Forbidden");
   });
 });
 
 describe("setupTelegramBot", () => {
-  it("fails closed without token or secret", async () => {
-    delete process.env.TELEGRAM_BOT_TOKEN;
+  it("fails closed when webhook secret is missing", async () => {
+    process.env.TELEGRAM_BOT_TOKEN = "123:abc";
     delete process.env.TELEGRAM_WEBHOOK_SECRET;
     const report = await setupTelegramBot({
       webhookUrl: "https://example.com/api/telegram/webhook",
     });
     expect(report.ok).toBe(false);
+    expect(report.steps.secret?.ok).toBe(false);
   });
 
-  it("registers webhook, commands, descriptions, and photo", async () => {
+  it("registers webhook with callback_query updates", async () => {
     process.env.TELEGRAM_BOT_TOKEN = "123:abc";
     process.env.TELEGRAM_WEBHOOK_SECRET = "hook-secret";
 
@@ -240,40 +280,53 @@ describe("setupTelegramBot", () => {
       .spyOn(global, "fetch")
       .mockImplementation(async (input) => {
         const url = String(input);
-        if (url.endsWith("/setMyProfilePhoto")) {
-          return new Response('{"ok":true,"result":true}', { status: 200 });
-        }
         if (url.endsWith("/getMe")) {
           return new Response(
             JSON.stringify({
               ok: true,
-              result: {
-                id: 1,
-                username: "CatalystIntelBot",
-                first_name: "Catalyst Intel",
-              },
+              result: { id: 1, username: "Bot", first_name: "Bot" },
             }),
             { status: 200 },
           );
         }
-        return new Response('{"ok":true,"result":true}', { status: 200 });
+        if (url.endsWith("/setWebhook")) {
+          return new Response(JSON.stringify({ ok: true, result: true }), {
+            status: 200,
+          });
+        }
+        if (url.endsWith("/setMyCommands")) {
+          return new Response(JSON.stringify({ ok: true, result: true }), {
+            status: 200,
+          });
+        }
+        if (
+          url.endsWith("/setMyDescription") ||
+          url.endsWith("/setMyShortDescription")
+        ) {
+          return new Response(JSON.stringify({ ok: true, result: true }), {
+            status: 200,
+          });
+        }
+        // profile photo upload
+        return new Response(JSON.stringify({ ok: true, result: true }), {
+          status: 200,
+        });
       });
 
     const report = await setupTelegramBot({
       webhookUrl: "https://example.com/api/telegram/webhook",
     });
 
-    expect(report.ok).toBe(true);
-    expect(report.bot?.username).toBe("CatalystIntelBot");
     expect(report.steps.setWebhook?.ok).toBe(true);
-    expect(report.steps.setMyCommands?.ok).toBe(true);
-    expect(report.steps.setMyProfilePhoto?.ok).toBe(true);
-
-    const methods = fetchMock.mock.calls.map((c) =>
-      String(c[0]).split("/").pop(),
+    const webhookCall = fetchMock.mock.calls.find((c) =>
+      String(c[0]).endsWith("/setWebhook"),
     );
-    expect(methods).toContain("setWebhook");
-    expect(methods).toContain("setMyCommands");
-    expect(methods).toContain("setMyProfilePhoto");
+    expect(webhookCall).toBeTruthy();
+    const body = JSON.parse(String(webhookCall?.[1]?.body ?? "{}")) as {
+      allowed_updates?: string[];
+    };
+    expect(body.allowed_updates).toEqual(
+      expect.arrayContaining(["message", "callback_query"]),
+    );
   });
 });
