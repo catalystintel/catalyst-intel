@@ -415,24 +415,30 @@ export function TapeSplitPanel({
             variant="ghost"
             size="icon-sm"
             disabled={!canPrev}
-            className="btn-press text-[var(--desk-text-muted)] hover:text-[var(--desk-text)] disabled:opacity-30"
-            onClick={onPrev}
+            title={canPrev ? "Newer catalyst" : "Already at newest"}
+            className="btn-press text-[var(--desk-text-muted)] hover:text-[var(--desk-text)] disabled:pointer-events-none disabled:opacity-30"
+            onClick={canPrev ? onPrev : undefined}
             aria-keyshortcuts="ArrowUp"
           >
             <ChevronUp />
-            <span className="sr-only">Previous catalyst</span>
+            <span className="sr-only">
+              {canPrev ? "Previous catalyst" : "Already at newest catalyst"}
+            </span>
           </Button>
           <Button
             type="button"
             variant="ghost"
             size="icon-sm"
             disabled={!canNext}
-            className="btn-press text-[var(--desk-text-muted)] hover:text-[var(--desk-text)] disabled:opacity-30"
-            onClick={onNext}
+            title={canNext ? "Older catalyst" : "Already at oldest loaded"}
+            className="btn-press text-[var(--desk-text-muted)] hover:text-[var(--desk-text)] disabled:pointer-events-none disabled:opacity-30"
+            onClick={canNext ? onNext : undefined}
             aria-keyshortcuts="ArrowDown"
           >
             <ChevronDown />
-            <span className="sr-only">Next catalyst</span>
+            <span className="sr-only">
+              {canNext ? "Next catalyst" : "Already at oldest loaded catalyst"}
+            </span>
           </Button>
           <Button
             type="button"
