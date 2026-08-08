@@ -123,7 +123,9 @@ function formatFiledEt(iso: string): string {
   }
 }
 
-function resolveAppOrigin(env: NodeJS.ProcessEnv = process.env): string | null {
+function resolveAppOrigin(
+  env: Record<string, string | undefined> = process.env,
+): string | null {
   const configured = env.NEXT_PUBLIC_APP_URL?.trim();
   if (configured) {
     try {
@@ -171,7 +173,7 @@ export function formatAlertMessage(
   options?: {
     ruleName?: string;
     takeaway?: string | null;
-    env?: NodeJS.ProcessEnv;
+    env?: Record<string, string | undefined>;
   },
 ): FormattedAlertMessage {
   const symbol = (catalyst.symbol?.trim() || "—").toUpperCase();

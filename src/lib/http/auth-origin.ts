@@ -40,7 +40,7 @@ function originFromHost(host: string): string {
 
 /** Collect every host that may safely run the Google OAuth PKCE dance. */
 export function getAllowedAuthHosts(
-  env: NodeJS.ProcessEnv = process.env,
+  env: Record<string, string | undefined> = process.env,
 ): Set<string> {
   const hosts = new Set<string>(KNOWN_AUTH_HOSTS);
 
@@ -70,7 +70,7 @@ export function getAllowedAuthHosts(
  * on an unsafe preview host.
  */
 export function getPreferredAuthOrigin(
-  env: NodeJS.ProcessEnv = process.env,
+  env: Record<string, string | undefined> = process.env,
 ): string {
   for (const key of [
     "NEXT_PUBLIC_AUTH_ORIGIN",
@@ -105,7 +105,7 @@ export function isLocalAuthHost(host: string): boolean {
 /** True when OAuth may start on this origin without bouncing. */
 export function isAllowedAuthOrigin(
   originOrHost: string,
-  env: NodeJS.ProcessEnv = process.env,
+  env: Record<string, string | undefined> = process.env,
 ): boolean {
   let host: string;
   try {
@@ -126,7 +126,7 @@ export function isAllowedAuthOrigin(
  */
 export function authHostBounceUrl(
   requestUrl: string | URL,
-  env: NodeJS.ProcessEnv = process.env,
+  env: Record<string, string | undefined> = process.env,
 ): string | null {
   const url = typeof requestUrl === "string" ? new URL(requestUrl) : requestUrl;
   if (isAllowedAuthOrigin(url.origin, env)) return null;
