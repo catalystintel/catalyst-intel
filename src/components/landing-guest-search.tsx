@@ -22,7 +22,14 @@ type GuestHit = {
  * Prelogin teaser: 2–3 free ticker lookups against the Live catalyst DB,
  * then nudge to Google sign-in for the full desk.
  */
-export function LandingGuestSearch({ className }: { className?: string }) {
+export function LandingGuestSearch({
+  className,
+  signInHref = "/login",
+}: {
+  className?: string;
+  /** Same target as other marketing CTAs (bypass chooser vs Google OAuth). */
+  signInHref?: string;
+}) {
   const [q, setQ] = useState("");
   const [loading, setLoading] = useState(false);
   const [hits, setHits] = useState<GuestHit[] | null>(null);
@@ -110,7 +117,7 @@ export function LandingGuestSearch({ className }: { className?: string }) {
           <p className="text-sm text-[var(--desk-text-secondary)]">{error}</p>
           {limitHit ? (
             <Link
-              href="/login"
+              href={signInHref}
               className="mt-2 inline-flex font-mono text-xs font-semibold text-[var(--desk-link)] underline-offset-4 hover:underline"
             >
               Sign in for unlimited search →

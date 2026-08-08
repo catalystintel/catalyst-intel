@@ -3,6 +3,7 @@ import Link from "next/link";
 
 import { PreLoginChrome } from "@/components/pre-login-chrome";
 import { buttonVariants } from "@/components/ui/button";
+import { getSignInStartHref } from "@/lib/auth/dev-bypass";
 import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = {
@@ -105,7 +106,7 @@ export default function AboutPage() {
           </p>
           <div className="mt-6 flex flex-wrap items-center gap-3">
             <Link
-              href="/auth/login?next=%2Fcatalyst-feed"
+              href={getSignInStartHref()}
               className={cn(
                 buttonVariants({ size: "lg" }),
                 "btn-press min-h-11 w-full justify-center bg-[var(--landing-primary,#00d4aa)] text-[var(--desk-accent-fg,#131722)] hover:bg-[var(--landing-primary-hover,#00b894)] sm:w-auto",

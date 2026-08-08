@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { isAdminEmail } from "@/lib/auth/admin";
+import { getSignInStartHref } from "@/lib/auth/dev-bypass";
 
 /** Quick-glance trust row under the hero CTA. */
 const HERO_STATS = [
@@ -193,11 +194,11 @@ export default async function Home({
               />
             </div>
             <div className="mt-5">
-              <LandingGuestSearch />
+              <LandingGuestSearch signInHref={getSignInStartHref()} />
             </div>
             <div className="mt-3">
               <Link
-                href="/login"
+                href={getSignInStartHref()}
                 className="inline-flex items-center font-mono text-xs font-semibold text-[var(--desk-text-secondary)] underline-offset-4 transition-colors hover:text-[var(--desk-text)] hover:underline"
               >
                 Sign in · No password · Full access
@@ -379,7 +380,7 @@ export default async function Home({
                 Live updates · Auto-refreshing
               </span>
               <Link
-                href="/login"
+                href={getSignInStartHref()}
                 className="inline-flex shrink-0 items-center gap-1 font-mono text-[0.68rem] font-semibold text-[var(--desk-text-secondary)] underline-offset-4 transition-colors hover:text-[var(--desk-text)] hover:underline"
               >
                 View full feed

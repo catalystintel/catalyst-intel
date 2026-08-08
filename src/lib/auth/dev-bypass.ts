@@ -28,3 +28,20 @@ export function getDevBypassEmail(): string {
   const configured = process.env.DEV_AUTH_EMAIL?.trim();
   return (configured || getAdminEmails()[0]).toLowerCase();
 }
+
+/**
+ * Href for marketing "Sign in" / "Continue with Google" CTAs.
+ *
+ * With local bypass on: `/login` so the user can pick desk bypass or real
+ * Google OAuth. Otherwise: `/auth/login` to start Supabase Google OAuth
+ * immediately (same outcome from every CTA).
+ *
+ * @param next - Post-auth path (re-validated by `/auth/login` / login page).
+ */
+export function getSignInStartHref(next = "/catalyst-feed"): string {
+  const q = `next=${encodeURIComponent(next)}`;
+  if (isDevAuthBypassEnabled()) {
+    return `/login?${q}`;
+  }
+  return `/auth/login?${q}`;
+}

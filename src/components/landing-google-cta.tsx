@@ -2,12 +2,15 @@ import { Zap } from "lucide-react";
 import Link from "next/link";
 
 import { buttonVariants } from "@/components/ui/button";
+import { getSignInStartHref } from "@/lib/auth/dev-bypass";
 import { cn } from "@/lib/utils";
 
 /**
- * Primary sign-up CTA — hero and footer. Starts Google OAuth in one click via
- * `/auth/login` (PKCE cookies on the redirect response). Mint landing primary
- * (`#00d4aa`) with dark label text so it matches the Signal Fintech desk accent.
+ * Primary sign-up CTA — hero and footer. Outside local bypass this starts
+ * Google OAuth in one click via `/auth/login` (PKCE cookies on the redirect
+ * response). With `DEV_AUTH_BYPASS`, both this and "Sign In" land on `/login`
+ * so the optional desk bypass is available. Mint landing primary (`#00d4aa`)
+ * with dark label text so it matches the Signal Fintech desk accent.
  */
 export function LandingGoogleCta({
   children = "Continue with Google — free",
@@ -27,7 +30,7 @@ export function LandingGoogleCta({
 }) {
   return (
     <Link
-      href={`/auth/login?next=${encodeURIComponent(next)}`}
+      href={getSignInStartHref(next)}
       className={cn(
         buttonVariants({ size: "lg" }),
         "btn-press h-auto min-h-11 flex-col justify-center gap-0.5 bg-[var(--landing-primary,#00d4aa)] px-6 py-2.5 text-[0.95rem] font-semibold tracking-tight text-[var(--desk-accent-fg,#131722)] shadow-[0_1px_2px_rgba(0,0,0,0.25),0_4px_18px_rgba(0,212,170,0.22)]",

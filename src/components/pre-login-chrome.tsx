@@ -3,6 +3,7 @@ import Link from "next/link";
 import { EarlyAccessBanner } from "@/components/early-access-banner";
 import { buttonVariants } from "@/components/ui/button";
 import { Toaster } from "@/components/ui/toaster";
+import { getSignInStartHref } from "@/lib/auth/dev-bypass";
 import { cn } from "@/lib/utils";
 
 type PreLoginChromeProps = {
@@ -17,13 +18,6 @@ type PreLoginChromeProps = {
   variant?: "marketing" | "auth";
 };
 
-/** Only routes that actually exist — no placeholder "#" links. */
-const FOOTER_LINKS = [
-  { href: "/#product", label: "Product" },
-  { href: "/about", label: "About" },
-  { href: "/login", label: "Sign in" },
-] as const;
-
 export function PreLoginChrome({
   children,
   glowClassName = "h-[40vh]",
@@ -32,6 +26,13 @@ export function PreLoginChrome({
 }: PreLoginChromeProps) {
   const year = new Date().getFullYear();
   const isAuth = variant === "auth";
+  const signInHref = getSignInStartHref();
+  /** Only routes that actually exist — no placeholder "#" links. */
+  const footerLinks = [
+    { href: "/#product", label: "Product" },
+    { href: "/about", label: "About" },
+    { href: signInHref, label: "Sign in" },
+  ] as const;
 
   return (
     // Prelogin always uses the landing fintech palette (`.prelogin-surface`)
@@ -102,7 +103,7 @@ export function PreLoginChrome({
                 About
               </Link>
               <Link
-                href="/login"
+                href={signInHref}
                 className={cn(
                   buttonVariants({ variant: "outline", size: "sm" }),
                   "btn-press min-h-11 border-[var(--desk-border-strong)] bg-transparent px-3 text-[var(--desk-text-secondary)] hover:bg-[var(--desk-overlay-strong)] hover:text-[var(--desk-text)] sm:min-h-0",
@@ -136,7 +137,7 @@ export function PreLoginChrome({
                 aria-label="Footer"
                 className="flex flex-wrap items-center justify-center gap-x-1 gap-y-2 text-sm text-[var(--desk-text-muted)]"
               >
-                {FOOTER_LINKS.map((link, index) => (
+                {footerLinks.map((link, index) => (
                   <span key={link.label} className="inline-flex items-center">
                     {index > 0 ? (
                       <span
