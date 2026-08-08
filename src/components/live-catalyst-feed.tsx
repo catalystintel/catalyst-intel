@@ -1088,7 +1088,7 @@ export function LiveCatalystFeed({
           className={cn(
             "flex min-h-0 min-w-[220px] flex-1 flex-col",
             // Split-open desk: slim the tape so triage (+ chart) own the right.
-            splitOpen && "xl:max-w-[300px] xl:flex-none",
+            splitOpen && "xl:max-w-[260px] xl:flex-none",
           )}
         >
           {emptyKind === "db" ? (
@@ -1223,8 +1223,8 @@ export function LiveCatalystFeed({
                 }
                 className={cn(
                   "min-h-0 min-w-0 flex-1 border-0",
-                  // Desktop dock: split and chart share the right side 50/50.
-                  "xl:min-w-0 xl:flex-1 xl:border-l",
+                  // Desktop dock: article ~40% / chart ~60% of the right side.
+                  "xl:min-w-0 xl:flex-[2] xl:border-l",
                 )}
               />
               {selectedSymbol && isXlDesk ? (
@@ -1240,7 +1240,7 @@ export function LiveCatalystFeed({
                       : null
                   }
                   density="compact"
-                  className="min-h-0 min-w-0 flex-1 border-l"
+                  className="min-h-0 min-w-0 flex-[3] border-l"
                   chartClassName="h-full min-h-0 border-t-0"
                 />
               ) : null}
