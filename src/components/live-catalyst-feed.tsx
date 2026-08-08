@@ -28,6 +28,14 @@ import { DeskTip } from "@/components/desk-tip";
 import { FeedFilterMultiSelect } from "@/components/feed-filter-multi-select";
 import { TapeSplitPanel } from "@/components/tape-split-panel";
 import { SymbolActionMenu } from "@/components/symbol-action-menu";
+import {
+  AddToWatchlistButton,
+  type WatchlistDestination,
+} from "@/components/watchlists/add-to-watchlist-menu";
+import {
+  WatchlistEditorDialog,
+  type WatchlistDraft,
+} from "@/components/watchlists/watchlist-editor-dialog";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -243,6 +251,9 @@ export function LiveCatalystFeed({
     id: number;
     name: string;
   } | null>(null);
+  const [watchlistEditorOpen, setWatchlistEditorOpen] = useState(false);
+  const [watchlistEditorDraft, setWatchlistEditorDraft] =
+    useState<WatchlistDraft | null>(null);
   const jumpToLatestRef = useRef<(() => void) | null>(null);
   const skipFilterAnimRef = useRef(true);
   const skipFlashRef = useRef(false);
@@ -645,20 +656,125 @@ export function LiveCatalystFeed({
     [watchlistSymbols],
   );
 
-  const handleQuiet = useCallback(
+  const removeFlatWatchlistSymbol = useCallback(
+    async (symbol: string): Promise<boolean> => {
+      const t = symbol.trim().toUpperCase();
+      if (!t) return false;
+      setWatchlistSymbols((prev) => prev.filter((x) => x !== t));
+      try {
+        const res = await fetch(
+          `/api/watchlist?symbol=${encodeURIComponent(t)}`,
+          { method: "DELETE", credentials: "same-origin" },
+        );
+        if (!res.ok) throw new Error("delete failed");
+        notifyWatchlistChanged();
+        return true;
+      } catch {
+        setWatchlistSymbols((prev) =>
+          prev.includes(t) ? prev : [...prev, t].sort(),
+        );
+        return false;
+      }
+    },
+    [],
+  );
+
+  /** "My symbols" is one of several watchlist destinations now — see the
+   * per-row "Watchlists" checklist (`AddToWatchlistSubmenu` /
+   * `AddToWatchlistButton`) for the multi-watchlist picker this feeds. */
+  const toggleFlatWatchlist = useCallback(
     async (symbol: string | null) => {
       const t = symbol?.trim().toUpperCase();
       if (!t) return;
       if (watchlistSymbols.includes(t)) {
-        toast.message(`${t} is already on your watchlist`);
+        const ok = await removeFlatWatchlistSymbol(t);
+        if (ok) toast.success(`${t} removed from My symbols`);
+        else toast.error(`Could not remove ${t} from My symbols`);
         return;
       }
       const ok = await quietAddSymbol(t);
-      if (ok) toast.success(`${t} added to watchlist`);
-      else toast.error(`Could not add ${t} to watchlist`);
+      if (ok) toast.success(`${t} added to My symbols`);
+      else toast.error(`Could not add ${t} to My symbols`);
     },
-    [quietAddSymbol, watchlistSymbols],
+    [quietAddSymbol, removeFlatWatchlistSymbol, watchlistSymbols],
   );
+
+  const toggleSavedWatchlistSymbol = useCallback(
+    async (destination: WatchlistDestination, symbol: string | null) => {
+      const t = symbol?.trim().toUpperCase();
+      if (!t) return;
+      const watchlist = savedWatchlists.find((w) => w.id === destination.id);
+      if (!watchlist) return;
+      const add = !destination.checked;
+      const current = watchlist.criteria.symbols ?? [];
+      const nextSymbols = add
+        ? current.includes(t)
+          ? current
+          : [...current, t]
+        : current.filter((s) => s !== t);
+
+      const nextCriteria: WatchlistCriteria = { ...watchlist.criteria };
+      if (nextSymbols.length > 0) nextCriteria.symbols = nextSymbols;
+      else delete nextCriteria.symbols;
+
+      if (Object.keys(nextCriteria).length === 0) {
+        toast.error(
+          `Removing ${t} would leave "${watchlist.name}" with no filters — edit or delete it on the Watchlists page instead.`,
+        );
+        return;
+      }
+
+      setSavedWatchlists((prev) =>
+        prev.map((w) =>
+          w.id === watchlist.id ? { ...w, criteria: nextCriteria } : w,
+        ),
+      );
+      try {
+        const res = await fetch(`/api/watchlists/${watchlist.id}`, {
+          method: "PATCH",
+          credentials: "same-origin",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ criteria: nextCriteria }),
+        });
+        if (!res.ok) throw new Error("patch failed");
+        notifyWatchlistChanged();
+        toast.success(
+          add
+            ? `${t} added to "${watchlist.name}"`
+            : `${t} removed from "${watchlist.name}"`,
+        );
+      } catch {
+        setSavedWatchlists((prev) =>
+          prev.map((w) => (w.id === watchlist.id ? watchlist : w)),
+        );
+        toast.error(`Could not update "${watchlist.name}"`);
+      }
+    },
+    [savedWatchlists],
+  );
+
+  const destinationsForSymbol = useCallback(
+    (symbol: string | null): WatchlistDestination[] => {
+      const t = symbol?.trim().toUpperCase() ?? "";
+      if (!t) return [];
+      return savedWatchlists.map((w) => ({
+        id: w.id,
+        name: w.name,
+        checked: (w.criteria.symbols ?? []).includes(t),
+      }));
+    },
+    [savedWatchlists],
+  );
+
+  const openCreateWatchlistForSymbol = useCallback((symbol: string | null) => {
+    const t = symbol?.trim().toUpperCase();
+    setWatchlistEditorDraft({
+      id: null,
+      name: "",
+      criteria: t ? { symbols: [t] } : {},
+    });
+    setWatchlistEditorOpen(true);
+  }, []);
 
   const openSaveWatchlist = useCallback(() => {
     setSaveWatchlistName("");
@@ -715,6 +831,11 @@ export function LiveCatalystFeed({
       // Soft-fail.
     }
   }, []);
+
+  useEffect(
+    () => subscribeWatchlistChanged(() => void reloadSavedWatchlists()),
+    [reloadSavedWatchlists],
+  );
 
   const submitSaveWatchlist = useCallback(async () => {
     const name = saveWatchlistName.trim();
@@ -970,12 +1091,15 @@ export function LiveCatalystFeed({
               splitOpen={Boolean(selected)}
               showSourceLabels={showSourceLabels}
               watchlistSymbols={watchlistSymbols}
+              destinationsForSymbol={destinationsForSymbol}
               onSelect={openSplit}
               onRead={openArticle}
               onPrefetch={prefetchQuote}
               onAct={openSplit}
               onDismiss={dismissCatalyst}
-              onQuiet={handleQuiet}
+              onToggleFlatWatchlist={toggleFlatWatchlist}
+              onToggleSavedWatchlist={toggleSavedWatchlistSymbol}
+              onCreateWatchlist={openCreateWatchlistForSymbol}
               onFilterToSymbol={filterToSymbol}
               restoreScrollToSelected={Boolean(initialSelectedId)}
               hasMore={Boolean(nextCursor)}
@@ -1077,6 +1201,15 @@ export function LiveCatalystFeed({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <WatchlistEditorDialog
+        open={watchlistEditorOpen}
+        draft={watchlistEditorDraft}
+        onOpenChange={setWatchlistEditorOpen}
+        onSaved={() => {
+          notifyWatchlistChanged();
+        }}
+      />
     </section>
   );
 }
@@ -1384,12 +1517,15 @@ function CatalystFeedList({
   splitOpen = false,
   showSourceLabels = false,
   watchlistSymbols,
+  destinationsForSymbol,
   onSelect,
   onRead,
   onPrefetch,
   onAct,
   onDismiss,
-  onQuiet,
+  onToggleFlatWatchlist,
+  onToggleSavedWatchlist,
+  onCreateWatchlist,
   onFilterToSymbol,
   restoreScrollToSelected = false,
   hasMore = false,
@@ -1406,12 +1542,19 @@ function CatalystFeedList({
   splitOpen?: boolean;
   showSourceLabels?: boolean;
   watchlistSymbols: string[];
+  /** Saved (rule-based) watchlists this symbol already belongs to. */
+  destinationsForSymbol: (symbol: string | null) => WatchlistDestination[];
   onSelect: (id: number) => void;
   onRead: (id: number) => void;
   onPrefetch: (id: number) => void;
   onAct: (id: number) => void;
   onDismiss: (id: number) => void;
-  onQuiet: (symbol: string | null) => void;
+  onToggleFlatWatchlist: (symbol: string | null) => void;
+  onToggleSavedWatchlist: (
+    destination: WatchlistDestination,
+    symbol: string | null,
+  ) => void;
+  onCreateWatchlist: (symbol: string | null) => void;
   onFilterToSymbol: (symbol: string) => void;
   /** One-shot scroll to the open row after returning from article. */
   restoreScrollToSelected?: boolean;
@@ -1570,21 +1713,32 @@ function CatalystFeedList({
           const sourceName = showSourceLabels
             ? sourceDisplay(catalyst).name
             : null;
-          const onWatchlist = Boolean(
+          const watchlistFlatChecked = Boolean(
             catalyst.symbol &&
             watchlistSymbols.includes(catalyst.symbol.toUpperCase()),
           );
+          const watchlistDestinations = destinationsForSymbol(catalyst.symbol);
+          const onWatchlist =
+            watchlistFlatChecked ||
+            watchlistDestinations.some((d) => d.checked);
           const renderSymbol = () =>
             catalyst.symbol ? (
               <SymbolActionMenu
                 symbol={catalyst.symbol}
                 companyName={catalyst.companyName}
                 catalystId={catalyst.id}
-                onWatchlist={onWatchlist}
+                watchlistFlatChecked={watchlistFlatChecked}
+                watchlistDestinations={watchlistDestinations}
                 onFilterToSymbol={() => onFilterToSymbol(catalyst.symbol!)}
                 onOpenPanel={() => onAct(catalyst.id)}
                 onOpenArticle={() => onRead(catalyst.id)}
-                onAddWatchlist={() => onQuiet(catalyst.symbol)}
+                onToggleFlatWatchlist={() =>
+                  onToggleFlatWatchlist(catalyst.symbol)
+                }
+                onToggleSavedWatchlist={(destination) =>
+                  onToggleSavedWatchlist(destination, catalyst.symbol)
+                }
+                onCreateWatchlist={() => onCreateWatchlist(catalyst.symbol)}
                 onDismiss={() => onDismiss(catalyst.id)}
               />
             ) : (
@@ -1670,18 +1824,19 @@ function CatalystFeedList({
                     Dismiss
                   </FeedActionButton>
                   {catalyst.symbol ? (
-                    <FeedActionButton
-                      onClick={() => onQuiet(catalyst.symbol)}
-                      tip={
-                        onWatchlist
-                          ? "Already on your watchlist"
-                          : "Add to watchlist"
+                    <WatchAction
+                      symbol={catalyst.symbol}
+                      onWatchlist={onWatchlist}
+                      flatChecked={watchlistFlatChecked}
+                      destinations={watchlistDestinations}
+                      onToggleFlat={() =>
+                        onToggleFlatWatchlist(catalyst.symbol)
                       }
-                      disabled={onWatchlist}
-                    >
-                      <Plus className="size-3" />
-                      Watch
-                    </FeedActionButton>
+                      onToggleSaved={(destination) =>
+                        onToggleSavedWatchlist(destination, catalyst.symbol)
+                      }
+                      onCreateNew={() => onCreateWatchlist(catalyst.symbol)}
+                    />
                   ) : null}
                 </div>
               </div>
@@ -1731,18 +1886,19 @@ function CatalystFeedList({
                         Dismiss
                       </FeedActionButton>
                       {catalyst.symbol ? (
-                        <FeedActionButton
-                          onClick={() => onQuiet(catalyst.symbol)}
-                          tip={
-                            onWatchlist
-                              ? "Already on your watchlist"
-                              : "Add to watchlist"
+                        <WatchAction
+                          symbol={catalyst.symbol}
+                          onWatchlist={onWatchlist}
+                          flatChecked={watchlistFlatChecked}
+                          destinations={watchlistDestinations}
+                          onToggleFlat={() =>
+                            onToggleFlatWatchlist(catalyst.symbol)
                           }
-                          disabled={onWatchlist}
-                        >
-                          <Plus className="size-3" />
-                          Watch
-                        </FeedActionButton>
+                          onToggleSaved={(destination) =>
+                            onToggleSavedWatchlist(destination, catalyst.symbol)
+                          }
+                          onCreateNew={() => onCreateWatchlist(catalyst.symbol)}
+                        />
                       ) : null}
                     </div>
                   </div>
@@ -1937,6 +2093,57 @@ function FeedActionButton({
       >
         {children}
       </button>
+    </DeskTip>
+  );
+}
+
+/**
+ * Quick-action twin of `FeedActionButton`, but a symbol can belong to
+ * several watchlists at once now, so this always opens the same "which
+ * watchlist(s)?" checklist as `SymbolActionMenu`'s Watchlists submenu
+ * (`add-to-watchlist-menu.tsx`) instead of a disable-once-added toggle.
+ */
+function WatchAction({
+  symbol,
+  onWatchlist,
+  flatChecked,
+  destinations,
+  onToggleFlat,
+  onToggleSaved,
+  onCreateNew,
+}: {
+  symbol: string;
+  onWatchlist: boolean;
+  flatChecked: boolean;
+  destinations: WatchlistDestination[];
+  onToggleFlat: () => void;
+  onToggleSaved: (destination: WatchlistDestination) => void;
+  onCreateNew: () => void;
+}) {
+  return (
+    <DeskTip
+      side="top"
+      content={
+        onWatchlist ? "On your watchlists — tap to manage" : "Add to watchlist"
+      }
+    >
+      <AddToWatchlistButton
+        symbol={symbol}
+        flatChecked={flatChecked}
+        destinations={destinations}
+        onToggleFlat={onToggleFlat}
+        onToggleSaved={onToggleSaved}
+        onCreateNew={onCreateNew}
+        className={cn(
+          "inline-flex shrink-0 items-center gap-1 rounded-sm px-1.5 py-0.5 font-mono text-[0.65rem] font-semibold tracking-wide uppercase transition-[background-color,border-color,color,filter,opacity] duration-100",
+          onWatchlist
+            ? "border border-[var(--desk-live)]/50 bg-[var(--desk-live)]/10 text-[var(--desk-live)] hover:bg-[var(--desk-live)]/20"
+            : "border border-[var(--desk-border-strong)] text-[var(--desk-text-muted)] hover:border-[var(--desk-text-dim)] hover:bg-[var(--desk-overlay-strong)] hover:text-[var(--desk-text)]",
+        )}
+      >
+        <Plus className="size-3" />
+        Watch
+      </AddToWatchlistButton>
     </DeskTip>
   );
 }
