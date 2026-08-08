@@ -71,19 +71,20 @@ describe("getTelegramWebhookOrigin", () => {
 
 describe("resolveOAuthRedirectOrigin", () => {
   it("rejects a mismatched forwarded host in favor of trusted origin", () => {
-    const previous = process.env.NEXT_PUBLIC_APP_URL;
-    const previousNode = process.env.NODE_ENV;
-    process.env.NEXT_PUBLIC_APP_URL = "https://app.example";
-    process.env.NODE_ENV = "production";
+    const env = process.env as unknown as Record<string, string | undefined>;
+    const previous = env.NEXT_PUBLIC_APP_URL;
+    const previousNode = env.NODE_ENV;
+    env.NEXT_PUBLIC_APP_URL = "https://app.example";
+    env.NODE_ENV = "production";
     try {
       const request = new Request("https://app.example/auth/callback", {
         headers: { "x-forwarded-host": "evil.example" },
       });
       expect(resolveOAuthRedirectOrigin(request)).toBe("https://app.example");
     } finally {
-      if (previous === undefined) delete process.env.NEXT_PUBLIC_APP_URL;
-      else process.env.NEXT_PUBLIC_APP_URL = previous;
-      process.env.NODE_ENV = previousNode;
+      if (previous === undefined) delete env.NEXT_PUBLIC_APP_URL;
+      else env.NEXT_PUBLIC_APP_URL = previous;
+      env.NODE_ENV = previousNode;
     }
   });
 });

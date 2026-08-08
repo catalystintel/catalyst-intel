@@ -46,7 +46,7 @@ export function getTelegramWebhookOrigin(request: Request): string {
  */
 export function getTrustedAppOrigin(
   request: Request,
-  env: NodeJS.ProcessEnv = process.env,
+  env: Record<string, string | undefined> = process.env,
 ): string {
   const configured = env.NEXT_PUBLIC_APP_URL?.trim();
   if (configured) {

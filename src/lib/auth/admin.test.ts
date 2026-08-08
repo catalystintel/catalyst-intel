@@ -1,23 +1,25 @@
 import { afterEach, describe, expect, it } from "vitest";
 
+import { mutableProcessEnv } from "@/lib/test/mutable-process-env";
 import { adminRoleForEmail, getAdminEmails, isAdminEmail } from "./admin";
 
 describe("admin allowlist", () => {
-  const originalEmails = process.env.ADMIN_EMAILS;
-  const originalNodeEnv = process.env.NODE_ENV;
+  const env = mutableProcessEnv();
+  const originalEmails = env.ADMIN_EMAILS;
+  const originalNodeEnv = env.NODE_ENV;
 
   afterEach(() => {
     if (originalEmails === undefined) {
-      delete process.env.ADMIN_EMAILS;
+      delete env.ADMIN_EMAILS;
     } else {
-      process.env.ADMIN_EMAILS = originalEmails;
+      env.ADMIN_EMAILS = originalEmails;
     }
-    process.env.NODE_ENV = originalNodeEnv;
+    env.NODE_ENV = originalNodeEnv;
   });
 
   it("defaults to the two allowlisted operators when ADMIN_EMAILS is unset", () => {
-    delete process.env.ADMIN_EMAILS;
-    process.env.NODE_ENV = "development";
+    delete env.ADMIN_EMAILS;
+    env.NODE_ENV = "development";
     expect(getAdminEmails()).toEqual([
       "zhbar10@gmail.com",
       "omer.nachshon@gmail.com",
@@ -30,8 +32,8 @@ describe("admin allowlist", () => {
   });
 
   it("keeps operator defaults in production when ADMIN_EMAILS is unset", () => {
-    delete process.env.ADMIN_EMAILS;
-    process.env.NODE_ENV = "production";
+    delete env.ADMIN_EMAILS;
+    env.NODE_ENV = "production";
     expect(getAdminEmails()).toEqual([
       "zhbar10@gmail.com",
       "omer.nachshon@gmail.com",
@@ -41,7 +43,7 @@ describe("admin allowlist", () => {
   });
 
   it("merges ADMIN_EMAILS extras onto the operator defaults", () => {
-    process.env.ADMIN_EMAILS = " ops@example.com , other@example.com ";
+    env.ADMIN_EMAILS = " ops@example.com , other@example.com ";
     expect(getAdminEmails()).toEqual([
       "zhbar10@gmail.com",
       "omer.nachshon@gmail.com",
