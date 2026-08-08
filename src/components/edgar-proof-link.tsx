@@ -55,7 +55,9 @@ export function EdgarProofLink({
       rel="noopener noreferrer"
       onClick={(e) => e.stopPropagation()}
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-md border border-[var(--desk-border-strong)] bg-[var(--desk-overlay-soft)] px-2 py-1 font-mono text-[0.68rem] text-[var(--desk-accent-fg)] transition-colors hover:border-[var(--desk-accent)]/50 hover:bg-[var(--desk-accent)]/10",
+        // Use desk secondary text — never --desk-accent-fg (that token is
+        // ink-on-teal for filled CTAs and disappears on dark panel chrome).
+        "inline-flex items-center gap-1.5 rounded-md border border-[var(--desk-border-strong)] bg-[var(--desk-overlay-soft)] px-2 py-1 font-mono text-[0.68rem] text-[var(--desk-text-secondary)] transition-colors hover:border-[var(--desk-border-strong)] hover:bg-[var(--desk-overlay-strong)] hover:text-[var(--desk-text)]",
         className,
       )}
       title={label}
