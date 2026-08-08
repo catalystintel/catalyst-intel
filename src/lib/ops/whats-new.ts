@@ -13,6 +13,14 @@ export type WhatsNewEntry = {
 /** Newest first — update this when shipping user-visible or ops-visible work. */
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
+    date: "2026-08-08",
+    title: "Feedback is signed-in only",
+    bullets: [
+      "Feedback CTA removed from the pre-login / marketing banner — use the desk banner or account menu after sign-in.",
+      "`POST /api/feedback` requires an authenticated session (guest submissions rejected).",
+    ],
+  },
+  {
     date: "2026-07-31",
     title: "Preview / staging admin-only",
     bullets: [

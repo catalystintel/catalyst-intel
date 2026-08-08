@@ -25,13 +25,13 @@ import { cn } from "@/lib/utils";
 type FeedbackDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  /** Prefill when the user is signed in (optional on marketing pages). */
+  /** Prefill reply-to from the signed-in session (required in normal use). */
   defaultEmail?: string | null;
 };
 
 /**
  * Collects bugs, feature requests, and improvement ideas and posts to
- * `/api/feedback` (emailed to FEEDBACK_TO_EMAIL via Resend).
+ * `/api/feedback` (signed-in only; emailed to FEEDBACK_TO_EMAIL via Resend).
  */
 export function FeedbackDialog({
   open,
