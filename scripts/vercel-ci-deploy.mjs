@@ -23,8 +23,11 @@ import {
   apiSetAlias,
   assertVercelUserToken,
   cliDeployCwd,
+  isVercelAuthError,
   listRecentDeployments,
+  resolveVercelAccess,
   stripSecret,
+  warnAndSkipUnauthorized,
 } from "./vercel-unblock-redeploy.mjs";
 
 const STAGING_ALIAS =
@@ -85,7 +88,16 @@ export async function runCiDeploy(cfg) {
   /** @type {Record<string, unknown> | null} */
   let created = null;
 
-  const deployments = await listRecentDeployments(cfg);
+  /** @type {Array<{ uid?: string, id?: string, meta?: Record<string, unknown>, created?: number, createdAt?: number }>} */
+  let deployments = [];
+  try {
+    deployments = await listRecentDeployments(cfg);
+  } catch (err) {
+    // Listing is best-effort for same-SHA redeploy; auth failures soft-skip
+    // in main(). Other list errors should not block gitSource / CLI paths.
+    if (isVercelAuthError(err)) throw err;
+    console.warn(`listRecentDeployments failed (continuing): ${err}`);
+  }
   const existing = findDeploymentForSha(deployments, sha);
 
   if (existing) {
@@ -217,17 +229,40 @@ async function main() {
     process.exit(0);
   }
 
-  const out = await runCiDeploy({
-    token,
-    teamId,
-    projectId,
-    projectName,
-    branch,
-    sha,
-    allowCli,
-    stagingAlias: STAGING_ALIAS,
-  });
-  console.log(JSON.stringify(out, null, 2));
+  /** @type {{ token: string, teamId: string, projectId: string, projectName: string }} */
+  let access;
+  try {
+    access = await resolveVercelAccess({
+      token,
+      teamId,
+      projectId,
+      projectName,
+    });
+  } catch (err) {
+    if (isVercelAuthError(err)) {
+      warnAndSkipUnauthorized("CI Vercel deploy", err);
+      process.exit(0);
+    }
+    throw err;
+  }
+
+  try {
+    const out = await runCiDeploy({
+      ...access,
+      projectName,
+      branch,
+      sha,
+      allowCli,
+      stagingAlias: STAGING_ALIAS,
+    });
+    console.log(JSON.stringify(out, null, 2));
+  } catch (err) {
+    if (isVercelAuthError(err)) {
+      warnAndSkipUnauthorized("CI Vercel deploy", err);
+      process.exit(0);
+    }
+    throw err;
+  }
 }
 
 const isDirectRun =

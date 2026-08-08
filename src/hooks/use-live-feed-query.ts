@@ -25,6 +25,16 @@ import { toUserFacingMessage } from "@/lib/errors/user-facing";
 const SEARCH_DEBOUNCE_MS = 280;
 const FEED_PAGE_SIZE = 75;
 
+/** Upsert `rows` into `prev` by id and keep newest → oldest order. */
+export function mergeFeedRows(
+  prev: FeedCatalyst[],
+  rows: FeedCatalyst[],
+): FeedCatalyst[] {
+  const byId = new Map(prev.map((c) => [c.id, c]));
+  for (const row of rows) byId.set(row.id, row);
+  return sortFeedNewestFirst([...byId.values()]);
+}
+
 export interface LiveFeedQueryState {
   catalysts: FeedCatalyst[];
   total: number | null;
@@ -102,16 +112,12 @@ export function useLiveFeedQuery(
       }
       const rows = (data.catalysts ?? []).map(toFeedCatalyst);
       if (options.replace) {
+        // Filter/search refetch: adopt the new first page as the full list.
         setCatalysts(sortFeedNewestFirst(rows));
       } else {
-        setCatalysts((prev) => {
-          const seen = new Set(prev.map((c) => c.id));
-          const merged = [...prev];
-          for (const row of rows) {
-            if (!seen.has(row.id)) merged.push(row);
-          }
-          return sortFeedNewestFirst(merged);
-        });
+        // Silent poll / load-more: merge so already-loaded rows (and an open
+        // split selection) are never wiped when newer items arrive.
+        setCatalysts((prev) => mergeFeedRows(prev, rows));
       }
       if (typeof data.total === "number") setTotal(data.total);
       if (data.facets) setFacets(data.facets);
@@ -142,7 +148,10 @@ export function useLiveFeedQuery(
       if (!opts?.silent) setLoading(true);
       try {
         await fetchPage({
-          replace: true,
+          // Background polls must merge — a hard replace drops load-more
+          // tails and closes an open split when the selected row isn't on
+          // the fresh first page. Filter changes still replace.
+          replace: !opts?.silent,
           silent: opts?.silent,
           signal: controller.signal,
         });
@@ -195,11 +204,7 @@ export function useLiveFeedQuery(
   }, []);
 
   const prependOrMerge = useCallback((rows: FeedCatalyst[]) => {
-    setCatalysts((prev) => {
-      const byId = new Map(prev.map((c) => [c.id, c]));
-      for (const row of rows) byId.set(row.id, row);
-      return sortFeedNewestFirst([...byId.values()]);
-    });
+    setCatalysts((prev) => mergeFeedRows(prev, rows));
   }, []);
 
   return {

@@ -23,7 +23,8 @@ Three environments, one app:
   fallback. `dev` is aliased to
   `catalyst-intel-git-dev-zhbar10s-projects.vercel.app`. Uses repo secrets
   `VERCEL_TOKEN` / `VERCEL_ORG_ID` / `VERCEL_PROJECT_ID` (soft-skip with
-  `::warning::` if unset — same pattern as the unblock workflow). Prefer a
+  `::warning::` if unset **or** if the Vercel API returns 401/403 Not
+  authorized — same pattern as the unblock workflow). Prefer a
   **personal** token from [vercel.com/account/tokens](https://vercel.com/account/tokens)
   (team-owner) so the CLI fallback can resolve `/v2/user`.
 - **Vercel Git integration** (`vercel.json`): still may deploy on push to `dev` /
@@ -285,12 +286,22 @@ gh secret set VERCEL_ORG_ID --body "<orgId from current Vercel project>"
 gh secret set VERCEL_PROJECT_ID --body "<projectId from current Vercel project>"
 ```
 
-If those secrets are missing, CI deploy and the unblock job each log a warning
-and exit 0 (same soft-fail pattern as `migrate.yml`). Unblock **`push` only
+If those secrets are missing **or unauthorized** (Vercel `401`/`403` Not
+authorized — wrong/expired token, or `VERCEL_ORG_ID` / `VERCEL_PROJECT_ID`
+pointing at a team/project the token cannot see), CI deploy and the unblock job
+each log a `::warning::` and exit 0 (same soft-fail pattern as `migrate.yml`).
+The scripts also retry team scope as `teamId` vs `slug` and will adopt the
+project’s `accountId` when the org secret is stale. Unblock **`push` only
 fires from the default branch (`main`)** — that workflow must be on `main` for
 post-push heal to be live; until then use **workflow_dispatch**. CI deploy runs
 from whichever branch was pushed (`dev` or `main`) once the workflow file is on
 that branch.
+
+**If Actions show `Vercel 403 … Not authorized`:** recreate `VERCEL_TOKEN` as a
+personal token from the **team-owner** account, and reset `VERCEL_ORG_ID` /
+`VERCEL_PROJECT_ID` from the current project’s Settings (or local
+`.vercel/project.json` → `orgId` / `projectId`). Do not reuse old zhbar10 team
+ids if the project now lives under a different Vercel team.
 
 Manual one-off (local, with env set):
 

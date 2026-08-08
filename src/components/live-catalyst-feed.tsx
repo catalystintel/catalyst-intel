@@ -250,6 +250,8 @@ export function LiveCatalystFeed({
   const [selectedId, setSelectedId] = useState<number | null>(
     initialSelectedId && initialSelectedId > 0 ? initialSelectedId : null,
   );
+  /** Last open row payload — keeps split mounted if a poll briefly omits it. */
+  const [selectedHold, setSelectedHold] = useState<FeedCatalyst | null>(null);
   const [chartRange, setChartRange] =
     useState<ChartRangeKey>(DEFAULT_CHART_RANGE);
   const isXlDesk = useIsXlDesk();
@@ -581,6 +583,7 @@ export function LiveCatalystFeed({
       // to finish - otherwise it would just vanish instantly.
       setDismissingIds((prev) => new Set(prev).add(id));
       setSelectedId((cur) => (cur === id ? null : cur));
+      setSelectedHold((hold) => (hold?.id === id ? null : hold));
       window.setTimeout(() => {
         setDismissedIds((prev) => {
           const next = new Set(prev);
@@ -604,9 +607,14 @@ export function LiveCatalystFeed({
     [undismissCatalyst],
   );
 
-  const openSplit = useCallback((id: number) => {
-    setSelectedId(id);
-  }, []);
+  const openSplit = useCallback(
+    (id: number) => {
+      setSelectedId(id);
+      const row = catalysts.find((c) => c.id === id);
+      if (row) setSelectedHold(row);
+    },
+    [catalysts],
+  );
 
   const openArticle = useCallback((id: number) => {
     setArticleId(id);
@@ -940,13 +948,48 @@ export function LiveCatalystFeed({
     return sortFeedNewestFirst(filtered);
   }, [catalysts, dismissedIds, quietMode, watchlistSymbols, signalWatchlists]);
 
-  const selectedRaw = selectedId
+  // Prefer the live list row; fall back to the row captured at open/nav so a
+  // silent poll never blanks the split out from under the user.
+  const selectedFromList = selectedId
     ? (catalysts.find((c) => c.id === selectedId) ?? null)
     : null;
+  const selectedRaw =
+    selectedFromList ??
+    (selectedId != null && selectedHold?.id === selectedId
+      ? selectedHold
+      : null);
   // Desk rule: don't open the split panel for unresolved names
   // (CPI / Jobs NFP macro exceptions may still open without a symbol).
+  // Silent polls merge (not replace) so this row is not dropped mid-triage.
   const selected =
     selectedRaw && passesSymbolFeedGate(selectedRaw) ? selectedRaw : null;
+
+  /** Visible rows the split can open — same gate as row click. */
+  const navigable = useMemo(
+    () => visible.filter((c) => passesSymbolFeedGate(c)),
+    [visible],
+  );
+  const selectedNavIndex = selected
+    ? navigable.findIndex((c) => c.id === selected.id)
+    : -1;
+  // Newest is index 0 → Up disabled at top; Down disabled at bottom.
+  // When a newer row arrives, index shifts down and Up re-enables.
+  const canPrevSplit = selectedNavIndex > 0;
+  const canNextSplit =
+    selectedNavIndex >= 0 && selectedNavIndex < navigable.length - 1;
+
+  const navigateSplit = useCallback(
+    (direction: -1 | 1) => {
+      if (selectedNavIndex < 0) return;
+      const nextIndex = selectedNavIndex + direction;
+      if (nextIndex < 0 || nextIndex >= navigable.length) return;
+      const next = navigable[nextIndex];
+      if (!next) return;
+      setSelectedId(next.id);
+      setSelectedHold(next);
+    },
+    [navigable, selectedNavIndex],
+  );
 
   // Keep the dashboard Watchlist rail highlight in sync with the open row —
   // additive, no-op without `onFocusSymbol`.
@@ -1113,7 +1156,7 @@ export function LiveCatalystFeed({
           className={cn(
             "flex min-h-0 min-w-[220px] flex-1 flex-col",
             // Split-open desk: slim the tape so triage (+ chart) own the right.
-            splitOpen && "xl:max-w-[300px] xl:flex-none",
+            splitOpen && "xl:max-w-[260px] xl:flex-none",
           )}
         >
           {emptyKind === "db" ? (
@@ -1193,7 +1236,10 @@ export function LiveCatalystFeed({
               type="button"
               aria-label="Close panel backdrop"
               className="fixed inset-0 z-40 bg-[var(--desk-scrim)] xl:hidden"
-              onClick={() => setSelectedId(null)}
+              onClick={() => {
+                setSelectedId(null);
+                setSelectedHold(null);
+              }}
             />
             <div
               className={cn(
@@ -1211,7 +1257,14 @@ export function LiveCatalystFeed({
                 isAdmin={isAdmin}
                 showSourceLabels={showSourceLabels}
                 chartRange={chartRange}
-                onClose={() => setSelectedId(null)}
+                onClose={() => {
+                  setSelectedId(null);
+                  setSelectedHold(null);
+                }}
+                onPrev={() => navigateSplit(-1)}
+                onNext={() => navigateSplit(1)}
+                canPrev={canPrevSplit}
+                canNext={canNextSplit}
                 onRead={() => openArticle(selected.id)}
                 onDismiss={() => {
                   if (selectedId !== null) dismissCatalyst(selectedId);
@@ -1248,8 +1301,8 @@ export function LiveCatalystFeed({
                 }
                 className={cn(
                   "min-h-0 min-w-0 flex-1 border-0",
-                  // Desktop dock: split and chart share the right side 50/50.
-                  "xl:min-w-0 xl:flex-1 xl:border-l",
+                  // Desktop dock: article ~40% / chart ~60% of the right side.
+                  "xl:min-w-0 xl:flex-[2] xl:border-l",
                 )}
               />
               {selectedSymbol && isXlDesk ? (
@@ -1265,7 +1318,7 @@ export function LiveCatalystFeed({
                       : null
                   }
                   density="compact"
-                  className="min-h-0 min-w-0 flex-1 border-l"
+                  className="min-h-0 min-w-0 flex-[3] border-l"
                   chartClassName="h-full min-h-0 border-t-0"
                 />
               ) : null}
@@ -1727,9 +1780,19 @@ function CatalystFeedList({
   // Up/Down/Home/End scroll it immediately, without requiring a prior click.
   useAutoFocusScrollRegion(listRef);
 
+  const prevSelectedIdRef = useRef<number | null>(selectedId);
+
   useEffect(() => {
-    if (!restoreScrollToSelected || selectedId == null) return;
-    if (didRestoreScrollRef.current) return;
+    if (selectedId == null) {
+      prevSelectedIdRef.current = null;
+      return;
+    }
+    const selectionChanged = prevSelectedIdRef.current !== selectedId;
+    prevSelectedIdRef.current = selectedId;
+    // One-shot restore when arriving via `?c=`; always scroll on nav/select.
+    if (!selectionChanged) {
+      if (!restoreScrollToSelected || didRestoreScrollRef.current) return;
+    }
     const row = listRef.current?.querySelector<HTMLElement>(
       `[data-catalyst-id="${selectedId}"]`,
     );
