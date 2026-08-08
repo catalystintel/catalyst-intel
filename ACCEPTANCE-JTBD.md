@@ -50,12 +50,12 @@ Sign in with Google before checking authenticated surfaces.
 
 ### Env (document for ops)
 
-| Variable            | Required for        | Notes                                |
-| ------------------- | ------------------- | ------------------------------------ |
-| `SMTP_HOST` / `SMTP_USER` / `SMTP_PASS` | Notification email | Optional; webhook works without it |
-| `SMTP_FROM`         | Email From override | Defaults to `Catalyst Intel <SMTP_USER>` |
-| `RESEND_API_KEY`    | Feedback email      | Optional; product feedback only      |
-| `FINNHUB_API_KEY`   | NYSE listings       | Optional; soft-fail empty UI         |
+| Variable                                | Required for        | Notes                                    |
+| --------------------------------------- | ------------------- | ---------------------------------------- |
+| `SMTP_HOST` / `SMTP_USER` / `SMTP_PASS` | Notification email  | Optional; webhook works without it       |
+| `SMTP_FROM`                             | Email From override | Defaults to `Catalyst Intel <SMTP_USER>` |
+| `RESEND_API_KEY`                        | Feedback email      | Optional; product feedback only          |
+| `FINNHUB_API_KEY`                       | NYSE listings       | Optional; soft-fail empty UI             |
 
 ### NYSE stock data (Finnhub)
 

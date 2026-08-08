@@ -10,8 +10,8 @@ export type SmtpSendResult = { ok: boolean; detail: string };
 export function isSmtpConfigured(): boolean {
   return Boolean(
     process.env.SMTP_HOST?.trim() &&
-      process.env.SMTP_USER?.trim() &&
-      process.env.SMTP_PASS?.trim(),
+    process.env.SMTP_USER?.trim() &&
+    process.env.SMTP_PASS?.trim(),
   );
 }
 
@@ -70,9 +70,7 @@ export async function sendSmtpEmail(options: {
       to,
       subject: options.subject,
       text: options.text,
-      ...(options.replyTo?.trim()
-        ? { replyTo: options.replyTo.trim() }
-        : {}),
+      ...(options.replyTo?.trim() ? { replyTo: options.replyTo.trim() } : {}),
     });
 
     return { ok: true, detail: "Email sent via SMTP" };
