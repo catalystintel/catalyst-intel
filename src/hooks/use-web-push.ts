@@ -220,5 +220,43 @@ export function useWebPush(publicKey: string | null) {
     }
   }, []);
 
-  return { status, error, subscribe, unsubscribe };
+  /**
+   * Local OS banner (no server). Use after subscribe to catch macOS/Windows
+   * blocking Chrome even when site permission is Allow.
+   */
+  const showProbe = useCallback(async (): Promise<{
+    ok: boolean;
+    detail: string;
+  }> => {
+    if (typeof window === "undefined" || !("Notification" in window)) {
+      return {
+        ok: false,
+        detail: "Notifications aren’t supported in this browser.",
+      };
+    }
+    if (Notification.permission !== "granted") {
+      return {
+        ok: false,
+        detail: "Allow notifications for this site first.",
+      };
+    }
+    try {
+      const registration = await ensurePushServiceWorker();
+      await registration.showNotification("Catalyst Intel", {
+        body: "Test banner — if you see this, push can reach this device.",
+        icon: "/apple-icon.png",
+        badge: "/apple-icon.png",
+        tag: "catalyst-push-probe",
+        data: { url: "/alerts" },
+      });
+      return { ok: true, detail: "Test banner sent to this device." };
+    } catch (err) {
+      return {
+        ok: false,
+        detail: pushSubscribeErrorMessage(err),
+      };
+    }
+  }, []);
+
+  return { status, error, subscribe, unsubscribe, showProbe };
 }

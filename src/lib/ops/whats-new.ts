@@ -14,6 +14,14 @@ export type WhatsNewEntry = {
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
     date: "2026-08-08",
+    title: "Push setup: verify system banners",
+    bullets: [
+      "Push setup shows a short checklist and a “Show test banner” probe.",
+      "If the banner never appears, we surface OS steps (macOS System Settings is a common blocker).",
+    ],
+  },
+  {
+    date: "2026-08-08",
     title: "Notification email via SMTP",
     bullets: [
       "Alert Email channel sends through SMTP (Gmail App Password) — no purchased domain required.",
