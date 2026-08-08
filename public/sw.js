@@ -18,20 +18,38 @@ self.addEventListener("message", (event) => {
 });
 
 self.addEventListener("push", (event) => {
-  let data = { title: "Catalyst Intel", body: "New catalyst alert", url: "/" };
+  let data = {
+    title: "Catalyst Intel",
+    body: "New catalyst alert",
+    url: "/alerts",
+  };
   try {
     if (event.data) data = { ...data, ...event.data.json() };
   } catch {
-    // Non-JSON payload — fall back to defaults.
+    try {
+      const text = event.data?.text?.();
+      if (text) data.body = String(text).slice(0, 180);
+    } catch {
+      // Non-JSON / non-text payload — keep defaults.
+    }
   }
 
+  // Always show a notification (userVisibleOnly subscriptions require it).
+  // Prefer the app icon; missing icons must not prevent the tray entry.
   event.waitUntil(
-    self.registration.showNotification(data.title, {
-      body: data.body,
-      icon: "/apple-icon.png",
-      badge: "/apple-icon.png",
-      data: { url: data.url || "/alerts" },
-    }),
+    self.registration
+      .showNotification(data.title || "Catalyst Intel", {
+        body: data.body || "New catalyst alert",
+        icon: "/apple-icon.png",
+        badge: "/apple-icon.png",
+        data: { url: data.url || "/alerts" },
+      })
+      .catch(() =>
+        self.registration.showNotification(data.title || "Catalyst Intel", {
+          body: data.body || "New catalyst alert",
+          data: { url: data.url || "/alerts" },
+        }),
+      ),
   );
 });
 

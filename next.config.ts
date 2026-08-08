@@ -45,6 +45,17 @@ const nextConfig: NextConfig = {
         source: "/:path*",
         headers: securityHeaders,
       },
+      {
+        // Always revalidate the push SW so subscribe + showNotification fixes ship.
+        source: "/sw.js",
+        headers: [
+          { key: "Service-Worker-Allowed", value: "/" },
+          {
+            key: "Cache-Control",
+            value: "no-cache, max-age=0, must-revalidate",
+          },
+        ],
+      },
     ];
   },
   async redirects() {
