@@ -18,8 +18,8 @@ import { cn } from "@/lib/utils";
  * Trading-desk dashboard shell for `/catalyst-feed` — two-column layout
  * aligned to `docs/design/dashboard-target-reference-02.png`: a broadened
  * center Live tape plus a right rail (Economic Calendar + Watchlists).
- * When a symbol row opens the split+chart panes, the calendar rail collapses
- * transiently (saved preference untouched) so the desk stays readable.
+ * When a feed row opens the split, the calendar rail vanishes transiently
+ * (saved preference untouched) so triage / chart can use the right side.
  */
 export function DeskDashboardGrid({
   initialCatalysts,
@@ -43,12 +43,12 @@ export function DeskDashboardGrid({
   const [focusSymbol, setFocusSymbol] = useState<string | null>(
     initialSymbolFilter?.trim().toUpperCase() || null,
   );
-  const [chartOpen, setChartOpen] = useState(false);
+  const [splitOpen, setSplitOpen] = useState(false);
   const { visible: calendarVisible, setVisible: setCalendarVisible } =
     useCalendarRailVisible();
-  // Transient override while the sibling chart pane is open — never writes
-  // localStorage; closing the split restores the saved preference.
-  const effectiveCalendarVisible = calendarVisible && !chartOpen;
+  // Transient override while split is open — never writes localStorage;
+  // closing the split restores the saved preference.
+  const effectiveCalendarVisible = calendarVisible && !splitOpen;
 
   return (
     <div className="desk-dashboard flex min-h-0 flex-1 flex-col gap-3">
@@ -61,19 +61,18 @@ export function DeskDashboardGrid({
           initialWatchlistCriteria={initialWatchlistCriteria}
           initialSelectedId={initialSelectedId}
           onFocusSymbol={setFocusSymbol}
-          onChartOpenChange={setChartOpen}
+          onSplitOpenChange={setSplitOpen}
           calendarRailHidden={!effectiveCalendarVisible}
           onShowCalendarRail={
-            chartOpen ? undefined : () => setCalendarVisible(true)
+            splitOpen ? undefined : () => setCalendarVisible(true)
           }
         />
 
         <aside
           className={cn(
             "min-h-0 shrink-0 flex-col gap-3",
-            // Sibling chart pane needs the horizontal budget — hide the rail
-            // entirely while open (preference restored on close).
-            chartOpen
+            // Feed click → vanish the rail so split/chart use the right budget.
+            splitOpen
               ? "hidden"
               : effectiveCalendarVisible
                 ? "hidden w-[240px] xl:flex 2xl:w-[300px]"

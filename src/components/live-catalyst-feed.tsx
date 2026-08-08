@@ -192,7 +192,7 @@ export function LiveCatalystFeed({
   initialWatchlistCriteria,
   initialSelectedId,
   onFocusSymbol,
-  onChartOpenChange,
+  onSplitOpenChange,
   calendarRailHidden = false,
   onShowCalendarRail,
 }: {
@@ -213,10 +213,10 @@ export function LiveCatalystFeed({
    */
   onFocusSymbol?: (symbol: string) => void;
   /**
-   * True while a symbol-gated selection is open (sibling chart pane active).
-   * Lets the desk shell transiently collapse the calendar rail.
+   * True while the triage split is open. Desk shell uses this to transiently
+   * hide the calendar/watchlist rail so split (+ chart) can use the right side.
    */
-  onChartOpenChange?: (open: boolean) => void;
+  onSplitOpenChange?: (open: boolean) => void;
   /**
    * When the desk Economic Calendar rail is collapsed, show a header control
    * so it can be restored without hunting for the slim edge strip.
@@ -937,12 +937,12 @@ export function LiveCatalystFeed({
   }, [selected, onFocusSymbol]);
 
   const selectedSymbol = selected?.symbol?.trim().toUpperCase() || null;
-  const chartOpen = Boolean(selectedSymbol);
+  const splitOpen = Boolean(selected);
 
   useEffect(() => {
-    onChartOpenChange?.(chartOpen);
-    return () => onChartOpenChange?.(false);
-  }, [chartOpen, onChartOpenChange]);
+    onSplitOpenChange?.(splitOpen);
+    return () => onSplitOpenChange?.(false);
+  }, [splitOpen, onSplitOpenChange]);
 
   // Reset shared chart lookback when the open symbol changes.
   useEffect(() => {
@@ -1083,7 +1083,13 @@ export function LiveCatalystFeed({
           filterRecalc && "feed-filter-recalc",
         )}
       >
-        <div className="flex min-h-0 min-w-[220px] flex-1 flex-col">
+        <div
+          className={cn(
+            "flex min-h-0 min-w-[220px] flex-1 flex-col",
+            // Split-open desk: slim the tape so triage (+ chart) own the right.
+            splitOpen && "xl:max-w-[300px] xl:flex-none",
+          )}
+        >
           {emptyKind === "db" ? (
             <div className="flex flex-1 flex-col items-center justify-center gap-2 px-6 py-16 text-center">
               <p className="text-sm font-medium text-[var(--desk-text)]">
@@ -1167,7 +1173,8 @@ export function LiveCatalystFeed({
               className={cn(
                 "z-50 flex min-h-0 bg-[var(--desk-panel)]",
                 "fixed inset-0 flex-col",
-                "xl:static xl:inset-auto xl:z-auto xl:w-auto xl:max-w-none xl:shrink-0 xl:flex-row",
+                // Desktop: dock grows so the chart pane can be the hero width.
+                "xl:static xl:inset-auto xl:z-auto xl:min-w-0 xl:flex-1 xl:flex-row",
               )}
             >
               <TapeSplitPanel
@@ -1205,6 +1212,7 @@ export function LiveCatalystFeed({
                             )
                           : null
                       }
+                      density="compact"
                       className="shrink-0 border-b border-[var(--desk-border)]"
                       chartClassName="h-[220px] max-h-[32vh] border-t-0 sm:h-[260px] sm:max-h-[34vh]"
                     />
@@ -1212,7 +1220,7 @@ export function LiveCatalystFeed({
                 }
                 className={cn(
                   "min-h-0 min-w-0 flex-1 border-0",
-                  "xl:w-[min(34%,360px)] xl:max-w-[360px] xl:min-w-[300px] xl:flex-none xl:border-l",
+                  "xl:w-[300px] xl:max-w-[320px] xl:min-w-[280px] xl:flex-none xl:border-l",
                 )}
               />
               {selectedSymbol && isXlDesk ? (
@@ -1227,7 +1235,8 @@ export function LiveCatalystFeed({
                         )
                       : null
                   }
-                  className="min-h-0 w-[min(38%,440px)] min-w-[320px] shrink-0 border-l"
+                  density="compact"
+                  className="min-h-0 min-w-[360px] flex-1 border-l"
                   chartClassName="h-full min-h-0 border-t-0"
                 />
               ) : null}
