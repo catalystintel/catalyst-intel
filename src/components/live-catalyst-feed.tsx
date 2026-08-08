@@ -50,6 +50,7 @@ import {
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuTrigger,
@@ -1171,7 +1172,9 @@ export function LiveCatalystFeed({
             />
             <div
               className={cn(
-                "z-50 flex min-h-0 bg-[var(--desk-panel)]",
+                // Mobile overlay must be opaque so feed text doesn't show through.
+                // Desktop dock keeps the glass desk panel token.
+                "z-50 flex min-h-0 bg-popover xl:bg-[var(--desk-panel)]",
                 "fixed inset-0 flex-col",
                 // Desktop: dock grows so the chart pane can be the hero width.
                 "xl:static xl:inset-auto xl:z-auto xl:min-w-0 xl:flex-1 xl:flex-row",
@@ -1439,24 +1442,26 @@ function FeedFilters({
               <ChevronDown className="size-3 shrink-0 opacity-60" />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="min-w-[14rem]">
-              <DropdownMenuLabel className="font-mono text-[0.65rem] tracking-wide uppercase">
-                Apply saved watchlist
-              </DropdownMenuLabel>
-              {savedWatchlists.length === 0 ? (
-                <p className="px-2 py-2 text-xs text-[var(--desk-text-muted)]">
-                  No watchlists yet — create one first.
-                </p>
-              ) : (
-                savedWatchlists.map((w) => (
-                  <DropdownMenuItem
-                    key={w.id}
-                    onClick={() => onApplyWatchlist(w)}
-                    className="font-mono text-xs"
-                  >
-                    {w.name}
-                  </DropdownMenuItem>
-                ))
-              )}
+              <DropdownMenuGroup>
+                <DropdownMenuLabel className="font-mono text-[0.65rem] tracking-wide uppercase">
+                  Apply saved watchlist
+                </DropdownMenuLabel>
+                {savedWatchlists.length === 0 ? (
+                  <p className="px-2 py-2 text-xs text-[var(--desk-text-muted)]">
+                    No watchlists yet — create one first.
+                  </p>
+                ) : (
+                  savedWatchlists.map((w) => (
+                    <DropdownMenuItem
+                      key={w.id}
+                      onClick={() => onApplyWatchlist(w)}
+                      className="font-mono text-xs"
+                    >
+                      {w.name}
+                    </DropdownMenuItem>
+                  ))
+                )}
+              </DropdownMenuGroup>
             </DropdownMenuContent>
           </DropdownMenu>
           <Link
