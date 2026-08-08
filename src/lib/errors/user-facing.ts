@@ -29,7 +29,7 @@ export const USER_FACING = {
 } as const;
 
 const OPS_LEAK_PATTERN =
-  /\b(LIBSQL_|DATABASE_URL|OPENROUTER_|RESEND_|TELEGRAM_BOT|WEB_PUSH_|NEXT_PUBLIC_|SUPABASE_|Vercel|Turso|DEPLOYMENT\.md|npm run |\.env\.local|BLOCKED|SQLITE_|local\.db|file:)/i;
+  /\b(LIBSQL_|DATABASE_URL|OPENROUTER_|RESEND_|SMTP_|TELEGRAM_BOT|WEB_PUSH_|NEXT_PUBLIC_|SUPABASE_|Vercel|Turso|DEPLOYMENT\.md|npm run |\.env\.local|BLOCKED|SQLITE_|local\.db|file:)/i;
 
 /** Raw vendor/env credential names that must not appear in product UI. */
 const SOURCE_KEY_ENV_PATTERN =
@@ -109,7 +109,7 @@ export function toUserFacingMessage(
     return USER_FACING.pushUnavailable;
   }
   if (
-    /RESEND_API_KEY|email delivery skipped|Resend.*(not configured|unavailable)/i.test(
+    /RESEND_API_KEY|SMTP_|email delivery skipped|Resend.*(not configured|unavailable)|SMTP.*(not configured|unavailable)/i.test(
       message,
     )
   ) {
