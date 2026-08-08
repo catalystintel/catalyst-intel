@@ -23,6 +23,16 @@ describe("scrubOriginMentions", () => {
     expect(scrubOriginMentions("openFDA: Bar")).toBe("Bar");
     expect(scrubOriginMentions("Polygon news")).toBe("news");
   });
+
+  it("strips retired impact-score phrases from wire summaries", () => {
+    expect(
+      scrubOriginMentions(
+        "Steakholder placement · financing / offering · Impact score 95 · bearish lean",
+      ),
+    ).toBe("Steakholder placement · financing / offering · bearish lean");
+    expect(scrubOriginMentions("Impact score: 72")).toBeNull();
+    expect(scrubOriginMentions("Impact score 88 / 100")).toBeNull();
+  });
 });
 
 describe("looksLikeOriginLabel / scrubOriginHeadline", () => {
@@ -41,9 +51,16 @@ describe("looksLikeOriginLabel / scrubOriginHeadline", () => {
 });
 
 describe("scrubOriginTags / subcategory / historicalImpact", () => {
-  it("drops vendor tags", () => {
+  it("drops vendor tags and retired impact:* tags", () => {
     expect(
-      scrubOriginTags(["finnhub", "earnings", "AAPL", "press-release", "wire"]),
+      scrubOriginTags([
+        "finnhub",
+        "earnings",
+        "AAPL",
+        "press-release",
+        "wire",
+        "impact:high",
+      ]),
     ).toEqual(["earnings", "AAPL"]);
   });
 

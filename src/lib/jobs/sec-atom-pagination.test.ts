@@ -113,3 +113,10 @@ describe("secFormVendorSourceId", () => {
     expect(secFormVendorSourceId("4")).toBe("sec-edgar:4");
   });
 });
+
+describe("SEC_ATOM_MAX_PAGES", () => {
+  it("allows 1000 filings per form per tick for hourly catch-up", () => {
+    expect(SEC_ATOM_MAX_PAGES).toBe(10);
+    expect(SEC_ATOM_MAX_PAGES * SEC_ATOM_PAGE_SIZE).toBe(1000);
+  });
+});

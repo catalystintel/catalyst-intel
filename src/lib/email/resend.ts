@@ -1,5 +1,6 @@
 /**
- * Thin Resend client shared by alert delivery and product feedback.
+ * Thin Resend client for product feedback.
+ * Alert / notification email uses SMTP — see `./smtp.ts`.
  */
 
 export type ResendSendResult = { ok: boolean; detail: string };

@@ -391,24 +391,6 @@ export function CatalystArticleView({
         </section>
       ) : null}
 
-      {catalyst.tags.length > 0 ? (
-        <section className="flex flex-col gap-2">
-          <h2 className="font-mono text-[0.65rem] tracking-[0.14em] text-[var(--desk-text-dim)] uppercase">
-            Tags
-          </h2>
-          <div className="flex flex-wrap gap-1.5">
-            {catalyst.tags.map((tag) => (
-              <span
-                key={tag}
-                className="rounded-sm border border-[var(--desk-border)] px-1.5 py-0.5 font-mono text-[0.65rem] text-[var(--desk-text-muted)]"
-              >
-                {tag}
-              </span>
-            ))}
-          </div>
-        </section>
-      ) : null}
-
       {enrichment?.profile ? (
         <section className="flex flex-col gap-2">
           <h2 className="font-mono text-[0.65rem] tracking-[0.14em] text-[var(--desk-text-dim)] uppercase">

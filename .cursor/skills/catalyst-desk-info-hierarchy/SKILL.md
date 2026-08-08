@@ -22,11 +22,11 @@ Benzinga Pro (and similar) are **reference for information density and WIIM-styl
 
 ## Layer contract
 
-| Layer        | Job                 | Must show                                                                                              | Must not                                             |
-| ------------ | ------------------- | ------------------------------------------------------------------------------------------------------ | ---------------------------------------------------- |
-| **Tape row** | Scan without click  | Clear title (plain English), symbol, category, time, materiality cue                                   | AccNo/Size, form jargon alone, empty “filing” labels |
-| **Split**    | Enough to decide    | WIIM one-liner, **takeaways**, **keyFacts** (3–6), short summary of what happened, quote/Δ, proof link | AccNo as body; “go read the filing” without numbers  |
-| **Details**  | Deep dive if needed | Split content + plain-text snippets, detail cards, items, tags, optional AI, proof meta                | Fake article from Atom AccNo; rendered HTML filings  |
+| Layer        | Job                 | Must show                                                                                              | Must not                                                                     |
+| ------------ | ------------------- | ------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------- |
+| **Tape row** | Scan without click  | Clear title (plain English), symbol, category, time, materiality cue                                   | AccNo/Size, form jargon alone, empty “filing” labels                         |
+| **Split**    | Enough to decide    | WIIM one-liner, **takeaways**, **keyFacts** (3–6), short summary of what happened, quote/Δ, proof link | AccNo as body; “go read the filing” without numbers                          |
+| **Details**  | Deep dive if needed | Split content + plain-text snippets, detail cards, items, optional AI, proof meta                      | Fake article from Atom AccNo; rendered HTML filings; impact score; tag chips |
 
 **AccNo / Size / Filed** = proof metadata only — never the event body.
 

@@ -47,7 +47,6 @@ const FORM_OPTIONS = FEED_FORM_FILTERS.map((value) => ({
 }));
 
 const TAG_SUGGESTIONS = [
-  "impact:high",
   "session:ah",
   "session:pm",
   "sentiment:bullish",

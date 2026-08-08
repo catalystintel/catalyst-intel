@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   getRequestOrigin,
+  getTelegramWebhookOrigin,
   getTrustedAppOrigin,
   resolveOAuthRedirectOrigin,
   safeNextPath,
@@ -41,6 +42,30 @@ describe("getTrustedAppOrigin", () => {
         NEXT_PUBLIC_APP_URL: "https://app.example",
       }),
     ).toBe("https://app.example");
+  });
+});
+
+describe("getTelegramWebhookOrigin", () => {
+  it("uses the request host, not NEXT_PUBLIC_APP_URL", () => {
+    const previous = process.env.NEXT_PUBLIC_APP_URL;
+    process.env.NEXT_PUBLIC_APP_URL = "https://dead.example";
+    try {
+      const request = new Request(
+        "https://catalyst-intel-rouge.vercel.app/api/admin/telegram/setup",
+        {
+          headers: {
+            host: "catalyst-intel-rouge.vercel.app",
+            "x-forwarded-proto": "https",
+          },
+        },
+      );
+      expect(getTelegramWebhookOrigin(request)).toBe(
+        "https://catalyst-intel-rouge.vercel.app",
+      );
+    } finally {
+      if (previous === undefined) delete process.env.NEXT_PUBLIC_APP_URL;
+      else process.env.NEXT_PUBLIC_APP_URL = previous;
+    }
   });
 });
 

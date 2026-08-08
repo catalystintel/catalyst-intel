@@ -30,6 +30,17 @@ export function telegramDeepLinkForStart(token: string): string | null {
   return `https://t.me/${username}?start=${encodeURIComponent(token)}`;
 }
 
+/**
+ * Opens Telegram Web with the same /start payload. Prefer this when the
+ * desktop `tg://` handler is missing (macOS browser "START BOT" no-op).
+ */
+export function telegramWebDeepLinkForStart(token: string): string | null {
+  const username = getTelegramBotUsername();
+  if (!username) return null;
+  const tgAddr = `tg://resolve?domain=${username}&start=${token}`;
+  return `https://web.telegram.org/a/#?tgaddr=${encodeURIComponent(tgAddr)}`;
+}
+
 export async function getTelegramLinkByUserId(
   userId: number,
 ): Promise<TelegramLinkRow | null> {
@@ -73,6 +84,7 @@ export async function createTelegramLinkSession(userId: number): Promise<{
   token: string;
   expiresAt: string;
   deepLink: string | null;
+  webDeepLink: string | null;
 }> {
   const token = createTelegramLinkTokenValue();
   const expiresAt = new Date(
@@ -89,6 +101,7 @@ export async function createTelegramLinkSession(userId: number): Promise<{
     token,
     expiresAt,
     deepLink: telegramDeepLinkForStart(token),
+    webDeepLink: telegramWebDeepLinkForStart(token),
   };
 }
 

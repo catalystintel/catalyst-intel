@@ -159,7 +159,7 @@ export function TradingViewAdvancedChart({
                 e.stopPropagation();
                 setFullscreen(true);
               }}
-              className="absolute top-2 right-2 z-10 inline-flex items-center gap-1.5 rounded-sm border border-[var(--desk-border-strong)] bg-[var(--desk-panel)]/90 px-2 py-1 font-mono text-[0.65rem] tracking-wide text-[var(--desk-text-secondary)] uppercase shadow-md backdrop-blur-sm transition-colors hover:border-[var(--desk-text-dim)] hover:text-[var(--desk-text)]"
+              className="absolute top-2 right-2 z-10 inline-flex items-center gap-1.5 rounded-sm border border-[var(--desk-border-strong)] bg-popover px-2 py-1 font-mono text-[0.65rem] tracking-wide text-[var(--desk-text-secondary)] uppercase shadow-md transition-colors hover:border-[var(--desk-text-dim)] hover:text-[var(--desk-text)]"
               title="Open chart full screen"
             >
               <Maximize2 className="size-3" />
@@ -188,7 +188,7 @@ export function TradingViewAdvancedChart({
           onClick={() => setFullscreen(false)}
         >
           <div
-            className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-[var(--desk-border-strong)] bg-[var(--desk-panel)] shadow-[0_24px_80px_var(--desk-panel-shadow)]"
+            className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-[var(--desk-border-strong)] bg-popover shadow-[0_24px_80px_var(--desk-panel-shadow)]"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex shrink-0 items-center justify-between gap-3 border-b border-[var(--desk-border)] bg-[var(--desk-header)] px-4 py-2.5">

@@ -525,14 +525,19 @@ export async function fetchSecEdgar(
         pages >= SEC_ATOM_MAX_PAGES && lastPageFull && !lastPageKnownHit;
 
       const newest = newestUpdatedIso(pageUpdated);
+      // Incomplete catch-up: hold watermark so we do not claim the gap is
+      // closed. Next tick retries; daily-index still reconciles multi-hour misses.
+      const message = hitMaxPages
+        ? `pages=${pages};overflow;hitMaxPages`
+        : overflowTriggered
+          ? `pages=${pages};overflow`
+          : `pages=${pages}`;
       await touchVendorFetchState({
         sourceId: secFormVendorSourceId(feed.type),
         status: "ok",
-        message: overflowTriggered
-          ? `pages=${pages};overflow`
-          : `pages=${pages}`,
-        advanceWatermark: true,
-        watermarkAt: newest ?? undefined,
+        message,
+        advanceWatermark: !hitMaxPages,
+        watermarkAt: hitMaxPages ? undefined : (newest ?? undefined),
       });
     } catch (error) {
       errors++;
