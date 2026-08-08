@@ -49,15 +49,15 @@ export const WATCHLIST_TEMPLATES: WatchlistTemplate[] = [
   },
   {
     id: "ah-pm-bombs",
-    name: "AH / PM high-impact bombs",
-    description: "High-materiality events posted after-hours or pre-market.",
-    criteria: { tags: ["impact:high", "session:ah"] },
+    name: "AH / PM bombs",
+    description: "Events posted after-hours or pre-market.",
+    criteria: { tags: ["session:ah"] },
   },
   {
     id: "earnings-surprises",
     name: "Earnings watch",
-    description: "Earnings prints and reactions, high materiality only.",
-    criteria: { categories: ["earnings"], tags: ["impact:high"] },
+    description: "Earnings prints and reactions.",
+    criteria: { categories: ["earnings"] },
   },
   {
     id: "analyst-actions",

@@ -59,14 +59,16 @@ catalyst, regardless of vendor, with deterministic namespaced tags, merged
 (case-insensitive dedupe, `mergeTags`) with whatever free-form tags the
 fetcher already supplies (`fda`, `wire`, `bz:*`, `13d`, …):
 
-| Namespace     | Values                                                    | Source                       |
-| ------------- | --------------------------------------------------------- | ---------------------------- |
-| `category:*`  | `EventCategoryKey` (see `taxonomy.ts`)                    | `eventCategory`              |
-| `form:*`      | lowercased `FeedFormFilter` bucket (e.g. `form:8-k`)      | `formBucketFromType(type)`   |
-| `session:*`   | `ah` \| `pm` \| `rth` (omitted when `any`)                | `classifySession(timestamp)` |
-| `impact:*`    | `low` \| `medium` \| `high` (thresholds: <40 / <70 / ≥70) | `impactScore`                |
-| `sentiment:*` | `bullish` \| `bearish` \| `neutral`                       | vendor sentiment (optional)  |
-| `symbol:*`    | lowercased ticker                                         | resolved `symbol` (optional) |
+| Namespace     | Values                                               | Source                       |
+| ------------- | ---------------------------------------------------- | ---------------------------- |
+| `category:*`  | `EventCategoryKey` (see `taxonomy.ts`)               | `eventCategory`              |
+| `form:*`      | lowercased `FeedFormFilter` bucket (e.g. `form:8-k`) | `formBucketFromType(type)`   |
+| `session:*`   | `ah` \| `pm` \| `rth` (omitted when `any`)           | `classifySession(timestamp)` |
+| `sentiment:*` | `bullish` \| `bearish` \| `neutral`                  | vendor sentiment (optional)  |
+| `symbol:*`    | lowercased ticker                                    | resolved `symbol` (optional) |
+
+`impact:*` tags are retired (impact score no longer on the product surface)
+and are stripped by `scrubOriginTags` on the public boundary.
 
 Tags are always **lowercase when filtered/matched** (`tagsSql` in
 `feed-query.ts` does `lower(tags) LIKE '%"tag"%'`), but may be stored with

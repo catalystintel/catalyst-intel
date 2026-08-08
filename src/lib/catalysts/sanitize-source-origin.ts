@@ -85,10 +85,27 @@ const STANDALONE_PUBLISHER_RE = new RegExp(
   "gim",
 );
 
+/**
+ * Retired product surface: strip impact-score phrases that older wire
+ * receipts baked into summaries / snippets (e.g. "Impact score 95").
+ */
+const IMPACT_SCORE_PHRASE_RE =
+  /(?:^|[\s·|,—–-]+)impact\s*scores?\s*[:=]?\s*\d{1,3}(?:\s*\/\s*100)?(?=$|[\s·|,—–.])/gi;
+
+/** Key-fact / snippet lines that are only an impact score. */
+const IMPACT_SCORE_LINE_RE =
+  /^\s*impact\s*scores?\s*[:=]?\s*\d{1,3}(?:\s*\/\s*100)?\s*$/i;
+
 export function looksLikeOriginLabel(text: string | null | undefined): boolean {
   const t = text?.replace(/\s+/g, " ").trim() ?? "";
   if (!t) return false;
   return new RegExp(`^(?:${ORIGIN_ALT})$`, "i").test(t);
+}
+
+/** True when a key-fact label is the retired impact-score field. */
+export function isImpactScoreLabel(label: string | null | undefined): boolean {
+  const t = label?.replace(/\s+/g, " ").trim() ?? "";
+  return /^impact\s*scores?$/i.test(t) || /^tier$/i.test(t);
 }
 
 /**
@@ -103,6 +120,12 @@ export function scrubOriginMentions(
   out = out.replace(WIRE_DATELINE_RE, " ");
   out = out.replace(STANDALONE_PUBLISHER_RE, "");
   out = out.replace(ORIGIN_TOKEN_RE, "");
+  out = out.replace(IMPACT_SCORE_PHRASE_RE, " ");
+  // Drop leftover lines that were only an impact-score fact.
+  out = out
+    .split("\n")
+    .filter((line) => !IMPACT_SCORE_LINE_RE.test(line))
+    .join("\n");
   // Collapse leftover punctuation chrome after stripping.
   out = out
     .replace(/^\s*[:—–\-]\s*/g, "")
@@ -110,11 +133,13 @@ export function scrubOriginMentions(
     .replace(/\(\s*\)/g, " ")
     .replace(/\s{2,}/g, " ")
     .replace(/\s+([,.;:])/g, "$1")
+    .replace(/\s*·\s*·\s*/g, " · ")
+    .replace(/^(?:\s*·\s*)+|(?:\s*·\s*)+$/g, "")
     .trim();
   return out || null;
 }
 
-/** Drop tags that name a vendor or wire origin. */
+/** Drop tags that name a vendor, wire origin, or retired impact tier. */
 export function scrubOriginTags(tags: unknown): string[] {
   if (!Array.isArray(tags)) return [];
   return tags.filter(
@@ -122,7 +147,8 @@ export function scrubOriginTags(tags: unknown): string[] {
       typeof t === "string" &&
       t.trim().length > 0 &&
       !ORIGIN_TAGS.has(t.trim().toLowerCase()) &&
-      !looksLikeOriginLabel(t),
+      !looksLikeOriginLabel(t) &&
+      !/^impact:(?:low|medium|high)$/i.test(t.trim()),
   );
 }
 

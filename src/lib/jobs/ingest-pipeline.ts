@@ -109,15 +109,16 @@ async function resolveCompany(
  *
  * Namespaced (`category:`, `form:`, …) so the feed's tag filter, saved
  * "smart" watchlists, and (next phase) alert rule conditions can combine on
- * structured fields — event type, form, session, materiality tier, sentiment
- * lean, symbol — without every fetcher having to agree on a vocabulary.
+ * structured fields — event type, form, session, sentiment lean, symbol —
+ * without every fetcher having to agree on a vocabulary.
  */
 export function deriveAutoTags(input: {
   eventCategory: EventCategoryKey;
   type: string;
   symbol?: string | null;
   session: AlertSession;
-  impactScore: number;
+  /** @deprecated Impact score retired — ignored when deriving tags. */
+  impactScore?: number;
   sentiment?: SentimentLean | null;
 }): string[] {
   const tags: string[] = [
@@ -125,13 +126,6 @@ export function deriveAutoTags(input: {
     `form:${formBucketFromType(input.type).toLowerCase()}`,
   ];
   if (input.session !== "any") tags.push(`session:${input.session}`);
-  const impactTier =
-    input.impactScore >= 70
-      ? "high"
-      : input.impactScore >= 40
-        ? "medium"
-        : "low";
-  tags.push(`impact:${impactTier}`);
   if (input.sentiment) tags.push(`sentiment:${input.sentiment}`);
   const symbol = input.symbol?.trim().toUpperCase();
   if (symbol) tags.push(`symbol:${symbol.toLowerCase()}`);

@@ -43,7 +43,7 @@ Field rules (all optional — omit any axis you don't need; empty criteria is in
 - "symbols": exact ticker matches, uppercase (e.g. "NVDA"). Only when the user names specific companies/tickers.
 - "categories": event-type buckets, ONLY from this list: ${CATEGORY_LIST}.
 - "forms": SEC form buckets, ONLY from this list: ${FORM_LIST}.
-- "tags": lowercase any-match tags. Prefer these namespaced auto-tags when they fit: "category:<key>" (same keys as above), "form:<key>" (lowercase form key, e.g. "form:8-k"), "session:ah" / "session:pm" / "session:rth" (after-hours / pre-market / regular hours), "impact:low" / "impact:medium" / "impact:high" (materiality tier), "sentiment:bullish" / "sentiment:bearish" / "sentiment:neutral". You may also use free-form vendor tags when clearly implied (e.g. "fda", "ipo", "13d", "analyst", "approval") — do not invent obscure ones.
+- "tags": lowercase any-match tags. Prefer these namespaced auto-tags when they fit: "category:<key>" (same keys as above), "form:<key>" (lowercase form key, e.g. "form:8-k"), "session:ah" / "session:pm" / "session:rth" (after-hours / pre-market / regular hours), "sentiment:bullish" / "sentiment:bearish" / "sentiment:neutral". You may also use free-form vendor tags when clearly implied (e.g. "fda", "ipo", "13d", "analyst", "approval") — do not invent obscure ones. Never use "impact:*" tags (impact score is retired).
 - "q": a short free-text fallback ONLY if nothing else captures the intent (rare — prefer structured fields).
 - Don't duplicate a concept across "categories" and "tags" (e.g. don't add both categories:["earnings"] and tags:["category:earnings"] for the same idea) unless the user's request genuinely needs both an event-type gate AND a tag gate (e.g. "AH" session for earnings).
 
