@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ComponentType } from "react";
 import {
   ArrowLeft,
   ArrowRight,
@@ -9,16 +9,15 @@ import {
   Check,
   CheckCircle2,
   CircleAlert,
-  ExternalLink,
   FlaskConical,
   List,
   Mail,
-  MessageCircle,
   Plus,
 } from "lucide-react";
 import { toast } from "sonner";
 
 import { AlertRulesListSkeleton } from "@/components/alerts-page-skeleton";
+import { TelegramIcon } from "@/components/telegram-icon";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { WatchlistCriteria } from "@/db/schema";
@@ -65,7 +64,7 @@ const METHOD_META: {
   id: NotificationChannel;
   label: string;
   blurb: string;
-  Icon: typeof Bell;
+  Icon: ComponentType<{ className?: string }>;
 }[] = [
   {
     id: "push",
@@ -77,7 +76,7 @@ const METHOD_META: {
     id: "telegram",
     label: "Telegram",
     blurb: "Fires on your phone via the Catalyst Intel bot",
-    Icon: MessageCircle,
+    Icon: TelegramIcon,
   },
   {
     id: "email",
@@ -611,9 +610,11 @@ function MethodsStep(props: {
                 <span
                   className={cn(
                     "mt-0.5 grid size-9 shrink-0 place-items-center rounded-lg border",
-                    on
-                      ? "border-[var(--desk-live)] bg-[var(--desk-live)] text-[var(--desk-accent-fg)]"
-                      : "border-[var(--desk-border-strong)] text-[var(--desk-text-muted)]",
+                    id === "telegram"
+                      ? "border-[var(--desk-border-strong)] bg-[var(--desk-overlay)]"
+                      : on
+                        ? "border-[var(--desk-live)] bg-[var(--desk-live)] text-[var(--desk-accent-fg)]"
+                        : "border-[var(--desk-border-strong)] text-[var(--desk-text-muted)]",
                   )}
                 >
                   <Icon className="size-4" aria-hidden />
@@ -820,7 +821,7 @@ function TelegramSetup({
             disabled={linking}
             className="btn-press gap-2 bg-[var(--desk-live)] text-[var(--desk-accent-fg)] hover:brightness-110"
           >
-            <ExternalLink className="size-3.5" aria-hidden />
+            <TelegramIcon className="size-3.5" />
             {linking ? "Waiting for link…" : "Connect Telegram"}
           </Button>
         )}
