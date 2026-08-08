@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { isDbResetAllowed, isNonProductionEnv } from "./non-production-env";
+import {
+  DB_RESET_CONFIRM_PHRASE,
+  isDbResetAllowed,
+  isNonProductionEnv,
+} from "./non-production-env";
 
 describe("isNonProductionEnv", () => {
   it("allows local (unset VERCEL_ENV)", () => {
@@ -17,24 +21,15 @@ describe("isNonProductionEnv", () => {
 });
 
 describe("isDbResetAllowed", () => {
-  it("allows local without ALLOW_DB_RESET", () => {
+  it("allows every environment (admin + confirm phrase gate the wipe)", () => {
     expect(isDbResetAllowed({})).toBe(true);
-    expect(isDbResetAllowed({ ALLOW_DB_RESET: "false" })).toBe(true);
+    expect(isDbResetAllowed({ VERCEL_ENV: "preview" })).toBe(true);
+    expect(isDbResetAllowed({ VERCEL_ENV: "production" })).toBe(true);
   });
+});
 
-  it("blocks production even with ALLOW_DB_RESET", () => {
-    expect(
-      isDbResetAllowed({
-        VERCEL_ENV: "production",
-        ALLOW_DB_RESET: "true",
-      }),
-    ).toBe(false);
-  });
-
-  it("allows preview only when explicitly enabled", () => {
-    expect(isDbResetAllowed({ VERCEL_ENV: "preview" })).toBe(false);
-    expect(
-      isDbResetAllowed({ VERCEL_ENV: "preview", ALLOW_DB_RESET: "true" }),
-    ).toBe(true);
+describe("DB_RESET_CONFIRM_PHRASE", () => {
+  it("is the exact type-to-confirm token", () => {
+    expect(DB_RESET_CONFIRM_PHRASE).toBe("delete");
   });
 });
