@@ -11,6 +11,7 @@ import {
   toFeedCatalyst,
 } from "@/lib/catalysts/feed-catalyst";
 import {
+  isImpactScoreLabel,
   scrubHistoricalImpact,
   scrubOriginHeadline,
   scrubOriginMentions,
@@ -57,11 +58,12 @@ export function toPublicFeedCatalyst(row: RawCatalystRow): PublicFeedCatalyst {
     sourceUrl: includeOrigins ? base.sourceUrl : null,
     sourceProvider: includeOrigins ? base.sourceProvider : null,
     keyFacts: base.keyFacts
-      .filter((f) => !/^impact\s*score$/i.test(f.label.trim()))
+      .filter((f) => !isImpactScoreLabel(f.label))
       .map((f) => ({
         label: scrubOriginMentions(f.label) ?? f.label,
         value: scrubOriginMentions(f.value) ?? f.value,
-      })),
+      }))
+      .filter((f) => f.label.length > 0 && f.value.length > 0),
   };
 }
 

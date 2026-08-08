@@ -53,9 +53,18 @@ describe("publicReceiptToArticle / category map", () => {
       settled: true,
     });
     expect(article?.article_body).toContain("Session move -12.50%");
+    expect(article?.article_body).not.toMatch(/Impact score/i);
     expect(article?.extracted?.keyFacts?.some((f) => f.label === "Event")).toBe(
       true,
     );
+    expect(
+      article?.extracted?.keyFacts?.some((f) =>
+        /impact\s*score/i.test(f.label),
+      ),
+    ).toBe(false);
+    expect(
+      article?.extracted?.keyFacts?.some((f) => /^tier$/i.test(f.label)),
+    ).toBe(false);
     const normalized = articleToNormalized(article!);
     expect(normalized).toMatchObject({
       provider: "pr-wire",
@@ -85,6 +94,8 @@ describe("publicReceiptToArticle / category map", () => {
     });
     expect(normalized?.rawContent).not.toHaveProperty("publisherName");
     expect(normalized?.rawContent).not.toHaveProperty("wireSource");
+    expect(normalized?.rawContent).not.toHaveProperty("impactScore");
+    expect(normalized?.rawContent).not.toHaveProperty("tier");
     expect(normalized?.tags).toContain("biotech_catalyst");
     expect(normalized?.tags).not.toContain("wire");
     expect(containsBlockedWireTrace(JSON.stringify(normalized))).toBe(false);

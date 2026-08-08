@@ -202,7 +202,6 @@ export function humanizeWireSlug(
 export function buildPublicReceiptSummary(input: {
   eventLabel?: string | null;
   theme?: string | null;
-  impactScore?: number | null;
   direction?: string | null;
   realizedMovePct?: number | null;
   settled?: boolean | null;
@@ -215,9 +214,6 @@ export function buildPublicReceiptSummary(input: {
   if (label) parts.push(label);
   const theme = humanizeWireSlug(input.theme);
   if (theme) parts.push(`${theme} theme`);
-  if (typeof input.impactScore === "number") {
-    parts.push(`Impact score ${input.impactScore}`);
-  }
   const direction = input.direction?.trim();
   if (direction) parts.push(`${direction} lean`);
   if (
@@ -239,9 +235,7 @@ export function buildPublicReceiptSummary(input: {
 export function buildPublicReceiptExtract(input: {
   eventLabel?: string | null;
   theme?: string | null;
-  impactScore?: number | null;
   direction?: string | null;
-  tier?: string | null;
   realizedMovePct?: number | null;
   realizedMaxAbs?: number | null;
   settled?: boolean | null;
@@ -256,12 +250,6 @@ export function buildPublicReceiptExtract(input: {
   if (label) keyFacts.push({ label: "Event", value: label });
   const theme = humanizeWireSlug(input.theme);
   if (theme) keyFacts.push({ label: "Theme", value: theme });
-  if (typeof input.impactScore === "number") {
-    keyFacts.push({ label: "Impact score", value: String(input.impactScore) });
-  }
-  if (input.tier?.trim()) {
-    keyFacts.push({ label: "Tier", value: input.tier.trim() });
-  }
   if (input.direction?.trim()) {
     keyFacts.push({ label: "Lean", value: input.direction.trim() });
   }
@@ -365,9 +353,7 @@ export function publicReceiptToArticle(
   const extractInput = {
     eventLabel,
     theme,
-    impactScore,
     direction,
-    tier,
     realizedMovePct,
     realizedMaxAbs,
     settled,
@@ -465,15 +451,12 @@ export function articleToNormalized(
     eventType: article.eventType ?? null,
     eventLabel,
     theme,
-    tier: article.tier ?? null,
     settled: article.settled ?? null,
   };
   // Never persist author / publisherName / wireSource — origin leak.
+  // Never persist impactScore / tier — retired from the product surface.
   if (publisher) rawContent.byline = publisher;
   if (imageUrl) rawContent.image_url = imageUrl;
-  if (typeof article.impactScore === "number") {
-    rawContent.impactScore = article.impactScore;
-  }
   if (typeof article.realizedMovePct === "number") {
     rawContent.realizedMovePct = article.realizedMovePct;
   }
