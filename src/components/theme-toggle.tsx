@@ -121,7 +121,7 @@ export function HeaderThemeToggle({ className }: { className?: string }) {
       </span>
       <span
         role="tooltip"
-        className="pointer-events-none absolute top-full right-0 z-50 mt-2 rounded-md border border-[var(--desk-border-strong)] bg-[var(--desk-panel)] px-2 py-1 font-mono text-[0.68rem] whitespace-nowrap text-[var(--desk-text-secondary)] opacity-0 shadow-[0_8px_24px_var(--desk-panel-shadow)] transition-opacity duration-150 group-hover:opacity-100 group-focus-visible:opacity-100"
+        className="pointer-events-none absolute top-full right-0 z-50 mt-2 rounded-md border border-[var(--desk-border-strong)] bg-[var(--desk-tooltip)] px-2 py-1 font-mono text-[0.68rem] whitespace-nowrap text-[var(--desk-text-secondary)] opacity-0 shadow-[0_8px_24px_var(--desk-panel-shadow)] transition-opacity duration-150 group-hover:opacity-100 group-focus-visible:opacity-100"
       >
         {nextLabel}
       </span>
