@@ -1,3 +1,7 @@
+"use client";
+
+import { PanelRightClose } from "lucide-react";
+
 import type { MacroEventDef } from "@/lib/jobs/fetch-macro-calendar";
 import { cn } from "@/lib/utils";
 
@@ -39,9 +43,12 @@ function countdownLabel(days: number): string {
 export function DashboardEconomicCalendar({
   events,
   className,
+  onHide,
 }: {
   events: MacroEventDef[];
   className?: string;
+  /** Collapse the rail; parent persists the preference. */
+  onHide?: () => void;
 }) {
   const nextId = events[0]?.id ?? null;
 
@@ -53,15 +60,28 @@ export function DashboardEconomicCalendar({
       )}
     >
       <div className="flex items-center justify-between gap-2 border-b border-[var(--desk-border)] bg-[var(--desk-header)] px-3 py-2.5">
-        <h2 className="desk-caps font-mono text-[0.7rem] font-semibold tracking-[0.14em] text-[var(--desk-text)] uppercase">
+        <h2 className="desk-caps min-w-0 truncate font-mono text-[0.7rem] font-semibold tracking-[0.14em] text-[var(--desk-text)] uppercase">
           Economic Calendar
         </h2>
-        <span
-          className="desk-data hidden tracking-wide text-[var(--desk-text-dim)] uppercase min-[1700px]:inline"
-          title="CPI · NFP · PPI · FOMC"
-        >
-          CPI · NFP · PPI · FOMC
-        </span>
+        <div className="flex shrink-0 items-center gap-1">
+          <span
+            className="desk-data hidden tracking-wide text-[var(--desk-text-dim)] uppercase min-[1700px]:inline"
+            title="CPI · NFP · PPI · FOMC"
+          >
+            CPI · NFP · PPI · FOMC
+          </span>
+          {onHide ? (
+            <button
+              type="button"
+              onClick={onHide}
+              title="Hide economic calendar"
+              aria-label="Hide economic calendar"
+              className="inline-flex size-7 items-center justify-center rounded-md text-[var(--desk-text-muted)] transition-colors hover:bg-[var(--desk-overlay-strong)] hover:text-[var(--desk-text)]"
+            >
+              <PanelRightClose className="size-3.5" />
+            </button>
+          ) : null}
+        </div>
       </div>
 
       <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
