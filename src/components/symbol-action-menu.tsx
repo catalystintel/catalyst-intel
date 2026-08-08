@@ -62,7 +62,7 @@ export function SymbolActionMenu({
             role="tooltip"
             className={cn(
               "pointer-events-none absolute top-full left-0 z-20 mt-1 max-w-[14rem]",
-              "rounded-sm border border-[var(--desk-border-strong)] bg-[var(--desk-panel)] px-2 py-1",
+              "rounded-sm border border-[var(--desk-border-strong)] bg-[var(--desk-tooltip)] px-2 py-1",
               "desk-body font-normal tracking-normal text-[var(--desk-text-secondary)] shadow-md",
               "opacity-0 transition-opacity duration-150",
               "group-hover/symbol:opacity-100 group-focus-visible/symbol:opacity-100",

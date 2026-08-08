@@ -125,7 +125,7 @@ export function DeskTip({
               }}
               className={cn(
                 "pointer-events-none fixed z-[90] w-max",
-                "rounded-md border border-[var(--desk-border-strong)] bg-[var(--desk-panel)] px-2.5 py-1.5",
+                "rounded-md border border-[var(--desk-border-strong)] bg-[var(--desk-tooltip)] px-2.5 py-1.5",
                 "shadow-[0_10px_28px_var(--desk-panel-shadow)]",
               )}
             >

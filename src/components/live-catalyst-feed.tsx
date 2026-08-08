@@ -1862,7 +1862,7 @@ function FeedTitleWithTooltip({
               }}
               className={cn(
                 "desk-arial pointer-events-none fixed z-[80] w-max",
-                "rounded-md border border-[var(--desk-border-strong)] bg-[var(--desk-panel)] px-2.5 py-2",
+                "rounded-md border border-[var(--desk-border-strong)] bg-[var(--desk-tooltip)] px-2.5 py-2",
                 "shadow-[0_12px_32px_var(--desk-panel-shadow)]",
               )}
             >
