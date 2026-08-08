@@ -110,9 +110,9 @@ type Presence = "active" | "blurred" | "hidden";
  * Time = event occurrence in the viewer's local timezone.
  *
  * Time is two lines (`3:58 PM` / `Jul 29, 2026`) so the stamp stays inside
- * its track; zone stays on the hover title. Actions track is wide enough for
- * Details + Dismiss + Watch and is clipped (`overflow-hidden` + `max-w-full`)
- * so buttons cannot paint over Time.
+ * its track; zone stays on the hover title. Actions track fits Details +
+ * Dismiss + Watch; if space is tight, secondary actions clip first so the
+ * primary Details label never reads as “ETAILS”.
  * Desktop Action buttons stay hover/focus/selected-only so the tape stays
  * quiet until the row is engaged.
  */
@@ -120,7 +120,7 @@ type Presence = "active" | "blurred" | "hidden";
 // Tracks are sized for laptop (~1280–1512) without a right rail; avoid large
 // minmax floors that force horizontal overflow when the docked split is open.
 const FEED_GRID =
-  "grid-cols-[4.5rem_minmax(0,1fr)] sm:grid-cols-[5rem_minmax(0,1fr)_6.5rem] lg:grid-cols-[5rem_minmax(0,1fr)_6.5rem_12.5rem]";
+  "grid-cols-[4.5rem_minmax(0,1fr)] sm:grid-cols-[5rem_minmax(0,1fr)_6.5rem] lg:grid-cols-[5rem_minmax(0,1fr)_6.5rem_15rem]";
 /** Denser tape columns while the split panel steals horizontal space. */
 const FEED_GRID_SPLIT =
   "grid-cols-[4.5rem_minmax(0,1fr)] sm:grid-cols-[4.5rem_minmax(0,1fr)] xl:grid-cols-[4.5rem_minmax(0,1fr)_5.75rem]";
@@ -1701,13 +1701,15 @@ function CatalystFeedList({
               {!splitOpen ? (
                 <div
                   role="cell"
-                  className="relative z-0 hidden min-w-0 overflow-hidden pl-2 lg:block"
+                  className="relative z-0 hidden min-w-0 pl-2 lg:block"
                   onClick={(e) => e.stopPropagation()}
                   onKeyDown={(e) => e.stopPropagation()}
                 >
+                  {/* Details stays shrink-0 on the left of the cluster; if the
+                      track is tight, Dismiss/Watch clip first — never “ETAILS”. */}
                   <div
                     className={cn(
-                      "ml-auto flex w-max max-w-full flex-nowrap items-center justify-end gap-1 overflow-hidden transition-opacity duration-100",
+                      "ml-auto flex max-w-full flex-nowrap items-center justify-end gap-1 transition-opacity duration-100",
                       "opacity-0 group-focus-within:opacity-100 group-hover:opacity-100",
                       selected && "opacity-100",
                     )}
@@ -1720,27 +1722,29 @@ function CatalystFeedList({
                       <BookOpen className="size-3" />
                       Details
                     </FeedActionButton>
-                    <FeedActionButton
-                      onClick={() => onDismiss(catalyst.id)}
-                      tip="Hide from results"
-                    >
-                      <X className="size-3" />
-                      Dismiss
-                    </FeedActionButton>
-                    {catalyst.symbol ? (
+                    <div className="flex min-w-0 flex-nowrap items-center justify-end gap-1 overflow-hidden">
                       <FeedActionButton
-                        onClick={() => onQuiet(catalyst.symbol)}
-                        tip={
-                          onWatchlist
-                            ? "Already on your watchlist"
-                            : "Add to watchlist"
-                        }
-                        disabled={onWatchlist}
+                        onClick={() => onDismiss(catalyst.id)}
+                        tip="Hide from results"
                       >
-                        <Plus className="size-3" />
-                        Watch
+                        <X className="size-3" />
+                        Dismiss
                       </FeedActionButton>
-                    ) : null}
+                      {catalyst.symbol ? (
+                        <FeedActionButton
+                          onClick={() => onQuiet(catalyst.symbol)}
+                          tip={
+                            onWatchlist
+                              ? "Already on your watchlist"
+                              : "Add to watchlist"
+                          }
+                          disabled={onWatchlist}
+                        >
+                          <Plus className="size-3" />
+                          Watch
+                        </FeedActionButton>
+                      ) : null}
+                    </div>
                   </div>
                 </div>
               ) : null}
