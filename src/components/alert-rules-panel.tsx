@@ -19,7 +19,6 @@ import { toast } from "sonner";
 import { AlertRulesListSkeleton } from "@/components/alerts-page-skeleton";
 import { TelegramIcon } from "@/components/telegram-icon";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import type { WatchlistCriteria } from "@/db/schema";
 import {
   emptyNotificationChannels,
@@ -116,7 +115,6 @@ export function AlertRulesPanel() {
     null,
   );
   const [linkingTelegram, setLinkingTelegram] = useState(false);
-  const [telegramChatOverride, setTelegramChatOverride] = useState("");
 
   const webPush = useWebPush(pushPublicKey);
 
@@ -344,9 +342,6 @@ export function AlertRulesPanel() {
         body: JSON.stringify({
           channels,
           watchlistIds: selectedWatchlistIds,
-          ...(telegramChatOverride.trim()
-            ? { telegramChatId: telegramChatOverride.trim() }
-            : {}),
         }),
       });
       const data = await res.json();
@@ -430,8 +425,6 @@ export function AlertRulesPanel() {
             linkingTelegram={linkingTelegram}
             onConnectTelegram={() => void connectTelegram()}
             onDisconnectTelegram={() => void disconnectTelegram()}
-            telegramChatOverride={telegramChatOverride}
-            setTelegramChatOverride={setTelegramChatOverride}
             emailConfigured={emailConfigured}
             sessionEmail={sessionEmail}
           />
@@ -453,7 +446,6 @@ export function AlertRulesPanel() {
             savedWatchlists={savedWatchlists}
             methodReady={methodReady}
             rules={rules}
-            sessionEmail={sessionEmail}
             telegramLinked={telegramLinked}
             saving={saving}
             testing={testing}
@@ -580,8 +572,6 @@ function MethodsStep(props: {
   linkingTelegram: boolean;
   onConnectTelegram: () => void;
   onDisconnectTelegram: () => void;
-  telegramChatOverride: string;
-  setTelegramChatOverride: (v: string) => void;
   emailConfigured: boolean;
   sessionEmail: string;
 }) {
@@ -602,6 +592,9 @@ function MethodsStep(props: {
           const on = props.channels[id];
           const available = props.methodAvailable(id);
           const ready = props.methodReady(id);
+          // Email needs no recipient UI when ready — only show setup errors.
+          const showSetup =
+            available && (id === "email" ? !ready : on || !ready);
           return (
             <div
               key={id}
@@ -677,7 +670,7 @@ function MethodsStep(props: {
                 </button>
               </div>
 
-              {(on || !ready) && available ? (
+              {showSetup ? (
                 <div className="border-t border-[var(--desk-border)] px-4 py-3">
                   {id === "push" ? (
                     <PushSetup
@@ -694,8 +687,6 @@ function MethodsStep(props: {
                       linking={props.linkingTelegram}
                       onConnect={props.onConnectTelegram}
                       onDisconnect={props.onDisconnectTelegram}
-                      chatOverride={props.telegramChatOverride}
-                      setChatOverride={props.setTelegramChatOverride}
                     />
                   ) : null}
                   {id === "email" ? (
@@ -765,8 +756,6 @@ function TelegramSetup({
   linking,
   onConnect,
   onDisconnect,
-  chatOverride,
-  setChatOverride,
 }: {
   configured: boolean;
   botHandle: string | null;
@@ -775,8 +764,6 @@ function TelegramSetup({
   linking: boolean;
   onConnect: () => void;
   onDisconnect: () => void;
-  chatOverride: string;
-  setChatOverride: (v: string) => void;
 }) {
   if (!configured) {
     return (
@@ -834,18 +821,6 @@ function TelegramSetup({
           </Button>
         )}
       </div>
-      <label className="flex flex-col gap-1">
-        <span className="text-[0.7rem] text-[var(--desk-text-dim)]">
-          Chat ID override (optional)
-        </span>
-        <Input
-          value={chatOverride}
-          onChange={(e) => setChatOverride(e.target.value)}
-          placeholder={linked ? `Linked ${linked.chatId}` : "e.g. 123456789"}
-          inputMode="numeric"
-          className="h-9 border-[var(--desk-border)] bg-[var(--desk-overlay)] font-mono text-xs"
-        />
-      </label>
     </div>
   );
 }
@@ -871,25 +846,7 @@ function EmailSetup({
       </p>
     );
   }
-  return (
-    <label className="flex flex-col gap-1.5">
-      <span className="text-xs font-medium text-[var(--desk-text-secondary)]">
-        Delivers to
-      </span>
-      <Input
-        value={sessionEmail}
-        readOnly
-        tabIndex={-1}
-        aria-readonly="true"
-        type="email"
-        className="h-10 cursor-default border-[var(--desk-border)] bg-[var(--desk-overlay)] font-mono text-xs text-[var(--desk-text-dim)] shadow-none focus-visible:border-[var(--desk-border)] focus-visible:ring-0"
-      />
-      <span className="inline-flex items-center gap-1.5 text-[0.7rem] text-[var(--desk-live-status)]">
-        <CheckCircle2 className="size-3" aria-hidden />
-        Recipient locked to your account email
-      </span>
-    </label>
-  );
+  return null;
 }
 
 function WatchlistsStep({
@@ -993,7 +950,6 @@ function ReviewStep({
   savedWatchlists,
   methodReady,
   rules,
-  sessionEmail,
   telegramLinked,
   saving,
   testing,
@@ -1006,7 +962,6 @@ function ReviewStep({
   savedWatchlists: SavedWatchlistOption[];
   methodReady: (id: NotificationChannel) => boolean;
   rules: AlertRuleRow[];
-  sessionEmail: string;
   telegramLinked: TelegramLinked | null;
   saving: boolean;
   testing: boolean;
@@ -1064,11 +1019,6 @@ function ReviewStep({
               ))}
             </ul>
           )}
-          {channels.email && sessionEmail ? (
-            <p className="mt-2 font-mono text-[0.7rem] text-[var(--desk-text-dim)]">
-              {sessionEmail}
-            </p>
-          ) : null}
           {channels.telegram && telegramLinked ? (
             <p className="mt-2 font-mono text-[0.7rem] text-[var(--desk-text-dim)]">
               Chat {telegramLinked.chatId}
