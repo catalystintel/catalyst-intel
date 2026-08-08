@@ -161,7 +161,7 @@ export function FetchTrigger() {
         <Button
           onClick={handleFetchAll}
           disabled={loading || sourceLoading !== null}
-          className="btn-press w-fit bg-[var(--desk-live)] text-[#121212] hover:brightness-110"
+          className="btn-press w-fit bg-[var(--desk-live)] text-[var(--desk-accent-fg)] hover:brightness-110"
         >
           {loading ? "Fetching…" : "Fetch all sources now"}
         </Button>

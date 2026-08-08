@@ -116,7 +116,7 @@ export function QuietModePanel({
             <span
               aria-hidden
               className={cn(
-                "absolute top-1 left-1 size-5 rounded-full bg-[#121212] shadow transition-transform duration-200",
+                "absolute top-1 left-1 size-5 rounded-full bg-[var(--desk-accent-fg)] shadow transition-transform duration-200",
                 quietMode && "translate-x-5",
               )}
             />
@@ -147,7 +147,7 @@ export function QuietModePanel({
             <Button
               type="submit"
               disabled={busy || !draft.trim()}
-              className="btn-press h-9 gap-1.5 bg-[var(--desk-live)] text-[#121212] hover:brightness-110"
+              className="btn-press h-9 gap-1.5 bg-[var(--desk-live)] text-[var(--desk-accent-fg)] hover:brightness-110"
             >
               <Plus className="size-3.5" />
               Add
@@ -239,7 +239,7 @@ export function QuietModePanel({
                       >
                         <span
                           className={cn(
-                            "absolute top-0.5 left-0.5 size-4 rounded-full bg-[#121212] shadow transition-transform",
+                            "absolute top-0.5 left-0.5 size-4 rounded-full bg-[var(--desk-accent-fg)] shadow transition-transform",
                             on && "translate-x-4",
                           )}
                         />

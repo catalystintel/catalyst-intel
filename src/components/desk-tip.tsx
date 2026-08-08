@@ -126,7 +126,7 @@ export function DeskTip({
               className={cn(
                 "pointer-events-none fixed z-[90] w-max",
                 "rounded-md border border-[var(--desk-border-strong)] bg-[var(--desk-panel)] px-2.5 py-1.5",
-                "shadow-[0_10px_28px_rgba(0,0,0,0.45)]",
+                "shadow-[0_10px_28px_var(--desk-panel-shadow)]",
               )}
             >
               <span className="block text-[0.75rem] leading-snug font-medium break-words whitespace-normal text-[var(--desk-text)]">

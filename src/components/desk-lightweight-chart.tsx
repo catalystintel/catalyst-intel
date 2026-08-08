@@ -69,16 +69,16 @@ function chartTheme(isDark: boolean): ChartTheme {
   }
   return {
     bg: "#FFFFFF",
-    text: "#64748B",
-    grid: "rgba(100,116,139,0.1)",
-    border: "rgba(100,116,139,0.22)",
+    text: "#5A6573",
+    grid: "rgba(15,30,50,0.06)",
+    border: "rgba(15,30,50,0.12)",
     crosshair: "rgba(37,99,235,0.45)",
-    up: "#16A34A",
-    down: "#DC2626",
+    up: "#059669",
+    down: "#E11D48",
     areaLine: "#2563EB",
-    areaTop: "rgba(37,99,235,0.22)",
+    areaTop: "rgba(37,99,235,0.2)",
     areaBottom: "rgba(37,99,235,0.02)",
-    marker: "#D97706",
+    marker: "#C2410C",
   };
 }
 
@@ -370,14 +370,14 @@ export function DeskLightweightChart({
 
       {fullscreen ? (
         <div
-          className="fixed inset-0 z-[90] flex flex-col bg-black/70 p-3 sm:p-5"
+          className="fixed inset-0 z-[90] flex flex-col bg-[var(--desk-scrim)] p-3 sm:p-5"
           role="dialog"
           aria-modal="true"
           aria-label={`${trimmed} chart full screen`}
           onClick={() => setFullscreen(false)}
         >
           <div
-            className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-[var(--desk-border-strong)] shadow-[0_24px_80px_rgba(0,0,0,0.55)]"
+            className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-[var(--desk-border-strong)] bg-[var(--desk-panel)] shadow-[0_24px_80px_var(--desk-panel-shadow)]"
             style={{ background: theme.bg }}
             onClick={(e) => e.stopPropagation()}
           >

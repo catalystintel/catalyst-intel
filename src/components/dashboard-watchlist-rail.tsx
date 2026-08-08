@@ -131,7 +131,7 @@ export function DashboardWatchlistRail({
             type="submit"
             disabled={saving || !draft.trim()}
             aria-label="Add symbol"
-            className="btn-press grid size-6 shrink-0 place-items-center rounded-md bg-[var(--desk-live)] text-[#121212] disabled:opacity-50"
+            className="btn-press grid size-6 shrink-0 place-items-center rounded-md bg-[var(--desk-live)] text-[var(--desk-accent-fg)] disabled:opacity-50"
           >
             <Plus className="size-3.5" />
           </button>
