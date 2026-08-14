@@ -139,10 +139,10 @@ type Presence = "active" | "blurred" | "hidden";
 // Tracks are sized for laptop (~1280–1512) without a right rail; avoid large
 // minmax floors that force horizontal overflow when the docked split is open.
 const FEED_GRID =
-  "grid-cols-[auto_auto_minmax(0,1fr)] sm:grid-cols-[auto_auto_minmax(0,1fr)_6.5rem] lg:grid-cols-[auto_auto_minmax(0,1fr)_6.5rem_15rem]";
+  "grid-cols-[4.75rem_5.5rem_minmax(0,1fr)] sm:grid-cols-[5rem_5.75rem_minmax(0,1fr)_6.5rem] lg:grid-cols-[5rem_5.75rem_minmax(0,1fr)_6.5rem_15rem]";
 /** Denser tape columns while the split panel steals horizontal space. */
 const FEED_GRID_SPLIT =
-  "grid-cols-[auto_auto_minmax(0,1fr)] sm:grid-cols-[auto_auto_minmax(0,1fr)] xl:grid-cols-[auto_auto_minmax(0,1fr)_5.75rem]";
+  "grid-cols-[4.5rem_5.25rem_minmax(0,1fr)] sm:grid-cols-[4.5rem_5.25rem_minmax(0,1fr)] xl:grid-cols-[4.5rem_5.25rem_minmax(0,1fr)_5.75rem]";
 
 function readPresence(): Presence {
   if (typeof document === "undefined") return "active";
@@ -1906,21 +1906,21 @@ function CatalystFeedList({
       <div
         role="row"
         className={cn(
-          "feed-sticky-cols desk-caps sticky top-0 z-10 grid h-10 items-center gap-x-1.5 gap-y-2 border-b border-[var(--desk-border)] px-4 font-mono text-[0.62rem] font-medium text-[var(--desk-text-muted)] uppercase sm:gap-x-2 sm:px-5 lg:gap-x-2.5",
+          "feed-sticky-cols desk-caps sticky top-0 z-10 grid h-10 items-center gap-x-2 gap-y-2 border-b border-[var(--desk-border)] px-4 font-mono text-[0.62rem] font-medium text-[var(--desk-text-muted)] uppercase sm:gap-x-3 sm:px-5 lg:gap-x-4",
           feedGrid,
         )}
       >
-        <div role="columnheader" className="min-w-0 pr-0.5">
+        <div role="columnheader" className="min-w-0 truncate text-left">
           Symbol
         </div>
         <div
           role="columnheader"
-          className="min-w-0"
+          className="min-w-0 truncate text-left"
           title="Session change (1D)"
         >
           1D
         </div>
-        <div role="columnheader" className="min-w-0">
+        <div role="columnheader" className="min-w-0 truncate text-left">
           Title
         </div>
         <div
@@ -2004,7 +2004,7 @@ function CatalystFeedList({
                 }
               }}
               className={cn(
-                "feed-row group relative grid min-h-[56px] cursor-pointer items-center gap-x-1.5 gap-y-2 border-b border-[var(--desk-border)] px-4 py-3 transition-colors duration-150 outline-none sm:min-h-[64px] sm:gap-x-2 sm:px-5 sm:py-1.5 lg:gap-x-2.5",
+                "feed-row group relative grid min-h-[56px] cursor-pointer items-center gap-x-2 gap-y-2 border-b border-[var(--desk-border)] px-4 py-3 transition-colors duration-150 outline-none sm:min-h-[64px] sm:gap-x-3 sm:px-5 sm:py-1.5 lg:gap-x-4",
                 feedGrid,
                 "hover:bg-[var(--desk-overlay-soft)] focus-visible:bg-[var(--desk-overlay-soft)] focus-visible:shadow-[inset_2px_0_0_var(--desk-live)]",
                 "hover:shadow-[inset_2px_0_0_rgba(240,193,75,0.35)]",
@@ -2022,11 +2022,11 @@ function CatalystFeedList({
               }}
               aria-hidden={dismissing || undefined}
             >
-              <div role="cell" className="relative z-[1] min-w-0 pr-0.5">
+              <div role="cell" className="relative z-[1] min-w-0 text-left">
                 {renderSymbol()}
               </div>
 
-              <div role="cell" className="relative z-[1] min-w-0">
+              <div role="cell" className="relative z-[1] min-w-0 text-left">
                 <FeedSessionPct
                   changePercent={
                     catalyst.symbol
