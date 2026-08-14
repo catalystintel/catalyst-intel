@@ -122,7 +122,7 @@ const DISMISS_STORAGE_KEY = "ci.dismissed-catalyst-ids";
 type Presence = "active" | "blurred" | "hidden";
 
 /**
- * Blotter: Symbol · Title · Time (+ Action toolbar).
+ * Blotter: Symbol · 1D · Title · Time (+ Action toolbar).
  * Symbol leads as the row index. No Event / Source primary columns.
  * Time = event occurrence in the viewer's local timezone.
  *
@@ -137,10 +137,10 @@ type Presence = "active" | "blurred" | "hidden";
 // Tracks are sized for laptop (~1280–1512) without a right rail; avoid large
 // minmax floors that force horizontal overflow when the docked split is open.
 const FEED_GRID =
-  "grid-cols-[5rem_minmax(0,1fr)] sm:grid-cols-[5.25rem_minmax(0,1fr)_6.5rem] lg:grid-cols-[5.25rem_minmax(0,1fr)_6.5rem_15rem]";
+  "grid-cols-[4.5rem_3.75rem_minmax(0,1fr)] sm:grid-cols-[5rem_4rem_minmax(0,1fr)_6.5rem] lg:grid-cols-[5rem_4rem_minmax(0,1fr)_6.5rem_15rem]";
 /** Denser tape columns while the split panel steals horizontal space. */
 const FEED_GRID_SPLIT =
-  "grid-cols-[5rem_minmax(0,1fr)] sm:grid-cols-[5rem_minmax(0,1fr)] xl:grid-cols-[5rem_minmax(0,1fr)_5.75rem]";
+  "grid-cols-[4.5rem_3.75rem_minmax(0,1fr)] sm:grid-cols-[4.5rem_3.75rem_minmax(0,1fr)] xl:grid-cols-[4.5rem_3.75rem_minmax(0,1fr)_5.75rem]";
 
 function readPresence(): Presence {
   if (typeof document === "undefined") return "active";
@@ -1911,6 +1911,13 @@ function CatalystFeedList({
         <div role="columnheader" className="min-w-0">
           Symbol
         </div>
+        <div
+          role="columnheader"
+          className="min-w-0 text-right"
+          title="Session change (1D)"
+        >
+          1D
+        </div>
         <div role="columnheader" className="min-w-0">
           Title
         </div>
@@ -2014,17 +2021,21 @@ function CatalystFeedList({
               aria-hidden={dismissing || undefined}
             >
               <div role="cell" className="relative z-[1] min-w-0">
-                <div className="flex min-w-0 flex-col gap-0.5">
-                  {renderSymbol()}
-                  <FeedSessionPct
-                    changePercent={
-                      catalyst.symbol
-                        ? (quotes[catalyst.symbol.toUpperCase()]
-                            ?.changePercent ?? null)
-                        : null
-                    }
-                  />
-                </div>
+                {renderSymbol()}
+              </div>
+
+              <div
+                role="cell"
+                className="relative z-[1] min-w-0 justify-self-end text-right"
+              >
+                <FeedSessionPct
+                  changePercent={
+                    catalyst.symbol
+                      ? (quotes[catalyst.symbol.toUpperCase()]?.changePercent ??
+                        null)
+                      : null
+                  }
+                />
               </div>
 
               <div role="cell" className="min-w-0">
@@ -2166,7 +2177,7 @@ function CatalystFeedList({
   );
 }
 
-/** Session (1D) % under the symbol — same coloring as split quote. */
+/** Session (1D) % in its own narrow column — same coloring as split quote. */
 function FeedSessionPct({
   changePercent,
 }: {
@@ -2177,14 +2188,21 @@ function FeedSessionPct({
     !Number.isFinite(changePercent) ||
     Math.abs(changePercent) > MAX_PLAUSIBLE_SESSION_PCT
   ) {
-    return null;
+    return (
+      <span
+        className="desk-data font-mono text-[0.7rem] tracking-tight text-[var(--desk-text-dim)] tabular-nums"
+        aria-hidden
+      >
+        —
+      </span>
+    );
   }
   const up = changePercent === 0 ? null : changePercent > 0;
   const sign = changePercent > 0 ? "+" : "";
   return (
     <span
       className={cn(
-        "desk-data font-mono text-[0.62rem] font-semibold tracking-tight tabular-nums",
+        "desk-data font-mono text-[0.7rem] font-semibold tracking-tight tabular-nums",
         up === true && "text-[var(--desk-positive)]",
         up === false && "text-[var(--desk-negative)]",
         up == null && "text-[var(--desk-text-muted)]",
