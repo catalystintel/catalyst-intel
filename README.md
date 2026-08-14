@@ -60,17 +60,17 @@ Copy `.env.example` to `.env.local` and fill in the Supabase values:
 cp .env.example .env.local
 ```
 
-| Variable                        | Required now?         | Notes                                                                                  |
-| ------------------------------- | --------------------- | -------------------------------------------------------------------------------------- |
-| `DATABASE_URL`                  | Yes (default is fine) | Local SQLite file path                                                                 |
-| `NEXT_PUBLIC_SUPABASE_URL`      | Yes                   | From Supabase Project Settings -> API                                                  |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Yes                   | From Supabase Project Settings -> API                                                  |
-| `SEC_EDGAR_USER_AGENT`          | Yes                   | SEC requires a descriptive contact string, e.g. `you@email.com CatalystIntel/0.1`      |
-| `NEXT_PUBLIC_POSTHOG_KEY`       | No                    | PostHog Project API key (`phc_…`). Leave blank to disable analytics                    |
-| `NEXT_PUBLIC_POSTHOG_HOST`      | No                    | Default `https://us.i.posthog.com` (use `https://eu.i.posthog.com` for EU)             |
-| `ADMIN_EMAILS`                  | No                    | Extra admin emails; always includes `zhbar10@gmail.com`, `omer.nachshon@gmail.com`     |
-| `SUPABASE_SERVICE_ROLE_KEY`     | No                    | Reserved for future admin operations                                                   |
-| `OPENROUTER_API_KEY`            | No                    | On-demand AI analysis (free `:free` models). Or use `OPENROUTER_API_KEYS` (comma pool) |
+| Variable                        | Required now?         | Notes                                                                                                                   |
+| ------------------------------- | --------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| `DATABASE_URL`                  | Yes (default is fine) | Local SQLite file path                                                                                                  |
+| `NEXT_PUBLIC_SUPABASE_URL`      | Yes                   | From Supabase Project Settings -> API                                                                                   |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Yes                   | From Supabase Project Settings -> API                                                                                   |
+| `SEC_EDGAR_USER_AGENT`          | Yes                   | SEC requires a descriptive contact string, e.g. `you@email.com CatalystIntel/0.1`                                       |
+| `NEXT_PUBLIC_POSTHOG_KEY`       | No                    | PostHog Project API key (`phc_…`). Leave blank to disable analytics                                                     |
+| `NEXT_PUBLIC_POSTHOG_HOST`      | No                    | Default `https://us.i.posthog.com` (use `https://eu.i.posthog.com` for EU)                                              |
+| `ADMIN_EMAILS`                  | No                    | Extra admin emails; always includes `omer.nachshon@gmail.com`, `zhbar10@gmail.com`, `catalyst.intel.feedback@gmail.com` |
+| `SUPABASE_SERVICE_ROLE_KEY`     | No                    | Reserved for future admin operations                                                                                    |
+| `OPENROUTER_API_KEY`            | No                    | On-demand AI analysis (free `:free` models). Or use `OPENROUTER_API_KEYS` (comma pool)                                  |
 
 No SEC/FDA/ClinicalTrials.gov API keys are needed - those vendors are free and keyless.
 

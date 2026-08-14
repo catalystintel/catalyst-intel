@@ -43,24 +43,24 @@ Three environments, one app:
 
 ### Local (`.env.local` on your machine)
 
-| Variable                               | Required? | Notes                                                                                                                          |
-| -------------------------------------- | --------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| `DATABASE_URL`                         | Yes       | `file:./local.db` (default is fine)                                                                                            |
-| `NEXT_PUBLIC_SUPABASE_URL`             | Yes       | Supabase Project Settings → API                                                                                                |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY`        | Yes       | Supabase Project Settings → API                                                                                                |
-| `SEC_EDGAR_USER_AGENT`                 | Yes       | e.g. `you@email.com CatalystIntel/0.1`                                                                                         |
-| `CRON_INTERVAL_MINUTES`                | No        | Default `1` for `npm run cron`                                                                                                 |
-| `NEXT_PUBLIC_POSTHOG_KEY`              | No        | PostHog Project API key; omit to disable analytics                                                                             |
-| `NEXT_PUBLIC_POSTHOG_HOST`             | No        | Default `https://us.i.posthog.com`                                                                                             |
-| `ADMIN_EMAILS`                         | No        | Extra admin emails (comma-separated); always includes `zhbar10@gmail.com`, `omer.nachshon@gmail.com`                           |
-| `FINNHUB_API_KEY`                      | No        | Finnhub: NYSE listings, earnings/FDA calendars, news (soft-fail)                                                               |
-| `FMP_API_KEY`                          | No        | FMP economic calendar (soft-fail; often premium — 402 skipped). Dedicated ~10m cron, not 1-min fetch/all                       |
-| `PR_WIRE_API_KEY` / `PR_WIRE_API_BASE` | No        | Optional. PR wire scrapes a **free public high-impact board** with no key; set these only for the authenticated full firehose. |
-| `POLYGON_API_KEY`                      | No        | Polygon/Massive news + historical_impact enrichment (soft-fail; free tier ~5 req/min, no same-day aggs)                        |
-| `MASSIVE_API_KEY`                      | No        | Alias for `POLYGON_API_KEY`                                                                                                    |
-| `FORM4_API_KEY`                        | No        | Optional Form4API enrichment (EDGAR Form 4 still works without it)                                                             |
-| `LIBSQL_URL` / `LIBSQL_AUTH_TOKEN`     | No        | Leave unset locally - use the SQLite file                                                                                      |
-| `CRON_SECRET`                          | No        | Only needed for remote cron callers                                                                                            |
+| Variable                               | Required? | Notes                                                                                                                                     |
+| -------------------------------------- | --------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `DATABASE_URL`                         | Yes       | `file:./local.db` (default is fine)                                                                                                       |
+| `NEXT_PUBLIC_SUPABASE_URL`             | Yes       | Supabase Project Settings → API                                                                                                           |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY`        | Yes       | Supabase Project Settings → API                                                                                                           |
+| `SEC_EDGAR_USER_AGENT`                 | Yes       | e.g. `you@email.com CatalystIntel/0.1`                                                                                                    |
+| `CRON_INTERVAL_MINUTES`                | No        | Default `1` for `npm run cron`                                                                                                            |
+| `NEXT_PUBLIC_POSTHOG_KEY`              | No        | PostHog Project API key; omit to disable analytics                                                                                        |
+| `NEXT_PUBLIC_POSTHOG_HOST`             | No        | Default `https://us.i.posthog.com`                                                                                                        |
+| `ADMIN_EMAILS`                         | No        | Extra admin emails (comma-separated); always includes `omer.nachshon@gmail.com`, `zhbar10@gmail.com`, `catalyst.intel.feedback@gmail.com` |
+| `FINNHUB_API_KEY`                      | No        | Finnhub: NYSE listings, earnings/FDA calendars, news (soft-fail)                                                                          |
+| `FMP_API_KEY`                          | No        | FMP economic calendar (soft-fail; often premium — 402 skipped). Dedicated ~10m cron, not 1-min fetch/all                                  |
+| `PR_WIRE_API_KEY` / `PR_WIRE_API_BASE` | No        | Optional. PR wire scrapes a **free public high-impact board** with no key; set these only for the authenticated full firehose.            |
+| `POLYGON_API_KEY`                      | No        | Polygon/Massive news + historical_impact enrichment (soft-fail; free tier ~5 req/min, no same-day aggs)                                   |
+| `MASSIVE_API_KEY`                      | No        | Alias for `POLYGON_API_KEY`                                                                                                               |
+| `FORM4_API_KEY`                        | No        | Optional Form4API enrichment (EDGAR Form 4 still works without it)                                                                        |
+| `LIBSQL_URL` / `LIBSQL_AUTH_TOKEN`     | No        | Leave unset locally - use the SQLite file                                                                                                 |
+| `CRON_SECRET`                          | No        | Only needed for remote cron callers                                                                                                       |
 
 Auth is **Google OAuth only** via Supabase. Passwords are never collected or stored in our DB
 (our `users` table only has id / supabase user id / email / role / subscription).

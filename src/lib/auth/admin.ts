@@ -8,8 +8,9 @@
  * them out of `/admin`.
  */
 const DEFAULT_ADMIN_EMAILS = [
-  "zhbar10@gmail.com",
   "omer.nachshon@gmail.com",
+  "zhbar10@gmail.com",
+  "catalyst.intel.feedback@gmail.com",
 ] as const;
 
 function parseAdminEmails(raw: string): string[] {

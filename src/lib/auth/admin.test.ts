@@ -17,15 +17,17 @@ describe("admin allowlist", () => {
     env.NODE_ENV = originalNodeEnv;
   });
 
-  it("defaults to the two allowlisted operators when ADMIN_EMAILS is unset", () => {
+  it("defaults to the three allowlisted operators when ADMIN_EMAILS is unset", () => {
     delete env.ADMIN_EMAILS;
     env.NODE_ENV = "development";
     expect(getAdminEmails()).toEqual([
-      "zhbar10@gmail.com",
       "omer.nachshon@gmail.com",
+      "zhbar10@gmail.com",
+      "catalyst.intel.feedback@gmail.com",
     ]);
     expect(isAdminEmail("zhbar10@gmail.com")).toBe(true);
     expect(isAdminEmail("ZHBAR10@GMAIL.COM")).toBe(true);
+    expect(isAdminEmail("catalyst.intel.feedback@gmail.com")).toBe(true);
     expect(isAdminEmail("stranger@example.com")).toBe(false);
     expect(adminRoleForEmail("omer.nachshon@gmail.com")).toBe("admin");
     expect(adminRoleForEmail("stranger@example.com")).toBe("user");
@@ -35,24 +37,28 @@ describe("admin allowlist", () => {
     delete env.ADMIN_EMAILS;
     env.NODE_ENV = "production";
     expect(getAdminEmails()).toEqual([
-      "zhbar10@gmail.com",
       "omer.nachshon@gmail.com",
+      "zhbar10@gmail.com",
+      "catalyst.intel.feedback@gmail.com",
     ]);
     expect(isAdminEmail("omer.nachshon@gmail.com")).toBe(true);
     expect(isAdminEmail("zhbar10@gmail.com")).toBe(true);
+    expect(isAdminEmail("catalyst.intel.feedback@gmail.com")).toBe(true);
   });
 
   it("merges ADMIN_EMAILS extras onto the operator defaults", () => {
     env.ADMIN_EMAILS = " ops@example.com , other@example.com ";
     expect(getAdminEmails()).toEqual([
-      "zhbar10@gmail.com",
       "omer.nachshon@gmail.com",
+      "zhbar10@gmail.com",
+      "catalyst.intel.feedback@gmail.com",
       "ops@example.com",
       "other@example.com",
     ]);
     expect(isAdminEmail("ops@example.com")).toBe(true);
     expect(isAdminEmail("zhbar10@gmail.com")).toBe(true);
     expect(isAdminEmail("omer.nachshon@gmail.com")).toBe(true);
+    expect(isAdminEmail("catalyst.intel.feedback@gmail.com")).toBe(true);
   });
 
   it("rejects empty / missing emails", () => {
