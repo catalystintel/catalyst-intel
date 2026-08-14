@@ -5,6 +5,7 @@ import {
   describeVercelSecretShapes,
   hasNewerHealthyForSha,
   isAccessRelatedFailure,
+  isOperatorAuthor,
   isVercelAuthError,
   isZhbarAuthor,
   matchDeploymentSha,
@@ -14,28 +15,43 @@ import {
   waitForShaDeployOutcome,
 } from "./vercel-unblock-redeploy.mjs";
 
-describe("isZhbarAuthor", () => {
-  it("matches common name/email/login variants", () => {
-    expect(isZhbarAuthor({ githubCommitAuthorName: "zhbar10" })).toBe(true);
+describe("isOperatorAuthor", () => {
+  it("matches zhbar name/email/login variants", () => {
+    expect(isOperatorAuthor({ githubCommitAuthorName: "zhbar10" })).toBe(true);
     expect(
-      isZhbarAuthor({ githubCommitAuthorEmail: "zhbar10@gmail.com" }),
+      isOperatorAuthor({ githubCommitAuthorEmail: "zhbar10@gmail.com" }),
     ).toBe(true);
-    expect(isZhbarAuthor({ githubCommitAuthorLogin: "zhbar10" })).toBe(true);
-    expect(isZhbarAuthor({ actor: "zhbar" })).toBe(true);
+    expect(isOperatorAuthor({ githubCommitAuthorLogin: "zhbar10" })).toBe(true);
+    expect(isOperatorAuthor({ actor: "zhbar" })).toBe(true);
+  });
+
+  it("matches Omer email/login/name variants", () => {
+    expect(
+      isOperatorAuthor({ githubCommitAuthorEmail: "omer.nachshon@gmail.com" }),
+    ).toBe(true);
+    expect(isOperatorAuthor({ githubCommitAuthorLogin: "OmerNachshon" })).toBe(
+      true,
+    );
+    expect(isOperatorAuthor({ githubCommitAuthorName: "Omer Nachshon" })).toBe(
+      true,
+    );
+    expect(isZhbarAuthor({ githubCommitAuthorLogin: "omernachshon" })).toBe(
+      true,
+    );
   });
 
   it("rejects unrelated authors", () => {
-    expect(isZhbarAuthor({ githubCommitAuthorName: "Omer Nachshon" })).toBe(
+    expect(isOperatorAuthor({ githubCommitAuthorName: "Jane Doe" })).toBe(
       false,
     );
     expect(
-      isZhbarAuthor({ githubCommitAuthorEmail: "omer.nachshon@gmail.com" }),
+      isOperatorAuthor({ githubCommitAuthorEmail: "stranger@example.com" }),
     ).toBe(false);
-    expect(isZhbarAuthor({ githubCommitAuthorLogin: "OmerNachshon" })).toBe(
+    expect(isOperatorAuthor({ githubCommitAuthorLogin: "dependabot" })).toBe(
       false,
     );
-    expect(isZhbarAuthor({})).toBe(false);
-    expect(isZhbarAuthor(null)).toBe(false);
+    expect(isOperatorAuthor({})).toBe(false);
+    expect(isOperatorAuthor(null)).toBe(false);
   });
 });
 
@@ -72,7 +88,7 @@ describe("isAccessRelatedFailure", () => {
 });
 
 describe("needsAutoRedeploy", () => {
-  it("heals blocked zhbar commits on main/dev", () => {
+  it("heals blocked operator commits on main/dev", () => {
     expect(
       needsAutoRedeploy({
         readyState: "BLOCKED",
@@ -85,7 +101,7 @@ describe("needsAutoRedeploy", () => {
     ).toMatchObject({
       branch: "main",
       target: "production",
-      reason: "blocked-zhbar-author",
+      reason: "blocked-operator-author",
     });
 
     expect(
@@ -97,9 +113,24 @@ describe("needsAutoRedeploy", () => {
         },
       }),
     ).toMatchObject({ branch: "dev", target: null });
+
+    expect(
+      needsAutoRedeploy({
+        readyState: "BLOCKED",
+        target: "production",
+        meta: {
+          githubCommitRef: "main",
+          githubCommitAuthorEmail: "omer.nachshon@gmail.com",
+        },
+      }),
+    ).toMatchObject({
+      branch: "main",
+      target: "production",
+      reason: "blocked-operator-author",
+    });
   });
 
-  it("heals zhbar ERROR with access wording", () => {
+  it("heals operator ERROR with access wording", () => {
     expect(
       needsAutoRedeploy({
         readyState: "ERROR",
@@ -109,10 +140,42 @@ describe("needsAutoRedeploy", () => {
         },
         errorMessage: "unauthorized GitHub App installation",
       }),
-    ).toMatchObject({ branch: "dev", reason: "error-zhbar-access" });
+    ).toMatchObject({ branch: "dev", reason: "error-operator-access" });
+
+    expect(
+      needsAutoRedeploy({
+        readyState: "ERROR",
+        meta: {
+          githubCommitRef: "main",
+          githubCommitAuthorEmail: "omer.nachshon@gmail.com",
+        },
+        errorMessage: "Commit author is not a team member",
+      }),
+    ).toMatchObject({
+      branch: "main",
+      target: "production",
+      reason: "error-operator-access",
+    });
   });
 
-  it("ignores feature-branch and non-zhbar build failures", () => {
+  it("heals Omer ERROR even without access wording", () => {
+    expect(
+      needsAutoRedeploy({
+        readyState: "ERROR",
+        meta: {
+          githubCommitRef: "main",
+          githubCommitAuthorLogin: "OmerNachshon",
+        },
+        errorMessage: "npm run build failed",
+      }),
+    ).toMatchObject({
+      branch: "main",
+      target: "production",
+      reason: "error-operator",
+    });
+  });
+
+  it("ignores feature-branch and non-operator build failures", () => {
     expect(
       needsAutoRedeploy({
         readyState: "BLOCKED",
@@ -127,7 +190,7 @@ describe("needsAutoRedeploy", () => {
         readyState: "ERROR",
         meta: {
           githubCommitRef: "main",
-          githubCommitAuthorLogin: "OmerNachshon",
+          githubCommitAuthorLogin: "dependabot[bot]",
         },
         errorMessage: "npm run build failed",
       }),

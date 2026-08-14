@@ -30,11 +30,12 @@ Three environments, one app:
 - **Vercel Git integration** (`vercel.json`): still may deploy on push to `dev` /
   `main` (and matching feature-branch globs). Treat it as secondary; CI deploy
   is authoritative for staging/production tip.
-- **Backup — Unblock zhbar CD heal** (`.github/workflows/vercel-unblock-redeploy.yml`):
+- **Backup — Unblock operator CD heal** (`.github/workflows/vercel-unblock-redeploy.yml`):
   independent of CI (not gated on green checks). On every push to `main`,
   **polls the Vercel deployments API** for that commit SHA until it is
   BLOCKED/ERROR (or healthy) — no blind sleep — then heals. Also supports
-  manual `workflow_dispatch`. Targets **zhbar10** commits on Omer's Vercel team.
+  manual `workflow_dispatch`. Targets **zhbar10** and **omer.nachshon@gmail.com**
+  (plus login/name variants) on the Vercel team.
 - **Scheduled ETL (production):** [cron-job.org](https://cron-job.org) POSTs
   `/api/admin/fetch/all` every **1 minute** with `x-cron-secret`. See "Production scheduler"
   below for setup and the in-app self-healing backstop.
@@ -247,14 +248,15 @@ It heals **`main` → Production** and **`dev` → Preview** if a blocked git
 deploy was left behind.
 
 **Author match rules** (case-insensitive): commit author name, login, email, or
-actor matching `zhbar10` or `zhbar`.
+actor matching `zhbar10` / `zhbar`, or `omer.nachshon@gmail.com` /
+`OmerNachshon` / `Omer Nachshon`.
 
 **What triggers a heal**
 
-| State     | Condition                                                        |
-| --------- | ---------------------------------------------------------------- |
-| `BLOCKED` | Author matches zhbar **or** access/seat wording                  |
-| `ERROR`   | Author matches zhbar (access wording preferred but not required) |
+| State     | Condition                                                              |
+| --------- | ---------------------------------------------------------------------- |
+| `BLOCKED` | Author matches an operator **or** access/seat wording                  |
+| `ERROR`   | Author matches an operator (access wording preferred but not required) |
 
 Only `main` / Production and `dev` Preview are healed (feature branches ignored).
 

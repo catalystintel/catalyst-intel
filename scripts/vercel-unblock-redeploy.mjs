@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Auto-heal Vercel deploys for zhbar10 commits on `main` / `dev`.
+ * Auto-heal Vercel deploys for operator commits (zhbar10 + Omer) on `main` / `dev`.
  *
  * Triggers when a recent deployment is:
  *   - BLOCKED (unverified / non-seat git author), or
@@ -13,7 +13,7 @@
  *      bypasses git-author seat checks)
  *
  * Used by `.github/workflows/vercel-unblock-redeploy.yml`.
- * Project lives on Omer's Vercel team — zhbar commits get Hobby git-author BLOCKED.
+ * Hobby git-author BLOCKED often hits collaborators who are not Vercel team seats.
  */
 import { spawnSync } from "node:child_process";
 import path from "node:path";
@@ -21,12 +21,18 @@ import { fileURLToPath } from "node:url";
 
 const API = "https://api.vercel.com";
 const LOOKBACK_MS = 6 * 60 * 60 * 1000; // 6 hours
-const AUTHOR_RE = /zhbar10|zhbar/i;
+/** Commit authors we auto-heal on main/dev (email, login, name, or actor). */
+const OPERATOR_AUTHOR_RE =
+  /zhbar10|zhbar|omer\.nachshon@gmail\.com|omernachshon|omer nachshon/i;
 const ACCESS_FAIL_RE =
   /access|permission|forbidden|unauthorized|not (a )?member|github app|git.?hub.?app|install(ation)?|author|unverified|team seat|private.?repo|denied|401|403|blocked/i;
 
-/** @param {Record<string, unknown> | null | undefined} meta */
-export function isZhbarAuthor(meta) {
+/**
+ * True when deployment metadata matches an allowlisted operator author
+ * (zhbar10 / omer.nachshon@gmail.com and common login/name variants).
+ * @param {Record<string, unknown> | null | undefined} meta
+ */
+export function isOperatorAuthor(meta) {
   if (!meta || typeof meta !== "object") return false;
   const fields = [
     meta.githubCommitAuthorName,
@@ -35,8 +41,13 @@ export function isZhbarAuthor(meta) {
     meta.githubCommitOrgUser,
     meta.actor,
   ];
-  return fields.some((v) => typeof v === "string" && AUTHOR_RE.test(v));
+  return fields.some(
+    (v) => typeof v === "string" && OPERATOR_AUTHOR_RE.test(v),
+  );
 }
+
+/** @deprecated use {@link isOperatorAuthor} */
+export const isZhbarAuthor = isOperatorAuthor;
 
 /** @param {unknown} deployment */
 export function deploymentErrorText(deployment) {
@@ -73,22 +84,22 @@ export function isAccessRelatedFailure(deployment) {
  */
 export function needsAutoRedeploy(deployment) {
   const state = deployment.readyState ?? deployment.state;
-  const zhbar = isZhbarAuthor(deployment.meta ?? {});
+  const operator = isOperatorAuthor(deployment.meta ?? {});
   const access = isAccessRelatedFailure(deployment);
   const mapped = resolveBranchTarget(deployment);
   if (!mapped) return null;
 
-  if (state === "BLOCKED" && (zhbar || access)) {
+  if (state === "BLOCKED" && (operator || access)) {
     return {
       ...mapped,
-      reason: zhbar ? "blocked-zhbar-author" : "blocked-access",
+      reason: operator ? "blocked-operator-author" : "blocked-access",
     };
   }
-  if (state === "ERROR" && zhbar) {
-    // zhbar ERROR on main/dev: heal even if dashboard omits the message.
+  if (state === "ERROR" && operator) {
+    // Operator ERROR on main/dev: heal even if dashboard omits the message.
     return {
       ...mapped,
-      reason: access ? "error-zhbar-access" : "error-zhbar",
+      reason: access ? "error-operator-access" : "error-operator",
     };
   }
   return null;
