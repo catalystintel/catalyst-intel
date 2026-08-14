@@ -13,7 +13,9 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import {
+  ArrowDownRight,
   ArrowUp,
+  ArrowUpRight,
   BookOpen,
   CalendarDays,
   ChevronDown,
@@ -137,10 +139,10 @@ type Presence = "active" | "blurred" | "hidden";
 // Tracks are sized for laptop (~1280–1512) without a right rail; avoid large
 // minmax floors that force horizontal overflow when the docked split is open.
 const FEED_GRID =
-  "grid-cols-[4.5rem_3.75rem_minmax(0,1fr)] sm:grid-cols-[5rem_4rem_minmax(0,1fr)_6.5rem] lg:grid-cols-[5rem_4rem_minmax(0,1fr)_6.5rem_15rem]";
+  "grid-cols-[auto_auto_minmax(0,1fr)] sm:grid-cols-[auto_auto_minmax(0,1fr)_6.5rem] lg:grid-cols-[auto_auto_minmax(0,1fr)_6.5rem_15rem]";
 /** Denser tape columns while the split panel steals horizontal space. */
 const FEED_GRID_SPLIT =
-  "grid-cols-[4.5rem_3.75rem_minmax(0,1fr)] sm:grid-cols-[4.5rem_3.75rem_minmax(0,1fr)] xl:grid-cols-[4.5rem_3.75rem_minmax(0,1fr)_5.75rem]";
+  "grid-cols-[auto_auto_minmax(0,1fr)] sm:grid-cols-[auto_auto_minmax(0,1fr)] xl:grid-cols-[auto_auto_minmax(0,1fr)_5.75rem]";
 
 function readPresence(): Presence {
   if (typeof document === "undefined") return "active";
@@ -1904,16 +1906,16 @@ function CatalystFeedList({
       <div
         role="row"
         className={cn(
-          "feed-sticky-cols desk-caps sticky top-0 z-10 grid h-10 items-center gap-2 border-b border-[var(--desk-border)] px-4 font-mono text-[0.62rem] font-medium text-[var(--desk-text-muted)] uppercase sm:gap-3 sm:px-5 lg:gap-4",
+          "feed-sticky-cols desk-caps sticky top-0 z-10 grid h-10 items-center gap-x-1.5 gap-y-2 border-b border-[var(--desk-border)] px-4 font-mono text-[0.62rem] font-medium text-[var(--desk-text-muted)] uppercase sm:gap-x-2 sm:px-5 lg:gap-x-2.5",
           feedGrid,
         )}
       >
-        <div role="columnheader" className="min-w-0">
+        <div role="columnheader" className="min-w-0 pr-0.5">
           Symbol
         </div>
         <div
           role="columnheader"
-          className="min-w-0 text-right"
+          className="min-w-0"
           title="Session change (1D)"
         >
           1D
@@ -2002,7 +2004,7 @@ function CatalystFeedList({
                 }
               }}
               className={cn(
-                "feed-row group relative grid min-h-[56px] cursor-pointer items-center gap-2 border-b border-[var(--desk-border)] px-4 py-3 transition-colors duration-150 outline-none sm:min-h-[64px] sm:gap-3 sm:px-5 sm:py-1.5 lg:gap-4",
+                "feed-row group relative grid min-h-[56px] cursor-pointer items-center gap-x-1.5 gap-y-2 border-b border-[var(--desk-border)] px-4 py-3 transition-colors duration-150 outline-none sm:min-h-[64px] sm:gap-x-2 sm:px-5 sm:py-1.5 lg:gap-x-2.5",
                 feedGrid,
                 "hover:bg-[var(--desk-overlay-soft)] focus-visible:bg-[var(--desk-overlay-soft)] focus-visible:shadow-[inset_2px_0_0_var(--desk-live)]",
                 "hover:shadow-[inset_2px_0_0_rgba(240,193,75,0.35)]",
@@ -2020,14 +2022,11 @@ function CatalystFeedList({
               }}
               aria-hidden={dismissing || undefined}
             >
-              <div role="cell" className="relative z-[1] min-w-0">
+              <div role="cell" className="relative z-[1] min-w-0 pr-0.5">
                 {renderSymbol()}
               </div>
 
-              <div
-                role="cell"
-                className="relative z-[1] min-w-0 justify-self-end text-right"
-              >
+              <div role="cell" className="relative z-[1] min-w-0">
                 <FeedSessionPct
                   changePercent={
                     catalyst.symbol
@@ -2177,7 +2176,7 @@ function CatalystFeedList({
   );
 }
 
-/** Session (1D) % in its own narrow column — same coloring as split quote. */
+/** Session (1D) % beside symbol — left-aligned with diagonal move cue. */
 function FeedSessionPct({
   changePercent,
 }: {
@@ -2190,7 +2189,7 @@ function FeedSessionPct({
   ) {
     return (
       <span
-        className="desk-data font-mono text-[0.7rem] tracking-tight text-[var(--desk-text-dim)] tabular-nums"
+        className="desk-data inline-flex items-center font-mono text-[0.7rem] tracking-tight text-[var(--desk-text-dim)] tabular-nums"
         aria-hidden
       >
         —
@@ -2202,15 +2201,23 @@ function FeedSessionPct({
   return (
     <span
       className={cn(
-        "desk-data font-mono text-[0.7rem] font-semibold tracking-tight tabular-nums",
+        "desk-data inline-flex items-center gap-0.5 font-mono text-[0.7rem] font-semibold tracking-tight tabular-nums",
         up === true && "text-[var(--desk-positive)]",
         up === false && "text-[var(--desk-negative)]",
         up == null && "text-[var(--desk-text-muted)]",
       )}
       title="Session change (1D)"
     >
-      {sign}
-      {changePercent.toFixed(2)}%
+      {up === true ? (
+        <ArrowUpRight className="size-3 shrink-0 opacity-90" aria-hidden />
+      ) : null}
+      {up === false ? (
+        <ArrowDownRight className="size-3 shrink-0 opacity-90" aria-hidden />
+      ) : null}
+      <span>
+        {sign}
+        {changePercent.toFixed(2)}%
+      </span>
     </span>
   );
 }
