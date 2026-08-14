@@ -58,6 +58,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { useAutoFocusScrollRegion } from "@/hooks/use-auto-focus-scroll-region";
 import { useLiveFeedQuery } from "@/hooks/use-live-feed-query";
+import { useWatchlistQuotes } from "@/hooks/use-watchlist-quotes";
+import { MAX_PLAUSIBLE_SESSION_PCT } from "@/lib/market/session-move";
 import {
   sortFeedNewestFirst,
   type FeedCatalyst,
@@ -135,10 +137,10 @@ type Presence = "active" | "blurred" | "hidden";
 // Tracks are sized for laptop (~1280–1512) without a right rail; avoid large
 // minmax floors that force horizontal overflow when the docked split is open.
 const FEED_GRID =
-  "grid-cols-[4.5rem_minmax(0,1fr)] sm:grid-cols-[5rem_minmax(0,1fr)_6.5rem] lg:grid-cols-[5rem_minmax(0,1fr)_6.5rem_15rem]";
+  "grid-cols-[5rem_minmax(0,1fr)] sm:grid-cols-[5.25rem_minmax(0,1fr)_6.5rem] lg:grid-cols-[5.25rem_minmax(0,1fr)_6.5rem_15rem]";
 /** Denser tape columns while the split panel steals horizontal space. */
 const FEED_GRID_SPLIT =
-  "grid-cols-[4.5rem_minmax(0,1fr)] sm:grid-cols-[4.5rem_minmax(0,1fr)] xl:grid-cols-[4.5rem_minmax(0,1fr)_5.75rem]";
+  "grid-cols-[5rem_minmax(0,1fr)] sm:grid-cols-[5rem_minmax(0,1fr)] xl:grid-cols-[5rem_minmax(0,1fr)_5.75rem]";
 
 function readPresence(): Presence {
   if (typeof document === "undefined") return "active";
@@ -1156,7 +1158,7 @@ export function LiveCatalystFeed({
           className={cn(
             "flex min-h-0 min-w-[220px] flex-1 flex-col",
             // Split-open desk: slim the tape so triage (+ chart) own the right.
-            splitOpen && "xl:max-w-[260px] xl:flex-none",
+            splitOpen && "xl:max-w-[300px] xl:flex-none",
           )}
         >
           {emptyKind === "db" ? (
@@ -1301,8 +1303,8 @@ export function LiveCatalystFeed({
                 }
                 className={cn(
                   "min-h-0 min-w-0 flex-1 border-0",
-                  // Desktop dock: article ~40% / chart ~60% of the right side.
-                  "xl:min-w-0 xl:flex-[2] xl:border-l",
+                  // Desktop dock: triage slightly wider than chart (~45% / ~55%).
+                  "xl:min-w-0 xl:flex-[5] xl:border-l",
                 )}
               />
               {selectedSymbol && isXlDesk ? (
@@ -1318,7 +1320,7 @@ export function LiveCatalystFeed({
                       : null
                   }
                   density="compact"
-                  className="min-h-0 min-w-0 flex-[3] border-l"
+                  className="min-h-0 min-w-0 flex-[6] border-l"
                   chartClassName="h-full min-h-0 border-t-0"
                 />
               ) : null}
@@ -1775,6 +1777,22 @@ function CatalystFeedList({
   const listRef = useRef<HTMLDivElement | null>(null);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
   const didRestoreScrollRef = useRef(false);
+
+  const quoteSymbols = useMemo(() => {
+    const seen = new Set<string>();
+    const out: string[] = [];
+    for (const c of catalysts) {
+      const s = c.symbol?.trim().toUpperCase();
+      if (!s || seen.has(s)) continue;
+      seen.add(s);
+      out.push(s);
+      // Cap so opening a long tape doesn't stampede the quote API.
+      if (out.length >= 36) break;
+    }
+    return out;
+  }, [catalysts]);
+  const { quotes } = useWatchlistQuotes(quoteSymbols);
+
   // The feed's own scroll region (not `<main>` - it's sized to fit exactly,
   // see app-shell.tsx) needs to be focusable + focused on mount so Page
   // Up/Down/Home/End scroll it immediately, without requiring a prior click.
@@ -1996,7 +2014,17 @@ function CatalystFeedList({
               aria-hidden={dismissing || undefined}
             >
               <div role="cell" className="relative z-[1] min-w-0">
-                {renderSymbol()}
+                <div className="flex min-w-0 flex-col gap-0.5">
+                  {renderSymbol()}
+                  <FeedSessionPct
+                    changePercent={
+                      catalyst.symbol
+                        ? (quotes[catalyst.symbol.toUpperCase()]
+                            ?.changePercent ?? null)
+                        : null
+                    }
+                  />
+                </div>
               </div>
 
               <div role="cell" className="min-w-0">
@@ -2135,6 +2163,37 @@ function CatalystFeedList({
         ) : null}
       </div>
     </div>
+  );
+}
+
+/** Session (1D) % under the symbol — same coloring as split quote. */
+function FeedSessionPct({
+  changePercent,
+}: {
+  changePercent: number | null | undefined;
+}) {
+  if (
+    changePercent == null ||
+    !Number.isFinite(changePercent) ||
+    Math.abs(changePercent) > MAX_PLAUSIBLE_SESSION_PCT
+  ) {
+    return null;
+  }
+  const up = changePercent === 0 ? null : changePercent > 0;
+  const sign = changePercent > 0 ? "+" : "";
+  return (
+    <span
+      className={cn(
+        "desk-data font-mono text-[0.62rem] font-semibold tracking-tight tabular-nums",
+        up === true && "text-[var(--desk-positive)]",
+        up === false && "text-[var(--desk-negative)]",
+        up == null && "text-[var(--desk-text-muted)]",
+      )}
+      title="Session change (1D)"
+    >
+      {sign}
+      {changePercent.toFixed(2)}%
+    </span>
   );
 }
 
