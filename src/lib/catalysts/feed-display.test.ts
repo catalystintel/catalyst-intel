@@ -555,7 +555,7 @@ describe("titleLine", () => {
           ],
         }),
       ),
-    ).toBe("ACME — Shelf $500M");
+    ).toBe("Acme Corp files $500M shelf registration");
 
     expect(
       titleLine(

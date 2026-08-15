@@ -385,7 +385,7 @@ export function form4TitleKindFromSubcategory(
   }
 }
 
-/** `{Company} files shelf registration (S-3)` */
+/** `{Company} files shelf registration (S-3)` — thin capital fallback. */
 export function formatShelfRegistrationTitle(
   companyName: string | null | undefined,
 ): string {
@@ -406,6 +406,13 @@ export function format425MergerTitle(
   return `${resolveDisplayCompanyName(companyName)} Announces Acquisition — Deal in Play`;
 }
 
+/** `{Company} announces strategic partnership` — thin partnership / collab fallback. */
+export function formatPartnershipTitle(
+  companyName: string | null | undefined,
+): string {
+  return `${resolveDisplayCompanyName(companyName)} announces strategic partnership`;
+}
+
 /** `{Company} reports active stake (13D)` */
 export function formatSchedule13DTitle(
   companyName: string | null | undefined,
@@ -420,7 +427,7 @@ export function formatSchedule13GTitle(
   return `${resolveDisplayCompanyName(companyName)} reports passive stake (13G)`;
 }
 
-/** `{Company} clinical trial update` */
+/** `{Company} clinical trial update` — thin clinical fallback. */
 export function formatClinicalTrialTitle(
   companyName: string | null | undefined,
 ): string {

@@ -47,7 +47,9 @@ describe("extractFromFilingText", () => {
     expect(extract.investorSummary).toMatch(/shelf/i);
     expect(extract.investorSummary).not.toMatch(/AccNo/i);
     expect(extract.keyFacts.some((f) => f.label === "Amount")).toBe(true);
-    expect(extract.titleOverride).toMatch(/FETH/);
+    expect(extract.titleOverride).toMatch(/shelf|at-the-market|ATM/i);
+    expect(extract.titleOverride).toMatch(/Fidelity Ethereum Fund|\$250/i);
+    expect(extract.titleOverride).not.toMatch(/AccNo/i);
   });
 
   it("builds 424B offering Amount/Shares keyFacts", () => {
