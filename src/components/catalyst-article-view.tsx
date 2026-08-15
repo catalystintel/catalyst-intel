@@ -101,7 +101,7 @@ export function CatalystArticleView({
   return (
     <article
       className={cn(
-        "desk-arial mx-auto flex w-full flex-1 flex-col gap-5",
+        "desk-arial mx-auto flex w-full flex-1 flex-col gap-7",
         variant === "page" ? "max-w-3xl pb-10" : "max-w-none pb-2",
       )}
     >
@@ -127,7 +127,7 @@ export function CatalystArticleView({
         </div>
       ) : null}
 
-      <header className="flex flex-col gap-3">
+      <header className="flex flex-col gap-4">
         <div className="flex flex-wrap items-center gap-2">
           {symbol ? (
             <span className="font-mono text-2xl font-semibold tracking-tight text-[var(--desk-text)] sm:text-3xl">
@@ -184,20 +184,20 @@ export function CatalystArticleView({
 
         {whyMoving ? (
           <div
-            className="border-l-2 border-[var(--desk-live)] pl-3"
+            className="border-l-2 border-[var(--desk-live)] pl-3.5"
             role="note"
             aria-label="Why it's moving"
           >
             <p className="font-mono text-[0.62rem] tracking-[0.14em] text-[var(--desk-live)] uppercase">
               Why it&apos;s moving
             </p>
-            <p className="mt-1 text-sm leading-snug text-[var(--desk-text)]">
+            <p className="mt-1.5 text-[0.95rem] leading-snug text-[var(--desk-text)]">
               {whyMoving}
             </p>
           </div>
         ) : null}
 
-        <dl className="grid grid-cols-2 gap-3 font-mono text-xs sm:grid-cols-3">
+        <dl className="grid grid-cols-2 gap-x-3 gap-y-3 border-t border-[var(--desk-border)] pt-3 font-mono text-xs sm:grid-cols-3">
           <MetaCell
             label="Category"
             value={
@@ -258,7 +258,7 @@ export function CatalystArticleView({
         )}
       </header>
 
-      <section className="flex flex-col gap-2">
+      <section className="flex flex-col gap-2.5">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
           <h2 className="font-mono text-[0.65rem] tracking-[0.14em] text-[var(--desk-text-dim)] uppercase">
             {takeaways.length > 0 ? "Takeaways" : "Summary"}
@@ -270,11 +270,11 @@ export function CatalystArticleView({
           ) : null}
         </div>
         {takeaways.length > 0 ? (
-          <ul className="flex list-none flex-col gap-1.5 pl-0">
+          <ul className="flex list-none flex-col gap-2 pl-0">
             {takeaways.map((bullet, i) => (
               <li
                 key={`takeaway-${i}`}
-                className="flex gap-2 text-[0.95rem] leading-relaxed text-[var(--desk-text-secondary)]"
+                className="flex gap-2.5 text-[0.95rem] leading-relaxed text-[var(--desk-text-secondary)]"
               >
                 <span
                   className="mt-2 size-1 shrink-0 rounded-full bg-[var(--desk-live)]"
@@ -290,6 +290,29 @@ export function CatalystArticleView({
           </p>
         )}
       </section>
+
+      {catalyst.keyFacts.length > 0 ? (
+        <section className="flex flex-col gap-2.5">
+          <h2 className="font-mono text-[0.65rem] tracking-[0.14em] text-[var(--desk-text-dim)] uppercase">
+            Key facts
+          </h2>
+          <dl className="grid grid-cols-2 gap-x-4 gap-y-0 sm:grid-cols-3">
+            {catalyst.keyFacts.slice(0, 8).map((fact) => (
+              <div
+                key={`${fact.label}:${fact.value}`}
+                className="border-b border-[var(--desk-border)] py-2.5"
+              >
+                <dt className="font-mono text-[0.6rem] tracking-[0.12em] text-[var(--desk-text-dim)] uppercase">
+                  {fact.label}
+                </dt>
+                <dd className="mt-0.5 text-sm font-medium text-[var(--desk-text)]">
+                  {fact.value}
+                </dd>
+              </div>
+            ))}
+          </dl>
+        </section>
+      ) : null}
 
       <AiAnalysisPanel
         catalystId={catalyst.id}
@@ -317,30 +340,7 @@ export function CatalystArticleView({
         </section>
       ) : null}
 
-      {catalyst.keyFacts.length > 0 ? (
-        <section className="flex flex-col gap-2">
-          <h2 className="font-mono text-[0.65rem] tracking-[0.14em] text-[var(--desk-text-dim)] uppercase">
-            Key facts
-          </h2>
-          <dl className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-            {catalyst.keyFacts.slice(0, 8).map((fact) => (
-              <div
-                key={`${fact.label}:${fact.value}`}
-                className="rounded-sm border border-[var(--desk-border)] bg-[var(--desk-overlay-soft)] px-2.5 py-2"
-              >
-                <dt className="font-mono text-[0.6rem] tracking-[0.12em] text-[var(--desk-text-dim)] uppercase">
-                  {fact.label}
-                </dt>
-                <dd className="mt-0.5 text-sm font-medium text-[var(--desk-text)]">
-                  {fact.value}
-                </dd>
-              </div>
-            ))}
-          </dl>
-        </section>
-      ) : null}
-
-      <section className="flex flex-col gap-2">
+      <section className="flex flex-col gap-2.5">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
           <h2 className="font-mono text-[0.65rem] tracking-[0.14em] text-[var(--desk-text-dim)] uppercase">
             Full text
@@ -354,7 +354,7 @@ export function CatalystArticleView({
         {body ? (
           <div
             className={cn(
-              "rounded-sm border border-[var(--desk-border)] bg-[var(--desk-overlay-soft)] px-4 py-4 text-[0.92rem] leading-relaxed whitespace-pre-wrap text-[var(--desk-text-secondary)]",
+              "rounded-sm border border-[var(--desk-border)] bg-[var(--desk-overlay-soft)] px-4 py-5 text-[0.92rem] leading-[1.65] whitespace-pre-wrap text-[var(--desk-text-secondary)]",
             )}
           >
             <HighlightedText text={body} />
