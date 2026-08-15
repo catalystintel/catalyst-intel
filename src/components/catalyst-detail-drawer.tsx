@@ -7,6 +7,7 @@ import { BookOpen, XIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CategoryBadge } from "@/components/category-badge";
 import type { FeedCatalyst } from "@/lib/catalysts/feed-catalyst";
+import { titleLine } from "@/lib/catalysts/feed-display";
 import {
   articleCategoryLabel,
   showArticleCategoryBadge,
@@ -72,7 +73,10 @@ export function CatalystDetailDrawer({
             <div className="flex items-start justify-between gap-3 border-b border-[var(--desk-border)] bg-[var(--desk-header)] px-5 py-4">
               <div className="min-w-0">
                 <p className="font-mono text-[0.65rem] tracking-[0.18em] text-[var(--desk-live)] uppercase">
-                  {catalyst.headline ?? "Catalyst"}
+                  {showArticleCategoryBadge(catalyst.eventCategory)
+                    ? (articleCategoryLabel(catalyst.eventCategory) ??
+                      "Catalyst")
+                    : "Catalyst"}
                 </p>
                 <h2
                   id={`catalyst-drawer-${catalyst.id}`}
@@ -80,6 +84,9 @@ export function CatalystDetailDrawer({
                 >
                   {catalyst.symbol ?? "—"}
                 </h2>
+                <p className="mt-1 text-sm leading-snug text-[var(--desk-text)]">
+                  {titleLine(catalyst)}
+                </p>
                 {catalyst.companyName ? (
                   <p className="mt-0.5 truncate text-sm text-[var(--desk-text-muted)]">
                     {catalyst.companyName}

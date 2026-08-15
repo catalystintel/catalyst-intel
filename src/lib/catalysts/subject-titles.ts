@@ -118,11 +118,19 @@ export function looksFactEnrichedTitle(
   if (/\bsets up\b.+\bat-the-market\b|\bATM\b/i.test(t) && /\$/.test(t)) {
     return true;
   }
-  if (/\bprices structured notes\b/i.test(t)) {
+  // Professional capital voices without a parsed dollar amount.
+  if (
+    /\b(?:files|amends)\b.+\bshelf registration\b/i.test(t) ||
+    /\bsets up\b.+\bat-the-market\b|\bATM\b.+\b(?:program|facility|equity)\b/i.test(
+      t,
+    ) ||
+    /\bfiles\b.+\b(?:equity|stock)\s+offering\b/i.test(t) ||
+    /\bprices structured notes\b/i.test(t)
+  ) {
     return true;
   }
   if (
-    /\b(?:to acquire|closes .+ acquisition|terminates .+ (?:deal|acquisition)|partners with|collaborat|licenses?)\b/i.test(
+    /\b(?:to acquire|closes .+ acquisition|terminates .+ (?:deal|acquisition)|partners with|announces partnership|collaborat|licenses?)\b/i.test(
       t,
     )
   ) {
@@ -142,7 +150,9 @@ export function looksFactEnrichedTitle(
     return true;
   }
   if (/\bphase\s*[123ivx]+\b/i.test(t)) return true;
-  if (/\b(?:primary endpoint|topline)\b/i.test(t)) return true;
+  if (/\b(?:primary endpoint|topline|clinical trial update)\b/i.test(t)) {
+    return true;
+  }
   if (
     /\b(?:upgraded|downgraded|raises?|cuts?)\b.+\b(?:pt|target|to)\b/i.test(t)
   ) {
