@@ -27,6 +27,10 @@ import {
   isEventCategoryKey,
   type EventCategoryKey,
 } from "@/lib/catalysts/taxonomy";
+import {
+  buildCaseEngineTitle,
+  categoryEligibleForCaseEngine,
+} from "@/lib/catalysts/subject-case-titles";
 
 export type SubjectTitleFact = {
   label: string;
@@ -140,14 +144,24 @@ export function looksFactEnrichedTitle(
     return true;
   }
   if (
-    /\b(?:to acquire|closes .+ acquisition|terminates .+ (?:deal|acquisition)|partners with|announces partnership|collaborat|licenses?)\b/i.test(
+    /\b(?:to acquire|Agrees to Acquire|Completes Acquisition|Announces Acquisition|partners with|Announces Strategic Partnership|Enters .+ Partnership|Enters Collaboration|Signs .+ Licensing|collaborat|licenses?|announces partnership)\b/i.test(
       t,
     )
   ) {
     return true;
   }
   if (
-    /\b(?:wins|receives)\b.+\b(?:FDA|EMA|agency)\b.+\b(?:approval|CRL|complete response|clearance)\b/i.test(
+    /\b(?:Announces|Prices|Secures)\b.+\b(?:Offering|Financing|Private Placement|Credit Facility|Registered Direct)\b/i.test(
+      t,
+    )
+  ) {
+    return true;
+  }
+  if (
+    /\b(?:wins|receives|Approves|Rejects|Accepts|Grants|Places|Clears)\b.+\b(?:FDA|EMA|agency|CRL|complete response|clearance|Clinical Hold|for Review)\b/i.test(
+      t,
+    ) ||
+    /\b(?:FDA|EMA)\b.+\b(?:Approves|Rejects|Accepts|Grants|Places|Clears)\b/i.test(
       t,
     ) ||
     /\bclinical hold\b/i.test(t) ||
@@ -178,7 +192,7 @@ export function looksProfessionalThinTitle(
   const t = normalizeWs(title ?? "");
   if (!t) return false;
   if (
-    /\bShelf Registration Filed\b|\bStock Offering Filed\b|\bAcquisition Announced\b|\bAcquisition Closed\b|\bPartnership or Major Contract Announced\b|\bStrategic Partnership Announced\b|\bRegulatory Action Update\b|\bClinical Trial Results Update\b|\bClinical Trial Results Reported\b/i.test(
+    /\bShelf Registration Filed\b|\bStock Offering Filed\b|\bAcquisition Announced\b|\bAcquisition Closed\b|\bPartnership or Major Contract Announced\b|\bStrategic Partnership Announced\b|\bRegulatory Action Update\b|\bClinical Trial Results Update\b|\bClinical Trial Results Reported\b|\bAnnounces Public Offering\b|\bAnnounces Financing\b|\bAnnounces Private Placement\b|\bAnnounces Registered Direct Offering\b|\bAnnounces Debt Financing\b|\bAnnounces Merger\b/i.test(
       t,
     )
   ) {
@@ -1127,6 +1141,17 @@ export function buildSubjectTitle(input: SubjectTitleInput): string | null {
       /13[DG]/i.test(input.type ?? ""))
   ) {
     return ownership;
+  }
+
+  // Subject-case title engine (financing / M&A / partnership / regulatory / clinical).
+  // Identify primary subject → case → template. Other subjects keep builders below.
+  // Structured notes keep the legacy capital voice (coupon / pricing supplement).
+  if (
+    categoryEligibleForCaseEngine(input.eventCategory) &&
+    !/\bstructured note\b/i.test(cue)
+  ) {
+    const engineered = buildCaseEngineTitle(input, facts);
+    if (engineered) return engineered;
   }
 
   if (!hasUsefulFacts) {
