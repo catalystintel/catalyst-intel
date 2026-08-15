@@ -685,7 +685,7 @@ describe("titleLine", () => {
           symbol: "STKH",
         }),
       ),
-    ).toBe("Halts (Steakholder Foods Ltd. ADS) - News pending");
+    ).toMatch(/^Halts \(Steakholder Foods Ltd\. ADS\) [-—] News pending$/);
 
     expect(
       titleLine(

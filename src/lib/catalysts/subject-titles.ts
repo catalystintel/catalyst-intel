@@ -1115,21 +1115,7 @@ export function buildSubjectTitle(input: SubjectTitleInput): string | null {
   const category = categoryOf(input.eventCategory);
   const hasUsefulFacts = facts.length > 0;
   const cue = groundedCueText(input, map);
-
-  // Prefer keeping an already fact-rich stored title (enrich path wrote it).
   const stored = normalizeWs(input.title ?? "");
-  if (looksFactEnrichedTitle(stored)) {
-    // Still allow ownership/capital fact builders to win when richer.
-    if (
-      (category === "capital" || category === "deals") &&
-      hasUsefulFacts &&
-      findLabeled(map, "amount", "coupon", "ownership")
-    ) {
-      // fall through to builders
-    } else {
-      return stored;
-    }
-  }
 
   // 13D/G often classified under deals — try ownership first when form says so.
   const ownership = ownershipTitle(input, map);
@@ -1143,15 +1129,35 @@ export function buildSubjectTitle(input: SubjectTitleInput): string | null {
     return ownership;
   }
 
-  // Subject-case title engine (financing / M&A / partnership / regulatory / clinical).
-  // Identify primary subject → case → template. Other subjects keep builders below.
+  // Subject-case engine for the five subjects so *existing* rows upgrade on read.
   // Structured notes keep the legacy capital voice (coupon / pricing supplement).
+  // Keep specific study/wire headlines that are already richer than the case template.
   if (
     categoryEligibleForCaseEngine(input.eventCategory) &&
     !/\bstructured note\b/i.test(cue)
   ) {
     const engineered = buildCaseEngineTitle(input, facts);
-    if (engineered) return engineered;
+    if (engineered) {
+      if (shouldUpgradeStoredToCaseTitle(stored, engineered)) {
+        return engineered;
+      }
+      if (stored) return stored;
+      return engineered;
+    }
+  }
+
+  // Prefer keeping an already fact-rich stored title for other subjects /
+  // when the case engine does not apply.
+  if (looksFactEnrichedTitle(stored)) {
+    if (
+      (category === "capital" || category === "deals") &&
+      hasUsefulFacts &&
+      findLabeled(map, "amount", "coupon", "ownership")
+    ) {
+      // fall through to builders
+    } else {
+      return stored;
+    }
   }
 
   if (!hasUsefulFacts) {
@@ -1285,4 +1291,40 @@ function hasUsefulDetail(candidate: string, fallback: string): boolean {
       candidate,
     ) && !/unknown company/i.test(candidate)
   );
+}
+
+/**
+ * Upgrade legacy/chip/old fact sentences to case-engine templates on read,
+ * but keep specific study/wire headlines that already name the study/drug detail.
+ */
+function shouldUpgradeStoredToCaseTitle(
+  stored: string,
+  engineered: string,
+): boolean {
+  const s = normalizeWs(stored);
+  if (!s) return true;
+  if (
+    looksLegacyStiffTitle(s) ||
+    looksTaxonomyChipTitle(s) ||
+    looksProfessionalThinTitle(s)
+  ) {
+    return true;
+  }
+  // Prior fact-sentence voices we replaced with case templates.
+  if (/\bfiles \$.+\bshelf registration\b/i.test(s)) return true;
+  if (/\bsets up \$.+\bat-the-market\b|\bATM\b/i.test(s)) return true;
+  if (/\bfiles \$.+\b(?:equity )?offering\b/i.test(s)) return true;
+  if (/\bto acquire\b.+\bfor \$/i.test(s)) return true;
+  if (/\bcloses \$.+\bacquisition\b/i.test(s)) return true;
+  if (/\bwins FDA approval\b|\breceives FDA approval\b/i.test(s)) return true;
+  if (/\bpartners with\b|\bannounces partnership with\b/i.test(s)) return true;
+  if (/\btrial meets primary endpoint\b/i.test(s) && /phase/i.test(s)) {
+    return true;
+  }
+  // Specific headlines (study names, long vendor copy): keep.
+  if (looksFactEnrichedTitle(s) && s.length >= engineered.length) {
+    return false;
+  }
+  if (looksFactEnrichedTitle(s)) return false;
+  return true;
 }

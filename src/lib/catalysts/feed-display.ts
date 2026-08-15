@@ -43,6 +43,7 @@ import {
 import {
   buildSubjectTitle,
   looksFactEnrichedTitle,
+  looksProfessionalThinTitle,
   preferSubjectTitle,
 } from "@/lib/catalysts/subject-titles";
 
@@ -1133,29 +1134,29 @@ export function titleLine(
     }),
   };
 
-  // Fact-enriched enrich titles win over cookie-cutter ground-rule chips —
-  // still allow a richer subject rebuild when keyFacts beat the stored line.
+  // Always rebuild via subject helpers first so existing DB titles pick up
+  // the case-engine guidelines on read (tape + open article).
+  const subjectFactTitle = buildSubjectTitle(subjectTitleInput);
+  if (subjectFactTitle) {
+    const baseline = title || headline || subjectFactTitle;
+    const preferred = preferSubjectTitle(subjectTitleInput, baseline);
+    if (
+      looksFactEnrichedTitle(preferred) ||
+      looksProfessionalThinTitle(preferred) ||
+      preferred === subjectFactTitle ||
+      preferred !== baseline
+    ) {
+      return preferred;
+    }
+  }
+
+  // Fact-enriched enrich titles still win when subject builders return null.
   if (looksFactEnrichedTitle(title)) {
     const preferred = preferSubjectTitle(
       subjectTitleInput,
       stripSourceNames(title) || title,
     );
     return stripSourceNames(preferred) || preferred;
-  }
-
-  const subjectFactTitle = buildSubjectTitle(subjectTitleInput);
-  // Professional subject voices (financing / M&A / partnership / regulatory /
-  // clinical, etc.) must win over taxonomy chips on tape AND open-article.
-  if (subjectFactTitle) {
-    const baseline = title || headline || subjectFactTitle;
-    const preferred = preferSubjectTitle(subjectTitleInput, baseline);
-    if (
-      looksFactEnrichedTitle(preferred) ||
-      preferred === subjectFactTitle ||
-      preferred !== baseline
-    ) {
-      return preferred;
-    }
   }
 
   if (prefersStoredGroundRuleTitle(c, title)) {
