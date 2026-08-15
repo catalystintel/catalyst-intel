@@ -1,3 +1,16 @@
+import {
+  DEFAULT_PRODUCTION_AUTH_ORIGIN,
+  KNOWN_AUTH_HOSTS,
+  isLocalAuthHost,
+} from "@/lib/http/auth-origin";
+
+function isStableAuthHost(host: string): boolean {
+  const h = host.toLowerCase();
+  return (
+    isLocalAuthHost(h) || (KNOWN_AUTH_HOSTS as readonly string[]).includes(h)
+  );
+}
+
 /**
  * Resolve the public origin of the current request. Important for OAuth
  * redirectTo on localhost (must be http, not https). Prefer the
@@ -41,17 +54,27 @@ export function getTelegramWebhookOrigin(request: Request): string {
 
 /**
  * Allowlisted public app origin for OAuth redirects. Prefer configured
- * `NEXT_PUBLIC_APP_URL`, then Vercel production/URL env — never trust a
- * bare client-controlled `X-Forwarded-Host` alone when these are set.
+ * `NEXT_PUBLIC_APP_URL` / `NEXT_PUBLIC_AUTH_ORIGIN` only when the host is a
+ * known auth host (blocks typos like www.marvel.com), then Vercel envs.
  */
 export function getTrustedAppOrigin(
   request: Request,
   env: Record<string, string | undefined> = process.env,
 ): string {
-  const configured = env.NEXT_PUBLIC_APP_URL?.trim();
-  if (configured) {
+  for (const key of [
+    "NEXT_PUBLIC_AUTH_ORIGIN",
+    "NEXT_PUBLIC_APP_URL",
+  ] as const) {
+    const configured = env[key]?.trim();
+    if (!configured) continue;
     try {
-      return new URL(configured).origin;
+      const withProto = /^https?:\/\//i.test(configured)
+        ? configured
+        : `https://${configured}`;
+      const url = new URL(withProto);
+      if (isStableAuthHost(url.host)) {
+        return url.origin;
+      }
     } catch {
       // fall through
     }
@@ -59,7 +82,19 @@ export function getTrustedAppOrigin(
 
   const productionHost = env.VERCEL_PROJECT_PRODUCTION_URL?.trim();
   if (env.VERCEL_ENV === "production" && productionHost) {
-    return `https://${productionHost.replace(/^https?:\/\//, "")}`;
+    const host = productionHost.replace(/^https?:\/\//, "");
+    if (isStableAuthHost(host)) {
+      return `https://${host}`;
+    }
+  }
+
+  try {
+    const requestHost = new URL(request.url).host;
+    if (isStableAuthHost(requestHost)) {
+      return new URL(request.url).origin;
+    }
+  } catch {
+    // fall through
   }
 
   const vercelUrl = env.VERCEL_URL?.trim();
@@ -67,16 +102,19 @@ export function getTrustedAppOrigin(
     return `https://${vercelUrl.replace(/^https?:\/\//, "")}`;
   }
 
-  return new URL(request.url).origin;
+  return DEFAULT_PRODUCTION_AUTH_ORIGIN;
 }
 
 /**
- * Host used after OAuth exchange. If forwarded host is present, it must
- * match the trusted app origin (or be local dev); otherwise use trusted.
+ * Host used after OAuth exchange. Prefer the request's stable auth host
+ * (e.g. www.marveel.com) so a mistyped NEXT_PUBLIC_APP_URL cannot bounce
+ * mobile users to a different site after Google returns.
  */
-export function resolveOAuthRedirectOrigin(request: Request): string {
-  const trusted = getTrustedAppOrigin(request);
-  const isLocal = process.env.NODE_ENV === "development";
+export function resolveOAuthRedirectOrigin(
+  request: Request,
+  env: Record<string, string | undefined> = process.env,
+): string {
+  const isLocal = env.NODE_ENV === "development";
   if (isLocal) {
     return new URL(request.url).origin;
   }
@@ -85,6 +123,13 @@ export function resolveOAuthRedirectOrigin(request: Request): string {
     .get("x-forwarded-host")
     ?.split(",")[0]
     ?.trim();
+  if (forwardedHost && isStableAuthHost(forwardedHost)) {
+    return isLocalAuthHost(forwardedHost)
+      ? `http://${forwardedHost}`
+      : `https://${forwardedHost}`;
+  }
+
+  const trusted = getTrustedAppOrigin(request, env);
   if (!forwardedHost) {
     return trusted;
   }
@@ -99,7 +144,7 @@ export function resolveOAuthRedirectOrigin(request: Request): string {
   }
 
   // Preview deployments: allow the deployment's own VERCEL_URL host.
-  const vercelUrl = process.env.VERCEL_URL?.trim();
+  const vercelUrl = env.VERCEL_URL?.trim();
   if (vercelUrl && forwardedHost === vercelUrl.replace(/^https?:\/\//, "")) {
     return forwardedOrigin;
   }
