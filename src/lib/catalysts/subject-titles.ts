@@ -398,6 +398,37 @@ export function seedFactsFromFetch(
     push("Type", "Acquisition");
   }
 
+  // Seed M&A parties / status from title/summary so existing rows upgrade on read
+  // even when enrich keyFacts never stored Target / Deal value labels.
+  const maTarget = extractAcquisitionTargetFromCue(cue);
+  if (maTarget) push("Target", maTarget);
+
+  if (
+    /\b(?:clos(?:e|es|ed|ing)|completes?|completed|consummat)\b.{0,48}\bacquisition\b/i.test(
+      cue,
+    ) &&
+    !seeded.some((f) => /closed/i.test(f.value))
+  ) {
+    push("Status", "closed");
+  }
+  if (
+    /\b(?:terminat(?:e|es|ed|ing)?|abandon(?:s|ed)?|withdrawn)\b.{0,48}\b(?:acquisition|deal|merger)\b/i.test(
+      cue,
+    ) &&
+    !seeded.some((f) => /terminat/i.test(f.value))
+  ) {
+    push("Status", "terminated");
+  }
+
+  // Prefer Deal value label when $ came from an acquisition cue (case engine M1).
+  if (
+    isAcquisitionCue(cue) &&
+    amountMatch?.[0] &&
+    !seeded.some((f) => /^deal value$/i.test(f.label))
+  ) {
+    push("Deal value", amountMatch[0].replace(/\s+/g, " ").trim());
+  }
+
   return seeded;
 }
 
@@ -430,6 +461,36 @@ function isPartnershipCue(cue: string): boolean {
 function isAcquisitionCue(cue: string): boolean {
   return /\b(?:acqui(?:re|res|red|sition)|merger|takeover|buyout|disposition|425)\b/i.test(
     cue,
+  );
+}
+
+/** Pull a named target from acquire / acquisition-of phrasing already on the row. */
+function extractAcquisitionTargetFromCue(cue: string): string | null {
+  const m = cue.match(
+    /\b(?:(?:(?:agrees?|plans?|moves?|enters?\s+(?:into\s+)?(?:a\s+)?definitive\s+agreement)\s+to|to|will)\s+acquire|acquires|acquired|acquisition\s+of)\s+([A-Z][\w.&']*(?:\s+(?:[A-Z][\w.&']*|and|of|the|Inc\.?|Corp\.?|Ltd\.?|LLC|Co\.?|PLC|Group|Holdings?)){0,6})/,
+  );
+  if (!m?.[1]) return null;
+  let target = normalizeWs(m[1]);
+  target = target.replace(
+    /\s+(?:for|in|at|from|via|through|under|worth|valued|all-cash|cash|stock)\b.*$/i,
+    "",
+  );
+  if (!target || /^(?:a|an|the|its|their|another)$/i.test(target)) return null;
+  if (/^(?:acquisition|merger|deal|agreement)$/i.test(target)) return null;
+  return target;
+}
+
+/** Case-engine M1–M5 shaped titles (already on guidelines). */
+function looksCaseShapedMaTitle(title: string): boolean {
+  return /\b(?:Agrees to Acquire|Completes Acquisition(?:\s+of)?|Announces Acquisition of|Terminates Acquisition(?:\s+of)?|Agrees to Merge With)\b/i.test(
+    title,
+  );
+}
+
+/** Legacy M&A fact sentences that should yield to case templates on read. */
+function looksLegacyMaFactTitle(title: string): boolean {
+  return /\b(?:moves to acquire|to acquire|acquires\b|acquired\b|acquisition of|closes .{0,48}acquisition|completes? .{0,24}acquisition|terminates? .{0,24}(?:acquisition|deal)|announces .{0,40}acquisition|agrees to merge|merger with|definitive agreement|all-cash|buyout|takeover)\b/i.test(
+    title,
   );
 }
 
@@ -1115,21 +1176,7 @@ export function buildSubjectTitle(input: SubjectTitleInput): string | null {
   const category = categoryOf(input.eventCategory);
   const hasUsefulFacts = facts.length > 0;
   const cue = groundedCueText(input, map);
-
-  // Prefer keeping an already fact-rich stored title (enrich path wrote it).
   const stored = normalizeWs(input.title ?? "");
-  if (looksFactEnrichedTitle(stored)) {
-    // Still allow ownership/capital fact builders to win when richer.
-    if (
-      (category === "capital" || category === "deals") &&
-      hasUsefulFacts &&
-      findLabeled(map, "amount", "coupon", "ownership")
-    ) {
-      // fall through to builders
-    } else {
-      return stored;
-    }
-  }
 
   // 13D/G often classified under deals — try ownership first when form says so.
   const ownership = ownershipTitle(input, map);
@@ -1143,15 +1190,35 @@ export function buildSubjectTitle(input: SubjectTitleInput): string | null {
     return ownership;
   }
 
-  // Subject-case title engine (financing / M&A / partnership / regulatory / clinical).
-  // Identify primary subject → case → template. Other subjects keep builders below.
+  // Subject-case engine for the five subjects so *existing* rows upgrade on read.
   // Structured notes keep the legacy capital voice (coupon / pricing supplement).
+  // Keep specific study/wire headlines that are already richer than the case template.
   if (
     categoryEligibleForCaseEngine(input.eventCategory) &&
     !/\bstructured note\b/i.test(cue)
   ) {
     const engineered = buildCaseEngineTitle(input, facts);
-    if (engineered) return engineered;
+    if (engineered) {
+      if (shouldUpgradeStoredToCaseTitle(stored, engineered)) {
+        return engineered;
+      }
+      if (stored) return stored;
+      return engineered;
+    }
+  }
+
+  // Prefer keeping an already fact-rich stored title for other subjects /
+  // when the case engine does not apply.
+  if (looksFactEnrichedTitle(stored)) {
+    if (
+      (category === "capital" || category === "deals") &&
+      hasUsefulFacts &&
+      findLabeled(map, "amount", "coupon", "ownership")
+    ) {
+      // fall through to builders
+    } else {
+      return stored;
+    }
   }
 
   if (!hasUsefulFacts) {
@@ -1285,4 +1352,61 @@ function hasUsefulDetail(candidate: string, fallback: string): boolean {
       candidate,
     ) && !/unknown company/i.test(candidate)
   );
+}
+
+/**
+ * Upgrade legacy/chip/old fact sentences to case-engine templates on read,
+ * but keep specific study/wire headlines that already name the study/drug detail.
+ */
+function shouldUpgradeStoredToCaseTitle(
+  stored: string,
+  engineered: string,
+): boolean {
+  const s = normalizeWs(stored);
+  const eng = normalizeWs(engineered);
+  if (!s) return true;
+  if (
+    looksLegacyStiffTitle(s) ||
+    looksTaxonomyChipTitle(s) ||
+    looksProfessionalThinTitle(s)
+  ) {
+    return true;
+  }
+  // Prior fact-sentence voices we replaced with case templates.
+  if (/\bfiles \$.+\bshelf registration\b/i.test(s)) return true;
+  if (/\bsets up \$.+\bat-the-market\b|\bATM\b/i.test(s)) return true;
+  if (/\bfiles \$.+\b(?:equity )?offering\b/i.test(s)) return true;
+  if (/\bwins FDA approval\b|\breceives FDA approval\b/i.test(s)) return true;
+  if (/\bpartners with\b|\bannounces partnership with\b/i.test(s)) return true;
+  if (/\btrial meets primary endpoint\b/i.test(s) && /phase/i.test(s)) {
+    return true;
+  }
+
+  // Legacy M&A voices → M1–M5 case templates. looksFactEnrichedTitle treats
+  // "to acquire" / "Announces Acquisition" as rich, which previously blocked upgrades.
+  if (looksLegacyMaFactTitle(s)) {
+    if (looksCaseShapedMaTitle(s)) {
+      // Already case-shaped: only swap when engineered adds material facts ($ / close).
+      if (/\$/.test(eng) && !/\$/.test(s)) return true;
+      if (
+        /\bCompletes Acquisition\b/i.test(eng) &&
+        !/\bCompletes Acquisition\b/i.test(s)
+      ) {
+        return true;
+      }
+      return false;
+    }
+    // Never replace a fact-rich legacy M&A sentence with a thin chip.
+    if (looksProfessionalThinTitle(eng) && looksFactEnrichedTitle(s)) {
+      return false;
+    }
+    return true;
+  }
+
+  // Specific headlines (study names, long vendor copy): keep.
+  if (looksFactEnrichedTitle(s) && s.length >= eng.length) {
+    return false;
+  }
+  if (looksFactEnrichedTitle(s)) return false;
+  return true;
 }

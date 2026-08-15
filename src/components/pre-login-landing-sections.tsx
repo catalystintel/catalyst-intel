@@ -11,6 +11,7 @@ import {
 
 import { LandingGoogleCta } from "@/components/landing-google-cta";
 import { CATEGORY_LABELS } from "@/lib/catalysts/taxonomy";
+import { APP_NAME } from "@/lib/brand";
 
 /**
  * Real event coverage, straight from the shared taxonomy — honest social
@@ -108,7 +109,7 @@ export function PreLoginLandingSections() {
           From event to understanding in three steps
         </h2>
         <p className="desk-body mx-auto mt-3 max-w-xl text-center text-pretty text-[var(--desk-text-muted)] sm:text-base">
-          Catalyst Intel shortens the gap between something happening and you
+          {APP_NAME} shortens the gap between something happening and you
           knowing what it means.
         </p>
         <ol className="mt-10 grid gap-4 sm:grid-cols-3">

@@ -3,6 +3,8 @@
  * Alert / notification email uses SMTP — see `./smtp.ts`.
  */
 
+import { APP_NAME } from "@/lib/brand";
+
 export type ResendSendResult = { ok: boolean; detail: string };
 
 export function isResendConfigured(): boolean {
@@ -12,7 +14,7 @@ export function isResendConfigured(): boolean {
 export function resendFromAddress(): string {
   return (
     process.env.RESEND_FROM_EMAIL?.trim() ||
-    "Catalyst Intel <onboarding@resend.dev>"
+    `${APP_NAME} <onboarding@resend.dev>`
   );
 }
 

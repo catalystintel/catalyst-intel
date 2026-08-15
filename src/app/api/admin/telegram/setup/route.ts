@@ -21,7 +21,7 @@ import {
 
 /**
  * Admin-only: register webhook, slash commands, description, and brand
- * profile photo for the Catalyst Intel Telegram bot.
+ * profile photo for the Telegram bot.
  */
 async function requireAdmin(
   request: NextRequest,

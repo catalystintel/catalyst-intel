@@ -22,6 +22,7 @@ import {
   type TelegramInlineKeyboard,
   type TelegramReplyKeyboard,
 } from "@/lib/telegram/bot";
+import { APP_NAME } from "@/lib/brand";
 import {
   getTelegramLinkByChatId,
   isTelegramLinkMuted,
@@ -67,7 +68,7 @@ export function telegramWelcomeReply(options: {
 
   return {
     text: [
-      "<b>Catalyst Intel</b>",
+      `<b>${APP_NAME}</b>`,
       "",
       linked,
       "",

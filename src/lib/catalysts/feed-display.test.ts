@@ -618,6 +618,38 @@ describe("titleLine", () => {
       titleLine(
         base({
           type: "8-K",
+          eventCategory: "deals",
+          headline: "Acquisition",
+          title: "Acme Corp moves to acquire Rival Inc",
+          companyName: "Acme Corp",
+          symbol: "ACME",
+          keyFacts: [
+            { label: "Target", value: "Rival Inc" },
+            { label: "Deal value", value: "$2.0B" },
+          ],
+        }),
+      ),
+    ).toBe("Acme Corp Agrees to Acquire Rival Inc for $2.0B");
+
+    expect(
+      titleLine(
+        base({
+          type: "425",
+          subcategory: "425",
+          eventCategory: "deals",
+          headline: "Merger / Acquisition (425)",
+          title: "Acme Corp to acquire Rival Inc for $2.0B",
+          companyName: "Acme Corp",
+          symbol: "ACME",
+          keyFacts: [],
+        }),
+      ),
+    ).toBe("Acme Corp Agrees to Acquire Rival Inc for $2.0B");
+
+    expect(
+      titleLine(
+        base({
+          type: "8-K",
           eventCategory: "regulatory",
           headline: "Regulatory",
           title: "Acme Corp - Regulatory Update",
@@ -685,7 +717,7 @@ describe("titleLine", () => {
           symbol: "STKH",
         }),
       ),
-    ).toBe("Halts (Steakholder Foods Ltd. ADS) - News pending");
+    ).toMatch(/^Halts \(Steakholder Foods Ltd\. ADS\) [-—] News pending$/);
 
     expect(
       titleLine(

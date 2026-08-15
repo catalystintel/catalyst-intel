@@ -10,12 +10,14 @@
 
 /** Stable production + staging hosts we always treat as auth-safe. */
 export const KNOWN_AUTH_HOSTS = [
+  "www.marveel.com",
+  "marveel.com",
   "catalyst-intel-catalyst-intel.vercel.app",
   "catalyst-intel-git-dev-zhbar10s-projects.vercel.app",
 ] as const;
 
-export const DEFAULT_PRODUCTION_AUTH_ORIGIN =
-  "https://catalyst-intel-catalyst-intel.vercel.app";
+/** Canonical production origin for OAuth bounce / “sign in here” links. */
+export const DEFAULT_PRODUCTION_AUTH_ORIGIN = "https://www.marveel.com";
 
 function hostFromUrlish(value: string | undefined): string | null {
   if (!value?.trim()) return null;

@@ -69,17 +69,26 @@ Auth is **Google OAuth only** via Supabase. Passwords are never collected or sto
 **Supabase Auth URL allowlist (required for phone + desktop sign-in):** in the Supabase
 dashboard → **Authentication → URL Configuration**, set:
 
-| Setting                  | Exact value                                                      |
-| ------------------------ | ---------------------------------------------------------------- |
-| Site URL                 | `https://catalyst-intel-catalyst-intel.vercel.app`               |
-| Redirect URLs            | `https://catalyst-intel-catalyst-intel.vercel.app/auth/callback` |
-| Redirect URLs            | `http://localhost:3000/auth/callback`                            |
-| Redirect URLs (optional) | `https://<your-preview>.vercel.app/auth/callback`                |
+| Setting                   | Exact value                                                      |
+| ------------------------- | ---------------------------------------------------------------- |
+| Site URL                  | `https://www.marveel.com`                                        |
+| Redirect URLs             | `https://www.marveel.com/auth/callback`                          |
+| Redirect URLs (preferred) | `https://www.marveel.com/**`                                     |
+| Redirect URLs             | `http://localhost:3000/auth/callback`                            |
+| Redirect URLs (optional)  | `https://catalyst-intel-catalyst-intel.vercel.app/auth/callback` |
+| Redirect URLs (optional)  | `https://<your-preview>.vercel.app/auth/callback`                |
 
 **Do not** set Site URL to a preview host (e.g. `catalyst-intel-rouge.vercel.app`)
-or omit `https://`. **Do not** allowlist only the site root (`…vercel.app/`) —
-Google must return to **`/auth/callback`**. A wrong Site URL / missing callback
+or omit `https://`. **Do not** allowlist only the site root (`https://www.marveel.com/`) —
+Google / Supabase must return to **`/auth/callback`**. A wrong Site URL / missing callback
 entry is the usual cause of landing on `/?code=…` still signed out.
+
+**Vercel Production env (custom domain):** set both to the public brand URL:
+
+| Variable                  | Exact value               |
+| ------------------------- | ------------------------- |
+| `NEXT_PUBLIC_APP_URL`     | `https://www.marveel.com` |
+| `NEXT_PUBLIC_AUTH_ORIGIN` | `https://www.marveel.com` |
 
 **Vercel Deployment Protection (common “login sent me to vercel.com” cause):**
 If Preview (or Production) has **Vercel Authentication / Deployment Protection**
@@ -90,19 +99,19 @@ only sign in on the stable production / `git-dev` hosts (ephemeral preview
 URLs bounce to production login automatically). Do **not** set Supabase Site URL
 to `https://vercel.com`.
 
-Also add `https://catalyst-intel-catalyst-intel.vercel.app` (and localhost) under Google Cloud → OAuth client
+Also add `https://www.marveel.com` (and localhost) under Google Cloud → OAuth client
 → **Authorized JavaScript origins**. Missing production redirect URLs are a common cause of
 “works on desktop / fails on phone” OAuth returns.
 
 **Phone still can’t enter after layout fixes?** Confirm the allowlist above, then on the phone:
 
 1. Open Safari (not an in-app browser from Messages/Instagram/etc.).
-2. Visit `https://catalyst-intel-catalyst-intel.vercel.app` directly.
+2. Visit `https://www.marveel.com` directly.
 3. Tap **Continue with Google** (sticky bar on phones, or Sign in).
 4. If it returns to `/login` with an error: **Settings → Safari → Clear History and Website Data**
-   (or per-site: Aa → Website Settings → clear data for `catalyst-intel-catalyst-intel.vercel.app`), then retry.
+   (or per-site: Aa → Website Settings → clear data for `www.marveel.com`), then retry.
 5. Avoid “Prevent Cross-Site Tracking” workarounds that block first-party auth cookies mid-redirect;
-   our cookies are first-party on `catalyst-intel-catalyst-intel.vercel.app` with `SameSite=Lax`.
+   our cookies are first-party on `www.marveel.com` with `SameSite=Lax`.
 
 OAuth start uses the browser client + `GET /auth/login` (PKCE cookies on the redirect response)
 so iOS Safari does not lose the verifier the way a Server Action `redirect()` sometimes did.

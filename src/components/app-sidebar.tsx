@@ -4,6 +4,7 @@ import Link, { useLinkStatus } from "next/link";
 import { PanelLeftClose, PanelLeftOpen } from "lucide-react";
 
 import { DeskTip } from "@/components/desk-tip";
+import { APP_NAME } from "@/lib/brand";
 import { getPrimaryNav, type NavItem, type NavKey } from "@/lib/nav/nav-items";
 import { cn } from "@/lib/utils";
 
@@ -45,7 +46,7 @@ export function AppSidebar({
         <Link
           href="/catalyst-feed"
           onClick={onNavigate}
-          aria-label="Catalyst Intel home"
+          aria-label={`${APP_NAME} home`}
           className={cn(
             "flex items-center gap-2.5 rounded-md transition-colors",
             "hover:bg-[var(--desk-overlay-soft)] focus-visible:bg-[var(--desk-overlay-soft)] focus-visible:outline-none",
@@ -62,7 +63,7 @@ export function AppSidebar({
                 Trading desk
               </p>
               <p className="marketing-headline truncate text-[0.95rem] text-[var(--desk-text)]">
-                Catalyst Intel
+                {APP_NAME}
               </p>
             </div>
           ) : null}

@@ -5,6 +5,7 @@ import posthog from "posthog-js";
 
 import { Button } from "@/components/ui/button";
 import { scrubEnvNamesFromMessage } from "@/lib/errors/user-facing";
+import { APP_NAME } from "@/lib/brand";
 
 interface SetupStepResult {
   ok: boolean;
@@ -107,7 +108,7 @@ export function TelegramBotSetup() {
     <div className="flex flex-col gap-3">
       <p className="max-w-2xl text-sm text-muted-foreground">
         Registers the webhook, slash commands (/start, /status, /mute, …), bot
-        description, and the Catalyst Intel brand avatar. Users then Connect
+        description, and the {APP_NAME} brand avatar. Users then Connect
         Telegram from /alerts (or paste a chat ID).
       </p>
       {status ? (

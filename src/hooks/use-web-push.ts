@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useState } from "react";
 
+import { APP_NAME } from "@/lib/brand";
+
 export type WebPushStatus =
   | "unsupported"
   | "denied"
@@ -242,7 +244,7 @@ export function useWebPush(publicKey: string | null) {
     }
     try {
       const registration = await ensurePushServiceWorker();
-      await registration.showNotification("Catalyst Intel", {
+      await registration.showNotification(APP_NAME, {
         body: "Test banner — if you see this, push can reach this device.",
         icon: "/apple-icon.png",
         badge: "/apple-icon.png",

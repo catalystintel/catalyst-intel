@@ -35,7 +35,7 @@ describe("POST /api/telegram/webhook", () => {
     isValidTelegramWebhookSecret.mockReturnValue(true);
     sendTelegramMessage.mockResolvedValue({ ok: true, detail: "sent" });
     buildTelegramMessageReply.mockResolvedValue({
-      text: "<b>Catalyst Intel</b>\n<code>4242</code>",
+      text: "<b>Marveel</b>\n<code>4242</code>",
       parseMode: "HTML",
       disableWebPagePreview: true,
     });

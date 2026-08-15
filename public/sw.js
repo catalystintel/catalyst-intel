@@ -1,8 +1,7 @@
 // Web Push service worker. Free — no FCM/APNs SDK involved; the browser
 // wakes this worker directly when a push arrives, even if the tab is closed.
+// Default title must stay in sync with APP_NAME in src/lib/brand.ts.
 
-// Activate immediately so pushManager.subscribe() can run on first click
-// without requiring a full page reload.
 self.addEventListener("install", (event) => {
   event.waitUntil(self.skipWaiting());
 });
@@ -19,7 +18,7 @@ self.addEventListener("message", (event) => {
 
 self.addEventListener("push", (event) => {
   let data = {
-    title: "Catalyst Intel",
+    title: "Marveel",
     body: "New catalyst alert",
     url: "/alerts",
   };
@@ -38,14 +37,14 @@ self.addEventListener("push", (event) => {
   // Prefer the app icon; missing icons must not prevent the tray entry.
   event.waitUntil(
     self.registration
-      .showNotification(data.title || "Catalyst Intel", {
+      .showNotification(data.title || "Marveel", {
         body: data.body || "New catalyst alert",
         icon: "/apple-icon.png",
         badge: "/apple-icon.png",
         data: { url: data.url || "/alerts" },
       })
       .catch(() =>
-        self.registration.showNotification(data.title || "Catalyst Intel", {
+        self.registration.showNotification(data.title || "Marveel", {
           body: data.body || "New catalyst alert",
           data: { url: data.url || "/alerts" },
         }),

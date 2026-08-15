@@ -49,7 +49,7 @@ describe("smtp email", () => {
   it("defaults From to SMTP_USER", async () => {
     setSmtpEnv();
     const { smtpFromAddress } = await import("./smtp");
-    expect(smtpFromAddress()).toBe("Catalyst Intel <alerts@example.com>");
+    expect(smtpFromAddress()).toBe("Marveel <alerts@example.com>");
   });
 
   it("sends via nodemailer and reports success", async () => {
@@ -73,7 +73,7 @@ describe("smtp email", () => {
     );
     expect(sendMail).toHaveBeenCalledWith(
       expect.objectContaining({
-        from: "Catalyst Intel <alerts@example.com>",
+        from: "Marveel <alerts@example.com>",
         to: ["user@example.com"],
         subject: "Alert",
         text: "Body",

@@ -7,6 +7,8 @@
  * stack free quotas. Soft-fails when no key is configured.
  */
 
+import { APP_NAME } from "@/lib/brand";
+
 export type LlmChatMessage = {
   role: "system" | "user" | "assistant";
   content: string;
@@ -94,8 +96,8 @@ export async function openRouterChatCompletion(options: {
           // Optional but recommended by OpenRouter for rankings / limits.
           "HTTP-Referer":
             process.env.NEXT_PUBLIC_APP_URL?.trim() ||
-            "https://catalyst-intel-catalyst-intel.vercel.app",
-          "X-Title": "Catalyst Intel",
+            "https://www.marveel.com",
+          "X-Title": APP_NAME,
         },
         body: JSON.stringify({
           model,

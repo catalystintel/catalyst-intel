@@ -3,6 +3,7 @@ import { DM_Mono, DM_Sans } from "next/font/google";
 
 import { PostHogProvider } from "@/components/posthog-provider";
 import { ThemeProvider } from "@/components/theme-provider";
+import { APP_NAME } from "@/lib/brand";
 
 import "./globals.css";
 
@@ -21,9 +22,16 @@ const deskMono = DM_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Catalyst Intel",
+  title: {
+    default: APP_NAME,
+    template: `%s · ${APP_NAME}`,
+  },
+  applicationName: APP_NAME,
   description:
     "Live SEC catalysts for day traders — on-spot filings on a trading-desk feed.",
+  openGraph: {
+    siteName: APP_NAME,
+  },
 };
 
 /** Phone-friendly viewport; `viewportFit` keeps notched Safari usable. */

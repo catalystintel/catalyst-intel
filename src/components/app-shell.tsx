@@ -11,6 +11,7 @@ import { LiveHeaderStatus } from "@/components/live-header-status";
 import { HeaderThemeToggle } from "@/components/theme-toggle";
 import { Toaster } from "@/components/ui/toaster";
 import { useAutoFocusScrollRegion } from "@/hooks/use-auto-focus-scroll-region";
+import { APP_NAME } from "@/lib/brand";
 import { navKeyFromPathname, type NavKey } from "@/lib/nav/nav-items";
 
 interface AppShellUser {
@@ -106,7 +107,7 @@ export function AppShell({
               <LiveHeaderStatus />
             ) : (
               <span className="truncate text-sm font-semibold tracking-tight text-[var(--desk-text)]">
-                Catalyst Intel
+                {APP_NAME}
               </span>
             )}
           </div>
