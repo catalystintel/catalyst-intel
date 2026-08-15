@@ -25,8 +25,11 @@ import {
   titleLine,
 } from "@/lib/catalysts/feed-display";
 import { plainEnglishForSecForm } from "@/lib/catalysts/sec-form-plain-english";
+import {
+  articleCategoryLabel,
+  showArticleCategoryBadge,
+} from "@/lib/catalysts/taxonomy";
 import { formatEventTime, formatRelativeAge } from "@/lib/format/relative-time";
-import { CATEGORY_LABELS } from "@/lib/jobs/parse-8k-items";
 import type { TriageResult } from "@/lib/jobs/llm-triage";
 import { chartRangeDef, type ChartRangeKey } from "@/lib/market/chart-range";
 import { cn } from "@/lib/utils";
@@ -151,9 +154,7 @@ export function TapeSplitPanel({
   const [rangePerfLoading, setRangePerfLoading] = useState(false);
 
   const eventTitle = titleLine(catalyst);
-  const categoryLabel = catalyst.eventCategory
-    ? CATEGORY_LABELS[catalyst.eventCategory]
-    : null;
+  const categoryLabel = articleCategoryLabel(catalyst.eventCategory);
   const subcategory = catalyst.subcategory?.replace(/_/g, " ") || null;
   const rawSummary = catalyst.summary?.trim() || "";
   const summaryText =
@@ -366,7 +367,7 @@ export function TapeSplitPanel({
                 {companyName}
               </span>
             ) : null}
-            {catalyst.eventCategory ? (
+            {showArticleCategoryBadge(catalyst.eventCategory) ? (
               <CategoryBadge category={catalyst.eventCategory} />
             ) : null}
           </div>
@@ -638,7 +639,12 @@ export function TapeSplitPanel({
               }
             />
             <MetaCell label="Form" value={catalyst.type || "—"} />
-            <MetaCell label="Sector" value={sectorLabel(catalyst)} />
+            <MetaCell
+              label="Sector"
+              value={sectorLabel(catalyst, {
+                omitArticleSuppressedCategories: true,
+              })}
+            />
             {showSourceLabels ? (
               <MetaCell label="Source" value={sourceDisplay(catalyst).name} />
             ) : null}

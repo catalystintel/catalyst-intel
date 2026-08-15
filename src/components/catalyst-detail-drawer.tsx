@@ -7,8 +7,11 @@ import { BookOpen, XIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CategoryBadge } from "@/components/category-badge";
 import type { FeedCatalyst } from "@/lib/catalysts/feed-catalyst";
+import {
+  articleCategoryLabel,
+  showArticleCategoryBadge,
+} from "@/lib/catalysts/taxonomy";
 import { formatEventTime, formatRelativeAge } from "@/lib/format/relative-time";
-import { CATEGORY_LABELS } from "@/lib/jobs/parse-8k-items";
 import { cn } from "@/lib/utils";
 
 export function CatalystDetailDrawer({
@@ -97,7 +100,7 @@ export function CatalystDetailDrawer({
 
             <div className="flex flex-1 flex-col gap-5 overflow-y-auto px-5 py-5">
               <div className="flex flex-wrap items-center gap-2">
-                {catalyst.eventCategory ? (
+                {showArticleCategoryBadge(catalyst.eventCategory) ? (
                   <CategoryBadge category={catalyst.eventCategory} />
                 ) : null}
               </div>
@@ -126,12 +129,12 @@ export function CatalystDetailDrawer({
                     Category
                   </dt>
                   <dd className="mt-1 text-sm text-[var(--desk-text)]">
-                    {catalyst.eventCategory
-                      ? CATEGORY_LABELS[catalyst.eventCategory]
-                      : "—"}
-                    {catalyst.subcategory
-                      ? ` · ${catalyst.subcategory.replace(/_/g, " ")}`
-                      : ""}
+                    {[
+                      articleCategoryLabel(catalyst.eventCategory),
+                      catalyst.subcategory?.replace(/_/g, " ") || null,
+                    ]
+                      .filter(Boolean)
+                      .join(" · ") || "—"}
                   </dd>
                 </div>
                 <div>
