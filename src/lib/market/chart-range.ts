@@ -4,9 +4,6 @@
  */
 
 export const CHART_RANGE_KEYS = [
-  "1m",
-  "5m",
-  "10m",
   "30m",
   "1H",
   "1D",
@@ -44,30 +41,10 @@ export type ChartRangeDef = {
 };
 
 export const CHART_RANGES: readonly ChartRangeDef[] = [
+  // Shortest desk lookback is 30m (no 1/5/10 Min chips).
   // Short windows use 1-minute bars so catalyst reaction is readable.
   // Display labels stay distinct from keys: minutes use "Min", months "Mo"
-  // (keys remain `1m` vs `1M` for API case-sensitivity).
-  {
-    key: "1m",
-    label: "1 Min",
-    interval: "1",
-    lookbackDays: null,
-    lookbackMinutes: 1,
-  },
-  {
-    key: "5m",
-    label: "5 Min",
-    interval: "1",
-    lookbackDays: null,
-    lookbackMinutes: 5,
-  },
-  {
-    key: "10m",
-    label: "10 Min",
-    interval: "1",
-    lookbackDays: null,
-    lookbackMinutes: 10,
-  },
+  // (keys remain `30m` vs `1M` for API case-sensitivity).
   {
     key: "30m",
     label: "30 Min",
@@ -166,7 +143,15 @@ export function parseChartRangeKey(
   if (isChartRangeKey(trimmed)) return trimmed;
   const lowered = trimmed.toLowerCase();
   const matches = CHART_RANGE_KEYS.filter((k) => k.toLowerCase() === lowered);
-  if (matches.length === 1) return matches[0]!;
+  if (matches.length === 1) {
+    const match = matches[0]!;
+    // Never fold a removed minute key onto a month key (`1m` ≠ `1M`).
+    // `30M` → `30m` is still allowed (query ends with M, key with m).
+    if (trimmed.endsWith("m") && match.endsWith("M") && trimmed !== match) {
+      return null;
+    }
+    return match;
+  }
   return null;
 }
 
@@ -174,7 +159,7 @@ export function chartRangeDef(key: ChartRangeKey): ChartRangeDef {
   return CHART_RANGES.find((r) => r.key === key) ?? CHART_RANGES[0]!;
 }
 
-/** Sub-day lookbacks (1m–1H). */
+/** Sub-day lookbacks (30m–1H). */
 export function isIntradayMinuteRange(key: ChartRangeKey): boolean {
   const mins = chartRangeDef(key).lookbackMinutes;
   return mins != null && mins > 0;

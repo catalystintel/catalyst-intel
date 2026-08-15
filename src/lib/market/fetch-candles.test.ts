@@ -26,8 +26,8 @@ describe("buildDemoCandles", () => {
     expect(bars30.length).toBe(31);
     expect(bars30[1]!.time - bars30[0]!.time).toBe(60);
 
-    const bars1 = buildDemoCandles("1m", now);
-    expect(bars1.length).toBe(2);
+    const bars1h = buildDemoCandles("1H", now);
+    expect(bars1h.length).toBe(60);
   });
 });
 
