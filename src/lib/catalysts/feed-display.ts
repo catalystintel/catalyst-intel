@@ -1048,12 +1048,7 @@ export function titleLine(
   const seekingAlphaTitle = seekingAlphaDisplayTitle(c);
   if (seekingAlphaTitle) return seekingAlphaTitle;
 
-  // Fact-enriched enrich titles win over cookie-cutter ground-rule chips.
-  if (looksFactEnrichedTitle(title)) {
-    return stripSourceNames(title) || title;
-  }
-
-  const subjectFactTitle = buildSubjectTitle({
+  const subjectTitleInput = {
     eventCategory: c.eventCategory,
     subcategory: c.subcategory,
     companyName: subject ?? c.companyName,
@@ -1066,44 +1061,45 @@ export function titleLine(
       summary: c.summary,
       timestamp: c.timestamp,
     }),
-  });
-  if (subjectFactTitle && looksFactEnrichedTitle(subjectFactTitle)) {
-    return subjectFactTitle;
+  };
+
+  // Fact-enriched enrich titles win over cookie-cutter ground-rule chips —
+  // still allow a richer subject rebuild when keyFacts beat the stored line.
+  if (looksFactEnrichedTitle(title)) {
+    const preferred = preferSubjectTitle(
+      subjectTitleInput,
+      stripSourceNames(title) || title,
+    );
+    return stripSourceNames(preferred) || preferred;
+  }
+
+  const subjectFactTitle = buildSubjectTitle(subjectTitleInput);
+  // Professional subject voices (financing / M&A / partnership / regulatory /
+  // clinical, etc.) must win over taxonomy chips on tape AND open-article.
+  if (subjectFactTitle) {
+    const baseline = title || headline || subjectFactTitle;
+    const preferred = preferSubjectTitle(subjectTitleInput, baseline);
+    if (
+      looksFactEnrichedTitle(preferred) ||
+      preferred === subjectFactTitle ||
+      preferred !== baseline
+    ) {
+      return preferred;
+    }
   }
 
   if (prefersStoredGroundRuleTitle(c, title)) {
     const canonical = canonicalizeGroundRuleTitle(c, title);
     const stripped = stripSourceNames(canonical) || canonical;
-    return preferSubjectTitle(
-      {
-        eventCategory: c.eventCategory,
-        subcategory: c.subcategory,
-        companyName: subject ?? c.companyName,
-        symbol: c.symbol,
-        keyFacts: c.keyFacts,
-        title: c.title,
-        headline: c.headline,
-        summary: c.summary,
-      },
-      stripped,
-    );
+    return preferSubjectTitle(subjectTitleInput, stripped);
   }
 
   const earningsTitle = earningsReportDisplayTitle(c);
   if (earningsTitle) {
     return preferSubjectTitle(
       {
+        ...subjectTitleInput,
         eventCategory: "earnings",
-        companyName: subject ?? c.companyName,
-        symbol: c.symbol,
-        keyFacts: c.keyFacts,
-        title: c.title,
-        headline: c.headline,
-        summary: c.summary,
-        dateYmd: earningsDateForQuarterInference({
-          summary: c.summary,
-          timestamp: c.timestamp,
-        }),
       },
       earningsTitle,
     );
