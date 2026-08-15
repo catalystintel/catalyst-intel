@@ -1906,7 +1906,7 @@ function CatalystFeedList({
       <div
         role="row"
         className={cn(
-          "feed-sticky-cols desk-caps sticky top-0 z-10 grid h-10 items-center gap-x-2 gap-y-2 border-b border-[var(--desk-border)] px-4 font-mono text-[0.62rem] font-medium text-[var(--desk-text-muted)] uppercase sm:gap-x-3 sm:px-5 lg:gap-x-4",
+          "feed-sticky-cols desk-caps sticky top-0 z-10 grid h-9 items-center gap-x-2 gap-y-2 border-b border-[var(--desk-border)] px-3.5 font-mono text-[0.6rem] font-medium text-[var(--desk-text-muted)] uppercase sm:gap-x-3 sm:px-4 lg:gap-x-4",
           feedGrid,
         )}
       >
@@ -2004,7 +2004,7 @@ function CatalystFeedList({
                 }
               }}
               className={cn(
-                "feed-row group relative grid min-h-[56px] cursor-pointer items-center gap-x-2 gap-y-2 border-b border-[var(--desk-border)] px-4 py-3 transition-colors duration-150 outline-none sm:min-h-[64px] sm:gap-x-3 sm:px-5 sm:py-1.5 lg:gap-x-4",
+                "feed-row group relative grid min-h-[48px] cursor-pointer items-center gap-x-2 gap-y-1.5 border-b border-[var(--desk-border)] px-3.5 py-2.5 transition-colors duration-150 outline-none sm:min-h-[52px] sm:gap-x-3 sm:px-4 sm:py-1.5 lg:gap-x-4",
                 feedGrid,
                 "hover:bg-[var(--desk-overlay-soft)] focus-visible:bg-[var(--desk-overlay-soft)] focus-visible:shadow-[inset_2px_0_0_var(--desk-live)]",
                 "hover:shadow-[inset_2px_0_0_rgba(240,193,75,0.35)]",
@@ -2047,7 +2047,7 @@ function CatalystFeedList({
                   sourceName={sourceName}
                 />
                 {/* Mobile: Time under Title (Symbol is the leading index col) */}
-                <div className="mt-1.5 flex flex-col gap-1 sm:hidden">
+                <div className="mt-1 flex flex-col gap-0.5 sm:hidden">
                   <time
                     dateTime={catalyst.timestamp}
                     className="desk-data font-medium tracking-tight whitespace-nowrap text-[var(--desk-text-muted)]"
@@ -2057,7 +2057,7 @@ function CatalystFeedList({
                 </div>
                 {/* Touch: always-visible actions below meta (never same-line overlap). */}
                 <div
-                  className="mt-2 flex flex-wrap items-center gap-1.5 lg:hidden"
+                  className="mt-1.5 flex flex-wrap items-center gap-1.5 lg:hidden"
                   onClick={(e) => e.stopPropagation()}
                   onKeyDown={(e) => e.stopPropagation()}
                 >
