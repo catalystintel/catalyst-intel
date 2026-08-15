@@ -20,7 +20,11 @@ Subjects: `src/lib/catalysts/taxonomy.ts`.
 
 ## `deals`
 
-**Title voice:** Buyer / target / value / status in natural deal language when known (announce, close, terminate). Avoid identical “New Deal Announced” wording when the extract already names parties.
+**Title voice:** Buyer / target / value / status in natural deal language when known (announce, close, terminate). Prefer outcome verbs (`to acquire`, `closes`, `terminates`) over identical “New Deal Announced” chips when the extract already names parties or dollars.
+
+Examples (fact-rich): `Acme to acquire Rival for $2.0B` · `Acme closes $2.0B acquisition of Rival` · `Acme terminates acquisition of Rival`.
+
+**Partnership voice (still `deals` taxonomy):** When facts or filing text say partnership / collaboration / license — not M&A — use a distinct partnership line: parties + nature when known (e.g. `Acme announces partnership with BioCo`, `Acme partners with BioCo — oncology collaboration`, `Acme licenses DrugX to BioCo`). Do not force acquisition wording onto collabs.
 
 **Content (3–6 lines):** Why it matters. Parties. Deal value or structure. Status. Timing if stated.
 
@@ -32,7 +36,9 @@ Subjects: `src/lib/catalysts/taxonomy.ts`.
 
 ## `capital`
 
-**Title voice:** Instrument + size when known (offering, notes, shelf). Sound like capital markets, not a form-code chip.
+**Title voice:** Capital-markets instrument + size when known (shelf, ATM, equity offering, notes). Company-first plain English — not a form-code chip like `{Company} - Shelf Registration (S-3)` when dollars or facility type exist. Never invent size; omit dollars when absent.
+
+Examples (fact-rich): `Acme files $500M shelf registration` · `Acme sets up $100M at-the-market (ATM) program` · `Acme files $250M equity offering` · `Acme prices structured notes · 5.25%`. Thin fallbacks keep ground-rule shelf / 424B copy.
 
 **Content (3–6 lines):** Why it matters. Instrument. Size. Dilution or leverage stake. Use of proceeds if stated.
 
@@ -74,13 +80,17 @@ Subjects: `src/lib/catalysts/taxonomy.ts`.
 
 ## `regulatory`
 
-**Title voice:** Agency action + outcome (approval, CRL, hold, etc.). Excitement only when the source is a clear approval.
+**Title voice:** Agency + action + product/indication when known (approval, CRL, clinical hold, clearance). Excitement (`Receives FDA Approval!`) only when the source is a clear approval — never invent approval from a thin regulatory row.
+
+Examples: `Acme wins FDA approval for DrugX` · `Acme receives FDA CRL for DrugX` · `Acme DrugX placed on clinical hold`. Thin non-approval → `Acme regulatory update`.
 
 **Content (3–6 lines):** Why it matters. Agency action. Product or indication. Outcome. Next milestone if stated.
 
 ## `clinical`
 
-**Title voice:** Phase / result / status when known; prefer study outcome language over a blank “Clinical Trial” chip.
+**Title voice:** Phase + result/status in study language when known; prefer primary-endpoint outcome phrasing over a blank “Clinical Trial” chip.
+
+Examples: `BioCo Phase 3 trial meets primary endpoint in NSCLC` · `BioCo Phase 2 trial enrollment complete`. Thin → ground-rule `clinical trial update`.
 
 **Content (3–6 lines):** Why it matters. Phase. Status or result. Condition. Primary endpoint if present.
 

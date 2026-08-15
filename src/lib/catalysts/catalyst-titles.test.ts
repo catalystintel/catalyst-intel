@@ -17,6 +17,7 @@ import {
   formatJobsReportTitle,
   formatMaterialAgreementTitle,
   formatOfficerDirectorChangeTitle,
+  formatPartnershipTitle,
   formatPriceTargetTitle,
   formatProspectusOfferingTitle,
   formatSchedule13DTitle,
@@ -266,6 +267,9 @@ describe("offering / ownership / clinical / macro / analyst titles", () => {
     );
     expect(format425MergerTitle("Acme Corp")).toBe(
       "Acme Corp Announces Acquisition — Deal in Play",
+    );
+    expect(formatPartnershipTitle("Acme Corp")).toBe(
+      "Acme Corp announces strategic partnership",
     );
     expect(formatSchedule13DTitle("Acme Corp")).toBe(
       "Acme Corp reports active stake (13D)",

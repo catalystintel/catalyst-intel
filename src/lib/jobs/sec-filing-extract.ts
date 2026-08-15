@@ -353,8 +353,16 @@ export function extractFromFilingText(input: {
         ...keyFacts,
       ],
       titleOverride: dollar
-        ? `${input.ticker?.toUpperCase() || subject} — ${amended ? "Amends shelf" : "Shelf"} ${dollar}${atm ? " (ATM)" : ""}`
-        : `${input.ticker?.toUpperCase() || subject} — ${amended ? "Amends shelf registration" : "Shelf registration"} (${form})`,
+        ? atm
+          ? `${subject} sets up ${dollar} at-the-market (ATM) program`
+          : amended
+            ? `${subject} amends shelf registration to ${dollar}`
+            : `${subject} files ${dollar} shelf registration`
+        : atm
+          ? `${subject} sets up at-the-market (ATM) equity program`
+          : amended
+            ? `${subject} amends shelf registration (S-3)`
+            : `${subject} files shelf registration (S-3)`,
       headlineOverride: atm ? "Shelf / ATM registration" : "Shelf registration",
       sourceDoc: input.sourceDoc ?? null,
     };
@@ -380,8 +388,8 @@ export function extractFromFilingText(input: {
           ...keyFacts,
         ],
         titleOverride: coupon
-          ? `${input.ticker?.toUpperCase() || subject} — Structured note · ${coupon}`
-          : `${input.ticker?.toUpperCase() || subject} — Structured note pricing supplement`,
+          ? `${subject} prices structured notes · ${coupon}`
+          : `${subject} files structured note pricing supplement`,
         headlineOverride: "Structured note / pricing supplement",
         sourceDoc: input.sourceDoc ?? null,
       };
@@ -403,8 +411,8 @@ export function extractFromFilingText(input: {
         ...keyFacts,
       ],
       titleOverride: dollar
-        ? `${input.ticker?.toUpperCase() || subject} — Offering ${dollar}${shares ? ` · ${shares}` : ""}`
-        : `${input.ticker?.toUpperCase() || subject} — Prospectus supplement (${form})`,
+        ? `${subject} files ${dollar} equity offering${shares ? ` (${shares})` : ""}`
+        : `${subject} files stock offering (dilution watch)`,
       headlineOverride: "Priced / registered offering",
       sourceDoc: input.sourceDoc ?? null,
     };
