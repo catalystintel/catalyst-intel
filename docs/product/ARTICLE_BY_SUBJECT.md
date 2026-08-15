@@ -11,7 +11,9 @@ Classify the catalyst into one of the 17 subjects first. Then write **title** an
 - **Vary voice by subject** so the tape does not read as cookie-cutter `{Company} - {Subject}` for every row.
 - **Keep feed taxonomy / chips as-is** (including Capital Markets on the feed). These rules are **titles only**.
 
-**Automation:** `src/lib/catalysts/subject-titles.ts` (`buildSubjectTitle` / `preferSubjectTitle`) composes titles from extracted `keyFacts` on the enrich + display path (`titleLine` in `feed-display.ts`). SEC extract / Form 4 persist fact-rich `titleOverride`s when dollars, stakes, insider names, etc. are present.
+**Automation:** For **financing / M&A / partnership / regulatory / clinical**, titles go through the subject-case engine (`subject-case-titles.ts`): identify primary subject → select case (F1–F6, M1–M5, P1–P6, R1–R7, C1–C7) → fill only that template with verified facts. Other subjects keep builders in `subject-titles.ts`. Display path: `titleLine` in `feed-display.ts`. Never invent numbers.
+
+**Primary vs secondary:** e.g. FDA approval after Phase 3 → **regulatory** title (clinical is secondary). Partnership to develop a drug → **partnership**, not clinical.
 
 **Content:** **3–6 short lines** of grounded detail from the real article/filing only — never invent numbers or facts. Lead with why it matters, then the subject’s fact slots below (omit a slot when the source does not state it).
 
