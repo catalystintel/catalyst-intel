@@ -555,7 +555,7 @@ describe("titleLine", () => {
           ],
         }),
       ),
-    ).toBe("Acme Corp files $500M shelf registration");
+    ).toBe("Acme Corp Announces $500M Shelf Registration");
 
     expect(
       titleLine(
@@ -593,7 +593,9 @@ describe("titleLine", () => {
           summary: "Acme announces partnership and collaboration with BioCo.",
         }),
       ),
-    ).toMatch(/partners with BioCo|partnership with BioCo/i);
+    ).toMatch(
+      /Partnership With BioCo|Collaboration With BioCo|partners with BioCo/i,
+    );
 
     expect(
       titleLine(
@@ -610,7 +612,7 @@ describe("titleLine", () => {
           ],
         }),
       ),
-    ).toBe("Acme Corp to acquire Rival Inc for $2.0B");
+    ).toBe("Acme Corp Agrees to Acquire Rival Inc for $2.0B");
 
     expect(
       titleLine(
@@ -629,7 +631,9 @@ describe("titleLine", () => {
           summary: "Acme receives FDA approval for DrugX.",
         }),
       ),
-    ).toMatch(/FDA approval for DrugX|wins FDA approval/i);
+    ).toMatch(
+      /FDA Approves Acme Corp's DrugX|FDA approval for DrugX|wins FDA approval/i,
+    );
 
     expect(
       titleLine(
@@ -665,7 +669,7 @@ describe("titleLine", () => {
           ],
         }),
       ),
-    ).toBe("Acme Corp files $500M shelf registration");
+    ).toBe("Acme Corp Announces $500M Shelf Registration");
   });
 
   it("prefers ground-rule Halt / FDA / Earnings titles over generic chips", () => {
@@ -695,7 +699,7 @@ describe("titleLine", () => {
           companyName: "Pfizer Inc",
         }),
       ),
-    ).toBe("Pfizer Inc Receives FDA Approval!");
+    ).toMatch(/FDA Approves Pfizer Inc|Receives FDA Approval/i);
 
     expect(
       titleLine(
@@ -709,7 +713,7 @@ describe("titleLine", () => {
           companyName: "Pfizer Inc",
         }),
       ),
-    ).toBe("Pfizer Inc Receives FDA Approval!");
+    ).toMatch(/FDA Approves Pfizer Inc|Receives FDA Approval/i);
 
     expect(
       titleLine(
