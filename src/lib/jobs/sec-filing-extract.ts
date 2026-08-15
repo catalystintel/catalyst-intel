@@ -496,6 +496,23 @@ export function extractFromFilingText(input: {
           input.companyName || input.ticker,
           { content: text },
         );
+        // Enrich with extracted dollars when the ground-rule chip is generic.
+        if (dollar && !/\$[\d.,]/.test(titleOverride)) {
+          const ticker =
+            input.ticker?.trim().toUpperCase() ||
+            input.companyName?.trim() ||
+            "Issuer";
+          if (
+            primary.category === "capital" ||
+            primary.category === "deals" ||
+            primary.category === "restructuring" ||
+            /agreement|obligation|acquisition|disposition|restructuring|exit/i.test(
+              primary.label,
+            )
+          ) {
+            titleOverride = `${ticker} — ${primary.label} · ${dollar}`;
+          }
+        }
         headlineOverride = primary.label;
       }
     } else {

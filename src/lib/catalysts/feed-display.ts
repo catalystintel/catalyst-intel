@@ -38,6 +38,11 @@ import {
   isSeekingAlphaCatalyst,
   isSeekingAlphaSource,
 } from "@/lib/catalysts/seeking-alpha-titles";
+import {
+  buildSubjectTitle,
+  looksFactEnrichedTitle,
+  preferSubjectTitle,
+} from "@/lib/catalysts/subject-titles";
 
 /** Summary (+ title/headline fallback) for Item 5.02 role/action parsing. */
 function officerChangeContent(c: FeedCatalyst): string {
@@ -689,6 +694,22 @@ function form4DisplayTitle(c: FeedCatalyst): string | null {
   if (!isForm4) return null;
 
   const title = normalizeDisplayText(c.title ?? "");
+  // Keep enrich-path titles that already name the insider / dollars / shares.
+  if (looksFactEnrichedTitle(title) || /insider (?:buy|sale):/i.test(title)) {
+    return stripSourceNames(title) || title;
+  }
+
+  const fromFacts = buildSubjectTitle({
+    eventCategory: "insider",
+    subcategory: c.subcategory,
+    companyName: tapeSubject(c) ?? c.companyName,
+    symbol: c.symbol,
+    keyFacts: c.keyFacts,
+    title: c.title,
+    headline: c.headline,
+  });
+  if (fromFacts && looksFactEnrichedTitle(fromFacts)) return fromFacts;
+
   if (/Form 4 Insider\b/i.test(title)) {
     return canonicalizeGroundRuleTitle(c, title);
   }
@@ -783,18 +804,26 @@ function secOfferingOwnershipDisplayTitle(c: FeedCatalyst): string | null {
   const title = normalizeDisplayText(c.title ?? "");
   const headline = normalizeDisplayText(c.headline ?? "").toLowerCase();
 
+  const fromFacts = buildSubjectTitle({
+    eventCategory: c.eventCategory,
+    subcategory: c.subcategory,
+    companyName: subject,
+    symbol: c.symbol,
+    keyFacts: c.keyFacts,
+    title: c.title,
+    headline: c.headline,
+  });
+
   const isS3 =
     sub === "s3" ||
     form.startsWith("S-3") ||
     /shelf registration \(s-3\)/i.test(headline) ||
     /shelf registration \(s-3\)/i.test(title);
   if (isS3) {
-    if (
-      /^Shelf Registration \(S-3\)\s*-/i.test(title) ||
-      /(?::|\s-)\s*Shelf Registration \(S-3\)$/i.test(title)
-    ) {
-      return formatShelfRegistrationTitle(subject);
+    if (looksFactEnrichedTitle(title) || /—\s*(?:Amends )?Shelf/i.test(title)) {
+      return stripSourceNames(title) || title;
     }
+    if (fromFacts && looksFactEnrichedTitle(fromFacts)) return fromFacts;
     return formatShelfRegistrationTitle(subject);
   }
 
@@ -812,6 +841,10 @@ function secOfferingOwnershipDisplayTitle(c: FeedCatalyst): string | null {
     if (looksStructured) {
       return stripSourceNames(title) || title;
     }
+    if (looksFactEnrichedTitle(title) || /—\s*Offering\b/i.test(title)) {
+      return stripSourceNames(title) || title;
+    }
+    if (fromFacts && looksFactEnrichedTitle(fromFacts)) return fromFacts;
     return formatProspectusOfferingTitle(subject);
   }
 
@@ -823,6 +856,7 @@ function secOfferingOwnershipDisplayTitle(c: FeedCatalyst): string | null {
     /Merger or Acquisition News/i.test(title) ||
     /\bAnnounces Acquisition\s*[—–-]\s*Deal in Play/i.test(title);
   if (is425) {
+    if (fromFacts && looksFactEnrichedTitle(fromFacts)) return fromFacts;
     return format425MergerTitle(subject);
   }
 
@@ -832,6 +866,10 @@ function secOfferingOwnershipDisplayTitle(c: FeedCatalyst): string | null {
     /(?:beneficial ownership|schedule)\s*\(?13d\)?/i.test(headline) ||
     /(?:beneficial ownership|schedule)\s*\(?13d\)?/i.test(title);
   if (is13d && !form.includes("13G")) {
+    if (looksFactEnrichedTitle(title) || /—\s*13D stake/i.test(title)) {
+      return stripSourceNames(title) || title;
+    }
+    if (fromFacts && looksFactEnrichedTitle(fromFacts)) return fromFacts;
     return formatSchedule13DTitle(subject);
   }
 
@@ -841,6 +879,10 @@ function secOfferingOwnershipDisplayTitle(c: FeedCatalyst): string | null {
     /(?:beneficial ownership|schedule)\s*\(?13g\)?/i.test(headline) ||
     /(?:beneficial ownership|schedule)\s*\(?13g\)?/i.test(title);
   if (is13g) {
+    if (looksFactEnrichedTitle(title) || /—\s*13G stake/i.test(title)) {
+      return stripSourceNames(title) || title;
+    }
+    if (fromFacts && looksFactEnrichedTitle(fromFacts)) return fromFacts;
     return formatSchedule13GTitle(subject);
   }
 
@@ -998,13 +1040,66 @@ export function titleLine(
   const seekingAlphaTitle = seekingAlphaDisplayTitle(c);
   if (seekingAlphaTitle) return seekingAlphaTitle;
 
+  // Fact-enriched enrich titles win over cookie-cutter ground-rule chips.
+  if (looksFactEnrichedTitle(title)) {
+    return stripSourceNames(title) || title;
+  }
+
+  const subjectFactTitle = buildSubjectTitle({
+    eventCategory: c.eventCategory,
+    subcategory: c.subcategory,
+    companyName: subject ?? c.companyName,
+    symbol: c.symbol,
+    keyFacts: c.keyFacts,
+    title: c.title,
+    headline: c.headline,
+    summary: c.summary,
+    dateYmd: earningsDateForQuarterInference({
+      summary: c.summary,
+      timestamp: c.timestamp,
+    }),
+  });
+  if (subjectFactTitle && looksFactEnrichedTitle(subjectFactTitle)) {
+    return subjectFactTitle;
+  }
+
   if (prefersStoredGroundRuleTitle(c, title)) {
     const canonical = canonicalizeGroundRuleTitle(c, title);
-    return stripSourceNames(canonical) || canonical;
+    const stripped = stripSourceNames(canonical) || canonical;
+    return preferSubjectTitle(
+      {
+        eventCategory: c.eventCategory,
+        subcategory: c.subcategory,
+        companyName: subject ?? c.companyName,
+        symbol: c.symbol,
+        keyFacts: c.keyFacts,
+        title: c.title,
+        headline: c.headline,
+        summary: c.summary,
+      },
+      stripped,
+    );
   }
 
   const earningsTitle = earningsReportDisplayTitle(c);
-  if (earningsTitle) return earningsTitle;
+  if (earningsTitle) {
+    return preferSubjectTitle(
+      {
+        eventCategory: "earnings",
+        companyName: subject ?? c.companyName,
+        symbol: c.symbol,
+        keyFacts: c.keyFacts,
+        title: c.title,
+        headline: c.headline,
+        summary: c.summary,
+        dateYmd: earningsDateForQuarterInference({
+          summary: c.summary,
+          timestamp: c.timestamp,
+        }),
+      },
+      earningsTitle,
+    );
+  }
 
   const form4Title = form4DisplayTitle(c);
   if (form4Title) return form4Title;
@@ -1013,16 +1108,66 @@ export function titleLine(
   if (offeringTitle) return offeringTitle;
 
   const clinicalTitle = clinicalDisplayTitle(c);
-  if (clinicalTitle) return clinicalTitle;
+  if (clinicalTitle) {
+    return preferSubjectTitle(
+      {
+        eventCategory: "clinical",
+        companyName: subject ?? c.companyName,
+        symbol: c.symbol,
+        keyFacts: c.keyFacts,
+        title: c.title,
+        headline: c.headline,
+      },
+      clinicalTitle,
+    );
+  }
 
   const macroTitle = macroDisplayTitle(c);
-  if (macroTitle) return macroTitle;
+  if (macroTitle) {
+    return preferSubjectTitle(
+      {
+        eventCategory: "macro",
+        subcategory: c.subcategory,
+        keyFacts: c.keyFacts,
+        title: c.title,
+        headline: c.headline,
+      },
+      macroTitle,
+    );
+  }
 
   const analystTitle = analystDisplayTitle(c);
-  if (analystTitle) return analystTitle;
+  if (analystTitle) {
+    return preferSubjectTitle(
+      {
+        eventCategory: "analyst",
+        subcategory: c.subcategory,
+        companyName: subject ?? c.companyName,
+        symbol: c.symbol,
+        keyFacts: c.keyFacts,
+        title: c.title,
+        headline: c.headline,
+      },
+      analystTitle,
+    );
+  }
 
   const sec8kTitle = sec8kDisplayTitle(c);
-  if (sec8kTitle) return sec8kTitle;
+  if (sec8kTitle) {
+    return preferSubjectTitle(
+      {
+        eventCategory: c.eventCategory,
+        subcategory: c.subcategory,
+        companyName: subject ?? c.companyName,
+        symbol: c.symbol,
+        keyFacts: c.keyFacts,
+        title: c.title,
+        headline: c.headline,
+        summary: c.summary,
+      },
+      sec8kTitle,
+    );
+  }
 
   // Real news / wire copy wins when it is not a publisher, status, or chip.
   if (
