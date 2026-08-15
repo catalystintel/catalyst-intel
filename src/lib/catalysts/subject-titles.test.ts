@@ -499,6 +499,91 @@ describe("looksFactEnrichedTitle + preferSubjectTitle", () => {
     ).toBe("FDA Approves Acme Corp's DrugX");
   });
 
+  it("upgrades legacy M&A stored titles to case templates on read", () => {
+    expect(
+      buildSubjectTitle({
+        eventCategory: "deals",
+        companyName: "Acme Corp",
+        title: "Acme Corp moves to acquire Rival Inc",
+        keyFacts: [
+          { label: "Target", value: "Rival Inc" },
+          { label: "Deal value", value: "$2.0B" },
+        ],
+      }),
+    ).toBe("Acme Corp Agrees to Acquire Rival Inc for $2.0B");
+
+    expect(
+      buildSubjectTitle({
+        eventCategory: "deals",
+        companyName: "Acme Corp",
+        title: "Acme Corp acquires Rival Inc for $2.0B",
+        keyFacts: [
+          { label: "Target", value: "Rival Inc" },
+          { label: "Deal value", value: "$2.0B" },
+        ],
+      }),
+    ).toBe("Acme Corp Agrees to Acquire Rival Inc for $2.0B");
+
+    expect(
+      buildSubjectTitle({
+        eventCategory: "deals",
+        companyName: "Acme Corp",
+        title: "Acme Corp announces acquisition of Rival Inc",
+        keyFacts: [
+          { label: "Target", value: "Rival Inc" },
+          { label: "Deal value", value: "$2.0B" },
+        ],
+      }),
+    ).toBe("Acme Corp Agrees to Acquire Rival Inc for $2.0B");
+
+    expect(
+      buildSubjectTitle({
+        eventCategory: "deals",
+        companyName: "Acme Corp",
+        title: "Acme Corp Announces Acquisition of Rival Inc",
+        keyFacts: [
+          { label: "Target", value: "Rival Inc" },
+          { label: "Deal value", value: "$2.0B" },
+        ],
+      }),
+    ).toBe("Acme Corp Agrees to Acquire Rival Inc for $2.0B");
+
+    expect(
+      buildSubjectTitle({
+        eventCategory: "deals",
+        companyName: "Acme Corp",
+        title: "Acme Corp enters definitive agreement to acquire Rival",
+        keyFacts: [
+          { label: "Target", value: "Rival Inc" },
+          { label: "Deal value", value: "$500M" },
+        ],
+      }),
+    ).toBe("Acme Corp Agrees to Acquire Rival Inc for $500M");
+
+    expect(
+      buildSubjectTitle({
+        eventCategory: "deals",
+        companyName: "Acme Corp",
+        title: "Acme Corp closes acquisition of Rival Inc",
+        keyFacts: [
+          { label: "Target", value: "Rival Inc" },
+          { label: "Deal value", value: "$2.0B" },
+          { label: "Status", value: "Closed" },
+        ],
+      }),
+    ).toBe("Acme Corp Completes Acquisition of Rival Inc");
+
+    // Title-only rows (no keyFacts): seed target/$ from the stored sentence.
+    expect(
+      buildSubjectTitle({
+        eventCategory: "deals",
+        companyName: "Acme Corp",
+        title: "Acme Corp to acquire Rival Inc for $2.0B",
+        keyFacts: [],
+      }),
+    ).toBe("Acme Corp Agrees to Acquire Rival Inc for $2.0B");
+  });
+
   it("builds titles from fetch type/items/summary without keyFacts", () => {
     expect(
       buildSubjectTitle({
