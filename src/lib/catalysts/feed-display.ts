@@ -744,8 +744,17 @@ function form4DisplayTitle(c: FeedCatalyst): string | null {
     keyFacts: c.keyFacts,
     title: c.title,
     headline: c.headline,
+    summary: c.summary,
+    type: c.type,
+    items: c.items,
   });
-  if (fromFacts && looksFactEnrichedTitle(fromFacts)) return fromFacts;
+  if (
+    fromFacts &&
+    (looksFactEnrichedTitle(fromFacts) ||
+      /Form 4 Insider\b|insider (?:buy|sale)/i.test(fromFacts))
+  ) {
+    return fromFacts;
+  }
 
   if (/Form 4 Insider\b/i.test(title)) {
     return canonicalizeGroundRuleTitle(c, title);
@@ -849,6 +858,9 @@ function secOfferingOwnershipDisplayTitle(c: FeedCatalyst): string | null {
     keyFacts: c.keyFacts,
     title: c.title,
     headline: c.headline,
+    summary: c.summary,
+    type: c.type,
+    items: c.items,
   });
 
   const isS3 =
@@ -862,7 +874,12 @@ function secOfferingOwnershipDisplayTitle(c: FeedCatalyst): string | null {
     if (looksFactEnrichedTitle(title) || /—\s*(?:Amends )?Shelf/i.test(title)) {
       return stripSourceNames(title) || title;
     }
-    if (fromFacts && looksFactEnrichedTitle(fromFacts)) return fromFacts;
+    if (
+      fromFacts &&
+      (looksFactEnrichedTitle(fromFacts) || /Shelf/i.test(fromFacts))
+    ) {
+      return fromFacts;
+    }
     return formatShelfRegistrationTitle(subject);
   }
 
@@ -877,14 +894,23 @@ function secOfferingOwnershipDisplayTitle(c: FeedCatalyst): string | null {
     const looksStructured =
       /structured note|pricing supplement/i.test(title) ||
       /structured note|pricing supplement/i.test(headline) ||
-      c.keyFacts.some((f) => /structured note/i.test(`${f.label} ${f.value}`));
-    if (looksStructured) {
+      c.keyFacts.some((f) =>
+        /structured note/i.test(`${f.label} ${f.value}`),
+      ) ||
+      /structured note|pricing supplement/i.test(c.summary ?? "");
+    if (looksStructured && looksFactEnrichedTitle(title)) {
       return stripSourceNames(title) || title;
     }
     if (looksFactEnrichedTitle(title) || /—\s*Offering\b/i.test(title)) {
       return stripSourceNames(title) || title;
     }
-    if (fromFacts && looksFactEnrichedTitle(fromFacts)) return fromFacts;
+    if (
+      fromFacts &&
+      (looksFactEnrichedTitle(fromFacts) ||
+        /Offering|structured note/i.test(fromFacts))
+    ) {
+      return fromFacts;
+    }
     return formatProspectusOfferingTitle(subject);
   }
 
@@ -897,7 +923,13 @@ function secOfferingOwnershipDisplayTitle(c: FeedCatalyst): string | null {
     /\bAnnounces Acquisition\s*[—–-]\s*Deal in Play/i.test(title) ||
     /\bAcquisition Announced\b/i.test(title);
   if (is425) {
-    if (fromFacts && looksFactEnrichedTitle(fromFacts)) return fromFacts;
+    if (
+      fromFacts &&
+      (looksFactEnrichedTitle(fromFacts) ||
+        /Acquisition|acquire/i.test(fromFacts))
+    ) {
+      return fromFacts;
+    }
     return format425MergerTitle(subject);
   }
 
@@ -1093,6 +1125,8 @@ export function titleLine(
     title: c.title,
     headline: c.headline,
     summary: c.summary,
+    type: c.type,
+    items: c.items,
     dateYmd: earningsDateForQuarterInference({
       summary: c.summary,
       timestamp: c.timestamp,
@@ -1151,12 +1185,8 @@ export function titleLine(
   if (clinicalTitle) {
     return preferSubjectTitle(
       {
+        ...subjectTitleInput,
         eventCategory: "clinical",
-        companyName: subject ?? c.companyName,
-        symbol: c.symbol,
-        keyFacts: c.keyFacts,
-        title: c.title,
-        headline: c.headline,
       },
       clinicalTitle,
     );
@@ -1166,11 +1196,8 @@ export function titleLine(
   if (macroTitle) {
     return preferSubjectTitle(
       {
+        ...subjectTitleInput,
         eventCategory: "macro",
-        subcategory: c.subcategory,
-        keyFacts: c.keyFacts,
-        title: c.title,
-        headline: c.headline,
       },
       macroTitle,
     );
@@ -1180,13 +1207,8 @@ export function titleLine(
   if (analystTitle) {
     return preferSubjectTitle(
       {
+        ...subjectTitleInput,
         eventCategory: "analyst",
-        subcategory: c.subcategory,
-        companyName: subject ?? c.companyName,
-        symbol: c.symbol,
-        keyFacts: c.keyFacts,
-        title: c.title,
-        headline: c.headline,
       },
       analystTitle,
     );
@@ -1194,19 +1216,7 @@ export function titleLine(
 
   const sec8kTitle = sec8kDisplayTitle(c);
   if (sec8kTitle) {
-    return preferSubjectTitle(
-      {
-        eventCategory: c.eventCategory,
-        subcategory: c.subcategory,
-        companyName: subject ?? c.companyName,
-        symbol: c.symbol,
-        keyFacts: c.keyFacts,
-        title: c.title,
-        headline: c.headline,
-        summary: c.summary,
-      },
-      sec8kTitle,
-    );
+    return preferSubjectTitle(subjectTitleInput, sec8kTitle);
   }
 
   // Real news / wire copy wins when it is not a publisher, status, or chip.

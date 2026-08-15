@@ -455,4 +455,59 @@ describe("looksFactEnrichedTitle + preferSubjectTitle", () => {
       ),
     ).toBe("BioCo reports positive topline data from Phase 3 KEYNOTE study");
   });
+
+  it("builds titles from fetch type/items/summary without keyFacts", () => {
+    expect(
+      buildSubjectTitle({
+        eventCategory: "capital",
+        companyName: "Acme Corp",
+        type: "S-3",
+        keyFacts: [],
+      }),
+    ).toBe("Acme Corp - Shelf Registration Filed (Capital Raise Window)");
+
+    expect(
+      buildSubjectTitle({
+        eventCategory: "capital",
+        companyName: "Acme Corp",
+        type: "S-3",
+        summary:
+          "The company filed a shelf registration for up to $500 million.",
+        keyFacts: [],
+      }),
+    ).toBe("Acme Corp files $500 million shelf registration");
+
+    expect(
+      buildSubjectTitle({
+        eventCategory: "deals",
+        companyName: "Acme Corp",
+        type: "8-K",
+        items: [
+          { code: "1.01", label: "Entry into a Material Definitive Agreement" },
+        ],
+        summary: "Acme announced a strategic partnership with BioCo.",
+        keyFacts: [],
+      }),
+    ).toMatch(/partnership/i);
+
+    expect(
+      buildSubjectTitle({
+        eventCategory: "clinical",
+        companyName: "BioCo",
+        type: "Clinical Trial",
+        summary: "Phase 3 trial met the primary endpoint in NSCLC patients.",
+        keyFacts: [],
+      }),
+    ).toMatch(/Phase 3/i);
+
+    expect(
+      buildSubjectTitle({
+        eventCategory: "regulatory",
+        companyName: "Acme Corp",
+        type: "8-K",
+        summary: "FDA approved DrugX for the treatment of adults.",
+        keyFacts: [],
+      }),
+    ).toMatch(/FDA|approv/i);
+  });
 });
