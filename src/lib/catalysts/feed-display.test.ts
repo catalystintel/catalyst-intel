@@ -389,7 +389,7 @@ describe("titleLine", () => {
           title: "Material agreement — SEC",
         }),
       ),
-    ).toBe("NVIDIA Corp - New Deal Announced (Major Contract or Partnership)");
+    ).toBe("NVIDIA Corp - Partnership or Major Contract Announced");
   });
 
   it("rewrites offering / ownership / clinical / macro / analyst titles", () => {
@@ -404,7 +404,7 @@ describe("titleLine", () => {
           companyName: "Acme Corp",
         }),
       ),
-    ).toBe("Acme Corp files shelf registration (S-3)");
+    ).toBe("Acme Corp - Shelf Registration Filed (Capital Raise Window)");
 
     expect(
       titleLine(
@@ -417,7 +417,7 @@ describe("titleLine", () => {
           companyName: "Acme Corp",
         }),
       ),
-    ).toBe("Acme Corp files stock offering (dilution watch)");
+    ).toBe("Acme Corp - Stock Offering Filed (Dilution Ahead)");
 
     expect(
       titleLine(
@@ -447,7 +447,7 @@ describe("titleLine", () => {
           companyName: "Acme Corp",
         }),
       ),
-    ).toBe("Acme Corp Announces Acquisition — Deal in Play");
+    ).toBe("Acme Corp - Acquisition Announced (Deal in Play)");
 
     expect(
       titleLine(
@@ -460,7 +460,7 @@ describe("titleLine", () => {
           companyName: "Acme Corp",
         }),
       ),
-    ).toBe("Acme Corp Announces Acquisition — Deal in Play");
+    ).toBe("Acme Corp - Acquisition Announced (Deal in Play)");
 
     expect(
       titleLine(
@@ -583,8 +583,7 @@ describe("titleLine", () => {
           type: "8-K",
           eventCategory: "deals",
           headline: "Material agreement",
-          title:
-            "Acme Corp - New Deal Announced (Major Contract or Partnership)",
+          title: "Acme Corp - Partnership or Major Contract Announced",
           companyName: "Acme Corp",
           symbol: "ACME",
           keyFacts: [
@@ -602,8 +601,7 @@ describe("titleLine", () => {
           type: "8-K",
           eventCategory: "deals",
           headline: "Acquisition",
-          title:
-            "Acme Corp - New Deal Announced (Major Contract or Partnership)",
+          title: "Acme Corp - Partnership or Major Contract Announced",
           companyName: "Acme Corp",
           symbol: "ACME",
           keyFacts: [

@@ -12,6 +12,7 @@ import {
   earningsDateForQuarterInference,
   earningsQuarterLabel,
   format425MergerTitle,
+  formatAcquisitionClosedTitle,
   formatAnalystRatingTitle,
   formatClinicalTrialTitle,
   formatCpiTitle,
@@ -21,6 +22,7 @@ import {
   formatForm4InsiderTitle,
   formatHaltTitle,
   formatJobsReportTitle,
+  formatMaterialAgreementTitle,
   formatPriceTargetTitle,
   formatProspectusOfferingTitle,
   formatSchedule13DTitle,
@@ -278,6 +280,8 @@ const GENERIC_EVENT_HEADLINES = new Set([
   "price target (street)",
   "analyst ratings (consensus)",
   "clinical trial update",
+  "clinical trial results update",
+  "clinical trial results reported",
   "macro calendar",
 ]);
 
@@ -292,6 +296,8 @@ const CLINICAL_STATUS_HEADLINES = new Set([
   "not yet recruiting",
   "enrolling by invitation",
   "clinical trial update",
+  "clinical trial results update",
+  "clinical trial results reported",
 ]);
 
 function isGenericEventHeadline(text: string): boolean {
@@ -366,13 +372,16 @@ function prefersStoredGroundRuleTitle(c: FeedCatalyst, title: string): boolean {
   if (
     /^Shelf Registration \(S-3\)\s*-/i.test(title) ||
     /(?::|\s-)\s*Shelf Registration \(S-3\)$/i.test(title) ||
-    /\bfiles shelf registration \(S-3\)$/i.test(title)
+    /\bfiles shelf registration \(S-3\)$/i.test(title) ||
+    /\bShelf Registration Filed\b/i.test(title) ||
+    /\bShelf Raise Filed\b/i.test(title)
   ) {
     return true;
   }
   // Legacy and narrative 424B / 425 titles.
   if (/New Stock Offering Filed/i.test(title)) return true;
   if (/\bfiles stock offering \(dilution watch\)$/i.test(title)) return true;
+  if (/\bStock Offering Filed\b/i.test(title)) return true;
   if (/^Prospectus \/ Offering \(424B\)\s*-/i.test(title)) return true;
   if (/—\s*Structured note/i.test(title)) return true;
   if (/Structured note pricing supplement/i.test(title)) return true;
@@ -380,6 +389,8 @@ function prefersStoredGroundRuleTitle(c: FeedCatalyst, title: string): boolean {
   if (/\bAnnounces Acquisition\s*[—–-]\s*Deal in Play/i.test(title)) {
     return true;
   }
+  if (/\bAcquisition Announced\b/i.test(title)) return true;
+  if (/\bAcquisition Closed\b/i.test(title)) return true;
   if (
     /^Schedule 13[DG]\s*-/i.test(title) ||
     /(?::|\s-)\s*Schedule 13[DG]$/i.test(title) ||
@@ -389,16 +400,20 @@ function prefersStoredGroundRuleTitle(c: FeedCatalyst, title: string): boolean {
   }
   // Narrative 8-K company-first titles (1.01 / 1.03 / 3.01 / 5.02).
   if (/New Deal Announced/i.test(title)) return true;
+  if (/Partnership or Major Contract Announced/i.test(title)) return true;
+  if (/\bStrategic Partnership Announced\b/i.test(title)) return true;
   if (/Delisting Risk/i.test(title)) return true;
   if (/Bankruptcy Filing/i.test(title)) return true;
   if (looksLikeOfficerDirectorChangeTitle(title)) return true;
   if (
     /^Clinical Trial\s*-/i.test(title) ||
     /(?::|\s-)\s*Clinical Trial$/i.test(title) ||
-    /\bclinical trial update$/i.test(title)
+    /\bclinical trial update$/i.test(title) ||
+    /\bClinical Trial Results\b/i.test(title)
   ) {
     return true;
   }
+  if (/\bRegulatory Action Update\b/i.test(title)) return true;
   if (
     /^Price Target\s*-/i.test(title) ||
     /(?::|\s-)\s*Price Target$/i.test(title) ||
@@ -503,7 +518,9 @@ function canonicalizeGroundRuleTitle(c: FeedCatalyst, title: string): string {
   if (
     /^Shelf Registration \(S-3\)\s*-/i.test(title) ||
     /(?::|\s-)\s*Shelf Registration \(S-3\)$/i.test(title) ||
-    /\bfiles shelf registration \(S-3\)$/i.test(title)
+    /\bfiles shelf registration \(S-3\)$/i.test(title) ||
+    /\bShelf Registration Filed\b/i.test(title) ||
+    /\bShelf Raise Filed\b(?!\s*\([^)]*\$)/i.test(title)
   ) {
     return formatShelfRegistrationTitle(subject);
   }
@@ -524,7 +541,8 @@ function canonicalizeGroundRuleTitle(c: FeedCatalyst, title: string): string {
   if (
     /^Clinical Trial\s*-/i.test(title) ||
     /(?::|\s-)\s*Clinical Trial$/i.test(title) ||
-    /\bclinical trial update$/i.test(title)
+    /\bclinical trial update$/i.test(title) ||
+    /\bClinical Trial Results (?:Update|Reported)$/i.test(title)
   ) {
     return formatClinicalTrialTitle(subject);
   }
@@ -547,26 +565,37 @@ function canonicalizeGroundRuleTitle(c: FeedCatalyst, title: string): string {
   if (
     /New Stock Offering Filed/i.test(title) ||
     /^Prospectus \/ Offering \(424B\)\s*-/i.test(title) ||
-    /\bfiles stock offering \(dilution watch\)$/i.test(title)
+    /\bfiles stock offering \(dilution watch\)$/i.test(title) ||
+    /\bStock Offering Filed\b(?!\s*\([^)]*\$)/i.test(title)
   ) {
     return formatProspectusOfferingTitle(subject);
   }
   if (
     /Merger or Acquisition News/i.test(title) ||
-    /\bAnnounces Acquisition\s*[—–-]\s*Deal in Play/i.test(title)
+    /\bAnnounces Acquisition\s*[—–-]\s*Deal in Play/i.test(title) ||
+    /\bAcquisition Announced\b/i.test(title)
   ) {
     const company =
       title.match(
         /^(.+?)\s+Announces Acquisition\s*[—–-]\s*Deal in Play$/i,
       )?.[1] ??
+      title.match(/^(.+?)\s*-\s*Acquisition Announced\b/i)?.[1] ??
       title.match(/^(.+?):\s*Merger or Acquisition News/i)?.[1] ??
       subject;
     return format425MergerTitle(company);
   }
+  if (/\bAcquisition Closed\b/i.test(title)) {
+    return formatAcquisitionClosedTitle(subject);
+  }
 
   // Narrative 8-K company-first titles → recompute with current company.
-  if (/New Deal Announced/i.test(title)) {
-    return formatSec8kItemTitle("Material Agreement", subject);
+  if (
+    /New Deal Announced|Partnership or Major Contract Announced/i.test(title)
+  ) {
+    return formatMaterialAgreementTitle(subject);
+  }
+  if (/\bStrategic Partnership Announced\b/i.test(title)) {
+    return formatMaterialAgreementTitle(subject);
   }
   if (/Delisting Risk/i.test(title)) {
     return formatSec8kItemTitle("Delisting Risk", subject);
@@ -826,7 +855,9 @@ function secOfferingOwnershipDisplayTitle(c: FeedCatalyst): string | null {
     sub === "s3" ||
     form.startsWith("S-3") ||
     /shelf registration \(s-3\)/i.test(headline) ||
-    /shelf registration \(s-3\)/i.test(title);
+    /shelf registration \(s-3\)/i.test(title) ||
+    /\bShelf Registration Filed\b/i.test(title) ||
+    /\bShelf Raise Filed\b/i.test(title);
   if (isS3) {
     if (looksFactEnrichedTitle(title) || /—\s*(?:Amends )?Shelf/i.test(title)) {
       return stripSourceNames(title) || title;
@@ -840,7 +871,8 @@ function secOfferingOwnershipDisplayTitle(c: FeedCatalyst): string | null {
     form.startsWith("424B") ||
     /prospectus \/ offering \(424b\)/i.test(headline) ||
     /prospectus \/ offering \(424b\)/i.test(title) ||
-    /New Stock Offering Filed/i.test(title);
+    /New Stock Offering Filed/i.test(title) ||
+    /\bStock Offering Filed\b/i.test(title);
   if (is424) {
     const looksStructured =
       /structured note|pricing supplement/i.test(title) ||
@@ -862,7 +894,8 @@ function secOfferingOwnershipDisplayTitle(c: FeedCatalyst): string | null {
     form.startsWith("425/") ||
     /merger \/ acquisition \(425\)/i.test(headline) ||
     /Merger or Acquisition News/i.test(title) ||
-    /\bAnnounces Acquisition\s*[—–-]\s*Deal in Play/i.test(title);
+    /\bAnnounces Acquisition\s*[—–-]\s*Deal in Play/i.test(title) ||
+    /\bAcquisition Announced\b/i.test(title);
   if (is425) {
     if (fromFacts && looksFactEnrichedTitle(fromFacts)) return fromFacts;
     return format425MergerTitle(subject);
@@ -905,13 +938,17 @@ function clinicalDisplayTitle(c: FeedCatalyst): string | null {
     /^clinical\s*trial/i.test(c.type ?? "");
   if (!isClinical) return null;
 
+  const isThinClinicalVoice = (text: string) =>
+    CLINICAL_STATUS_HEADLINES.has(text.toLowerCase()) ||
+    /\bclinical trial update$/i.test(text) ||
+    /\bClinical Trial Results\b/i.test(text);
+
   const headline = normalizeDisplayText(c.headline ?? "");
   if (
     headline &&
     !looksLikeSourceLabel(headline) &&
     !isGenericEventHeadline(headline) &&
-    !CLINICAL_STATUS_HEADLINES.has(headline.toLowerCase()) &&
-    !/\bclinical trial update$/i.test(headline)
+    !isThinClinicalVoice(headline)
   ) {
     return null;
   }
@@ -921,8 +958,7 @@ function clinicalDisplayTitle(c: FeedCatalyst): string | null {
     title &&
     !looksLikeSourceLabel(title) &&
     !isGenericEventHeadline(title) &&
-    !CLINICAL_STATUS_HEADLINES.has(title.toLowerCase()) &&
-    !/\bclinical trial(?: update)?$/i.test(title) &&
+    !isThinClinicalVoice(title) &&
     !/(?:Clinical Trial).*filing$/i.test(title)
   ) {
     return stripSourceNames(title) || title;

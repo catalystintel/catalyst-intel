@@ -4,6 +4,7 @@ import {
   earningsDateForQuarterInference,
   earningsQuarterLabel,
   format425MergerTitle,
+  formatAcquisitionClosedTitle,
   formatAnalystRatingTitle,
   formatBankruptcyFilingTitle,
   formatClinicalTrialTitle,
@@ -20,6 +21,7 @@ import {
   formatPartnershipTitle,
   formatPriceTargetTitle,
   formatProspectusOfferingTitle,
+  formatRegulatoryActionTitle,
   formatSchedule13DTitle,
   formatSchedule13GTitle,
   formatSec8kItemTitle,
@@ -171,7 +173,7 @@ describe("earningsQuarterLabel + formatEarningsReportTitle", () => {
 describe("formatSec8kItemTitle / formatForm4InsiderTitle", () => {
   it("builds narrative titles for high-signal 8-K items", () => {
     expect(formatSec8kItemTitle("Material agreement", "PEDEVCO CORP")).toBe(
-      "PEDEVCO CORP - New Deal Announced (Major Contract or Partnership)",
+      "PEDEVCO CORP - Partnership or Major Contract Announced",
     );
     expect(formatSec8kItemTitle("Officer / director change", "Acme Corp")).toBe(
       "Acme Corp - Executive Change",
@@ -189,7 +191,7 @@ describe("formatSec8kItemTitle / formatForm4InsiderTitle", () => {
       "Acme Corp - Bankruptcy Filing (Equity at Risk)",
     );
     expect(formatMaterialAgreementTitle("Acme Corp")).toBe(
-      "Acme Corp - New Deal Announced (Major Contract or Partnership)",
+      "Acme Corp - Partnership or Major Contract Announced",
     );
     expect(formatBankruptcyFilingTitle("Acme Corp")).toBe(
       "Acme Corp - Bankruptcy Filing (Equity at Risk)",
@@ -260,16 +262,19 @@ describe("formatSec8kItemTitle / formatForm4InsiderTitle", () => {
 describe("offering / ownership / clinical / macro / analyst titles", () => {
   it("formats S-3 / 424B / 425 / 13D / 13G ground-rule titles", () => {
     expect(formatShelfRegistrationTitle("Acme Corp")).toBe(
-      "Acme Corp files shelf registration (S-3)",
+      "Acme Corp - Shelf Registration Filed (Capital Raise Window)",
     );
     expect(formatProspectusOfferingTitle("Acme Corp")).toBe(
-      "Acme Corp files stock offering (dilution watch)",
+      "Acme Corp - Stock Offering Filed (Dilution Ahead)",
     );
     expect(format425MergerTitle("Acme Corp")).toBe(
-      "Acme Corp Announces Acquisition — Deal in Play",
+      "Acme Corp - Acquisition Announced (Deal in Play)",
+    );
+    expect(formatAcquisitionClosedTitle("Acme Corp")).toBe(
+      "Acme Corp - Acquisition Closed",
     );
     expect(formatPartnershipTitle("Acme Corp")).toBe(
-      "Acme Corp announces strategic partnership",
+      "Acme Corp - Strategic Partnership Announced",
     );
     expect(formatSchedule13DTitle("Acme Corp")).toBe(
       "Acme Corp reports active stake (13D)",
@@ -281,7 +286,10 @@ describe("offering / ownership / clinical / macro / analyst titles", () => {
 
   it("formats clinical / macro / analyst ground-rule titles", () => {
     expect(formatClinicalTrialTitle("Pfizer Inc")).toBe(
-      "Pfizer Inc clinical trial update",
+      "Pfizer Inc - Clinical Trial Results Update",
+    );
+    expect(formatRegulatoryActionTitle("Acme Corp")).toBe(
+      "Acme Corp - Regulatory Action Update",
     );
     expect(formatCpiTitle("July 2026")).toBe("CPI — July 2026");
     expect(formatJobsReportTitle("July 2026")).toBe(
