@@ -112,7 +112,7 @@ export default function AboutPage() {
                 "btn-press min-h-11 w-full justify-center bg-[var(--landing-primary,#00d4aa)] text-[var(--desk-accent-fg,#131722)] hover:bg-[var(--landing-primary-hover,#00b894)] sm:w-auto",
               )}
             >
-              Continue with Google — free
+              Continue with Google
             </Link>
             <Link
               href="/"

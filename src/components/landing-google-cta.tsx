@@ -13,7 +13,7 @@ import { cn } from "@/lib/utils";
  * with dark label text so it matches the Signal Fintech desk accent.
  */
 export function LandingGoogleCta({
-  children = "Continue with Google — free",
+  children = "Continue with Google",
   subtext,
   showIcon = false,
   className,
