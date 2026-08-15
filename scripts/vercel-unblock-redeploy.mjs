@@ -897,11 +897,16 @@ async function main() {
     stripSecret(process.env.VERCEL_PROJECT_NAME) || "catalyst-intel";
   const allowCli = process.env.VERCEL_UNBLOCK_ALLOW_CLI !== "0";
 
-  if (!token || !teamId || !projectId) {
+  if (!token || !projectId) {
     console.warn(
-      "::warning::VERCEL_TOKEN / VERCEL_ORG_ID / VERCEL_PROJECT_ID not set — skipping unblock redeploy. See DEPLOYMENT.md.",
+      "::warning::VERCEL_TOKEN / VERCEL_PROJECT_ID not set — skipping unblock redeploy. See DEPLOYMENT.md.",
     );
     process.exit(0);
+  }
+  if (!teamId) {
+    console.warn(
+      "::warning::VERCEL_ORG_ID unset — will resolve team from project via Vercel API.",
+    );
   }
 
   /** @type {{ token: string, teamId: string, projectId: string, projectName: string, allowCli: boolean }} */
@@ -910,7 +915,7 @@ async function main() {
     cfg = {
       ...(await resolveVercelAccess({
         token,
-        teamId,
+        teamId: teamId || "",
         projectId,
         projectName,
       })),
