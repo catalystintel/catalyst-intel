@@ -74,18 +74,51 @@ export function getAllowedAuthHosts(
 export function getPreferredAuthOrigin(
   env: Record<string, string | undefined> = process.env,
 ): string {
-  for (const key of [
-    "NEXT_PUBLIC_AUTH_ORIGIN",
-    "NEXT_PUBLIC_APP_URL",
-    "VERCEL_PROJECT_PRODUCTION_URL",
-  ] as const) {
-    const raw = env[key]?.trim();
-    if (!raw) continue;
+  const authOrigin = env.NEXT_PUBLIC_AUTH_ORIGIN?.trim();
+  if (authOrigin) {
     try {
-      const withProto = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
+      const withProto = /^https?:\/\//i.test(authOrigin)
+        ? authOrigin
+        : `https://${authOrigin}`;
       return new URL(withProto).origin;
     } catch {
-      // continue
+      // fall through
+    }
+  }
+
+  const appUrl = env.NEXT_PUBLIC_APP_URL?.trim();
+  if (appUrl) {
+    try {
+      const withProto = /^https?:\/\//i.test(appUrl)
+        ? appUrl
+        : `https://${appUrl}`;
+      const url = new URL(withProto);
+      // APP_URL alone must be a known host — blocks typos like www.marvel.com.
+      if (
+        isLocalAuthHost(url.host) ||
+        (KNOWN_AUTH_HOSTS as readonly string[]).includes(url.host.toLowerCase())
+      ) {
+        return url.origin;
+      }
+    } catch {
+      // fall through
+    }
+  }
+
+  const productionHost = env.VERCEL_PROJECT_PRODUCTION_URL?.trim();
+  if (productionHost) {
+    try {
+      const withProto = /^https?:\/\//i.test(productionHost)
+        ? productionHost
+        : `https://${productionHost}`;
+      const url = new URL(withProto);
+      if (
+        (KNOWN_AUTH_HOSTS as readonly string[]).includes(url.host.toLowerCase())
+      ) {
+        return url.origin;
+      }
+    } catch {
+      // fall through
     }
   }
 
