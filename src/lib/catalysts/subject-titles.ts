@@ -9,6 +9,7 @@ import {
   formatAnalystRatingTitle,
   formatClinicalTrialTitle,
   formatEarningsReportTitle,
+  formatFdaApprovalTitle,
   formatForm4InsiderTitle,
   formatHaltTitle,
   formatPriceTargetTitle,
@@ -108,17 +109,75 @@ export function looksFactEnrichedTitle(
   if (/—\s*(?:Shelf|Offering|Amends shelf|13[DG]|Structured note)/i.test(t)) {
     return true;
   }
+  if (
+    /\b(?:files|sets up|amends)\b.+\$(?:[\d.,]+)/i.test(t) &&
+    /\b(?:shelf|at-the-market|\bATM\b|offering|notes)\b/i.test(t)
+  ) {
+    return true;
+  }
+  if (/\bsets up\b.+\bat-the-market\b|\bATM\b/i.test(t) && /\$/.test(t)) {
+    return true;
+  }
+  if (/\bprices structured notes\b/i.test(t)) {
+    return true;
+  }
+  if (
+    /\b(?:to acquire|closes .+ acquisition|terminates .+ (?:deal|acquisition)|partners with|collaborat|licenses?)\b/i.test(
+      t,
+    )
+  ) {
+    return true;
+  }
+  if (
+    /\b(?:wins|receives)\b.+\b(?:FDA|EMA|agency)\b.+\b(?:approval|CRL|complete response|clearance)\b/i.test(
+      t,
+    ) ||
+    /\bclinical hold\b/i.test(t) ||
+    /\breceives CRL\b/i.test(t)
+  ) {
+    return true;
+  }
   if (/:\s+[A-Z][a-z]+.+(?:·|\$)/.test(t)) return true; // Form 4 style
   if (/\b(?:beat|miss)(?:s|ed)?\b/i.test(t) && /\b(?:eps|revenue)\b/i.test(t)) {
     return true;
   }
-  if (/\bphase\s*[123]\b/i.test(t)) return true;
+  if (/\bphase\s*[123ivx]+\b/i.test(t)) return true;
+  if (/\b(?:primary endpoint|topline)\b/i.test(t)) return true;
   if (
     /\b(?:upgraded|downgraded|raises?|cuts?)\b.+\b(?:pt|target|to)\b/i.test(t)
   ) {
     return true;
   }
   return false;
+}
+
+/** Cue text from facts + stored title/headline/summary (never invents). */
+function groundedCueText(
+  input: SubjectTitleInput,
+  map: Map<string, string>,
+): string {
+  const factBits = [...map.entries()].map(([k, v]) => `${k} ${v}`);
+  return normalizeWs(
+    [
+      ...factBits,
+      input.subcategory ?? "",
+      input.title ?? "",
+      input.headline ?? "",
+      input.summary ?? "",
+    ].join(" "),
+  );
+}
+
+function isPartnershipCue(cue: string): boolean {
+  return /\b(?:partnership|partner(?:s|ed|ing)?\b|collaborat(?:e|ion|ing)|co-develop|joint venture|\blicen[cs]e[sd]?\b|\blicensing\b)/i.test(
+    cue,
+  );
+}
+
+function isAcquisitionCue(cue: string): boolean {
+  return /\b(?:acqui(?:re|res|red|sition)|merger|takeover|buyout|disposition|425)\b/i.test(
+    cue,
+  );
 }
 
 function earningsTitle(
@@ -153,10 +212,67 @@ function earningsTitle(
   return formatEarningsReportTitle(q, company);
 }
 
+function partnershipTitle(
+  input: SubjectTitleInput,
+  map: Map<string, string>,
+): string {
+  const company = companyOf(input);
+  const partner = findLabeled(
+    map,
+    "partner",
+    "counterparty",
+    "collaborator",
+    "licensee",
+    "licensor",
+  );
+  const nature =
+    findLabeled(map, "nature", "scope", "focus", "area") ||
+    findLabeled(map, "type", "agreement");
+  const asset = findLabeled(map, "product", "asset", "candidate", "indication");
+
+  const natureIsGeneric =
+    !nature ||
+    /^(?:material agreement|partnership|collaboration|license|deal)$/i.test(
+      nature,
+    );
+
+  if (partner && asset && /licen/i.test(groundedCueText(input, map))) {
+    return `${company} licenses ${asset} to ${partner}`;
+  }
+  if (partner && asset && !natureIsGeneric) {
+    return `${company} and ${partner} collaborate on ${asset}`;
+  }
+  if (partner && !natureIsGeneric) {
+    return `${company} partners with ${partner} — ${nature}`;
+  }
+  if (partner) {
+    return `${company} announces partnership with ${partner}`;
+  }
+  if (asset && !natureIsGeneric) {
+    return `${company} partnership — ${nature} (${asset})`;
+  }
+  if (!natureIsGeneric && nature) {
+    return `${company} announces ${nature}`;
+  }
+  return `${company} announces strategic partnership`;
+}
+
 function dealsTitle(
   input: SubjectTitleInput,
   map: Map<string, string>,
 ): string {
+  const cue = groundedCueText(input, map);
+  if (isPartnershipCue(cue) && !isAcquisitionCue(cue)) {
+    return partnershipTitle(input, map);
+  }
+  // Partnership language wins even alongside soft "deal" wording when parties say so.
+  if (
+    isPartnershipCue(cue) &&
+    findLabeled(map, "partner", "counterparty", "collaborator")
+  ) {
+    return partnershipTitle(input, map);
+  }
+
   const company = companyOf(input);
   const value = findLabeled(
     map,
@@ -164,27 +280,57 @@ function dealsTitle(
     "value",
     "consideration",
     "amount",
+    "purchase price",
   );
-  const target = findLabeled(map, "target");
+  const target = findLabeled(map, "target", "seller");
   const buyer = findLabeled(map, "buyer", "acquirer");
-  const status = findLabeled(map, "status", "close");
+  const status = findLabeled(map, "status", "close", "stage");
 
+  const closed = /\b(?:clos(?:e|ed|ing)|completed?|consummat)/i.test(
+    `${status ?? ""} ${cue}`,
+  );
+  const terminated =
+    /\b(?:terminat(?:e|es|ed|ing)?|abandon(?:s|ed|ing)?|withdrawn|broken)\b/i.test(
+      `${status ?? ""} ${cue}`,
+    );
+
+  if (terminated && target) {
+    return `${company} terminates acquisition of ${target}`;
+  }
+  if (terminated && value) {
+    return `${company} terminates ${value} deal`;
+  }
+  if (terminated) {
+    return `${company} terminates announced deal`;
+  }
+  if (closed && target && value) {
+    return `${company} closes ${value} acquisition of ${target}`;
+  }
+  if (closed && target) {
+    return `${company} closes acquisition of ${target}`;
+  }
+  if (closed && value) {
+    return `${company} closes ${value} deal`;
+  }
   if (target && value) {
     return `${company} to acquire ${target} for ${value}`;
   }
   if (buyer && value) {
     return `${buyer} to acquire ${company} for ${value}`;
   }
-  if (value && status) {
-    return `${company} deal ${status.toLowerCase()} — ${value}`;
+  if (buyer && target) {
+    return `${buyer} to acquire ${target}`;
   }
   if (value) {
-    return `${company} announces deal valued at ${value}`;
+    return `${company} announces ${value} acquisition`;
   }
   if (target) {
-    return `${company} announces deal for ${target}`;
+    return `${company} moves to acquire ${target}`;
   }
-  return `${company} announces material deal`;
+  if (isAcquisitionCue(cue)) {
+    return `${company} Announces Acquisition — Deal in Play`;
+  }
+  return `${company} - New Deal Announced (Major Contract or Partnership)`;
 }
 
 function managementTitle(
@@ -224,34 +370,57 @@ function capitalTitle(
   map: Map<string, string>,
 ): string {
   const company = companyOf(input);
-  const ticker = input.symbol?.trim().toUpperCase() || company;
   const amount = findLabeled(map, "amount", "size", "proceeds");
   const shares = findLabeled(map, "shares");
   const coupon = findLabeled(map, "coupon");
   const type = findLabeled(map, "type", "instrument", "facility");
   const form = findLabeled(map, "form");
+  const cue = groundedCueText(input, map);
+  const atm =
+    /atm|at-the-market/i.test(`${type ?? ""} ${cue}`) ||
+    Boolean(findFact(map, "atm"));
+  const amended = /\bamend/i.test(cue) || /\/A$/i.test(form ?? "");
+  const notes = /note|convertible|senior|debenture/i.test(
+    `${type ?? ""} ${cue}`,
+  );
+  const structured = /structured note/i.test(`${type ?? ""} ${cue}`);
 
-  if (type && /structured note/i.test(type) && coupon) {
-    return `${ticker} — Structured note · ${coupon}`;
+  if (structured && coupon) {
+    return `${company} prices structured notes · ${coupon}`;
   }
-  if (type && /structured note/i.test(type)) {
-    return `${ticker} — Structured note pricing supplement`;
+  if (structured) {
+    return `${company} files structured note pricing supplement`;
   }
-  if (type && /shelf/i.test(type) && amount) {
-    const atm = /atm/i.test(type) || findFact(map, "atm");
-    return `${ticker} — Shelf ${amount}${atm ? " (ATM)" : ""}`;
+  if (atm && amount) {
+    return `${company} sets up ${amount} at-the-market (ATM) program`;
   }
-  if (form && /^S-3/i.test(form) && amount) {
-    return `${ticker} — Shelf ${amount}`;
+  if (atm) {
+    return `${company} sets up at-the-market (ATM) equity program`;
   }
-  if (form && /^S-3/i.test(form)) {
-    return formatShelfRegistrationTitle(company);
+  if (
+    (/shelf/i.test(`${type ?? ""} ${cue}`) || /^S-3/i.test(form ?? "")) &&
+    amount
+  ) {
+    return amended
+      ? `${company} amends shelf registration to ${amount}`
+      : `${company} files ${amount} shelf registration`;
+  }
+  if (/^S-3/i.test(form ?? "") || /shelf/i.test(`${type ?? ""}`)) {
+    return amended
+      ? `${company} amends shelf registration (S-3)`
+      : formatShelfRegistrationTitle(company);
+  }
+  if (notes && amount && coupon) {
+    return `${company} announces ${amount} notes · ${coupon}`;
+  }
+  if (notes && amount) {
+    return `${company} announces ${amount} note offering`;
   }
   if (amount && shares) {
-    return `${ticker} — Offering ${amount} · ${shares}`;
+    return `${company} files ${amount} equity offering (${shares})`;
   }
   if (amount) {
-    return `${ticker} — Offering ${amount}`;
+    return `${company} files ${amount} equity offering`;
   }
   if (form && /^424B/i.test(form)) {
     return formatProspectusOfferingTitle(company);
@@ -375,25 +544,80 @@ function regulatoryTitle(
   map: Map<string, string>,
 ): string {
   const company = companyOf(input);
-  const product = findLabeled(map, "product", "indication");
-  const outcome = findLabeled(map, "outcome", "approval", "fda", "agency");
+  const product = findLabeled(
+    map,
+    "product",
+    "indication",
+    "drug",
+    "therapy",
+    "device",
+  );
+  const outcome = findLabeled(
+    map,
+    "outcome",
+    "approval",
+    "decision",
+    "action",
+    "status",
+  );
+  const agencyRaw = findLabeled(map, "agency", "regulator", "fda");
+  const cue = groundedCueText(input, map);
+  const agency =
+    agencyRaw
+      ?.match(/\b(FDA|EMA|MHRA|PMDA|NMPA|SEC|FTC|DOJ)\b/i)?.[1]
+      ?.toUpperCase() ??
+    (/\bfda\b/i.test(`${agencyRaw ?? ""} ${outcome ?? ""} ${cue}`)
+      ? "FDA"
+      : agencyRaw && !/^(?:yes|no|true|false)$/i.test(agencyRaw)
+        ? agencyRaw
+        : null);
 
-  if (outcome && /approv/i.test(outcome) && product) {
-    return `${company} wins FDA approval for ${product}`;
+  const isApproval = /\bapprov/i.test(`${outcome ?? ""} ${cue}`);
+  const isCrl = /\b(?:crl|complete response)\b/i.test(
+    `${outcome ?? ""} ${cue}`,
+  );
+  const isHold = /\b(?:clinical\s+hold|partial\s+hold)\b/i.test(
+    `${outcome ?? ""} ${cue}`,
+  );
+  const isClearance = /\bclear(?:s|ed|ance)\b/i.test(`${outcome ?? ""} ${cue}`);
+
+  const agencyLabel = agency || "FDA";
+
+  if (isCrl && product) {
+    return `${company} receives ${agencyLabel} CRL for ${product}`;
   }
-  if (outcome && /approv/i.test(outcome)) {
-    return `${company} Receives FDA Approval!`;
+  if (isCrl) {
+    return `${company} receives ${agencyLabel} Complete Response Letter`;
   }
-  if (outcome && /crl|complete response/i.test(outcome)) {
-    return product
-      ? `${company} receives CRL for ${product}`
-      : `${company} receives FDA Complete Response Letter`;
+  if (isHold && product) {
+    return `${company} ${product} placed on clinical hold`;
+  }
+  if (isHold) {
+    return `${company} faces clinical hold`;
+  }
+  if (isApproval && product) {
+    return `${company} wins ${agencyLabel} approval for ${product}`;
+  }
+  if (isClearance && product) {
+    return `${agencyLabel} clears ${company}'s ${product}`;
+  }
+  if (isApproval) {
+    return formatFdaApprovalTitle(company);
   }
   if (product && outcome) {
     return `${company}: ${outcome} — ${product}`;
   }
-  if (outcome) return `${company}: ${outcome}`;
-  return `${company} Receives FDA Approval!`;
+  if (outcome && outcome.length >= 8 && !/^fda$/i.test(outcome)) {
+    return `${company}: ${outcome}`;
+  }
+  // Never invent an approval when facts are thin / non-approval.
+  if (
+    /fda_approval|approval/i.test(input.subcategory ?? "") ||
+    /\bapprov/i.test(cue)
+  ) {
+    return formatFdaApprovalTitle(company);
+  }
+  return `${company} regulatory update`;
 }
 
 function clinicalTitle(
@@ -402,20 +626,64 @@ function clinicalTitle(
 ): string {
   const company = companyOf(input);
   const phase = findLabeled(map, "phase");
-  const status = findLabeled(map, "status", "result");
-  const condition = findLabeled(map, "condition", "indication");
+  const status = findLabeled(map, "status", "result", "outcome");
+  const condition = findLabeled(
+    map,
+    "condition",
+    "indication",
+    "disease",
+    "setting",
+  );
+  const endpoint = findLabeled(map, "endpoint", "primary endpoint");
 
-  if (phase && status && condition) {
-    return `${company} ${phase} ${status} in ${condition}`;
+  const phaseLabel = phase
+    ? /phase/i.test(phase)
+      ? phase.replace(/\s+/g, " ").trim()
+      : `Phase ${phase}`
+    : null;
+
+  const statusText = status?.replace(/\s+/g, " ").trim() ?? "";
+  const metPrimary =
+    /\b(?:met|meets|achieved?)\b.+\bprimary\b/i.test(statusText) ||
+    /\bprimary endpoint\b.+\b(?:met|meets)\b/i.test(statusText) ||
+    (endpoint && /\b(?:met|meets|achieved?)\b/i.test(statusText));
+  const missedPrimary =
+    /\b(?:miss(?:ed|es)?|fail(?:ed|s)?|did not meet)\b.+\bprimary\b/i.test(
+      statusText,
+    );
+
+  if (phaseLabel && metPrimary && condition) {
+    return `${company} ${phaseLabel} trial meets primary endpoint in ${condition}`;
   }
-  if (phase && status) {
-    return `${company} ${phase} trial ${status}`;
+  if (phaseLabel && missedPrimary && condition) {
+    return `${company} ${phaseLabel} trial misses primary endpoint in ${condition}`;
   }
-  if (phase && condition) {
-    return `${company} ${phase} study — ${condition}`;
+  if (phaseLabel && metPrimary) {
+    return `${company} ${phaseLabel} trial meets primary endpoint`;
   }
-  if (status && condition) {
-    return `${company} clinical update — ${condition} (${status})`;
+  if (phaseLabel && missedPrimary) {
+    return `${company} ${phaseLabel} trial misses primary endpoint`;
+  }
+  if (phaseLabel && endpoint && statusText) {
+    return `${company} ${phaseLabel}: ${statusText} (${endpoint})`;
+  }
+  if (phaseLabel && statusText && condition) {
+    return `${company} ${phaseLabel} trial ${statusText} in ${condition}`;
+  }
+  if (phaseLabel && statusText) {
+    return `${company} ${phaseLabel} trial ${statusText}`;
+  }
+  if (phaseLabel && condition) {
+    return `${company} ${phaseLabel} study — ${condition}`;
+  }
+  if (phaseLabel) {
+    return `${company} ${phaseLabel} clinical trial update`;
+  }
+  if (statusText && condition) {
+    return `${company} clinical update — ${condition} (${statusText})`;
+  }
+  if (endpoint && statusText) {
+    return `${company} clinical update — ${statusText} on ${endpoint}`;
   }
   return formatClinicalTrialTitle(company);
 }
@@ -683,7 +951,7 @@ function hasUsefulDetail(candidate: string, fallback: string): boolean {
   const f = fallback.toLowerCase();
   if (c === f) return false;
   return (
-    /\$|\d+%|shares|stake|eps|phase|coupon|offering|shelf|insider/i.test(
+    /\$|\d+%|shares|stake|eps|phase|coupon|offering|shelf|insider|acquire|partner|crl|endpoint|atm/i.test(
       candidate,
     ) && !/unknown company/i.test(candidate)
   );
