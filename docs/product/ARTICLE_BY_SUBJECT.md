@@ -4,6 +4,8 @@ Classify the catalyst into one of the 17 subjects first. Then write **title** an
 
 **Titles:** Interesting, clear, professional — include company / outcome / real article details when known. Vary voice by subject so the tape does not read as cookie-cutter `{Company} - {Subject}` for every row. Prefer a specific vendor or filing headline when it already says what happened; use ground-rule fallbacks only when the stored title is a taxonomy chip or AccNo-thin.
 
+**Automation:** `src/lib/catalysts/subject-titles.ts` (`buildSubjectTitle` / `preferSubjectTitle`) composes titles from extracted `keyFacts` on the enrich + display path (`titleLine` in `feed-display.ts`). SEC extract / Form 4 persist fact-rich `titleOverride`s when dollars, stakes, insider names, etc. are present. Never invent numbers — only extracted facts.
+
 **Content:** **3–6 short lines** of grounded detail from the real article/filing only — never invent numbers or facts. Lead with why it matters, then the subject’s fact slots below (omit a slot when the source does not state it).
 
 Subjects: `src/lib/catalysts/taxonomy.ts`.

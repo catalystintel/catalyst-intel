@@ -11,6 +11,7 @@ import {
   isAccNoMetadataBlob,
   isWeakSummary,
 } from "@/lib/catalysts/article-content";
+import { deriveWhyMoving } from "@/lib/catalysts/article-funnel";
 import { deriveSubjectTakeaways } from "@/lib/catalysts/subject-article-content";
 import type { FeedCatalyst } from "@/lib/catalysts/feed-catalyst";
 import type {
@@ -164,7 +165,7 @@ export function TapeSplitPanel({
     catalyst.headline?.trim() ||
     catalyst.title.trim();
   const formBlurb = plainEnglishForSecForm(catalyst.type);
-  const takeaways = deriveSubjectTakeaways({
+  const subjectLines = deriveSubjectTakeaways({
     eventCategory: catalyst.eventCategory,
     summary: rawSummary && !isAccNoMetadataBlob(rawSummary) ? rawSummary : null,
     headline: catalyst.headline,
@@ -174,6 +175,21 @@ export function TapeSplitPanel({
     symbol: catalyst.symbol,
     maxLines: 6,
   }).filter((t) => !isAccNoMetadataBlob(t));
+  const whyMoving =
+    deriveWhyMoving({
+      summary:
+        rawSummary && !isAccNoMetadataBlob(rawSummary) ? rawSummary : null,
+      headline: catalyst.headline,
+      title: catalyst.title,
+    }) ||
+    subjectLines[0] ||
+    null;
+  // Keep takeaways to ~3–6 total desk lines; drop the why-line when duplicated.
+  const takeaways = subjectLines
+    .filter(
+      (line) => !whyMoving || line.toLowerCase() !== whyMoving.toLowerCase(),
+    )
+    .slice(0, 5);
   const companyName =
     market?.profile?.name?.trim() || catalyst.companyName?.trim() || null;
 
@@ -461,7 +477,7 @@ export function TapeSplitPanel({
       {chartSlot}
 
       <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
-        <div className="flex flex-col gap-4 border-b border-[var(--desk-border)] px-4 py-4">
+        <div className="flex flex-col gap-5 border-b border-[var(--desk-border)] px-4 py-5">
           {!symbol ? (
             <div className="rounded-sm border border-[var(--desk-border)] bg-[var(--desk-overlay-soft)] px-3 py-3">
               <p className="font-mono text-[0.65rem] tracking-[0.14em] text-[var(--desk-text-dim)] uppercase">
@@ -500,24 +516,31 @@ export function TapeSplitPanel({
             </button>
           </div>
 
-          <div>
-            <p className="font-mono text-[0.65rem] tracking-[0.14em] text-[var(--desk-text-dim)] uppercase">
-              Triage summary
-            </p>
-            <p className="mt-2 line-clamp-5 text-sm leading-relaxed text-[var(--desk-text-secondary)]">
-              {summaryText}
-            </p>
-            {formBlurb ? (
-              <p className="mt-2 text-[0.8rem] leading-snug text-[var(--desk-text-muted)]">
-                {formBlurb}
+          {whyMoving ? (
+            <div
+              className="border-l-2 border-[var(--desk-live)] pl-3"
+              role="note"
+              aria-label="Why it's moving"
+            >
+              <p className="font-mono text-[0.62rem] tracking-[0.14em] text-[var(--desk-live)] uppercase">
+                Why it&apos;s moving
               </p>
-            ) : null}
-            {takeaways.length > 0 ? (
-              <ul className="mt-3 flex list-none flex-col gap-1.5 pl-0">
+              <p className="mt-1.5 text-sm leading-snug text-[var(--desk-text)]">
+                {whyMoving}
+              </p>
+            </div>
+          ) : null}
+
+          {takeaways.length > 0 ? (
+            <section className="flex flex-col gap-2">
+              <h3 className="font-mono text-[0.65rem] tracking-[0.14em] text-[var(--desk-text-dim)] uppercase">
+                Takeaways
+              </h3>
+              <ul className="flex list-none flex-col gap-2 pl-0">
                 {takeaways.map((bullet, i) => (
                   <li
                     key={`takeaway-${i}`}
-                    className="flex gap-2 text-sm leading-snug text-[var(--desk-text-secondary)]"
+                    className="flex gap-2.5 text-sm leading-relaxed text-[var(--desk-text-secondary)]"
                   >
                     <span
                       className="mt-2 size-1 shrink-0 rounded-full bg-[var(--desk-live)]"
@@ -527,13 +550,33 @@ export function TapeSplitPanel({
                   </li>
                 ))}
               </ul>
-            ) : null}
-            {catalyst.keyFacts.length > 0 ? (
-              <dl className="mt-3 grid grid-cols-2 gap-2">
+            </section>
+          ) : (
+            <section className="flex flex-col gap-2">
+              <h3 className="font-mono text-[0.65rem] tracking-[0.14em] text-[var(--desk-text-dim)] uppercase">
+                Summary
+              </h3>
+              <p className="line-clamp-4 text-sm leading-relaxed text-[var(--desk-text-secondary)]">
+                {summaryText}
+              </p>
+              {formBlurb ? (
+                <p className="text-[0.8rem] leading-snug text-[var(--desk-text-muted)]">
+                  {formBlurb}
+                </p>
+              ) : null}
+            </section>
+          )}
+
+          {catalyst.keyFacts.length > 0 ? (
+            <section className="flex flex-col gap-2">
+              <h3 className="font-mono text-[0.65rem] tracking-[0.14em] text-[var(--desk-text-dim)] uppercase">
+                Key facts
+              </h3>
+              <dl className="grid grid-cols-2 gap-2">
                 {catalyst.keyFacts.slice(0, 6).map((fact) => (
                   <div
                     key={`${fact.label}:${fact.value}`}
-                    className="rounded-sm border border-[var(--desk-border)] bg-[var(--desk-overlay-soft)] px-2.5 py-2"
+                    className="border-b border-[var(--desk-border)] px-0.5 py-2"
                   >
                     <dt className="font-mono text-[0.6rem] tracking-[0.12em] text-[var(--desk-text-dim)] uppercase">
                       {fact.label}
@@ -544,8 +587,13 @@ export function TapeSplitPanel({
                   </div>
                 ))}
               </dl>
-            ) : catalyst.items.length > 0 ? (
-              <ul className="mt-3 space-y-1">
+            </section>
+          ) : catalyst.items.length > 0 ? (
+            <section className="flex flex-col gap-1.5">
+              <h3 className="font-mono text-[0.65rem] tracking-[0.14em] text-[var(--desk-text-dim)] uppercase">
+                Filing items
+              </h3>
+              <ul className="space-y-1">
                 {catalyst.items.slice(0, 4).map((item) => (
                   <li
                     key={item.code}
@@ -558,12 +606,14 @@ export function TapeSplitPanel({
                   </li>
                 ))}
               </ul>
-            ) : null}
-            <p className="mt-2 font-mono text-[0.62rem] tracking-wide text-[var(--desk-text-dim)]">
-              Opening Details adds fuller event text — split stays available
-              with best data collected so far.
+            </section>
+          ) : null}
+
+          {takeaways.length > 0 && formBlurb ? (
+            <p className="text-[0.8rem] leading-snug text-[var(--desk-text-muted)]">
+              {formBlurb}
             </p>
-          </div>
+          ) : null}
 
           <AiAnalysisPanel
             key={`ai-${catalyst.id}`}
@@ -580,7 +630,7 @@ export function TapeSplitPanel({
             onAnalyzed={onAiAnalyzed}
           />
 
-          <dl className="grid grid-cols-2 gap-3 font-mono text-xs">
+          <dl className="grid grid-cols-2 gap-x-3 gap-y-3 border-t border-[var(--desk-border)] pt-4 font-mono text-xs">
             <MetaCell
               label="Category"
               value={

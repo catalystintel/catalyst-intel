@@ -332,8 +332,25 @@ export function parseForm4OwnershipXml(xml: string): Form4Direction | null {
       : "";
   const investorSummary = `${ownerBit.trim()} ${verb} on a Form 4${shareBit}${valueBit}. Form 4 filings report officer/director/10% owner trades — useful for conviction and selling pressure screens.`;
 
+  const sideLabel =
+    subcategory === "insider_buy"
+      ? "buy"
+      : subcategory === "insider_sell"
+        ? "sale"
+        : subcategory === "form4_mixed"
+          ? "buy and sell"
+          : null;
+  const detailBit =
+    totalValue != null && totalValue > 0
+      ? formatUsd(totalValue)
+      : totalShares != null
+        ? formatShares(totalShares)
+        : null;
+  // Subject voice: `{Company} insider buy: Name · $…` (company applied at persist).
   const titleOverride = ownerName
-    ? `${headline.replace(" (Form 4)", "")}: ${ownerName}${totalValue != null && totalValue > 0 ? ` · ${formatUsd(totalValue)}` : totalShares != null ? ` · ${formatShares(totalShares)}` : ""}`
+    ? sideLabel
+      ? `insider ${sideLabel}: ${ownerName}${detailBit ? ` · ${detailBit}` : ""}`
+      : `${headline.replace(" (Form 4)", "")}: ${ownerName}${detailBit ? ` · ${detailBit}` : ""}`
     : null;
 
   return {
