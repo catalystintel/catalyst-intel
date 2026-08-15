@@ -11,6 +11,8 @@ import {
 describe("getAllowedAuthHosts", () => {
   it("includes known production and staging hosts", () => {
     const hosts = getAllowedAuthHosts({});
+    expect(hosts.has("www.marveel.com")).toBe(true);
+    expect(hosts.has("marveel.com")).toBe(true);
     expect(hosts.has("catalyst-intel-catalyst-intel.vercel.app")).toBe(true);
     expect(
       hosts.has("catalyst-intel-git-dev-zhbar10s-projects.vercel.app"),
@@ -39,6 +41,7 @@ describe("getAllowedAuthHosts", () => {
 describe("isAllowedAuthOrigin", () => {
   it("allows localhost and known hosts", () => {
     expect(isAllowedAuthOrigin("http://localhost:3000", {})).toBe(true);
+    expect(isAllowedAuthOrigin("https://www.marveel.com", {})).toBe(true);
     expect(
       isAllowedAuthOrigin(
         "https://catalyst-intel-catalyst-intel.vercel.app",
@@ -59,6 +62,7 @@ describe("isAllowedAuthOrigin", () => {
 
 describe("authHostBounceUrl", () => {
   it("returns null on safe hosts", () => {
+    expect(authHostBounceUrl("https://www.marveel.com/login")).toBeNull();
     expect(
       authHostBounceUrl(
         "https://catalyst-intel-catalyst-intel.vercel.app/login",

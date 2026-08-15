@@ -96,7 +96,7 @@ export async function openRouterChatCompletion(options: {
           // Optional but recommended by OpenRouter for rankings / limits.
           "HTTP-Referer":
             process.env.NEXT_PUBLIC_APP_URL?.trim() ||
-            "https://catalyst-intel-catalyst-intel.vercel.app",
+            "https://www.marveel.com",
           "X-Title": APP_NAME,
         },
         body: JSON.stringify({
