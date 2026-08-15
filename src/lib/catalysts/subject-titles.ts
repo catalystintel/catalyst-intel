@@ -1,0 +1,690 @@
+/**
+ * Subject-aware tape titles from extracted keyFacts (see ARTICLE_BY_SUBJECT.md).
+ * Freer than cookie-cutter `{Company} - {Subject}` when real facts exist;
+ * never invents numbers — only uses provided keyFacts / grounded text cues.
+ */
+
+import {
+  earningsQuarterLabel,
+  formatAnalystRatingTitle,
+  formatClinicalTrialTitle,
+  formatEarningsReportTitle,
+  formatForm4InsiderTitle,
+  formatHaltTitle,
+  formatPriceTargetTitle,
+  formatProspectusOfferingTitle,
+  formatSchedule13DTitle,
+  formatSchedule13GTitle,
+  formatShelfRegistrationTitle,
+  form4TitleKindFromSubcategory,
+  resolveDisplayCompanyName,
+  type Form4TitleKind,
+} from "@/lib/catalysts/catalyst-titles";
+import {
+  isEventCategoryKey,
+  type EventCategoryKey,
+} from "@/lib/catalysts/taxonomy";
+
+export type SubjectTitleFact = {
+  label: string;
+  value: string;
+};
+
+export type SubjectTitleInput = {
+  eventCategory?: string | null;
+  subcategory?: string | null;
+  companyName?: string | null;
+  symbol?: string | null;
+  keyFacts?: SubjectTitleFact[] | null;
+  title?: string | null;
+  headline?: string | null;
+  summary?: string | null;
+  /** Halt reason label when already resolved. */
+  haltReason?: string | null;
+  /** Explicit quarter (1–4) when known. */
+  quarter?: number | null;
+  /** Date hint for quarter inference. */
+  dateYmd?: string | null;
+};
+
+function normalizeWs(text: string): string {
+  return text.replace(/\s+/g, " ").trim();
+}
+
+function companyOf(input: SubjectTitleInput): string {
+  return resolveDisplayCompanyName(input.companyName, input.symbol);
+}
+
+function categoryOf(value?: string | null): EventCategoryKey {
+  if (value && isEventCategoryKey(value)) return value;
+  return "other";
+}
+
+function factMap(facts: SubjectTitleFact[]): Map<string, string> {
+  const map = new Map<string, string>();
+  for (const f of facts) {
+    const label = normalizeWs(f.label ?? "");
+    const value = normalizeWs(f.value ?? "");
+    if (!label || !value) continue;
+    map.set(label.toLowerCase(), value);
+  }
+  return map;
+}
+
+function findFact(
+  map: Map<string, string>,
+  ...needles: string[]
+): string | null {
+  for (const [label, value] of map) {
+    const hay = `${label} ${value}`.toLowerCase();
+    if (needles.some((n) => hay.includes(n.toLowerCase()))) return value;
+  }
+  return null;
+}
+
+function findLabeled(
+  map: Map<string, string>,
+  ...exactOrIncludes: string[]
+): string | null {
+  for (const needle of exactOrIncludes) {
+    const lower = needle.toLowerCase();
+    for (const [label, value] of map) {
+      if (label === lower || label.includes(lower)) return value;
+    }
+  }
+  return findFact(map, ...exactOrIncludes);
+}
+
+/** True when a stored title already carries concrete detail beyond a taxonomy chip. */
+export function looksFactEnrichedTitle(
+  title: string | null | undefined,
+): boolean {
+  const t = normalizeWs(title ?? "");
+  if (!t || t.length < 12) return false;
+  // Dollar / percent / share counts / named people cues.
+  if (/\$[\d.,]+\s*(?:[kmb]|mm|bn|billion|million)?/i.test(t)) return true;
+  if (/\b\d+(?:\.\d+)?%/i.test(t)) return true;
+  if (/\b\d[\d,]*(?:\.\d+)?\s*(?:shares?|sh)\b/i.test(t)) return true;
+  if (/—\s*(?:Shelf|Offering|Amends shelf|13[DG]|Structured note)/i.test(t)) {
+    return true;
+  }
+  if (/:\s+[A-Z][a-z]+.+(?:·|\$)/.test(t)) return true; // Form 4 style
+  if (/\b(?:beat|miss)(?:s|ed)?\b/i.test(t) && /\b(?:eps|revenue)\b/i.test(t)) {
+    return true;
+  }
+  if (/\bphase\s*[123]\b/i.test(t)) return true;
+  if (
+    /\b(?:upgraded|downgraded|raises?|cuts?)\b.+\b(?:pt|target|to)\b/i.test(t)
+  ) {
+    return true;
+  }
+  return false;
+}
+
+function earningsTitle(
+  input: SubjectTitleInput,
+  map: Map<string, string>,
+): string {
+  const company = companyOf(input);
+  const q = earningsQuarterLabel(input.quarter, input.dateYmd);
+  const eps = findLabeled(map, "eps", "earnings per share");
+  const surprise = findLabeled(map, "surprise");
+  const revenue = findLabeled(map, "revenue", "sales");
+  const guidance = findLabeled(map, "guidance");
+
+  const beatMiss =
+    surprise?.match(/\b(beat|miss)/i)?.[1] ??
+    eps?.match(/\b(beat|miss)/i)?.[1] ??
+    null;
+
+  if (eps && beatMiss) {
+    const side = beatMiss.toLowerCase() === "beat" ? "beats" : "misses";
+    return `${company} ${q} EPS ${side} (${eps})`;
+  }
+  if (eps && surprise) {
+    return `${company} ${q} EPS ${eps} · surprise ${surprise}`;
+  }
+  if (eps && revenue) {
+    return `${company} ${q} earnings — EPS ${eps}, sales ${revenue}`;
+  }
+  if (guidance && /rais|cut|lower|withdraw|suspend/i.test(guidance)) {
+    return `${company} ${q} guidance update — ${guidance}`;
+  }
+  return formatEarningsReportTitle(q, company);
+}
+
+function dealsTitle(
+  input: SubjectTitleInput,
+  map: Map<string, string>,
+): string {
+  const company = companyOf(input);
+  const value = findLabeled(
+    map,
+    "deal value",
+    "value",
+    "consideration",
+    "amount",
+  );
+  const target = findLabeled(map, "target");
+  const buyer = findLabeled(map, "buyer", "acquirer");
+  const status = findLabeled(map, "status", "close");
+
+  if (target && value) {
+    return `${company} to acquire ${target} for ${value}`;
+  }
+  if (buyer && value) {
+    return `${buyer} to acquire ${company} for ${value}`;
+  }
+  if (value && status) {
+    return `${company} deal ${status.toLowerCase()} — ${value}`;
+  }
+  if (value) {
+    return `${company} announces deal valued at ${value}`;
+  }
+  if (target) {
+    return `${company} announces deal for ${target}`;
+  }
+  return `${company} announces material deal`;
+}
+
+function managementTitle(
+  input: SubjectTitleInput,
+  map: Map<string, string>,
+): string {
+  const company = companyOf(input);
+  const who = findLabeled(map, "officer", "name", "insider");
+  const role = findLabeled(map, "role", "position");
+  const action = findLabeled(map, "appointment", "departure", "action");
+
+  const act =
+    action?.match(/\b(appoint|depart|resign|retire|name)/i)?.[0] ??
+    (action && /depart|resign|retire/i.test(action)
+      ? "Departure"
+      : action && /appoint|name/i.test(action)
+        ? "Appointment"
+        : null);
+
+  if (who && role && act) {
+    const verb = /depart|resign|retire/i.test(act) ? "departs as" : "named";
+    return verb === "named"
+      ? `${company} names ${who} as ${role}`
+      : `${company}: ${who} ${verb} ${role}`;
+  }
+  if (who && role) {
+    return `${company}: ${who} — ${role} change`;
+  }
+  if (role && act) {
+    return `${company} - ${role} Change (${/depart|resign|retire/i.test(act) ? "Departure" : "Appointment"})`;
+  }
+  return `${company} - Executive Change`;
+}
+
+function capitalTitle(
+  input: SubjectTitleInput,
+  map: Map<string, string>,
+): string {
+  const company = companyOf(input);
+  const ticker = input.symbol?.trim().toUpperCase() || company;
+  const amount = findLabeled(map, "amount", "size", "proceeds");
+  const shares = findLabeled(map, "shares");
+  const coupon = findLabeled(map, "coupon");
+  const type = findLabeled(map, "type", "instrument", "facility");
+  const form = findLabeled(map, "form");
+
+  if (type && /structured note/i.test(type) && coupon) {
+    return `${ticker} — Structured note · ${coupon}`;
+  }
+  if (type && /structured note/i.test(type)) {
+    return `${ticker} — Structured note pricing supplement`;
+  }
+  if (type && /shelf/i.test(type) && amount) {
+    const atm = /atm/i.test(type) || findFact(map, "atm");
+    return `${ticker} — Shelf ${amount}${atm ? " (ATM)" : ""}`;
+  }
+  if (form && /^S-3/i.test(form) && amount) {
+    return `${ticker} — Shelf ${amount}`;
+  }
+  if (form && /^S-3/i.test(form)) {
+    return formatShelfRegistrationTitle(company);
+  }
+  if (amount && shares) {
+    return `${ticker} — Offering ${amount} · ${shares}`;
+  }
+  if (amount) {
+    return `${ticker} — Offering ${amount}`;
+  }
+  if (form && /^424B/i.test(form)) {
+    return formatProspectusOfferingTitle(company);
+  }
+  return formatShelfRegistrationTitle(company);
+}
+
+function distressTitle(
+  input: SubjectTitleInput,
+  map: Map<string, string>,
+): string {
+  const company = companyOf(input);
+  const event = findLabeled(map, "bankruptcy", "delist", "event", "risk");
+  const amount = findLabeled(map, "amount", "covenant");
+  if (event && /delist/i.test(event)) {
+    return `${company} - Delisting Risk (Stock Could Lose Its Listing)`;
+  }
+  if (event && /bankrupt/i.test(event)) {
+    return amount
+      ? `${company} bankruptcy filing — ${amount}`
+      : `${company} - Bankruptcy Filing (Equity at Risk)`;
+  }
+  if (amount) return `${company} distress update — ${amount}`;
+  return `${company} - Distress disclosure`;
+}
+
+function restructuringTitle(
+  input: SubjectTitleInput,
+  map: Map<string, string>,
+): string {
+  const company = companyOf(input);
+  const charge = findLabeled(map, "charge", "amount", "severance");
+  const headcount = findLabeled(map, "headcount", "sites");
+  const savings = findLabeled(map, "savings");
+  if (charge && headcount) {
+    return `${company} restructuring — ${charge}, ${headcount}`;
+  }
+  if (charge) return `${company} takes restructuring charge of ${charge}`;
+  if (headcount) return `${company} restructuring — ${headcount}`;
+  if (savings) return `${company} restructuring targeting ${savings}`;
+  return `${company} - Restructuring / Exit Costs`;
+}
+
+function governanceTitle(
+  input: SubjectTitleInput,
+  map: Map<string, string>,
+): string {
+  const company = companyOf(input);
+  const event = findLabeled(
+    map,
+    "auditor",
+    "vote",
+    "control",
+    "board",
+    "event",
+  );
+  if (event && /auditor/i.test(event)) {
+    return `${company} - Auditor Change`;
+  }
+  if (event && /control/i.test(event)) {
+    return `${company} - Change of Control`;
+  }
+  if (event) return `${company} — ${event}`;
+  return `${company} - Governance update`;
+}
+
+function disclosureTitle(
+  input: SubjectTitleInput,
+  map: Map<string, string>,
+): string {
+  const company = companyOf(input);
+  const event = findLabeled(map, "event", "item", "fact");
+  if (event && event.length >= 8) return `${company} — ${event}`;
+  return `${company} - Material disclosure`;
+}
+
+function haltTitle(input: SubjectTitleInput, map: Map<string, string>): string {
+  const company = companyOf(input);
+  const reason =
+    input.haltReason ||
+    findLabeled(map, "reason", "halt", "status") ||
+    "Reason unavailable";
+  return formatHaltTitle(company, reason, { reasonIsLabel: true });
+}
+
+function insiderTitle(
+  input: SubjectTitleInput,
+  map: Map<string, string>,
+): string {
+  const company = companyOf(input);
+  const kind: Form4TitleKind = form4TitleKindFromSubcategory(input.subcategory);
+  const who = findLabeled(map, "insider", "officer", "name");
+  const shares = findLabeled(map, "shares");
+  const value = findLabeled(map, "value");
+  const direction = findLabeled(map, "direction", "transaction", "buy", "sell");
+
+  const side =
+    kind === "buy" || /\bbuy\b/i.test(direction ?? "")
+      ? "buy"
+      : kind === "sell" || /\bsell|sale\b/i.test(direction ?? "")
+        ? "sale"
+        : kind === "mixed"
+          ? "buy and sell"
+          : null;
+
+  const detail = value || shares;
+  if (who && side && detail) {
+    return `${company} insider ${side}: ${who} · ${detail}`;
+  }
+  if (who && side) {
+    return `${company} insider ${side}: ${who}`;
+  }
+  if (side && detail) {
+    return `${company} insider ${side} · ${detail}`;
+  }
+  return formatForm4InsiderTitle(kind, company);
+}
+
+function regulatoryTitle(
+  input: SubjectTitleInput,
+  map: Map<string, string>,
+): string {
+  const company = companyOf(input);
+  const product = findLabeled(map, "product", "indication");
+  const outcome = findLabeled(map, "outcome", "approval", "fda", "agency");
+
+  if (outcome && /approv/i.test(outcome) && product) {
+    return `${company} wins FDA approval for ${product}`;
+  }
+  if (outcome && /approv/i.test(outcome)) {
+    return `${company} Receives FDA Approval!`;
+  }
+  if (outcome && /crl|complete response/i.test(outcome)) {
+    return product
+      ? `${company} receives CRL for ${product}`
+      : `${company} receives FDA Complete Response Letter`;
+  }
+  if (product && outcome) {
+    return `${company}: ${outcome} — ${product}`;
+  }
+  if (outcome) return `${company}: ${outcome}`;
+  return `${company} Receives FDA Approval!`;
+}
+
+function clinicalTitle(
+  input: SubjectTitleInput,
+  map: Map<string, string>,
+): string {
+  const company = companyOf(input);
+  const phase = findLabeled(map, "phase");
+  const status = findLabeled(map, "status", "result");
+  const condition = findLabeled(map, "condition", "indication");
+
+  if (phase && status && condition) {
+    return `${company} ${phase} ${status} in ${condition}`;
+  }
+  if (phase && status) {
+    return `${company} ${phase} trial ${status}`;
+  }
+  if (phase && condition) {
+    return `${company} ${phase} study — ${condition}`;
+  }
+  if (status && condition) {
+    return `${company} clinical update — ${condition} (${status})`;
+  }
+  return formatClinicalTrialTitle(company);
+}
+
+function macroTitle(
+  input: SubjectTitleInput,
+  map: Map<string, string>,
+): string {
+  const print = findLabeled(map, "print", "event");
+  const actual = findLabeled(map, "actual");
+  const estimate = findLabeled(map, "estimate");
+  const period = findLabeled(map, "period", "month");
+
+  const base =
+    print ||
+    (input.subcategory === "cpi"
+      ? "CPI"
+      : input.subcategory === "nfp"
+        ? "Jobs Report (NFP)"
+        : input.subcategory === "fomc"
+          ? "FOMC Rate Decision"
+          : null);
+
+  if (base && /fomc/i.test(base)) {
+    return actual ? `FOMC Rate Decision — ${actual}` : "FOMC Rate Decision";
+  }
+  if (base && actual && estimate) {
+    const month = period ? ` — ${period}` : "";
+    return `${base}${month}: ${actual} vs ${estimate} est`;
+  }
+  if (base && actual) {
+    const month = period ? ` — ${period}` : "";
+    return `${base}${month}: ${actual}`;
+  }
+  if (base && period) return `${base} — ${period}`;
+  return base || "Macro print";
+}
+
+function analystTitle(
+  input: SubjectTitleInput,
+  map: Map<string, string>,
+): string {
+  const company = companyOf(input);
+  const firm = findLabeled(map, "firm");
+  const action = findLabeled(map, "action", "upgrade", "downgrade", "rating");
+  const target = findLabeled(map, "target", "pt", "price target");
+
+  if (firm && action && target) {
+    return `${company}: ${firm} ${action} · PT ${target}`;
+  }
+  if (firm && action) {
+    return `${company}: ${firm} ${action}`;
+  }
+  if (action && target) {
+    return `${company} ${action} — PT ${target}`;
+  }
+  if (target) {
+    return `${company} price target update — ${target}`;
+  }
+  if (action && /upgrade|downgrade|rating/i.test(action)) {
+    return formatAnalystRatingTitle(company);
+  }
+  return formatPriceTargetTitle(company);
+}
+
+function cyberTitle(
+  input: SubjectTitleInput,
+  map: Map<string, string>,
+): string {
+  const company = companyOf(input);
+  const incident = findLabeled(map, "incident", "event", "type");
+  const impact = findLabeled(map, "impact", "system", "data");
+  if (incident && impact) {
+    return `${company} cybersecurity incident — ${impact}`;
+  }
+  if (incident) return `${company} discloses ${incident}`;
+  return `${company} - Material Cybersecurity Incident`;
+}
+
+function newsTitle(input: SubjectTitleInput, map: Map<string, string>): string {
+  const company = companyOf(input);
+  const stored =
+    normalizeWs(input.title ?? "") || normalizeWs(input.headline ?? "");
+  if (stored && looksFactEnrichedTitle(stored)) return stored;
+  if (
+    stored &&
+    stored.length >= 16 &&
+    !/^(?:news|press release)$/i.test(stored)
+  ) {
+    return stored;
+  }
+  const event = findLabeled(map, "event", "headline", "detail");
+  if (event) return `${company} — ${event}`;
+  return stored || `${company} — Company news`;
+}
+
+function otherTitle(
+  input: SubjectTitleInput,
+  map: Map<string, string>,
+): string {
+  const company = companyOf(input);
+  const event = findLabeled(map, "event", "fact", "detail");
+  if (event) return `${company} — ${event}`;
+  const stored =
+    normalizeWs(input.title ?? "") || normalizeWs(input.headline ?? "");
+  return stored || `${company} — Market event`;
+}
+
+function ownershipTitle(
+  input: SubjectTitleInput,
+  map: Map<string, string>,
+): string | null {
+  const company = companyOf(input);
+  const ticker = input.symbol?.trim().toUpperCase() || company;
+  const pct = findLabeled(map, "ownership", "stake", "%");
+  const type = findLabeled(map, "type", "form");
+  const form = findLabeled(map, "form") || "";
+  const is13d =
+    input.subcategory === "13d" ||
+    /13d/i.test(form) ||
+    /13d|active ownership/i.test(type ?? "");
+  const is13g =
+    input.subcategory === "13g" ||
+    /13g/i.test(form) ||
+    /13g|passive ownership/i.test(type ?? "");
+
+  if (is13d) {
+    return pct
+      ? `${ticker} — 13D stake ~${pct}`
+      : formatSchedule13DTitle(company);
+  }
+  if (is13g) {
+    return pct
+      ? `${ticker} — 13G stake ~${pct}`
+      : formatSchedule13GTitle(company);
+  }
+  return null;
+}
+
+/**
+ * Build a subject-distinct professional title from extracted facts.
+ * Returns null when facts are too thin — callers keep ground-rule / stored titles.
+ */
+export function buildSubjectTitle(input: SubjectTitleInput): string | null {
+  const facts = (input.keyFacts ?? [])
+    .map((f) => ({
+      label: normalizeWs(f.label ?? ""),
+      value: normalizeWs(f.value ?? ""),
+    }))
+    .filter((f) => f.label && f.value);
+
+  const map = factMap(facts);
+  const category = categoryOf(input.eventCategory);
+  const hasUsefulFacts = facts.length > 0;
+
+  // Prefer keeping an already fact-rich stored title (enrich path wrote it).
+  const stored = normalizeWs(input.title ?? "");
+  if (looksFactEnrichedTitle(stored)) {
+    // Still allow ownership/capital fact builders to win when richer.
+    if (
+      (category === "capital" || category === "deals") &&
+      hasUsefulFacts &&
+      findLabeled(map, "amount", "coupon", "ownership")
+    ) {
+      // fall through to builders
+    } else {
+      return stored;
+    }
+  }
+
+  // 13D/G often classified under deals — try ownership first when form says so.
+  const ownership = ownershipTitle(input, map);
+  if (
+    ownership &&
+    (input.subcategory === "13d" ||
+      input.subcategory === "13g" ||
+      /13[DG]/i.test(findLabeled(map, "form") ?? ""))
+  ) {
+    return ownership;
+  }
+
+  if (!hasUsefulFacts) {
+    // Still produce subject-distinct fallbacks for a few high-signal chips.
+    switch (category) {
+      case "trading_halt":
+        return haltTitle(input, map);
+      case "earnings":
+        return formatEarningsReportTitle(
+          earningsQuarterLabel(input.quarter, input.dateYmd),
+          companyOf(input),
+        );
+      case "insider":
+        return formatForm4InsiderTitle(
+          form4TitleKindFromSubcategory(input.subcategory),
+          companyOf(input),
+        );
+      default:
+        return null;
+    }
+  }
+
+  switch (category) {
+    case "earnings":
+      return earningsTitle(input, map);
+    case "deals":
+      return ownership ?? dealsTitle(input, map);
+    case "management":
+      return managementTitle(input, map);
+    case "capital":
+      return capitalTitle(input, map);
+    case "distress":
+      return distressTitle(input, map);
+    case "restructuring":
+      return restructuringTitle(input, map);
+    case "governance":
+      return governanceTitle(input, map);
+    case "disclosure":
+      return disclosureTitle(input, map);
+    case "trading_halt":
+      return haltTitle(input, map);
+    case "insider":
+      return insiderTitle(input, map);
+    case "regulatory":
+      return regulatoryTitle(input, map);
+    case "clinical":
+      return clinicalTitle(input, map);
+    case "macro":
+      return macroTitle(input, map);
+    case "analyst":
+      return analystTitle(input, map);
+    case "cyber":
+      return cyberTitle(input, map);
+    case "news":
+      return newsTitle(input, map);
+    case "other":
+    default:
+      return otherTitle(input, map);
+  }
+}
+
+/**
+ * Display-path helper: prefer subject title when it adds concrete facts
+ * over a taxonomy / ground-rule chip.
+ */
+export function preferSubjectTitle(
+  input: SubjectTitleInput,
+  fallback: string,
+): string {
+  const built = buildSubjectTitle(input);
+  if (!built) return fallback;
+  const fb = normalizeWs(fallback);
+  if (!fb) return built;
+  // Subject title wins when it looks more specific than the fallback chip.
+  if (looksFactEnrichedTitle(built) && !looksFactEnrichedTitle(fb)) {
+    return built;
+  }
+  if (built.length > fb.length + 8 && hasUsefulDetail(built, fb)) {
+    return built;
+  }
+  return looksFactEnrichedTitle(built) ? built : fallback;
+}
+
+function hasUsefulDetail(candidate: string, fallback: string): boolean {
+  const c = candidate.toLowerCase();
+  const f = fallback.toLowerCase();
+  if (c === f) return false;
+  return (
+    /\$|\d+%|shares|stake|eps|phase|coupon|offering|shelf|insider/i.test(
+      candidate,
+    ) && !/unknown company/i.test(candidate)
+  );
+}

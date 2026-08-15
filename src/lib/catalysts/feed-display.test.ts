@@ -495,6 +495,63 @@ describe("titleLine", () => {
     ).toBe("Apple Inc. price target update");
   });
 
+  it("prefers fact-enriched subject titles over ground-rule chips", () => {
+    expect(
+      titleLine(
+        base({
+          type: "4",
+          subcategory: "insider_buy",
+          eventCategory: "insider",
+          headline: "Insider buy",
+          title: "Acme Corp — Form 4 filing",
+          companyName: "Acme Corp",
+          keyFacts: [
+            { label: "Direction", value: "Buy" },
+            { label: "Insider", value: "Jane Doe" },
+            { label: "Value", value: "$1.2M" },
+          ],
+        }),
+      ),
+    ).toBe("Acme Corp insider buy: Jane Doe · $1.2M");
+
+    expect(
+      titleLine(
+        base({
+          type: "S-3",
+          subcategory: "s3",
+          eventCategory: "capital",
+          headline: "Shelf registration (S-3)",
+          title: "Acme Corp — S-3 filing",
+          companyName: "Acme Corp",
+          symbol: "ACME",
+          keyFacts: [
+            { label: "Form", value: "S-3" },
+            { label: "Type", value: "Shelf registration" },
+            { label: "Amount", value: "$500M" },
+          ],
+        }),
+      ),
+    ).toBe("ACME — Shelf $500M");
+
+    expect(
+      titleLine(
+        base({
+          type: "SC 13D",
+          subcategory: "13d",
+          eventCategory: "deals",
+          headline: "Beneficial ownership (13D)",
+          title: "Acme Corp — SC 13D filing",
+          companyName: "Acme Corp",
+          symbol: "ACME",
+          keyFacts: [
+            { label: "Form", value: "SC 13D" },
+            { label: "Ownership", value: "9.8%" },
+          ],
+        }),
+      ),
+    ).toBe("ACME — 13D stake ~9.8%");
+  });
+
   it("prefers ground-rule Halt / FDA / Earnings titles over generic chips", () => {
     expect(
       titleLine(
