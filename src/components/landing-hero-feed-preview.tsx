@@ -15,7 +15,7 @@ import { cn } from "@/lib/utils";
  * card instead of spanning the full page width.
  */
 const PREVIEW_GRID =
-  "grid-cols-[4.5rem_minmax(0,1fr)] sm:grid-cols-[5rem_minmax(0,1fr)_156px] lg:grid-cols-[5rem_minmax(0,1fr)_160px_minmax(84px,max-content)]";
+  "grid-cols-[4rem_minmax(0,1fr)] sm:grid-cols-[4.5rem_minmax(0,1fr)_140px] lg:grid-cols-[4.5rem_minmax(0,1fr)_148px_minmax(72px,max-content)]";
 
 const VISIBLE_ROWS = 6;
 const STREAM_INTERVAL_MS = 4000;
@@ -211,7 +211,7 @@ function DemoFeedRow({
     <article
       role="row"
       className={cn(
-        "feed-row grid min-h-[56px] items-center gap-2 border-b border-[var(--desk-border)] px-4 py-3 last:border-b-0 sm:gap-3 sm:px-5 sm:py-0",
+        "feed-row grid min-h-[34px] items-center gap-1.5 border-b border-[var(--desk-border)] px-3 py-1 last:border-b-0 sm:gap-2 sm:px-4 sm:py-1",
         animateIn && "row-flash",
         PREVIEW_GRID,
       )}
@@ -233,7 +233,7 @@ function DemoFeedRow({
             {row.title}
           </span>
         </div>
-        <div className="mt-1.5 flex items-center gap-2 md:hidden">
+        <div className="mt-0.5 flex items-center gap-2 md:hidden">
           <CategoryChip highPriority={row.highPriority}>
             {row.category}
           </CategoryChip>
@@ -241,7 +241,7 @@ function DemoFeedRow({
             {row.timeShort}
           </time>
         </div>
-        <div className="mt-2 flex flex-wrap items-center gap-1.5 lg:hidden">
+        <div className="mt-1 flex flex-wrap items-center gap-1 lg:hidden">
           <PreviewActionChip variant="primary">
             <BookOpen className="size-3" />
             Details
@@ -350,7 +350,7 @@ export function LandingHeroFeedPreview() {
         <div
           role="row"
           className={cn(
-            "desk-caps grid h-10 items-center gap-2 border-b border-[var(--desk-border-strong)] bg-[var(--desk-header)] px-4 font-mono text-[0.62rem] font-medium text-[var(--desk-text-dim)] uppercase shadow-[0_1px_0_rgba(0,0,0,0.35)] sm:gap-3 sm:px-5",
+            "desk-caps grid h-8 items-center gap-1.5 border-b border-[var(--desk-border-strong)] bg-[var(--desk-header)] px-3 font-mono text-[0.58rem] font-medium text-[var(--desk-text-dim)] uppercase shadow-[0_1px_0_rgba(0,0,0,0.35)] sm:gap-2 sm:px-4",
             PREVIEW_GRID,
           )}
         >
