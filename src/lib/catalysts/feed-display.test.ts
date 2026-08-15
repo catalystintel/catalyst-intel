@@ -434,7 +434,7 @@ describe("titleLine", () => {
           ],
         }),
       ),
-    ).toBe("C — Structured note · 8.67%");
+    ).toBe("Citigroup Inc prices structured notes · 8.67%");
 
     expect(
       titleLine(
@@ -574,6 +574,100 @@ describe("titleLine", () => {
         }),
       ),
     ).toBe("ACME — 13D stake ~9.8%");
+  });
+
+  it("uses professional subject voices for partnership / M&A / regulatory / clinical chips", () => {
+    expect(
+      titleLine(
+        base({
+          type: "8-K",
+          eventCategory: "deals",
+          headline: "Material agreement",
+          title:
+            "Acme Corp - New Deal Announced (Major Contract or Partnership)",
+          companyName: "Acme Corp",
+          symbol: "ACME",
+          keyFacts: [
+            { label: "Partner", value: "BioCo" },
+            { label: "Nature", value: "Oncology collaboration" },
+          ],
+          summary: "Acme announces partnership and collaboration with BioCo.",
+        }),
+      ),
+    ).toMatch(/partners with BioCo|partnership with BioCo/i);
+
+    expect(
+      titleLine(
+        base({
+          type: "8-K",
+          eventCategory: "deals",
+          headline: "Acquisition",
+          title:
+            "Acme Corp - New Deal Announced (Major Contract or Partnership)",
+          companyName: "Acme Corp",
+          symbol: "ACME",
+          keyFacts: [
+            { label: "Target", value: "Rival Inc" },
+            { label: "Deal value", value: "$2.0B" },
+          ],
+        }),
+      ),
+    ).toBe("Acme Corp to acquire Rival Inc for $2.0B");
+
+    expect(
+      titleLine(
+        base({
+          type: "8-K",
+          eventCategory: "regulatory",
+          headline: "Regulatory",
+          title: "Acme Corp - Regulatory Update",
+          companyName: "Acme Corp",
+          symbol: "ACME",
+          keyFacts: [
+            { label: "Agency", value: "FDA" },
+            { label: "Product", value: "DrugX" },
+            { label: "Outcome", value: "Approval / clearance" },
+          ],
+          summary: "Acme receives FDA approval for DrugX.",
+        }),
+      ),
+    ).toMatch(/FDA approval for DrugX|wins FDA approval/i);
+
+    expect(
+      titleLine(
+        base({
+          type: "Clinical",
+          eventCategory: "clinical",
+          headline: "Clinical Trial",
+          title: "BioCo - Clinical Trial",
+          companyName: "BioCo",
+          symbol: "BIO",
+          keyFacts: [
+            { label: "Phase", value: "Phase 3" },
+            { label: "Result", value: "Meets primary endpoint" },
+            { label: "Condition", value: "NSCLC" },
+          ],
+        }),
+      ),
+    ).toMatch(/Phase 3|primary endpoint|NSCLC/i);
+
+    expect(
+      titleLine(
+        base({
+          type: "S-3",
+          eventCategory: "capital",
+          headline: "Shelf Registration (S-3)",
+          title: "Acme Corp - Shelf Registration (S-3)",
+          companyName: "Acme Corp",
+          symbol: "ACME",
+          keyFacts: [
+            { label: "Form", value: "S-3" },
+            { label: "Type", value: "Shelf registration" },
+            { label: "Amount", value: "$500M" },
+          ],
+        }),
+      ),
+    ).toBe("Acme Corp files $500M shelf registration");
   });
 
   it("prefers ground-rule Halt / FDA / Earnings titles over generic chips", () => {

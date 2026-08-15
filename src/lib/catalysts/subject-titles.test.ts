@@ -297,7 +297,13 @@ describe("looksFactEnrichedTitle + preferSubjectTitle", () => {
     ).toBe(true);
     expect(
       looksFactEnrichedTitle("Acme Corp files shelf registration (S-3)"),
-    ).toBe(false);
+    ).toBe(true);
+    expect(
+      looksFactEnrichedTitle("Acme announces partnership with BioCo"),
+    ).toBe(true);
+    expect(looksFactEnrichedTitle("Acme Corp - Shelf Registration (S-3)")).toBe(
+      false,
+    );
   });
 
   it("prefers enriched subject title over ground-rule chip", () => {
