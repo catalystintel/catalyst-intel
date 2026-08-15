@@ -13,33 +13,35 @@ import {
 import { performanceFromCandles } from "./range-performance";
 
 describe("chart-range", () => {
-  it("validates range keys (1m minutes vs 1M month stay distinct)", () => {
+  it("validates range keys (30m minutes vs 1M month stay distinct)", () => {
     expect(isChartRangeKey("1M")).toBe(true);
-    expect(isChartRangeKey("1m")).toBe(true);
-    expect(isChartRangeKey("5m")).toBe(true);
-    expect(isChartRangeKey("10m")).toBe(true);
+    expect(isChartRangeKey("1m")).toBe(false);
+    expect(isChartRangeKey("5m")).toBe(false);
+    expect(isChartRangeKey("10m")).toBe(false);
     expect(isChartRangeKey("30m")).toBe(true);
     expect(isChartRangeKey("1H")).toBe(true);
     expect(isChartRangeKey("2Y")).toBe(false);
   });
 
   it("uses professional display labels without collapsing minute/month keys", () => {
-    expect(chartRangeDef("1m").label).toBe("1 Min");
-    expect(chartRangeDef("5m").label).toBe("5 Min");
-    expect(chartRangeDef("10m").label).toBe("10 Min");
     expect(chartRangeDef("30m").label).toBe("30 Min");
     expect(chartRangeDef("1H").label).toBe("1H");
     expect(chartRangeDef("1M").label).toBe("1 Mo");
     expect(chartRangeDef("3M").label).toBe("3 Mo");
     expect(chartRangeDef("6M").label).toBe("6 Mo");
+    // Shortest chip is 30 Min — no 1/5/10 Min.
+    expect(CHART_RANGES[0]?.key).toBe("30m");
+    expect(CHART_RANGES.some((r) => r.key === "1m")).toBe(false);
+    expect(CHART_RANGES.some((r) => r.key === "5m")).toBe(false);
+    expect(CHART_RANGES.some((r) => r.key === "10m")).toBe(false);
     // Chip labels must not equal ambiguous bare "1M" for both units.
     const labels = CHART_RANGES.map((r) => r.label);
     expect(labels.filter((l) => l === "1M")).toHaveLength(0);
     expect(new Set(labels).size).toBe(labels.length);
   });
 
-  it("parses range params without collapsing 1m into 1M", () => {
-    expect(parseChartRangeKey("1m")).toBe("1m");
+  it("parses range params without collapsing 30m into 1M", () => {
+    expect(parseChartRangeKey("1m")).toBeNull();
     expect(parseChartRangeKey("1M")).toBe("1M");
     expect(parseChartRangeKey("1d")).toBe("1D");
     expect(parseChartRangeKey("30M")).toBe("30m");
@@ -63,18 +65,6 @@ describe("chart-range", () => {
     expect(isIntradayMinuteRange("30m")).toBe(true);
     expect(isIntradayMinuteRange("1D")).toBe(false);
 
-    expect(chartRangeWindow("1m", now)).toEqual({
-      fromSec: toSec - 60,
-      toSec,
-    });
-    expect(chartRangeWindow("5m", now)).toEqual({
-      fromSec: toSec - 5 * 60,
-      toSec,
-    });
-    expect(chartRangeWindow("10m", now)).toEqual({
-      fromSec: toSec - 10 * 60,
-      toSec,
-    });
     expect(chartRangeWindow("30m", now)).toEqual({
       fromSec: toSec - 30 * 60,
       toSec,
@@ -84,7 +74,7 @@ describe("chart-range", () => {
       toSec,
     });
 
-    for (const key of ["1m", "5m", "10m", "30m", "1H"] as const) {
+    for (const key of ["30m", "1H"] as const) {
       expect(finnhubResolutionForRange(key)).toBe("1");
       expect(polygonAggForRange(key)).toEqual({
         multiplier: 1,
