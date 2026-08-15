@@ -129,8 +129,6 @@
   --desk-type-card-title: 1rem; /* 16px */
   --desk-type-body: 0.875rem; /* 14px */
   --desk-type-data: 0.8125rem; /* 13px */
-  /* Live tape headline — denser than card-title so more rows fit (pro blotter). */
-  --desk-type-tape-title: 0.8125rem; /* 13px */
   --radius: 0.375rem;
   color-scheme: dark;
 }
@@ -686,13 +684,12 @@
     line-height: 1.35;
   }
 
-  /* Blotter primary title lines — compact scan weight (pro-terminal density). */
+  /* Blotter primary title lines — card-title size, bold for scanability. */
   .desk-arial .feed-article-title,
   .feed-article-title {
-    font-size: var(--desk-type-tape-title);
-    font-weight: 600;
-    letter-spacing: -0.01em;
-    line-height: 1.25;
+    font-size: var(--desk-type-card-title);
+    font-weight: 700;
+    letter-spacing: -0.015em;
   }
 
   /* Marketing hero / auth brand: full weight + tight tracking. */

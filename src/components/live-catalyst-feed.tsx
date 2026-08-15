@@ -128,9 +128,10 @@ type Presence = "active" | "blurred" | "hidden";
  * Symbol leads as the row index. No Event / Source primary columns.
  * Time = event occurrence in the viewer's local timezone.
  *
- * Density targets a Benzinga Pro–style tape: short vertical rhythm so more
- * catalysts fit on screen. Title stays the scan column; Time/Actions stay
- * fixed. Clock + day compress to one line; full stamp stays on hover title.
+ * Time is two lines (`3:58 PM` / `Jul 29, 2026`) so the stamp stays inside
+ * its track; zone stays on the hover title. Actions track fits Details +
+ * Dismiss + Watch; if space is tight, secondary actions clip first so the
+ * primary Details label never reads as “ETAILS”.
  * Desktop Action buttons stay hover/focus/selected-only so the tape stays
  * quiet until the row is engaged.
  */
@@ -138,10 +139,10 @@ type Presence = "active" | "blurred" | "hidden";
 // Tracks are sized for laptop (~1280–1512) without a right rail; avoid large
 // minmax floors that force horizontal overflow when the docked split is open.
 const FEED_GRID =
-  "grid-cols-[4.25rem_4.75rem_minmax(0,1fr)] sm:grid-cols-[4.5rem_5rem_minmax(0,1fr)_5.75rem] lg:grid-cols-[4.5rem_5rem_minmax(0,1fr)_5.75rem_13.5rem]";
+  "grid-cols-[4.75rem_5.5rem_minmax(0,1fr)] sm:grid-cols-[5rem_5.75rem_minmax(0,1fr)_6.5rem] lg:grid-cols-[5rem_5.75rem_minmax(0,1fr)_6.5rem_15rem]";
 /** Denser tape columns while the split panel steals horizontal space. */
 const FEED_GRID_SPLIT =
-  "grid-cols-[4rem_4.5rem_minmax(0,1fr)] sm:grid-cols-[4rem_4.5rem_minmax(0,1fr)] xl:grid-cols-[4rem_4.5rem_minmax(0,1fr)_5.25rem]";
+  "grid-cols-[4.5rem_5.25rem_minmax(0,1fr)] sm:grid-cols-[4.5rem_5.25rem_minmax(0,1fr)] xl:grid-cols-[4.5rem_5.25rem_minmax(0,1fr)_5.75rem]";
 
 function readPresence(): Presence {
   if (typeof document === "undefined") return "active";
@@ -1905,7 +1906,7 @@ function CatalystFeedList({
       <div
         role="row"
         className={cn(
-          "feed-sticky-cols desk-caps sticky top-0 z-10 grid h-8 items-center gap-x-1.5 gap-y-0 border-b border-[var(--desk-border)] px-3 font-mono text-[0.58rem] font-medium text-[var(--desk-text-muted)] uppercase sm:gap-x-2 sm:px-4 lg:gap-x-3",
+          "feed-sticky-cols desk-caps sticky top-0 z-10 grid h-10 items-center gap-x-2 gap-y-2 border-b border-[var(--desk-border)] px-4 font-mono text-[0.62rem] font-medium text-[var(--desk-text-muted)] uppercase sm:gap-x-3 sm:px-5 lg:gap-x-4",
           feedGrid,
         )}
       >
@@ -2003,7 +2004,7 @@ function CatalystFeedList({
                 }
               }}
               className={cn(
-                "feed-row group relative grid min-h-[36px] cursor-pointer items-center gap-x-1.5 gap-y-1 border-b border-[var(--desk-border)] px-3 py-1.5 transition-colors duration-150 outline-none sm:min-h-[34px] sm:gap-x-2 sm:px-4 sm:py-1 lg:gap-x-3",
+                "feed-row group relative grid min-h-[56px] cursor-pointer items-center gap-x-2 gap-y-2 border-b border-[var(--desk-border)] px-4 py-3 transition-colors duration-150 outline-none sm:min-h-[64px] sm:gap-x-3 sm:px-5 sm:py-1.5 lg:gap-x-4",
                 feedGrid,
                 "hover:bg-[var(--desk-overlay-soft)] focus-visible:bg-[var(--desk-overlay-soft)] focus-visible:shadow-[inset_2px_0_0_var(--desk-live)]",
                 "hover:shadow-[inset_2px_0_0_rgba(240,193,75,0.35)]",
@@ -2046,7 +2047,7 @@ function CatalystFeedList({
                   sourceName={sourceName}
                 />
                 {/* Mobile: Time under Title (Symbol is the leading index col) */}
-                <div className="mt-0.5 flex flex-col gap-0.5 sm:hidden">
+                <div className="mt-1.5 flex flex-col gap-1 sm:hidden">
                   <time
                     dateTime={catalyst.timestamp}
                     className="desk-data font-medium tracking-tight whitespace-nowrap text-[var(--desk-text-muted)]"
@@ -2056,7 +2057,7 @@ function CatalystFeedList({
                 </div>
                 {/* Touch: always-visible actions below meta (never same-line overlap). */}
                 <div
-                  className="mt-1 flex flex-wrap items-center gap-1 lg:hidden"
+                  className="mt-2 flex flex-wrap items-center gap-1.5 lg:hidden"
                   onClick={(e) => e.stopPropagation()}
                   onKeyDown={(e) => e.stopPropagation()}
                 >
@@ -2162,7 +2163,7 @@ function CatalystFeedList({
         {hasMore ? (
           <div
             ref={sentinelRef}
-            className="flex min-h-[36px] items-center justify-center py-2"
+            className="flex min-h-[48px] items-center justify-center py-3"
             aria-hidden
           >
             {loadingMore ? (
@@ -2188,7 +2189,7 @@ function FeedSessionPct({
   ) {
     return (
       <span
-        className="desk-data inline-flex items-center font-mono text-[0.65rem] tracking-tight text-[var(--desk-text-dim)] tabular-nums"
+        className="desk-data inline-flex items-center font-mono text-[0.7rem] tracking-tight text-[var(--desk-text-dim)] tabular-nums"
         aria-hidden
       >
         —
@@ -2200,7 +2201,7 @@ function FeedSessionPct({
   return (
     <span
       className={cn(
-        "desk-data inline-flex items-center gap-0.5 font-mono text-[0.65rem] font-semibold tracking-tight tabular-nums",
+        "desk-data inline-flex items-center gap-0.5 font-mono text-[0.7rem] font-semibold tracking-tight tabular-nums",
         up === true && "text-[var(--desk-positive)]",
         up === false && "text-[var(--desk-negative)]",
         up == null && "text-[var(--desk-text-muted)]",
@@ -2221,7 +2222,7 @@ function FeedSessionPct({
   );
 }
 
-/** Compact local event stamp — clock · day on one line (full stamp on title). */
+/** Two-line local event stamp — clock, then calendar day (zone on title). */
 function FeedTimeStamp({ iso }: { iso: string }) {
   const parts = formatEventTimeParts(iso);
   if (!parts) {
@@ -2237,11 +2238,13 @@ function FeedTimeStamp({ iso }: { iso: string }) {
   return (
     <time
       dateTime={iso}
-      className="desk-data block min-w-0 truncate font-medium tracking-tight whitespace-nowrap text-[var(--desk-text-muted)]"
+      className="desk-data block min-w-0 font-medium tracking-tight text-[var(--desk-text-muted)]"
       title={formatTimeDate(iso)}
     >
-      <span className="tabular-nums">{parts.clock}</span>
-      <span className="text-[var(--desk-text-dim)]"> · {parts.day}</span>
+      <span className="block truncate whitespace-nowrap">{parts.clock}</span>
+      <span className="mt-0.5 block truncate text-[0.92em] whitespace-nowrap text-[var(--desk-text-dim)]">
+        {parts.day}
+      </span>
     </time>
   );
 }
@@ -2379,7 +2382,7 @@ function FeedActionButton({
         disabled={disabled}
         onClick={onClick}
         className={cn(
-          "inline-flex shrink-0 items-center gap-0.5 rounded-sm px-1.5 py-0 font-mono text-[0.6rem] font-semibold tracking-wide uppercase transition-[background-color,border-color,color,filter,opacity] duration-100",
+          "inline-flex shrink-0 items-center gap-1 rounded-sm px-1.5 py-0.5 font-mono text-[0.65rem] font-semibold tracking-wide uppercase transition-[background-color,border-color,color,filter,opacity] duration-100",
           variant === "primary"
             ? "bg-[var(--desk-live)] text-[var(--desk-accent-fg)] hover:brightness-110"
             : "border border-[var(--desk-border-strong)] text-[var(--desk-text-muted)] hover:border-[var(--desk-text-dim)] hover:bg-[var(--desk-overlay-strong)] hover:text-[var(--desk-text)]",
@@ -2431,7 +2434,7 @@ function WatchAction({
         onToggleSaved={onToggleSaved}
         onCreateNew={onCreateNew}
         className={cn(
-          "inline-flex shrink-0 items-center gap-0.5 rounded-sm px-1.5 py-0 font-mono text-[0.6rem] font-semibold tracking-wide uppercase transition-[background-color,border-color,color,filter,opacity] duration-100",
+          "inline-flex shrink-0 items-center gap-1 rounded-sm px-1.5 py-0.5 font-mono text-[0.65rem] font-semibold tracking-wide uppercase transition-[background-color,border-color,color,filter,opacity] duration-100",
           onWatchlist
             ? "border border-[var(--desk-live)]/50 bg-[var(--desk-live)]/10 text-[var(--desk-live)] hover:bg-[var(--desk-live)]/20"
             : "border border-[var(--desk-border-strong)] text-[var(--desk-text-muted)] hover:border-[var(--desk-text-dim)] hover:bg-[var(--desk-overlay-strong)] hover:text-[var(--desk-text)]",
