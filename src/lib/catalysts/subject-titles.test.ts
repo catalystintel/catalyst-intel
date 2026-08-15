@@ -458,6 +458,47 @@ describe("looksFactEnrichedTitle + preferSubjectTitle", () => {
     ).toBe("BioCo reports positive topline data from Phase 3 KEYNOTE study");
   });
 
+  it("upgrades existing stored titles via case engine on read", () => {
+    expect(
+      buildSubjectTitle({
+        eventCategory: "capital",
+        companyName: "Acme Corp",
+        type: "S-3",
+        title: "Acme Corp files $500M shelf registration",
+        keyFacts: [
+          { label: "Form", value: "S-3" },
+          { label: "Amount", value: "$500M" },
+          { label: "Type", value: "Shelf registration" },
+        ],
+      }),
+    ).toBe("Acme Corp Announces $500M Shelf Registration");
+
+    expect(
+      buildSubjectTitle({
+        eventCategory: "deals",
+        companyName: "Acme Corp",
+        title: "Acme Corp to acquire Rival Inc for $2.0B",
+        keyFacts: [
+          { label: "Target", value: "Rival Inc" },
+          { label: "Deal value", value: "$2.0B" },
+        ],
+      }),
+    ).toBe("Acme Corp Agrees to Acquire Rival Inc for $2.0B");
+
+    expect(
+      buildSubjectTitle({
+        eventCategory: "regulatory",
+        companyName: "Acme Corp",
+        title: "Acme Corp wins FDA approval for DrugX",
+        keyFacts: [
+          { label: "Agency", value: "FDA" },
+          { label: "Outcome", value: "approval" },
+          { label: "Product", value: "DrugX" },
+        ],
+      }),
+    ).toBe("FDA Approves Acme Corp's DrugX");
+  });
+
   it("builds titles from fetch type/items/summary without keyFacts", () => {
     expect(
       buildSubjectTitle({
