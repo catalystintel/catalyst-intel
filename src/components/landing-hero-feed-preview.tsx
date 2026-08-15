@@ -53,7 +53,7 @@ const DEMO_POOL: DemoRow[] = [
   },
   {
     symbol: "AMD",
-    title: "AMD - New Deal Announced (Major Contract or Partnership)",
+    title: "AMD - Partnership or Major Contract Announced",
     category: "M&A",
     time: "9:31 AM · Jul 26, 2026",
     timeShort: "9:31 AM",

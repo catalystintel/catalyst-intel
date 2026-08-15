@@ -12,8 +12,10 @@ import {
   formatFdaApprovalTitle,
   formatForm4InsiderTitle,
   formatHaltTitle,
+  formatPartnershipTitle,
   formatPriceTargetTitle,
   formatProspectusOfferingTitle,
+  formatRegulatoryActionTitle,
   formatSchedule13DTitle,
   formatSchedule13GTitle,
   formatShelfRegistrationTitle,
@@ -109,6 +111,7 @@ export function looksFactEnrichedTitle(
   if (/—\s*(?:Shelf|Offering|Amends shelf|13[DG]|Structured note)/i.test(t)) {
     return true;
   }
+  // Dollar-backed capital sentences only — bare shelf/offering thin lines stay upgradeable.
   if (
     /\b(?:files|sets up|amends)\b.+\$(?:[\d.,]+)/i.test(t) &&
     /\b(?:shelf|at-the-market|\bATM\b|offering|notes)\b/i.test(t)
@@ -118,15 +121,18 @@ export function looksFactEnrichedTitle(
   if (/\bsets up\b.+\bat-the-market\b|\bATM\b/i.test(t) && /\$/.test(t)) {
     return true;
   }
-  // Professional capital voices without a parsed dollar amount.
+  // ATM / structured note voices (facility detail without requiring a parsed $).
   if (
-    /\b(?:files|amends)\b.+\bshelf registration\b/i.test(t) ||
     /\bsets up\b.+\bat-the-market\b|\bATM\b.+\b(?:program|facility|equity)\b/i.test(
       t,
     ) ||
-    /\bfiles\b.+\b(?:equity|stock)\s+offering\b/i.test(t) ||
-    /\bprices structured notes\b/i.test(t)
+    /\bprices structured notes\b/i.test(t) ||
+    /\bstructured note pricing supplement\b/i.test(t)
   ) {
+    return true;
+  }
+  // Dollar-backed Shelf Raise / Stock Offering Filed (…($500M)…)
+  if (/\b(?:Shelf Raise Filed|Stock Offering Filed)\s*\([^)]*\$/i.test(t)) {
     return true;
   }
   if (
@@ -150,7 +156,7 @@ export function looksFactEnrichedTitle(
     return true;
   }
   if (/\bphase\s*[123ivx]+\b/i.test(t)) return true;
-  if (/\b(?:primary endpoint|topline|clinical trial update)\b/i.test(t)) {
+  if (/\b(?:primary endpoint|topline)\b/i.test(t)) {
     return true;
   }
   if (
@@ -159,6 +165,67 @@ export function looksFactEnrichedTitle(
     return true;
   }
   return false;
+}
+
+/** Professional thin ground-rule voices (company + event phrase, no invented facts). */
+export function looksProfessionalThinTitle(
+  title: string | null | undefined,
+): boolean {
+  const t = normalizeWs(title ?? "");
+  if (!t) return false;
+  if (
+    /\bShelf Registration Filed\b|\bStock Offering Filed\b|\bAcquisition Announced\b|\bAcquisition Closed\b|\bPartnership or Major Contract Announced\b|\bStrategic Partnership Announced\b|\bRegulatory Action Update\b|\bClinical Trial Results Update\b|\bClinical Trial Results Reported\b/i.test(
+      t,
+    )
+  ) {
+    return true;
+  }
+  if (/\bReceives FDA Approval!$/i.test(t)) return true;
+  if (/^Halts\s*\(/i.test(t)) return true;
+  return false;
+}
+
+/** Taxonomy / catalog chips that should yield to subject or ground-rule voices. */
+export function looksTaxonomyChipTitle(
+  title: string | null | undefined,
+): boolean {
+  const t = normalizeWs(title ?? "").toLowerCase();
+  if (!t) return false;
+  if (
+    /^(?:8-k filing|current report|filing|shelf registration \(s-3\)|prospectus \/ offering \(424b\)|merger \/ acquisition \(425\)|clinical trial(?: update)?|fda catalyst|capital markets|material agreement|new deal announced)$/i.test(
+      t,
+    )
+  ) {
+    return true;
+  }
+  if (/^[a-z0-9 ./\-()]{3,40}$/i.test(t) && !/\s-\s/.test(t) && t.length < 48) {
+    // Short catalog-style chips without a company separator.
+    if (
+      /\b(?:registration|offering|acquisition|partnership|clinical|regulatory|agreement|filing)\b/i.test(
+        t,
+      )
+    ) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/** Legacy stiff voices we happily replace with professional thin or fact-rich titles. */
+function looksLegacyStiffTitle(title: string | null | undefined): boolean {
+  const t = normalizeWs(title ?? "");
+  if (!t) return false;
+  if (/New Deal Announced/i.test(t)) return true;
+  if (/\bfiles shelf registration \(S-3\)$/i.test(t)) return true;
+  if (/\bfiles stock offering \(dilution watch\)$/i.test(t)) return true;
+  if (/\bAnnounces Acquisition\s*[—–-]\s*Deal in Play/i.test(t)) return true;
+  if (/\bannounces strategic partnership$/i.test(t)) return true;
+  if (/\bclinical trial update$/i.test(t)) return true;
+  if (/\bregulatory update$/i.test(t)) return true;
+  if (/Shelf Registration \(S-3\)|Prospectus \/ Offering \(424B\)/i.test(t)) {
+    return true;
+  }
+  return looksTaxonomyChipTitle(t);
 }
 
 /** Cue text from facts + stored title/headline/summary (never invents). */
@@ -227,7 +294,7 @@ function partnershipTitle(
   map: Map<string, string>,
 ): string {
   const company = companyOf(input);
-  const partner = findLabeled(
+  const partnerRaw = findLabeled(
     map,
     "partner",
     "counterparty",
@@ -235,6 +302,12 @@ function partnershipTitle(
     "licensee",
     "licensor",
   );
+  const partnerIsTypeWord =
+    !!partnerRaw &&
+    /^(?:partnership|collaboration|collaborator|license|licence|licensing|agreement|deal|contract|strategic\s+partnership)$/i.test(
+      partnerRaw,
+    );
+  const partner = partnerIsTypeWord ? null : partnerRaw;
   const nature =
     findLabeled(map, "nature", "scope", "focus", "area") ||
     findLabeled(map, "type", "agreement");
@@ -242,7 +315,7 @@ function partnershipTitle(
 
   const natureIsGeneric =
     !nature ||
-    /^(?:material agreement|partnership|collaboration|license|deal)$/i.test(
+    /^(?:material agreement|partnership|strategic partnership|collaboration|license|licence|deal|contract)$/i.test(
       nature,
     );
 
@@ -264,7 +337,7 @@ function partnershipTitle(
   if (!natureIsGeneric && nature) {
     return `${company} announces ${nature}`;
   }
-  return `${company} announces strategic partnership`;
+  return formatPartnershipTitle(company);
 }
 
 function dealsTitle(
@@ -338,9 +411,9 @@ function dealsTitle(
     return `${company} moves to acquire ${target}`;
   }
   if (isAcquisitionCue(cue)) {
-    return `${company} Announces Acquisition — Deal in Play`;
+    return `${company} - Acquisition Announced (Deal in Play)`;
   }
-  return `${company} - New Deal Announced (Major Contract or Partnership)`;
+  return `${company} - Partnership or Major Contract Announced`;
 }
 
 function managementTitle(
@@ -627,7 +700,7 @@ function regulatoryTitle(
   ) {
     return formatFdaApprovalTitle(company);
   }
-  return `${company} regulatory update`;
+  return formatRegulatoryActionTitle(company);
 }
 
 function clinicalTitle(
@@ -876,7 +949,8 @@ export function buildSubjectTitle(input: SubjectTitleInput): string | null {
   }
 
   if (!hasUsefulFacts) {
-    // Still produce subject-distinct fallbacks for a few high-signal chips.
+    // Thin-fact subject voices for high-signal chips. Capital / deals stay
+    // null here so form helpers (S-3 / 424B / 425 / 1.01) can supply copy.
     switch (category) {
       case "trading_halt":
         return haltTitle(input, map);
@@ -890,6 +964,10 @@ export function buildSubjectTitle(input: SubjectTitleInput): string | null {
           form4TitleKindFromSubcategory(input.subcategory),
           companyOf(input),
         );
+      case "regulatory":
+        return regulatoryTitle(input, map);
+      case "clinical":
+        return clinicalTitle(input, map);
       default:
         return null;
     }
@@ -936,7 +1014,8 @@ export function buildSubjectTitle(input: SubjectTitleInput): string | null {
 
 /**
  * Display-path helper: prefer subject title when it adds concrete facts
- * over a taxonomy / ground-rule chip.
+ * or a professional thin voice over taxonomy / legacy stiff chips.
+ * Never overwrite a specific study/wire headline with a thin chip.
  */
 export function preferSubjectTitle(
   input: SubjectTitleInput,
@@ -946,14 +1025,29 @@ export function preferSubjectTitle(
   if (!built) return fallback;
   const fb = normalizeWs(fallback);
   if (!fb) return built;
-  // Subject title wins when it looks more specific than the fallback chip.
-  if (looksFactEnrichedTitle(built) && !looksFactEnrichedTitle(fb)) {
+
+  const builtRich = looksFactEnrichedTitle(built);
+  const fbRich = looksFactEnrichedTitle(fb);
+  const builtThin = looksProfessionalThinTitle(built);
+  const fbStiff = looksLegacyStiffTitle(fb) || looksTaxonomyChipTitle(fb);
+
+  // Fact-rich always beats chips / stiff / thin.
+  if (builtRich && !fbRich) return built;
+  if (builtRich && fbRich) {
+    if (built.length > fb.length + 8 && hasUsefulDetail(built, fb)) {
+      return built;
+    }
     return built;
   }
-  if (built.length > fb.length + 8 && hasUsefulDetail(built, fb)) {
+
+  // Professional thin upgrades chips / legacy stiff only — keep specific headlines.
+  if (builtThin && fbStiff && !fbRich) return built;
+
+  if (built.length > fb.length + 8 && hasUsefulDetail(built, fb) && !fbRich) {
     return built;
   }
-  return looksFactEnrichedTitle(built) ? built : fallback;
+
+  return fbRich || (!fbStiff && !builtRich) ? fallback : built;
 }
 
 function hasUsefulDetail(candidate: string, fallback: string): boolean {

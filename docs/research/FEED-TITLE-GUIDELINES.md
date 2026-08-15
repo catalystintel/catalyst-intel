@@ -13,11 +13,23 @@ Tape titles should answer **what happened** and **to whom** in one glance:
 `{Company Name} - {Event phrase}`  
 or for halts: `Halts ({Company Name}) - {reason}`  
 or for FDA approvals: `{Company Name} Receives FDA Approval!`  
-or for acquisition announcements: `{Company Name} Announces Acquisition — Deal in Play`
+or for acquisition announcements: `{Company Name} - Acquisition Announced (Deal in Play)`
 
 Prefer stored ground-rule titles from ingest (`title` / mirrored `headline`) over taxonomy chips (“8-K filing”, “Price target (Street)”).
 
 **Fact-rich override:** When enrich extracts real `keyFacts` (size, parties, phase, agency outcome, etc.), `buildSubjectTitle` / `preferSubjectTitle` in `src/lib/catalysts/subject-titles.ts` may use freer, subject-specific wording from [`ARTICLE_BY_SUBJECT.md`](../product/ARTICLE_BY_SUBJECT.md). Those fact titles win over cookie-cutter chips — still never invent numbers. Ground-rule rows below remain the thin-fact / pre-enrich fallback.
+
+**When to use thin (capital / deals / partnership / regulatory / clinical):**
+
+| Situation                                      | Use thin ground-rule voice                                    |
+| ---------------------------------------------- | ------------------------------------------------------------- |
+| S-3 with no extracted size / ATM detail        | `{Company} - Shelf Registration Filed (Capital Raise Window)` |
+| 424B with no extracted size / coupon           | `{Company} - Stock Offering Filed (Dilution Ahead)`           |
+| Form 425 / acquisition cue without parties/$   | `{Company} - Acquisition Announced (Deal in Play)`            |
+| Item 1.01 / material agreement without parties | `{Company} - Partnership or Major Contract Announced`         |
+| Partnership/collab cue without a named partner | `{Company} - Strategic Partnership Announced`                 |
+| Regulatory row without approval/CRL/hold facts | `{Company} - Regulatory Action Update`                        |
+| Clinical row without phase/endpoint            | `{Company} - Clinical Trial Results Update`                   |
 
 **One separator only.** Use a single spaced hyphen (`-`) between company and event. Put any tagline in parentheses — never a second dash / em dash:
 
@@ -25,7 +37,7 @@ Prefer stored ground-rule titles from ingest (`title` / mirrored `headline`) ove
 - Bad: `Acme Corp — Delisting Risk — Stock Could Lose Its Listing`
 - Bad (legacy): `Acme Corp: Delisting Risk (Stock Could Lose Its Listing)`
 
-Exceptions (no company/event hyphen; fixed product copy): FDA (`Receives FDA Approval!`) and Acquisition Announcement (`Announces Acquisition — Deal in Play`). Fact-rich capital / deal / clinical / partnership / regulatory titles from `subject-titles.ts` may also omit the single hyphen when they read as a natural sentence.
+Exceptions (no company/event hyphen; fixed product copy): FDA (`Receives FDA Approval!`). Acquisition announcements use the hyphen form `{Company} - Acquisition Announced (Deal in Play)`. Fact-rich capital / deal / clinical / partnership / regulatory titles from `subject-titles.ts` may also omit the single hyphen when they read as a natural sentence.
 
 Macro titles with no issuer keep an em dash for the period only: `CPI — {Month Year}`, `Jobs Report (NFP) — {Month Year}`.
 
@@ -40,9 +52,9 @@ Macro titles with no issuer keep an em dash for the period only: `CPI — {Month
 | Halts                                                | `Halts ({Company Name}) - {reason}`                                                                                                                                                                                                    |
 | Form 4 Buy                                           | `{Company Name} - Form 4 Insider Buy` (mixed → `{Company} - Form 4 Insider Buy & Sell`)                                                                                                                                                |
 | Form 4 Sell                                          | `{Company Name} - Form 4 Insider Sell`                                                                                                                                                                                                 |
-| 8-K Material agreement (1.01)                        | `{Company Name} - New Deal Announced (Major Contract or Partnership)` (thin); partnership/collab facts → partnership voice; M&A facts → acquire/close/terminate                                                                        |
+| 8-K Material agreement (1.01)                        | Thin: `{Company Name} - Partnership or Major Contract Announced`; partnership/collab facts → partnership voice; M&A facts → acquire/close/terminate                                                                                    |
 | 8-K Agreement terminated (1.02)                      | `{Company Name} - Agreement Terminated`                                                                                                                                                                                                |
-| 8-K M&A / acquisition closed (2.01)                  | `{Company Name} - Acquisition / Disposition Closed` (thin); fact-rich → `closes … acquisition`                                                                                                                                         |
+| 8-K M&A / acquisition closed (2.01)                  | Thin: `{Company Name} - Acquisition Closed`; fact-rich → `closes … acquisition`                                                                                                                                                        |
 | 8-K Change of control (5.01)                         | `{Company Name} - Change of Control`                                                                                                                                                                                                   |
 | 8-K Management (5.02)                                | `{Company Name} - {Position} Change ({Appointment\|Departure})` e.g. `Acme Corp - CEO Change (Departure)`                                                                                                                              |
 | 8-K Capital / obligation (2.03, 3.02, …)             | Title Case item label, e.g. `{Company Name} - New Financial Obligation`                                                                                                                                                                |
@@ -53,12 +65,13 @@ Macro titles with no issuer keep an em dash for the period only: `CPI — {Month
 | 8-K Restructuring (2.05)                             | `{Company Name} - Restructuring / Exit Costs`                                                                                                                                                                                          |
 | 8-K Governance misc (4.01, 5.03, 5.04)               | Title Case item label, e.g. `{Company Name} - Auditor Change`                                                                                                                                                                          |
 | 8-K Non-catalyst only (7.01 / 8.01 / 9.01 / routine) | Suppressed by quality gate (not on tape)                                                                                                                                                                                               |
-| S-3                                                  | Thin: `{Company Name} files shelf registration (S-3)`; fact-rich: `{Company} files $XM shelf registration` / ATM program                                                                                                               |
-| 424B                                                 | Thin: `{Company Name} files stock offering (dilution watch)`; fact-rich: size / notes / structured coupon when extracted                                                                                                               |
-| Acquisition Announcement (425)                       | `{Company Name} Announces Acquisition — Deal in Play`                                                                                                                                                                                  |
+| S-3                                                  | Thin: `{Company Name} - Shelf Registration Filed (Capital Raise Window)`; fact-rich: `{Company} files $XM shelf registration` / ATM program                                                                                            |
+| 424B                                                 | Thin: `{Company Name} - Stock Offering Filed (Dilution Ahead)`; fact-rich: size / notes / structured coupon when extracted                                                                                                             |
+| Acquisition Announcement (425)                       | `{Company Name} - Acquisition Announced (Deal in Play)`                                                                                                                                                                                |
 | 13D                                                  | `{Company Name} - Schedule 13D`                                                                                                                                                                                                        |
 | 13G                                                  | `{Company Name} - Schedule 13G`                                                                                                                                                                                                        |
-| Clinical trials                                      | Thin: `{Company Name} clinical trial update`; fact-rich: Phase + endpoint/status via `subject-titles`                                                                                                                                  |
+| Clinical trials                                      | Thin: `{Company Name} - Clinical Trial Results Update`; fact-rich: Phase + endpoint/status via `subject-titles`                                                                                                                        |
+| Regulatory (non-approval thin)                       | Thin: `{Company Name} - Regulatory Action Update`; approval → `{Company} Receives FDA Approval!` or agency+product via `subject-titles`                                                                                                |
 | CPI                                                  | `CPI — {Month Year}`                                                                                                                                                                                                                   |
 | Jobs / NFP                                           | `Jobs Report (NFP) — {Month Year}`                                                                                                                                                                                                     |
 | FOMC                                                 | `FOMC Rate Decision`                                                                                                                                                                                                                   |
@@ -72,25 +85,27 @@ Macro titles with no issuer keep an em dash for the period only: `CPI — {Month
 
 Implemented in `src/lib/catalysts/catalyst-titles.ts`:
 
-| Pattern                                     | Formatter                          |
-| ------------------------------------------- | ---------------------------------- |
-| `Halts ({Company}) - {reason}`              | `formatHaltTitle`                  |
-| `{Company} Receives FDA Approval!`          | `formatFdaApprovalTitle`           |
-| `{Company} - Earnings Report Qn`            | `formatEarningsReportTitle`        |
-| Narrative 8-K (1.01 / 1.03 / 3.01 / 5.02)   | `formatSec8kItemTitle` (+ helpers) |
-| Other `{Company} - {8-K item label}`        | `formatSec8kItemTitle`             |
-| `{Company} - Form 4 Insider Buy/Sell/…`     | `formatForm4InsiderTitle`          |
-| `{Company} files shelf registration (S-3)`  | `formatShelfRegistrationTitle`     |
-| 424B dilution narrative                     | `formatProspectusOfferingTitle`    |
-| Acquisition Announcement (425)              | `format425MergerTitle`             |
-| `{Company} announces strategic partnership` | `formatPartnershipTitle`           |
-| `{Company} - Schedule 13D/G`                | `formatSchedule13DTitle` / `13G`   |
-| `{Company} clinical trial update`           | `formatClinicalTrialTitle`         |
-| `CPI — {Month Year}`                        | `formatCpiTitle`                   |
-| `Jobs Report (NFP) — {Month Year}`          | `formatJobsReportTitle`            |
-| `FOMC Rate Decision`                        | `formatFomcRateDecisionTitle`      |
-| `{Company} - Price Target`                  | `formatPriceTargetTitle`           |
-| `{Company} - Analyst Rating`                | `formatAnalystRatingTitle`         |
+| Pattern                                                       | Formatter                          |
+| ------------------------------------------------------------- | ---------------------------------- |
+| `Halts ({Company}) - {reason}`                                | `formatHaltTitle`                  |
+| `{Company} Receives FDA Approval!`                            | `formatFdaApprovalTitle`           |
+| `{Company} - Earnings Report Qn`                              | `formatEarningsReportTitle`        |
+| Narrative 8-K (1.01 / 1.03 / 3.01 / 5.02)                     | `formatSec8kItemTitle` (+ helpers) |
+| Other `{Company} - {8-K item label}`                          | `formatSec8kItemTitle`             |
+| `{Company} - Form 4 Insider Buy/Sell/…`                       | `formatForm4InsiderTitle`          |
+| `{Company} - Shelf Registration Filed (Capital Raise Window)` | `formatShelfRegistrationTitle`     |
+| `{Company} - Stock Offering Filed (Dilution Ahead)`           | `formatProspectusOfferingTitle`    |
+| `{Company} - Acquisition Announced (Deal in Play)`            | `format425MergerTitle`             |
+| `{Company} - Acquisition Closed`                              | `formatAcquisitionClosedTitle`     |
+| `{Company} - Strategic Partnership Announced`                 | `formatPartnershipTitle`           |
+| `{Company} - Schedule 13D/G`                                  | `formatSchedule13DTitle` / `13G`   |
+| `{Company} - Clinical Trial Results Update`                   | `formatClinicalTrialTitle`         |
+| `{Company} - Regulatory Action Update`                        | `formatRegulatoryActionTitle`      |
+| `CPI — {Month Year}`                                          | `formatCpiTitle`                   |
+| `Jobs Report (NFP) — {Month Year}`                            | `formatJobsReportTitle`            |
+| `FOMC Rate Decision`                                          | `formatFomcRateDecisionTitle`      |
+| `{Company} - Price Target`                                    | `formatPriceTargetTitle`           |
+| `{Company} - Analyst Rating`                                  | `formatAnalystRatingTitle`         |
 
 Display preference / legacy rewrite: `titleLine` in `src/lib/catalysts/feed-display.ts` (rewrites double-dash / `{Event} - {Company}` / `{Company}: {Event}` legacy rows to the current ground-rule form, including `FDA Approval - {Company}` / `{Company}: FDA Approval` → `{Company} Receives FDA Approval!`).
 
