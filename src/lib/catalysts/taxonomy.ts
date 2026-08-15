@@ -106,6 +106,28 @@ export function isEventCategoryKey(value: string): value is EventCategoryKey {
   return VALID_EVENT_CATEGORIES.has(value);
 }
 
+/**
+ * Category labels that must not appear as chips/keys inside open-article chrome
+ * (split / details / article view). Feed filters and taxonomy keep the key.
+ */
+const ARTICLE_SUPPRESSED_CATEGORY_LABELS = new Set<EventCategoryKey>([
+  "capital",
+]);
+
+/** Display label for article interiors — null when the taxonomy key is suppressed. */
+export function articleCategoryLabel(category?: string | null): string | null {
+  if (!category || !isEventCategoryKey(category)) return null;
+  if (ARTICLE_SUPPRESSED_CATEGORY_LABELS.has(category)) return null;
+  return CATEGORY_LABELS[category];
+}
+
+/** Whether to render a category badge inside open-article chrome. */
+export function showArticleCategoryBadge(
+  category?: string | null,
+): category is EventCategoryKey {
+  return articleCategoryLabel(category) != null;
+}
+
 /** Order-insensitive equality for category chip lists. */
 export function sameCategorySet(
   a: readonly string[],

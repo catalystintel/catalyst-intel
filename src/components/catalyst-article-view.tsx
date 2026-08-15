@@ -29,7 +29,10 @@ import type { ArticleEnrichment } from "@/lib/catalysts/enrich-article";
 import { formatMarketCapMillions } from "@/lib/catalysts/enrich-article-format";
 import { isLocalDevUi } from "@/lib/dev/local-dev-ui";
 import { formatRelativeAge, formatTimeDate } from "@/lib/format/relative-time";
-import { CATEGORY_LABELS } from "@/lib/jobs/parse-8k-items";
+import {
+  articleCategoryLabel,
+  showArticleCategoryBadge,
+} from "@/lib/catalysts/taxonomy";
 import { feedHref } from "@/lib/nav/feed-href";
 import { cn } from "@/lib/utils";
 
@@ -90,9 +93,7 @@ export function CatalystArticleView({
   variant = "page",
   showSourceLabels = false,
 }: CatalystArticleViewProps) {
-  const categoryLabel = catalyst.eventCategory
-    ? CATEGORY_LABELS[catalyst.eventCategory]
-    : null;
+  const categoryLabel = articleCategoryLabel(catalyst.eventCategory);
   const subcategory = catalyst.subcategory?.replace(/_/g, " ") || null;
   const panelAnalog = benzingaPanelForCategory(catalyst.eventCategory);
   const symbol = catalyst.symbol?.trim().toUpperCase() || null;
@@ -154,7 +155,7 @@ export function CatalystArticleView({
               ))}
             </div>
           ) : null}
-          {catalyst.eventCategory ? (
+          {showArticleCategoryBadge(catalyst.eventCategory) ? (
             <CategoryBadge category={catalyst.eventCategory} />
           ) : null}
           {variant === "dialog" ? (
@@ -205,7 +206,12 @@ export function CatalystArticleView({
             }
           />
           <MetaCell label="Type" value={catalyst.type || "—"} />
-          <MetaCell label="Sector" value={sectorLabel(catalyst)} />
+          <MetaCell
+            label="Sector"
+            value={sectorLabel(catalyst, {
+              omitArticleSuppressedCategories: true,
+            })}
+          />
           {showSourceLabels ? (
             <MetaCell label="Source" value={sourceDisplay(catalyst).name} />
           ) : null}
