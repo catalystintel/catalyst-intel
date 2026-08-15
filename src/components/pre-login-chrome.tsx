@@ -4,6 +4,7 @@ import { EarlyAccessBanner } from "@/components/early-access-banner";
 import { buttonVariants } from "@/components/ui/button";
 import { Toaster } from "@/components/ui/toaster";
 import { getSignInStartHref } from "@/lib/auth/dev-bypass";
+import { APP_NAME } from "@/lib/brand";
 import { cn } from "@/lib/utils";
 
 type PreLoginChromeProps = {
@@ -75,7 +76,7 @@ export function PreLoginChrome({
             aria-hidden
             className="brand-mark relative size-7 shrink-0 rounded-lg"
           />
-          <span className="truncate">Catalyst Intel</span>
+          <span className="truncate">{APP_NAME}</span>
         </Link>
         <nav
           aria-label="Primary"
@@ -129,7 +130,7 @@ export function PreLoginChrome({
                   aria-hidden
                   className="brand-mark relative size-6 shrink-0 rounded-md"
                 />
-                Catalyst Intel
+                {APP_NAME}
               </Link>
 
               <nav
@@ -157,7 +158,7 @@ export function PreLoginChrome({
               </nav>
 
               <p className="font-mono text-[0.72rem] tracking-[0.04em] text-[var(--desk-text-dim)]">
-                © {year} Catalyst Intel
+                © {year} {APP_NAME}
               </p>
             </div>
           </div>

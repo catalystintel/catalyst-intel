@@ -5,6 +5,8 @@
 
 import nodemailer from "nodemailer";
 
+import { APP_NAME } from "@/lib/brand";
+
 export type SmtpSendResult = { ok: boolean; detail: string };
 
 export function isSmtpConfigured(): boolean {
@@ -19,7 +21,7 @@ export function smtpFromAddress(): string {
   const from = process.env.SMTP_FROM?.trim();
   if (from) return from;
   const user = process.env.SMTP_USER?.trim();
-  return user ? `Catalyst Intel <${user}>` : "Catalyst Intel";
+  return user ? `${APP_NAME} <${user}>` : APP_NAME;
 }
 
 function smtpPort(): number {

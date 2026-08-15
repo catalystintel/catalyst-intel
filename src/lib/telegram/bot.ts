@@ -13,6 +13,7 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 
 import { isValidCronSecret } from "@/lib/auth/cron-secret";
+import { APP_NAME } from "@/lib/brand";
 
 export type TelegramSendResult = { ok: boolean; detail: string };
 
@@ -73,7 +74,7 @@ export const TELEGRAM_BOT_COMMANDS: TelegramBotCommand[] = [
   },
   {
     command: "help",
-    description: "How Catalyst Intel alerts work",
+    description: `How ${APP_NAME} alerts work`,
   },
 ];
 
@@ -526,12 +527,10 @@ export async function setTelegramBotDescriptions(): Promise<{
   shortDescription: TelegramSendResult;
 }> {
   const description = await callTelegramApi("setMyDescription", {
-    description:
-      "Catalyst Intel alerts bot.\n\nConnect from Alerts on the desk (or /start), then get catalyst fires here when your watchlist rules match. Menu: /status /recent /mute /help.",
+    description: `${APP_NAME} alerts bot.\n\nConnect from Alerts on the desk (or /start), then get catalyst fires here when your watchlist rules match. Menu: /status /recent /mute /help.`,
   });
   const shortDescription = await callTelegramApi("setMyShortDescription", {
-    short_description:
-      "Watchlist alert fires from Catalyst Intel — connect from /alerts.",
+    short_description: `Watchlist alert fires from ${APP_NAME} — connect from /alerts.`,
   });
   return { description, shortDescription };
 }
@@ -544,7 +543,7 @@ export function telegramBotAvatarPath(): string {
 }
 
 /**
- * Upload the Catalyst Intel brand mark as the bot profile photo via
+ * Upload the brand mark as the bot profile photo via
  * `setMyProfilePhoto` (static JPG).
  */
 export async function setTelegramBotProfilePhoto(
