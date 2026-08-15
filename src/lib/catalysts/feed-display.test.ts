@@ -89,6 +89,30 @@ describe("sectorLabel", () => {
       sectorLabel(base({ eventCategory: null, sector: null, type: "8-K" })),
     ).toBe("Filings");
   });
+
+  it("omits Capital Markets when article-suppressed fallback is requested", () => {
+    expect(
+      sectorLabel(
+        base({
+          eventCategory: "capital",
+          sector: null,
+          type: "S-3",
+          sourceProvider: "finnhub",
+        }),
+        { omitArticleSuppressedCategories: true },
+      ),
+    ).toBe("S-3");
+    expect(
+      sectorLabel(
+        base({
+          eventCategory: "capital",
+          sector: null,
+          type: "S-3",
+          sourceProvider: "finnhub",
+        }),
+      ),
+    ).toBe("Capital Markets");
+  });
 });
 
 describe("titleLine", () => {
@@ -531,7 +555,7 @@ describe("titleLine", () => {
           ],
         }),
       ),
-    ).toBe("ACME — Shelf $500M");
+    ).toBe("Acme Corp files $500M shelf registration");
 
     expect(
       titleLine(

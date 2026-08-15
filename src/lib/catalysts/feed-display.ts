@@ -136,12 +136,20 @@ export function sourceDisplay(c: FeedCatalyst): SourceDisplay {
 
 /**
  * Sector column: company sector when present, else event category, else type fallback.
+ * Pass `omitArticleSuppressedCategories` in open-article chrome so suppressed
+ * taxonomy labels (e.g. "Capital Markets") never appear as the sector fallback.
  */
-export function sectorLabel(c: FeedCatalyst): string {
+export function sectorLabel(
+  c: FeedCatalyst,
+  options?: { omitArticleSuppressedCategories?: boolean },
+): string {
   const companySector = c.sector?.trim();
   if (companySector) return companySector;
   if (c.eventCategory && c.eventCategory in CATEGORY_LABELS) {
-    return CATEGORY_LABELS[c.eventCategory as EventCategoryKey];
+    const key = c.eventCategory as EventCategoryKey;
+    if (!(options?.omitArticleSuppressedCategories && key === "capital")) {
+      return CATEGORY_LABELS[key];
+    }
   }
   if (c.sourceProvider === "sec-edgar" || /^8-?K$/i.test(c.type)) {
     return "Filings";
