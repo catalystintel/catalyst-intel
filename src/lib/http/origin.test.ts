@@ -35,13 +35,22 @@ describe("getRequestOrigin", () => {
 });
 
 describe("getTrustedAppOrigin", () => {
-  it("prefers NEXT_PUBLIC_APP_URL", () => {
+  it("prefers NEXT_PUBLIC_AUTH_ORIGIN / APP_URL when host is a known auth host", () => {
     const request = new Request("https://ignored.example/auth/callback");
     expect(
       getTrustedAppOrigin(request, {
-        NEXT_PUBLIC_APP_URL: "https://app.example",
+        NEXT_PUBLIC_APP_URL: "https://www.marveel.com",
       }),
-    ).toBe("https://app.example");
+    ).toBe("https://www.marveel.com");
+  });
+
+  it("ignores mistyped APP_URL like www.marvel.com", () => {
+    const request = new Request("https://www.marveel.com/auth/callback");
+    expect(
+      getTrustedAppOrigin(request, {
+        NEXT_PUBLIC_APP_URL: "https://www.marvel.com",
+      }),
+    ).toBe("https://www.marveel.com");
   });
 });
 
@@ -74,18 +83,33 @@ describe("resolveOAuthRedirectOrigin", () => {
     const env = process.env as unknown as Record<string, string | undefined>;
     const previous = env.NEXT_PUBLIC_APP_URL;
     const previousNode = env.NODE_ENV;
-    env.NEXT_PUBLIC_APP_URL = "https://app.example";
+    env.NEXT_PUBLIC_APP_URL = "https://www.marveel.com";
     env.NODE_ENV = "production";
     try {
-      const request = new Request("https://app.example/auth/callback", {
+      const request = new Request("https://www.marveel.com/auth/callback", {
         headers: { "x-forwarded-host": "evil.example" },
       });
-      expect(resolveOAuthRedirectOrigin(request)).toBe("https://app.example");
+      expect(resolveOAuthRedirectOrigin(request, env)).toBe(
+        "https://www.marveel.com",
+      );
     } finally {
       if (previous === undefined) delete env.NEXT_PUBLIC_APP_URL;
       else env.NEXT_PUBLIC_APP_URL = previous;
       env.NODE_ENV = previousNode;
     }
+  });
+
+  it("keeps www.marveel.com even when APP_URL is mistyped as marvel.com", () => {
+    const env: Record<string, string | undefined> = {
+      NODE_ENV: "production",
+      NEXT_PUBLIC_APP_URL: "https://www.marvel.com",
+    };
+    const request = new Request("https://www.marveel.com/auth/callback", {
+      headers: { "x-forwarded-host": "www.marveel.com" },
+    });
+    expect(resolveOAuthRedirectOrigin(request, env)).toBe(
+      "https://www.marveel.com",
+    );
   });
 });
 
