@@ -211,7 +211,7 @@ function DemoFeedRow({
     <article
       role="row"
       className={cn(
-        "feed-row grid min-h-[56px] items-center gap-2 border-b border-[var(--desk-border)] px-4 py-3 last:border-b-0 sm:gap-3 sm:px-5 sm:py-0",
+        "feed-row grid min-h-[48px] items-center gap-2 border-b border-[var(--desk-border)] px-3.5 py-2.5 last:border-b-0 sm:gap-3 sm:px-4 sm:py-0",
         animateIn && "row-flash",
         PREVIEW_GRID,
       )}
@@ -233,7 +233,7 @@ function DemoFeedRow({
             {row.title}
           </span>
         </div>
-        <div className="mt-1.5 flex items-center gap-2 md:hidden">
+        <div className="mt-1 flex items-center gap-2 md:hidden">
           <CategoryChip highPriority={row.highPriority}>
             {row.category}
           </CategoryChip>
@@ -350,7 +350,7 @@ export function LandingHeroFeedPreview() {
         <div
           role="row"
           className={cn(
-            "desk-caps grid h-10 items-center gap-2 border-b border-[var(--desk-border-strong)] bg-[var(--desk-header)] px-4 font-mono text-[0.62rem] font-medium text-[var(--desk-text-dim)] uppercase shadow-[0_1px_0_rgba(0,0,0,0.35)] sm:gap-3 sm:px-5",
+            "desk-caps grid h-9 items-center gap-2 border-b border-[var(--desk-border-strong)] bg-[var(--desk-header)] px-3.5 font-mono text-[0.6rem] font-medium text-[var(--desk-text-dim)] uppercase shadow-[0_1px_0_rgba(0,0,0,0.35)] sm:gap-3 sm:px-4",
             PREVIEW_GRID,
           )}
         >
