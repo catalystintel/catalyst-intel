@@ -42,6 +42,10 @@ export type SubjectTitleInput = {
   title?: string | null;
   headline?: string | null;
   summary?: string | null;
+  /** Filing / vendor type already on the row (e.g. S-3, 424B5, 8-K, 4). */
+  type?: string | null;
+  /** Parsed 8-K items (code + label) from fetch — enough to voice deals/capital. */
+  items?: Array<{ code?: string | null; label?: string | null }> | null;
   /** Halt reason label when already resolved. */
   haltReason?: string | null;
   /** Explicit quarter (1–4) when known. */
@@ -228,21 +232,179 @@ function looksLegacyStiffTitle(title: string | null | undefined): boolean {
   return looksTaxonomyChipTitle(t);
 }
 
-/** Cue text from facts + stored title/headline/summary (never invents). */
+/** Cue text from facts + stored title/headline/summary/type/items (never invents). */
 function groundedCueText(
   input: SubjectTitleInput,
   map: Map<string, string>,
 ): string {
   const factBits = [...map.entries()].map(([k, v]) => `${k} ${v}`);
+  const itemBits = (input.items ?? []).flatMap((i) => [
+    i.code ?? "",
+    i.label ?? "",
+  ]);
   return normalizeWs(
     [
       ...factBits,
+      ...itemBits,
+      input.type ?? "",
       input.subcategory ?? "",
       input.title ?? "",
       input.headline ?? "",
       input.summary ?? "",
     ].join(" "),
   );
+}
+
+/**
+ * Seed facts from fields already on the fetched row so thin keyFacts rows
+ * still get subject-aware titles. Only copies/parses what is present —
+ * never invents dollars or outcomes.
+ */
+export function seedFactsFromFetch(
+  input: SubjectTitleInput,
+): SubjectTitleFact[] {
+  const seeded: SubjectTitleFact[] = [];
+  const push = (label: string, value: string | null | undefined) => {
+    const v = normalizeWs(value ?? "");
+    if (!v) return;
+    seeded.push({ label, value: v });
+  };
+
+  const formType = normalizeWs(input.type ?? "");
+  if (formType) {
+    push("Form", formType);
+    if (/^S-3/i.test(formType)) push("Type", "Shelf registration");
+    if (/^424B/i.test(formType)) push("Type", "Prospectus offering");
+    if (/^425/i.test(formType)) push("Type", "Acquisition");
+    if (/^SC\s*13D|^13D/i.test(formType)) push("Form", "SC 13D");
+    if (/^SC\s*13G|^13G/i.test(formType)) push("Form", "SC 13G");
+    if (/^(?:4(?:\/|$)|form\s*4)/i.test(formType)) push("Type", "Form 4");
+  }
+
+  for (const item of input.items ?? []) {
+    const code = normalizeWs(item.code ?? "");
+    const label = normalizeWs(item.label ?? "");
+    if (code) push("Item", code);
+    if (label) push("Event", label);
+    if (
+      code === "1.01" ||
+      /material agreement|partnership|collaborat/i.test(label)
+    ) {
+      push("Type", "Material agreement");
+    }
+    if (code === "2.01" || /acquisition|disposition/i.test(label)) {
+      push("Status", "closed");
+      push("Type", "Acquisition");
+    }
+    if (code === "1.02" || /terminat/i.test(label)) {
+      push("Status", "terminated");
+    }
+  }
+
+  const sub = normalizeWs(input.subcategory ?? "");
+  if (sub) push("Subcategory", sub);
+
+  const cue = normalizeWs(
+    [
+      formType,
+      sub,
+      input.title ?? "",
+      input.headline ?? "",
+      input.summary ?? "",
+    ]
+      .concat(
+        (input.items ?? []).map((i) => `${i.code ?? ""} ${i.label ?? ""}`),
+      )
+      .join(" "),
+  );
+
+  const amountMatch = cue.match(
+    /\$[\d.,]+\s*(?:million|billion|mm|bn|[kmb](?!\w))?/i,
+  );
+  if (amountMatch?.[0]) {
+    push("Amount", amountMatch[0].replace(/\s+/g, " ").trim());
+  }
+
+  const sharesMatch = cue.match(
+    /\b([\d,.]+)\s*(?:million\s+)?(?:shares?|sh)\b/i,
+  );
+  if (sharesMatch?.[0]) {
+    push("Shares", sharesMatch[0].replace(/\s+/g, " ").trim());
+  }
+
+  const phaseMatch = cue.match(/\bphase\s*([123ivx]+)\b/i);
+  if (phaseMatch?.[1]) {
+    push("Phase", phaseMatch[1].toUpperCase());
+  }
+
+  if (/\bat-the-market\b|\bATM\b/i.test(cue)) {
+    push("Type", "ATM");
+  }
+  if (/\bshelf\b/i.test(cue) && !seeded.some((f) => /shelf/i.test(f.value))) {
+    push("Type", "Shelf");
+  }
+  if (/\bstructured note/i.test(cue)) {
+    push("Type", "Structured note");
+  }
+  if (/\bprimary endpoint\b/i.test(cue)) {
+    push("Endpoint", "Primary endpoint");
+    if (/\b(?:met|meets|achieved)\b/i.test(cue)) {
+      push("Status", "met primary endpoint");
+    } else if (/\b(?:miss(?:ed|es)?|fail(?:ed|s)?|did not meet)\b/i.test(cue)) {
+      push("Status", "missed primary endpoint");
+    }
+  }
+  if (/\bFDA\b/i.test(cue)) {
+    push("Agency", "FDA");
+    if (/\bapprov/i.test(cue)) push("Outcome", "approval");
+    else if (/\bCRL\b|complete response/i.test(cue)) push("Outcome", "CRL");
+    else if (/\bclinical hold\b/i.test(cue)) push("Outcome", "clinical hold");
+  }
+  if (isPartnershipCue(cue)) {
+    // Don't classify legacy chip "Partnership or Major Contract Announced" as
+    // partnership when the row is clearly M&A (target / deal value / 425).
+    const keyText = (input.keyFacts ?? [])
+      .map((f) => `${f.label} ${f.value}`)
+      .join(" ");
+    const maFacts = Boolean(
+      /\b(?:target|buyer|acquirer|deal value|purchase price)\b/i.test(
+        keyText,
+      ) ||
+      /^425/i.test(input.type ?? "") ||
+      isAcquisitionCue(
+        cue.replace(/Partnership or Major Contract Announced/gi, ""),
+      ),
+    );
+    if (!maFacts) push("Type", "Partnership");
+  }
+  if (
+    isAcquisitionCue(cue) &&
+    !seeded.some((f) => /acquisition/i.test(f.value))
+  ) {
+    push("Type", "Acquisition");
+  }
+
+  return seeded;
+}
+
+function mergeFacts(
+  primary: SubjectTitleFact[],
+  seeded: SubjectTitleFact[],
+): SubjectTitleFact[] {
+  const map = factMap(primary);
+  const out = [...primary];
+  for (const f of seeded) {
+    const key = f.label.toLowerCase();
+    if (map.has(key)) continue;
+    // Allow multiple Item/Event entries via unique labels.
+    if (key === "item" || key === "event") {
+      out.push(f);
+      continue;
+    }
+    map.set(key, f.value);
+    out.push(f);
+  }
+  return out;
 }
 
 function isPartnershipCue(cue: string): boolean {
@@ -345,17 +507,6 @@ function dealsTitle(
   map: Map<string, string>,
 ): string {
   const cue = groundedCueText(input, map);
-  if (isPartnershipCue(cue) && !isAcquisitionCue(cue)) {
-    return partnershipTitle(input, map);
-  }
-  // Partnership language wins even alongside soft "deal" wording when parties say so.
-  if (
-    isPartnershipCue(cue) &&
-    findLabeled(map, "partner", "counterparty", "collaborator")
-  ) {
-    return partnershipTitle(input, map);
-  }
-
   const company = companyOf(input);
   const value = findLabeled(
     map,
@@ -368,6 +519,22 @@ function dealsTitle(
   const target = findLabeled(map, "target", "seller");
   const buyer = findLabeled(map, "buyer", "acquirer");
   const status = findLabeled(map, "status", "close", "stage");
+
+  // Concrete M&A facts beat partnership wording leftover in stored chip titles.
+  const hasMaFacts = Boolean(
+    target || buyer || (value && isAcquisitionCue(cue)),
+  );
+
+  if (!hasMaFacts && isPartnershipCue(cue) && !isAcquisitionCue(cue)) {
+    return partnershipTitle(input, map);
+  }
+  if (
+    !hasMaFacts &&
+    isPartnershipCue(cue) &&
+    findLabeled(map, "partner", "counterparty", "collaborator")
+  ) {
+    return partnershipTitle(input, map);
+  }
 
   const closed = /\b(?:clos(?:e|ed|ing)|completed?|consummat)/i.test(
     `${status ?? ""} ${cue}`,
@@ -866,13 +1033,23 @@ function newsTitle(input: SubjectTitleInput, map: Map<string, string>): string {
 function otherTitle(
   input: SubjectTitleInput,
   map: Map<string, string>,
-): string {
+): string | null {
   const company = companyOf(input);
   const event = findLabeled(map, "event", "fact", "detail");
-  if (event) return `${company} — ${event}`;
+  if (event && event.length >= 8 && !/8-?k filing/i.test(event)) {
+    return `${company} — ${event}`;
+  }
   const stored =
     normalizeWs(input.title ?? "") || normalizeWs(input.headline ?? "");
-  return stored || `${company} — Market event`;
+  if (
+    !stored ||
+    looksTaxonomyChipTitle(stored) ||
+    looksLegacyStiffTitle(stored) ||
+    /8-?k filing/i.test(stored)
+  ) {
+    return null;
+  }
+  return stored;
 }
 
 function ownershipTitle(
@@ -908,19 +1085,22 @@ function ownershipTitle(
 
 /**
  * Build a subject-distinct professional title from extracted facts.
- * Returns null when facts are too thin — callers keep ground-rule / stored titles.
+ * Seeds from fetch type/items/summary cues when keyFacts are thin so existing
+ * rows still get subject-aware titles — never invents numbers.
  */
 export function buildSubjectTitle(input: SubjectTitleInput): string | null {
-  const facts = (input.keyFacts ?? [])
+  const rawFacts = (input.keyFacts ?? [])
     .map((f) => ({
       label: normalizeWs(f.label ?? ""),
       value: normalizeWs(f.value ?? ""),
     }))
     .filter((f) => f.label && f.value);
 
+  const facts = mergeFacts(rawFacts, seedFactsFromFetch(input));
   const map = factMap(facts);
   const category = categoryOf(input.eventCategory);
   const hasUsefulFacts = facts.length > 0;
+  const cue = groundedCueText(input, map);
 
   // Prefer keeping an already fact-rich stored title (enrich path wrote it).
   const stored = normalizeWs(input.title ?? "");
@@ -943,14 +1123,14 @@ export function buildSubjectTitle(input: SubjectTitleInput): string | null {
     ownership &&
     (input.subcategory === "13d" ||
       input.subcategory === "13g" ||
-      /13[DG]/i.test(findLabeled(map, "form") ?? ""))
+      /13[DG]/i.test(findLabeled(map, "form") ?? "") ||
+      /13[DG]/i.test(input.type ?? ""))
   ) {
     return ownership;
   }
 
   if (!hasUsefulFacts) {
-    // Thin-fact subject voices for high-signal chips. Capital / deals stay
-    // null here so form helpers (S-3 / 424B / 425 / 1.01) can supply copy.
+    // Truly empty payload — only high-signal categories with formatters.
     switch (category) {
       case "trading_halt":
         return haltTitle(input, map);
@@ -968,9 +1148,30 @@ export function buildSubjectTitle(input: SubjectTitleInput): string | null {
         return regulatoryTitle(input, map);
       case "clinical":
         return clinicalTitle(input, map);
+      case "capital":
+        return capitalTitle(input, map);
+      case "deals":
+        return dealsTitle(input, map);
       default:
         return null;
     }
+  }
+
+  // Fetch-seeded facts (form/items/summary $) are enough to voice capital/deals
+  // even when enrich keyFacts were empty on older rows.
+  if (
+    category === "other" &&
+    (/^S-3|^424B|^425|13[DG]/i.test(input.type ?? "") ||
+      isPartnershipCue(cue) ||
+      isAcquisitionCue(cue))
+  ) {
+    if (
+      /^S-3|^424B/i.test(input.type ?? "") ||
+      /\bshelf\b|\bATM\b/i.test(cue)
+    ) {
+      return capitalTitle(input, map);
+    }
+    return ownership ?? dealsTitle(input, map);
   }
 
   switch (category) {
