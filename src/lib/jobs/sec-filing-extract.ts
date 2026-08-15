@@ -10,6 +10,7 @@ import {
   formatEarningsReportTitle,
   formatSec8kItemTitle,
 } from "@/lib/catalysts/catalyst-titles";
+import { buildSubjectTitle } from "@/lib/catalysts/subject-titles";
 import {
   extractItems,
   selectPrimaryItem,
@@ -360,9 +361,19 @@ export function extractFromFilingText(input: {
             : `${subject} files ${dollar} shelf registration`
         : atm
           ? `${subject} sets up at-the-market (ATM) equity program`
-          : amended
-            ? `${subject} amends shelf registration (S-3)`
-            : `${subject} files shelf registration (S-3)`,
+          : (buildSubjectTitle({
+              eventCategory: "capital",
+              companyName: input.companyName || input.ticker,
+              symbol: input.ticker,
+              keyFacts: [
+                { label: "Form", value: form },
+                {
+                  label: "Type",
+                  value: atm ? "Shelf + ATM" : "Shelf registration",
+                },
+              ],
+            }) ??
+            `${subject} - Shelf Registration Filed (Capital Raise Window)`),
       headlineOverride: atm ? "Shelf / ATM registration" : "Shelf registration",
       sourceDoc: input.sourceDoc ?? null,
     };
@@ -412,7 +423,15 @@ export function extractFromFilingText(input: {
       ],
       titleOverride: dollar
         ? `${subject} files ${dollar} equity offering${shares ? ` (${shares})` : ""}`
-        : `${subject} files stock offering (dilution watch)`,
+        : (buildSubjectTitle({
+            eventCategory: "capital",
+            companyName: input.companyName || input.ticker,
+            symbol: input.ticker,
+            keyFacts: [
+              { label: "Form", value: form },
+              { label: "Type", value: "Prospectus supplement" },
+            ],
+          }) ?? `${subject} - Stock Offering Filed (Dilution Ahead)`),
       headlineOverride: "Priced / registered offering",
       sourceDoc: input.sourceDoc ?? null,
     };
@@ -504,8 +523,45 @@ export function extractFromFilingText(input: {
           input.companyName || input.ticker,
           { content: text },
         );
-        // Enrich with extracted dollars when the ground-rule chip is generic.
-        if (dollar && !/\$[\d.,]/.test(titleOverride)) {
+        // Prefer subject voice when extract has dollars or deal/partnership verbs.
+        const subjectBuilt = buildSubjectTitle({
+          eventCategory: primary.category,
+          companyName: input.companyName || input.ticker,
+          symbol: input.ticker,
+          keyFacts: [
+            { label: "Form", value: form },
+            { label: "Type", value: primary.label },
+            ...(dollar ? [{ label: "Amount", value: dollar }] : []),
+            ...(items.length
+              ? [
+                  {
+                    label: "Items",
+                    value: items
+                      .slice(0, 4)
+                      .map((i) => `${i.code} ${i.label}`)
+                      .join(" · "),
+                  },
+                ]
+              : []),
+          ],
+          title: titleOverride,
+          summary: text.slice(0, 2000),
+        });
+        const dealCue =
+          /\$[\d.,]|acquire|partners?|closes|terminates|licenses/i.test(
+            `${dollar ?? ""} ${text.slice(0, 1200)} ${titleOverride}`,
+          );
+        if (
+          subjectBuilt &&
+          dealCue &&
+          (primary.category === "deals" ||
+            primary.category === "capital" ||
+            /agreement|obligation|acquisition|disposition|partnership/i.test(
+              primary.label,
+            ))
+        ) {
+          titleOverride = subjectBuilt;
+        } else if (dollar && !/\$[\d.,]/.test(titleOverride)) {
           const ticker =
             input.ticker?.trim().toUpperCase() ||
             input.companyName?.trim() ||

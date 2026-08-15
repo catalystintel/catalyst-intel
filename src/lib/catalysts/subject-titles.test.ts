@@ -3,6 +3,8 @@ import { describe, expect, it } from "vitest";
 import {
   buildSubjectTitle,
   looksFactEnrichedTitle,
+  looksProfessionalThinTitle,
+  looksTaxonomyChipTitle,
   preferSubjectTitle,
 } from "./subject-titles";
 
@@ -80,14 +82,34 @@ describe("buildSubjectTitle", () => {
     ).toBe("Acme Corp licenses DrugX to BioCo");
   });
 
-  it("falls back to ground-rule deal chip when deal facts are thin", () => {
+  it("falls back to professional thin deal / partnership voices", () => {
     expect(
       buildSubjectTitle({
         eventCategory: "deals",
         companyName: "Acme Corp",
         keyFacts: [{ label: "Type", value: "Material agreement" }],
       }),
-    ).toBe("Acme Corp - New Deal Announced (Major Contract or Partnership)");
+    ).toBe("Acme Corp - Partnership or Major Contract Announced");
+
+    expect(
+      buildSubjectTitle({
+        eventCategory: "deals",
+        companyName: "Acme Corp",
+        keyFacts: [
+          { label: "Type", value: "Partnership" },
+          { label: "Partner", value: "partnership" },
+        ],
+      }),
+    ).toBe("Acme Corp - Strategic Partnership Announced");
+
+    expect(
+      buildSubjectTitle({
+        eventCategory: "deals",
+        companyName: "Acme Corp",
+        title: "Acme Corp acquisition filing",
+        keyFacts: [{ label: "Type", value: "Acquisition" }],
+      }),
+    ).toBe("Acme Corp - Acquisition Announced (Deal in Play)");
   });
 
   it("builds insider titles with name and dollars", () => {
@@ -145,6 +167,30 @@ describe("buildSubjectTitle", () => {
     ).toBe("Acme Corp files $250M equity offering (12.5M shares)");
   });
 
+  it("uses professional thin capital fallbacks without inventing size", () => {
+    expect(
+      buildSubjectTitle({
+        eventCategory: "capital",
+        companyName: "Acme Corp",
+        keyFacts: [
+          { label: "Form", value: "S-3" },
+          { label: "Type", value: "Shelf registration" },
+        ],
+      }),
+    ).toBe("Acme Corp - Shelf Registration Filed (Capital Raise Window)");
+
+    expect(
+      buildSubjectTitle({
+        eventCategory: "capital",
+        companyName: "Acme Corp",
+        keyFacts: [
+          { label: "Form", value: "424B5" },
+          { label: "Type", value: "Prospectus supplement" },
+        ],
+      }),
+    ).toBe("Acme Corp - Stock Offering Filed (Dilution Ahead)");
+  });
+
   it("builds 13D stake titles from ownership %", () => {
     expect(
       buildSubjectTitle({
@@ -182,14 +228,21 @@ describe("buildSubjectTitle", () => {
     ).toBe("BioCo Phase 2 clinical trial update");
   });
 
-  it("uses clinical trial update when clinical facts are empty of phase/result", () => {
+  it("uses clinical trial results thin voice when phase/result missing", () => {
     expect(
       buildSubjectTitle({
         eventCategory: "clinical",
         companyName: "BioCo",
         keyFacts: [{ label: "Source", value: "ClinicalTrials.gov" }],
       }),
-    ).toBe("BioCo clinical trial update");
+    ).toBe("BioCo - Clinical Trial Results Update");
+
+    expect(
+      buildSubjectTitle({
+        eventCategory: "clinical",
+        companyName: "BioCo",
+      }),
+    ).toBe("BioCo - Clinical Trial Results Update");
   });
 
   it("builds regulatory agency + product titles without inventing approval", () => {
@@ -222,7 +275,14 @@ describe("buildSubjectTitle", () => {
         companyName: "Acme Corp",
         keyFacts: [{ label: "Form", value: "8-K" }],
       }),
-    ).toBe("Acme Corp regulatory update");
+    ).toBe("Acme Corp - Regulatory Action Update");
+
+    expect(
+      buildSubjectTitle({
+        eventCategory: "regulatory",
+        companyName: "Acme Corp",
+      }),
+    ).toBe("Acme Corp - Regulatory Action Update");
   });
 
   it("builds analyst firm/action/PT titles", () => {
@@ -274,7 +334,7 @@ describe("buildSubjectTitle", () => {
       ],
     });
     expect(title).not.toMatch(/\$\d/);
-    expect(title).toMatch(/shelf registration/i);
+    expect(title).toMatch(/Shelf Registration Filed/i);
   });
 });
 
@@ -295,15 +355,36 @@ describe("looksFactEnrichedTitle + preferSubjectTitle", () => {
         "BioCo Phase 3 trial meets primary endpoint in NSCLC",
       ),
     ).toBe(true);
+    // Bare shelf/offering sentences without $ are not fact-enriched.
     expect(
       looksFactEnrichedTitle("Acme Corp files shelf registration (S-3)"),
-    ).toBe(true);
+    ).toBe(false);
+    expect(
+      looksFactEnrichedTitle(
+        "Acme Corp - Shelf Registration Filed (Capital Raise Window)",
+      ),
+    ).toBe(false);
     expect(
       looksFactEnrichedTitle("Acme announces partnership with BioCo"),
     ).toBe(true);
     expect(looksFactEnrichedTitle("Acme Corp - Shelf Registration (S-3)")).toBe(
       false,
     );
+  });
+
+  it("recognizes professional thin and taxonomy chip titles", () => {
+    expect(
+      looksProfessionalThinTitle(
+        "Acme Corp - Shelf Registration Filed (Capital Raise Window)",
+      ),
+    ).toBe(true);
+    expect(
+      looksProfessionalThinTitle(
+        "Acme Corp - Acquisition Announced (Deal in Play)",
+      ),
+    ).toBe(true);
+    expect(looksTaxonomyChipTitle("Shelf registration (S-3)")).toBe(true);
+    expect(looksTaxonomyChipTitle("8-K filing")).toBe(true);
   });
 
   it("prefers enriched subject title over ground-rule chip", () => {
@@ -322,5 +403,56 @@ describe("looksFactEnrichedTitle + preferSubjectTitle", () => {
         "Acme Corp insider sale filed",
       ),
     ).toBe("Acme Corp insider sale: Jane Doe · $900K");
+  });
+
+  it("upgrades taxonomy chips and legacy stiff voices to professional thin", () => {
+    expect(
+      preferSubjectTitle(
+        {
+          eventCategory: "capital",
+          companyName: "Acme Corp",
+          keyFacts: [
+            { label: "Form", value: "S-3" },
+            { label: "Type", value: "Shelf registration" },
+          ],
+        },
+        "Shelf registration (S-3)",
+      ),
+    ).toBe("Acme Corp - Shelf Registration Filed (Capital Raise Window)");
+
+    expect(
+      preferSubjectTitle(
+        {
+          eventCategory: "deals",
+          companyName: "Acme Corp",
+          keyFacts: [{ label: "Type", value: "Material agreement" }],
+        },
+        "Acme Corp - New Deal Announced (Major Contract or Partnership)",
+      ),
+    ).toBe("Acme Corp - Partnership or Major Contract Announced");
+
+    expect(
+      preferSubjectTitle(
+        {
+          eventCategory: "clinical",
+          companyName: "BioCo",
+        },
+        "BioCo clinical trial update",
+      ),
+    ).toBe("BioCo - Clinical Trial Results Update");
+  });
+
+  it("does not overwrite a specific study headline with thin clinical voice", () => {
+    expect(
+      preferSubjectTitle(
+        {
+          eventCategory: "clinical",
+          companyName: "BioCo",
+          title:
+            "BioCo reports positive topline data from Phase 3 KEYNOTE study",
+        },
+        "BioCo reports positive topline data from Phase 3 KEYNOTE study",
+      ),
+    ).toBe("BioCo reports positive topline data from Phase 3 KEYNOTE study");
   });
 });

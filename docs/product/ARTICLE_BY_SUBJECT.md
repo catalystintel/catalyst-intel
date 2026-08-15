@@ -2,9 +2,16 @@
 
 Classify the catalyst into one of the 17 subjects first. Then write **title** and **content** for that subject.
 
-**Titles:** Interesting, clear, professional — include company / outcome / real article details when known. Vary voice by subject so the tape does not read as cookie-cutter `{Company} - {Subject}` for every row. Prefer a specific vendor or filing headline when it already says what happened; use ground-rule fallbacks only when the stored title is a taxonomy chip or AccNo-thin.
+## Title craft (all subjects)
 
-**Automation:** `src/lib/catalysts/subject-titles.ts` (`buildSubjectTitle` / `preferSubjectTitle`) composes titles from extracted `keyFacts` on the enrich + display path (`titleLine` in `feed-display.ts`). SEC extract / Form 4 persist fact-rich `titleOverride`s when dollars, stakes, insider names, etc. are present. Never invent numbers — only extracted facts.
+- **One job:** say what happened and to whom in one glance. Prefer a grounded sentence when facts exist; use a professional thin fallback when they do not.
+- **Never invent** dollars, parties, phases, approvals, or outcomes. Omit a slot when the source does not state it.
+- **Fact-rich beats chips.** A specific vendor/filing headline or extracted-fact sentence wins over taxonomy labels (`Shelf registration (S-3)`, `Clinical trial`, `8-K filing`).
+- **Professional thin beats stiff legacy.** Prefer `{Company} - Shelf Registration Filed (Capital Raise Window)` over `files shelf registration (S-3)` / AccNo-thin chips — still no invented size.
+- **Vary voice by subject** so the tape does not read as cookie-cutter `{Company} - {Subject}` for every row.
+- **Keep feed taxonomy / chips as-is** (including Capital Markets on the feed). These rules are **titles only**.
+
+**Automation:** `src/lib/catalysts/subject-titles.ts` (`buildSubjectTitle` / `preferSubjectTitle`) composes titles from extracted `keyFacts` on the enrich + display path (`titleLine` in `feed-display.ts`). SEC extract / Form 4 persist fact-rich `titleOverride`s when dollars, stakes, insider names, etc. are present.
 
 **Content:** **3–6 short lines** of grounded detail from the real article/filing only — never invent numbers or facts. Lead with why it matters, then the subject’s fact slots below (omit a slot when the source does not state it).
 
@@ -20,11 +27,34 @@ Subjects: `src/lib/catalysts/taxonomy.ts`.
 
 ## `deals`
 
-**Title voice:** Buyer / target / value / status in natural deal language when known (announce, close, terminate). Prefer outcome verbs (`to acquire`, `closes`, `terminates`) over identical “New Deal Announced” chips when the extract already names parties or dollars.
+**Title voice:** Buyer / target / value / status in natural deal language when known (announce, close, terminate). Prefer outcome verbs (`to acquire`, `closes`, `terminates`) over identical deal chips when the extract already names parties or dollars.
 
-Examples (fact-rich): `Acme to acquire Rival for $2.0B` · `Acme closes $2.0B acquisition of Rival` · `Acme terminates acquisition of Rival`.
+### Preferred patterns (M&A)
 
-**Partnership voice (still `deals` taxonomy):** When facts or filing text say partnership / collaboration / license — not M&A — use a distinct partnership line: parties + nature when known (e.g. `Acme announces partnership with BioCo`, `Acme partners with BioCo — oncology collaboration`, `Acme licenses DrugX to BioCo`). Do not force acquisition wording onto collabs.
+| Facts known                         | Pattern                                               |
+| ----------------------------------- | ----------------------------------------------------- |
+| Target + value                      | `{Company} to acquire {Target} for {Value}`           |
+| Closed + target + value             | `{Company} closes {Value} acquisition of {Target}`    |
+| Terminated + target                 | `{Company} terminates acquisition of {Target}`        |
+| Acquisition cue, thin               | `{Company} - Acquisition Announced (Deal in Play)`    |
+| Closed, thin                        | `{Company} - Acquisition Closed`                      |
+| Material agreement / contract, thin | `{Company} - Partnership or Major Contract Announced` |
+
+**Good:** `Acme to acquire Rival for $2.0B` · `Acme closes $2.0B acquisition of Rival` · `Acme - Acquisition Announced (Deal in Play)`  
+**Bad:** `Acme - New Deal Announced.` · inventing a deal value · forcing acquisition wording onto a collab filing
+
+### Partnership voice (still `deals` taxonomy)
+
+When facts or filing text say partnership / collaboration / license — not M&A — use a distinct partnership line.
+
+| Facts known                | Pattern                                          |
+| -------------------------- | ------------------------------------------------ |
+| Partner + nature           | `{Company} partners with {Partner} — {nature}`   |
+| License + asset + partner  | `{Company} licenses {Asset} to {Partner}`        |
+| Partner only               | `{Company} announces partnership with {Partner}` |
+| Thin / type-word “partner” | `{Company} - Strategic Partnership Announced`    |
+
+Reject partner values that are type words (`partnership`, `collaboration`, `license`, etc.). Treat `strategic partnership` as a generic nature → thin fallback.
 
 **Content (3–6 lines):** Why it matters. Parties. Deal value or structure. Status. Timing if stated.
 
@@ -38,7 +68,19 @@ Examples (fact-rich): `Acme to acquire Rival for $2.0B` · `Acme closes $2.0B ac
 
 **Title voice:** Capital-markets instrument + size when known (shelf, ATM, equity offering, notes). Company-first plain English — not a form-code chip like `{Company} - Shelf Registration (S-3)` when dollars or facility type exist. Never invent size; omit dollars when absent.
 
-Examples (fact-rich): `Acme files $500M shelf registration` · `Acme sets up $100M at-the-market (ATM) program` · `Acme files $250M equity offering` · `Acme prices structured notes · 5.25%`. Thin fallbacks keep ground-rule shelf / 424B copy.
+### Preferred patterns
+
+| Facts known               | Pattern                                                       |
+| ------------------------- | ------------------------------------------------------------- |
+| Shelf + amount            | `{Company} files $500M shelf registration`                    |
+| ATM + amount              | `{Company} sets up $100M at-the-market (ATM) program`         |
+| Equity offering + amount  | `{Company} files $250M equity offering`                       |
+| Structured notes + coupon | `{Company} prices structured notes · 5.25%`                   |
+| Thin S-3                  | `{Company} - Shelf Registration Filed (Capital Raise Window)` |
+| Thin 424B                 | `{Company} - Stock Offering Filed (Dilution Ahead)`           |
+
+**Good:** `Acme files $500M shelf registration` · `Acme - Stock Offering Filed (Dilution Ahead)`  
+**Bad:** inventing `$500M` on a thin S-3 · leaving AccNo / “Shelf registration (S-3)” as the tape title when a professional thin voice exists
 
 **Content (3–6 lines):** Why it matters. Instrument. Size. Dilution or leverage stake. Use of proceeds if stated.
 
@@ -82,7 +124,18 @@ Examples (fact-rich): `Acme files $500M shelf registration` · `Acme sets up $10
 
 **Title voice:** Agency + action + product/indication when known (approval, CRL, clinical hold, clearance). Excitement (`Receives FDA Approval!`) only when the source is a clear approval — never invent approval from a thin regulatory row.
 
-Examples: `Acme wins FDA approval for DrugX` · `Acme receives FDA CRL for DrugX` · `Acme DrugX placed on clinical hold`. Thin non-approval → `Acme regulatory update`.
+### Preferred patterns
+
+| Facts known             | Pattern                                       |
+| ----------------------- | --------------------------------------------- |
+| Approval + product      | `{Company} wins FDA approval for {Product}`   |
+| CRL + product           | `{Company} receives FDA CRL for {Product}`    |
+| Clinical hold + product | `{Company} {Product} placed on clinical hold` |
+| Clear approval, thin    | `{Company} Receives FDA Approval!`            |
+| Non-approval thin       | `{Company} - Regulatory Action Update`        |
+
+**Good:** `Acme wins FDA approval for DrugX` · `Acme - Regulatory Action Update`  
+**Bad:** inventing `Receives FDA Approval!` from a generic 8-K regulatory mention
 
 **Content (3–6 lines):** Why it matters. Agency action. Product or indication. Outcome. Next milestone if stated.
 
@@ -90,7 +143,17 @@ Examples: `Acme wins FDA approval for DrugX` · `Acme receives FDA CRL for DrugX
 
 **Title voice:** Phase + result/status in study language when known; prefer primary-endpoint outcome phrasing over a blank “Clinical Trial” chip.
 
-Examples: `BioCo Phase 3 trial meets primary endpoint in NSCLC` · `BioCo Phase 2 trial enrollment complete`. Thin → ground-rule `clinical trial update`.
+### Preferred patterns
+
+| Facts known                     | Pattern                                                         |
+| ------------------------------- | --------------------------------------------------------------- |
+| Phase + met primary + condition | `{Company} Phase 3 trial meets primary endpoint in {Condition}` |
+| Phase + missed primary          | `{Company} Phase 2 trial misses primary endpoint`               |
+| Phase only                      | `{Company} Phase 2 clinical trial update`                       |
+| Thin / no phase                 | `{Company} - Clinical Trial Results Update`                     |
+
+**Good:** `BioCo Phase 3 trial meets primary endpoint in NSCLC` · `BioCo - Clinical Trial Results Update`  
+**Bad:** inventing endpoint success · leaving a bare `Clinical Trial` taxonomy chip as the title
 
 **Content (3–6 lines):** Why it matters. Phase. Status or result. Condition. Primary endpoint if present.
 

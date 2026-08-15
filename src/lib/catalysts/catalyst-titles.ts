@@ -235,11 +235,11 @@ export function looksLikeResultsOfOperationsTitle(
   );
 }
 
-/** `{Company} - New Deal Announced (Major Contract or Partnership)` (Item 1.01) */
+/** `{Company} - Partnership or Major Contract Announced` (Item 1.01) */
 export function formatMaterialAgreementTitle(
   companyName: string | null | undefined,
 ): string {
-  return `${resolveDisplayCompanyName(companyName)} - New Deal Announced (Major Contract or Partnership)`;
+  return `${resolveDisplayCompanyName(companyName)} - Partnership or Major Contract Announced`;
 }
 
 /** `{Company} - Bankruptcy Filing (Equity at Risk)` (Item 1.03) */
@@ -299,6 +299,9 @@ const NARRATIVE_8K_BY_LABEL: Record<
     formatBankruptcyFilingTitle(company),
   "delisting risk": (company) => formatDelistingRiskTitle(company),
   "officer / director change": formatOfficerDirectorChangeTitle,
+  "acquisition / disposition closed": (company) =>
+    formatAcquisitionClosedTitle(company),
+  "acquisition closed": (company) => formatAcquisitionClosedTitle(company),
 };
 
 /**
@@ -385,32 +388,39 @@ export function form4TitleKindFromSubcategory(
   }
 }
 
-/** `{Company} files shelf registration (S-3)` — thin capital fallback. */
+/** `{Company} - Shelf Registration Filed (Capital Raise Window)` (S-3) */
 export function formatShelfRegistrationTitle(
   companyName: string | null | undefined,
 ): string {
-  return `${resolveDisplayCompanyName(companyName)} files shelf registration (S-3)`;
+  return `${resolveDisplayCompanyName(companyName)} - Shelf Registration Filed (Capital Raise Window)`;
 }
 
-/** `{Company} files stock offering (dilution watch)` (424B) */
+/** `{Company} - Stock Offering Filed (Dilution Ahead)` (424B) */
 export function formatProspectusOfferingTitle(
   companyName: string | null | undefined,
 ): string {
-  return `${resolveDisplayCompanyName(companyName)} files stock offering (dilution watch)`;
+  return `${resolveDisplayCompanyName(companyName)} - Stock Offering Filed (Dilution Ahead)`;
 }
 
-/** `{Company Name} Announces Acquisition — Deal in Play` (Form 425) */
+/** `{Company} - Acquisition Announced (Deal in Play)` (Form 425) */
 export function format425MergerTitle(
   companyName: string | null | undefined,
 ): string {
-  return `${resolveDisplayCompanyName(companyName)} Announces Acquisition — Deal in Play`;
+  return `${resolveDisplayCompanyName(companyName)} - Acquisition Announced (Deal in Play)`;
 }
 
-/** `{Company} announces strategic partnership` — thin partnership / collab fallback. */
+/** `{Company} - Acquisition Closed` (Item 2.01) */
+export function formatAcquisitionClosedTitle(
+  companyName: string | null | undefined,
+): string {
+  return `${resolveDisplayCompanyName(companyName)} - Acquisition Closed`;
+}
+
+/** `{Company} - Strategic Partnership Announced` — thin partnership / collab fallback. */
 export function formatPartnershipTitle(
   companyName: string | null | undefined,
 ): string {
-  return `${resolveDisplayCompanyName(companyName)} announces strategic partnership`;
+  return `${resolveDisplayCompanyName(companyName)} - Strategic Partnership Announced`;
 }
 
 /** `{Company} reports active stake (13D)` */
@@ -427,11 +437,18 @@ export function formatSchedule13GTitle(
   return `${resolveDisplayCompanyName(companyName)} reports passive stake (13G)`;
 }
 
-/** `{Company} clinical trial update` — thin clinical fallback. */
+/** `{Company} - Clinical Trial Results Update` — thin clinical fallback. */
 export function formatClinicalTrialTitle(
   companyName: string | null | undefined,
 ): string {
-  return `${resolveDisplayCompanyName(companyName)} clinical trial update`;
+  return `${resolveDisplayCompanyName(companyName)} - Clinical Trial Results Update`;
+}
+
+/** `{Company} - Regulatory Action Update` — thin non-approval regulatory fallback. */
+export function formatRegulatoryActionTitle(
+  companyName: string | null | undefined,
+): string {
+  return `${resolveDisplayCompanyName(companyName)} - Regulatory Action Update`;
 }
 
 /** `CPI — {Month Year}` */
