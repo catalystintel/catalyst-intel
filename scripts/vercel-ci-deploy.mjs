@@ -216,11 +216,16 @@ async function main() {
     );
     process.exit(0);
   }
-  if (!teamId || !projectId) {
+  if (!projectId) {
     console.warn(
-      "::warning::VERCEL_ORG_ID / VERCEL_PROJECT_ID not set — skipping CI Vercel deploy. See DEPLOYMENT.md.",
+      "::warning::VERCEL_PROJECT_ID not set — skipping CI Vercel deploy. See DEPLOYMENT.md.",
     );
     process.exit(0);
+  }
+  if (!teamId) {
+    console.warn(
+      "::warning::VERCEL_ORG_ID unset — will resolve team from project via Vercel API.",
+    );
   }
   if (!branch) {
     console.warn(
@@ -234,7 +239,7 @@ async function main() {
   try {
     access = await resolveVercelAccess({
       token,
-      teamId,
+      teamId: teamId || "",
       projectId,
       projectName,
     });
