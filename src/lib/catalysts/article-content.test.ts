@@ -293,6 +293,21 @@ describe("synthesizeReadableSummary", () => {
     expect(text.length).toBeGreaterThan(20);
     expect(text).toMatch(/MSFT/i);
   });
+
+  it("does not write Capital Markets into synthesized article copy", () => {
+    const text = synthesizeReadableSummary({
+      symbol: "C",
+      companyName: "Citigroup Inc.",
+      eventCategory: "capital",
+      subcategory: "ipo",
+      title: "C — IPO",
+      headline: null,
+      provider: "finnhub",
+      type: "IPO",
+    });
+    expect(text).not.toMatch(/Capital Markets/i);
+    expect(text.length).toBeGreaterThan(20);
+  });
 });
 
 describe("originalSourceLabel", () => {

@@ -93,7 +93,11 @@ function joinFields(
 
 function categoryLabel(value?: string | null): string | null {
   if (!value) return null;
-  if (isEventCategoryKey(value)) return CATEGORY_LABELS[value];
+  if (isEventCategoryKey(value)) {
+    // Keep "Capital Markets" out of synthesized article copy; use subcategory/type.
+    if (value === "capital") return null;
+    return CATEGORY_LABELS[value];
+  }
   return value.replace(/_/g, " ");
 }
 
