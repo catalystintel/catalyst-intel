@@ -42,9 +42,6 @@ function yahooRangeParams(range: ChartRangeKey): {
   range: string;
 } {
   switch (range) {
-    case "1m":
-    case "5m":
-    case "10m":
     case "30m":
     case "1H":
       // Yahoo has no sub-day `range`; pull 1d of 1m bars and clip client-side.
