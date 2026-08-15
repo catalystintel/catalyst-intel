@@ -7,6 +7,7 @@ import {
   getDevBypassEmail,
   isDevAuthBypassEnabled,
 } from "@/lib/auth/dev-bypass";
+import { APP_NAME } from "@/lib/brand";
 import { getPreferredAuthOrigin } from "@/lib/http/auth-origin";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
 import { toUserFacingMessage, USER_FACING } from "@/lib/errors/user-facing";
@@ -46,7 +47,7 @@ export default async function LoginPage({
             Trading desk
           </p>
           <h1 className="marketing-headline mt-2 text-3xl text-[var(--desk-text)] sm:text-4xl">
-            Catalyst Intel
+            {APP_NAME}
           </h1>
           <p className="desk-body mt-3 max-w-sm text-pretty text-[var(--desk-text-secondary)] sm:text-base">
             Live SEC catalysts for day traders — sign in free for full desk

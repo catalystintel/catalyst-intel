@@ -18,6 +18,7 @@ import { toast } from "sonner";
 
 import { AlertRulesListSkeleton } from "@/components/alerts-page-skeleton";
 import { TelegramIcon } from "@/components/telegram-icon";
+import { APP_NAME } from "@/lib/brand";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { WatchlistCriteria } from "@/db/schema";
@@ -86,7 +87,7 @@ const METHOD_META: {
   {
     id: "telegram",
     label: "Telegram",
-    blurb: "Fires on your phone via the Catalyst Intel bot",
+    blurb: `Fires on your phone via the ${APP_NAME} bot`,
     Icon: TelegramIcon,
   },
   {
@@ -1109,7 +1110,7 @@ function TelegramSetup({
       </p>
     );
   }
-  const displayName = botName?.trim() || "Catalyst Intel";
+  const displayName = botName?.trim() || APP_NAME;
   return (
     <div className="flex flex-col gap-3">
       <div>

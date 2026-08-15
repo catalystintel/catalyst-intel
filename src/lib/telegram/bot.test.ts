@@ -22,6 +22,7 @@ import {
   telegramHelpReply,
   telegramWelcomeReply,
 } from "./handlers";
+import { APP_NAME } from "@/lib/brand";
 
 const originalToken = process.env.TELEGRAM_BOT_TOKEN;
 const originalWebhookSecret = process.env.TELEGRAM_WEBHOOK_SECRET;
@@ -89,7 +90,7 @@ describe("resolveTelegramBotIdentity", () => {
           result: {
             id: 1,
             username: "LiveCatalystBot",
-            first_name: "Catalyst Intel",
+            first_name: "Marveel",
           },
         }),
         { status: 200 },
@@ -98,7 +99,7 @@ describe("resolveTelegramBotIdentity", () => {
 
     const identity = await resolveTelegramBotIdentity();
     expect(identity.handle).toBe("@LiveCatalystBot");
-    expect(identity.firstName).toBe("Catalyst Intel");
+    expect(identity.firstName).toBe("Marveel");
     expect(identity.deepLink).toBe("https://t.me/LiveCatalystBot");
 
     const fetchMock = vi.mocked(global.fetch);
@@ -190,7 +191,7 @@ describe("inbound replies", () => {
   it("includes menu copy for /start", () => {
     const reply = telegramWelcomeReply({ chatId: 42 });
     expect(reply.parseMode).toBe("HTML");
-    expect(reply.text).toContain("Catalyst Intel");
+    expect(reply.text).toContain(APP_NAME);
     expect(reply.replyMarkup).toEqual(MAIN_REPLY_KEYBOARD);
   });
 

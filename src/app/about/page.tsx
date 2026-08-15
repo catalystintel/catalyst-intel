@@ -4,10 +4,11 @@ import Link from "next/link";
 import { PreLoginChrome } from "@/components/pre-login-chrome";
 import { buttonVariants } from "@/components/ui/button";
 import { getSignInStartHref } from "@/lib/auth/dev-bypass";
+import { APP_NAME } from "@/lib/brand";
 import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = {
-  title: "About · Catalyst Intel",
+  title: "About",
   description:
     "Material market catalysts on a trading blotter — Symbol, Title, Time. Scan the event, open Details for the story, then act or dismiss.",
 };
@@ -36,11 +37,11 @@ export default function AboutPage() {
             About · Open Early Access
           </span>
           <h1 className="marketing-headline mt-3 text-3xl text-balance text-[var(--desk-text)] sm:text-4xl">
-            Catalyst Intel
+            {APP_NAME}
           </h1>
           <p className="mt-4 text-base text-pretty text-[var(--desk-text-secondary)] sm:text-lg">
             A real-time catalyst desk for traders who need the event story first
-            — then the chart. For the desk, Catalyst Intel is the source.
+            — then the chart. For the desk, {APP_NAME} is the source.
           </p>
           <p className="mt-3 text-base text-pretty text-[var(--desk-text-muted)]">
             We&apos;re in Open Early Access: every available feature is free

@@ -8,6 +8,7 @@ import {
 } from "@/app/(desk)/profile/actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { APP_NAME } from "@/lib/brand";
 import { cn } from "@/lib/utils";
 
 interface ProfileNameFormProps {
@@ -42,7 +43,7 @@ export function ProfileNameForm({ currentName }: ProfileNameFormProps) {
           id="displayName"
           name="displayName"
           defaultValue={currentName ?? ""}
-          placeholder="How your name shows across Catalyst Intel"
+          placeholder={`How your name shows across ${APP_NAME}`}
           maxLength={60}
           className="h-9 max-w-sm"
         />

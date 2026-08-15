@@ -4,6 +4,8 @@
  * API `error` bodies for public routes, or marketing/auth UI.
  */
 
+import { APP_NAME } from "@/lib/brand";
+
 export const USER_FACING = {
   generic: "Something went wrong. Please try again.",
   unavailable:
@@ -15,10 +17,8 @@ export const USER_FACING = {
     "Sign-in is temporarily unavailable. Please try again shortly.",
   previewAdminOnly:
     "This preview / staging link is restricted to admins. Use the production site to sign in.",
-  useProductionLogin:
-    "Sign-in only works on the main Catalyst Intel site — not on temporary preview links. Continue below on this page, or open the production URL.",
-  pkceVerifierMissing:
-    "Sign-in was interrupted (browser storage was cleared or the login started on a different link). Open the main Catalyst Intel site and try Continue with Google again.",
+  useProductionLogin: `Sign-in only works on the main ${APP_NAME} site — not on temporary preview links. Continue below on this page, or open the production URL.`,
+  pkceVerifierMissing: `Sign-in was interrupted (browser storage was cleared or the login started on a different link). Open the main ${APP_NAME} site and try Continue with Google again.`,
   aiUnavailable:
     "AI analysis is not available at the moment. You can try again shortly.",
   pushUnavailable: "Browser push is not available right now.",

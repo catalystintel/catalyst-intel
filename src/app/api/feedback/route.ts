@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { getCurrentAppUser } from "@/lib/auth/current-user";
+import { APP_NAME } from "@/lib/brand";
 import {
   FEEDBACK_CATEGORIES,
   FEEDBACK_MESSAGE_MAX_CHARS,
@@ -119,7 +120,7 @@ export async function POST(request: NextRequest) {
   }
 
   const label = categoryLabel(categoryRaw);
-  const subject = `[Feedback · ${label}] Catalyst Intel`;
+  const subject = `[Feedback · ${label}] ${APP_NAME}`;
   const text = [
     `Type: ${label}`,
     `From: ${fromEmail}`,

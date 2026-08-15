@@ -7,6 +7,7 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { logout, signOutEverywhere } from "@/app/login/actions";
 import { getCurrentAppUser } from "@/lib/auth/current-user";
+import { APP_NAME } from "@/lib/brand";
 
 export default async function ProfilePage() {
   const user = await getCurrentAppUser();
@@ -118,8 +119,8 @@ export default async function ProfilePage() {
           Session
         </h2>
         <p className="mt-1 max-w-xl text-sm text-[var(--desk-text-muted)]">
-          Sign out ends your Catalyst Intel session. It does not delete your
-          Google account or permanently unlink OAuth from Supabase.
+          Sign out ends your {APP_NAME} session. It does not delete your Google
+          account or permanently unlink OAuth from Supabase.
         </p>
         <div className="mt-4 flex flex-wrap gap-3">
           <form action={logout}>
