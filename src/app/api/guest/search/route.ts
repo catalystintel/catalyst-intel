@@ -8,8 +8,10 @@ import { and, desc, eq, like, or, sql } from "drizzle-orm";
 
 import { databaseUnavailableMessage, isLibsqlConfigured } from "@/db/env";
 import { db } from "@/db/client";
-import { catalysts, rawSources } from "@/db/schema";
+import { catalysts, companies, rawSources } from "@/db/schema";
 import { normalizeSymbol } from "@/lib/alerts/normalize";
+import { feedSelectFields } from "@/lib/catalysts/feed-query";
+import { toPublicFeedCatalyst } from "@/lib/catalysts/public-catalyst";
 import { getClientIp } from "@/lib/http/client-ip";
 import {
   GUEST_SEARCH_COOKIE,
@@ -75,17 +77,10 @@ export async function GET(request: NextRequest) {
 
   const pattern = `${symbol}%`;
   const rows = await db
-    .select({
-      id: catalysts.id,
-      symbol: catalysts.symbol,
-      title: catalysts.title,
-      headline: catalysts.headline,
-      eventCategory: catalysts.eventCategory,
-      timestamp: catalysts.timestamp,
-      summary: catalysts.summary,
-    })
+    .select(feedSelectFields)
     .from(catalysts)
     .leftJoin(rawSources, eq(catalysts.rawSourceId, rawSources.id))
+    .leftJoin(companies, eq(catalysts.companyId, companies.id))
     .where(
       and(
         or(eq(catalysts.symbol, symbol), like(catalysts.symbol, pattern))!,
@@ -102,14 +97,17 @@ export async function GET(request: NextRequest) {
       symbol,
       remaining,
       limit: GUEST_SEARCH_LIMIT,
-      results: rows.map((r) => ({
-        id: r.id,
-        symbol: r.symbol,
-        title: r.headline?.trim() || r.title,
-        category: r.eventCategory,
-        timestamp: r.timestamp,
-        summary: r.summary,
-      })),
+      results: rows.map((r) => {
+        const pub = toPublicFeedCatalyst(r);
+        return {
+          id: pub.id,
+          symbol: pub.symbol,
+          title: pub.title,
+          category: pub.eventCategory,
+          timestamp: pub.timestamp,
+          summary: pub.summary,
+        };
+      }),
     }),
     limitResult,
   );

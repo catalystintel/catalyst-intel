@@ -10,6 +10,7 @@ import {
   type RawCatalystRow,
   toFeedCatalyst,
 } from "@/lib/catalysts/feed-catalyst";
+import { titleLine } from "@/lib/catalysts/feed-display";
 import {
   isImpactScoreLabel,
   scrubHistoricalImpact,
@@ -25,6 +26,9 @@ export type PublicFeedCatalyst = FeedCatalyst;
  * Map a DB / internal row into a client-safe {@link FeedCatalyst}.
  * Omits `sourceProvider` / `sourceUrl` outside local-dev; never includes
  * `rawContent` (keyFacts are extracted first).
+ *
+ * Applies {@link titleLine} so SSR / API payloads already carry case-engine
+ * display titles — the Live tape must not depend on client-only rewrites.
  */
 export function toPublicFeedCatalyst(row: RawCatalystRow): PublicFeedCatalyst {
   const includeOrigins = isLocalDevUi();
@@ -43,7 +47,15 @@ export function toPublicFeedCatalyst(row: RawCatalystRow): PublicFeedCatalyst {
     rawContent: row.rawContent,
   });
 
-  return {
+  const keyFacts = base.keyFacts
+    .filter((f) => !isImpactScoreLabel(f.label))
+    .map((f) => ({
+      label: scrubOriginMentions(f.label) ?? f.label,
+      value: scrubOriginMentions(f.value) ?? f.value,
+    }))
+    .filter((f) => f.label.length > 0 && f.value.length > 0);
+
+  const scrubbed: FeedCatalyst = {
     ...base,
     // Impact score retired from the product surface — keep fields for
     // typed shape / DB compat but never ship scores to the client.
@@ -57,13 +69,13 @@ export function toPublicFeedCatalyst(row: RawCatalystRow): PublicFeedCatalyst {
     historicalImpact: scrubHistoricalImpact(base.historicalImpact),
     sourceUrl: includeOrigins ? base.sourceUrl : null,
     sourceProvider: includeOrigins ? base.sourceProvider : null,
-    keyFacts: base.keyFacts
-      .filter((f) => !isImpactScoreLabel(f.label))
-      .map((f) => ({
-        label: scrubOriginMentions(f.label) ?? f.label,
-        value: scrubOriginMentions(f.value) ?? f.value,
-      }))
-      .filter((f) => f.label.length > 0 && f.value.length > 0),
+    keyFacts,
+  };
+
+  const displayTitle = titleLine(scrubbed);
+  return {
+    ...scrubbed,
+    title: displayTitle,
   };
 }
 
