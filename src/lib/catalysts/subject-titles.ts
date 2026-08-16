@@ -494,6 +494,104 @@ function looksLegacyMaFactTitle(title: string): boolean {
   );
 }
 
+/** Pre-case financing voices (Title Case Announces, closes facility, etc.). */
+function looksLegacyFinancingFactTitle(title: string): boolean {
+  return /\b(?:Announces \$.+\b(?:Shelf|ATM|At-The-Market|Stock Offering|Equity Offering|Public Offering|Private Placement|Registered Direct|Credit Facility|Financing|Notes)\b|closes?.{0,24}\b(?:credit facility|term loan)|secures?.{0,24}\b(?:debt|financing|facility)|prices?.{0,24}\boffering|files \$.+\b(?:shelf|equity offering|offering)\b|sets up \$.+\bat-the-market|\bATM\b)/i.test(
+    title,
+  );
+}
+
+/** Pre-case partnership / license / collab builder voices. */
+function looksLegacyPartnershipFactTitle(title: string): boolean {
+  return /\b(?:partners with|announces (?:strategic )?partnership|Announces Strategic Partnership|announces collaboration|Enters .+ Partnership|Enters Collaboration|collaborat(?:es|e|ion) with|and .+ collaborate on|licenses?\b.+\bto\b|Signs .+ Licensing)\b/i.test(
+    title,
+  );
+}
+
+/** Pre-case regulatory builder voices (company-first wins/receives, hold phrasing). */
+function looksLegacyRegulatoryFactTitle(title: string): boolean {
+  return /\b(?:wins (?:FDA|EMA) approval|receives (?:FDA|EMA) (?:approval|CRL|Complete Response)|placed on clinical hold|faces clinical hold|(?:FDA|EMA) clears\b|(?:FDA|EMA) Approves\b|(?:FDA|EMA) Rejects\b|(?:FDA|EMA) Places\b|(?:FDA|EMA) Grants\b|(?:FDA|EMA) Accepts\b|Receives FDA Approval!)\b/i.test(
+    title,
+  );
+}
+
+/** Pre-case clinical builder voices (lowercase trial / phase update). */
+function looksLegacyClinicalFactTitle(title: string): boolean {
+  return /\b(?:phase\s*[123ivx]+.{0,40}(?:trial|study).{0,40}(?:meets|misses|met|missed).{0,20}primary|phase\s*[123ivx]+\s+clinical trial update|reports (?:positive|negative|mixed|topline).{0,40}(?:phase|results)|clinical update —)\b/i.test(
+    title,
+  );
+}
+
+/** True when stored already matches the case-engine M&A / financing / etc. shape. */
+function looksCaseShapedEngineTitle(title: string): boolean {
+  if (looksCaseShapedMaTitle(title)) return true;
+  if (
+    /\b(?:files \$.+\bshelf registration|sets up \$.+\bat-the-market \(ATM\)|files \$.+\bequity offering|Announces \$.+\b(?:Public Offering|Registered Direct|Private Placement|Credit Facility|Financing)|Prices \$.+\b(?:Offering|Registered Direct)|Secures \$.+\bDebt Financing)\b/i.test(
+      title,
+    )
+  ) {
+    return true;
+  }
+  if (
+    /\b(?:Enters \$.+\bPartnership With|Enters Collaboration With|Signs (?:\$.+\s)?Licensing Agreement With|partners with)\b/i.test(
+      title,
+    )
+  ) {
+    return true;
+  }
+  if (
+    /^(?:FDA|EMA|SEC|FTC|DOJ)\b.+\b(?:Approves|Rejects|Accepts|Grants|Places|Clears)\b/i.test(
+      title,
+    ) ||
+    /\bReceives (?:FDA|EMA) CRL\b/i.test(title)
+  ) {
+    return true;
+  }
+  if (
+    /\bPhase\s*[123ivx]+\s+Trial (?:Meets|Misses) Primary Endpoint\b/i.test(
+      title,
+    ) ||
+    /\bReports (?:Positive|Negative|Mixed|Topline) Phase\b/i.test(title)
+  ) {
+    return true;
+  }
+  return false;
+}
+
+/**
+ * Keep study/wire headlines that are denser than the case template
+ * (named trials, protocol IDs, extra grounded detail) — never invent facts.
+ */
+function isDenserSpecificHeadline(stored: string, engineered: string): boolean {
+  const s = normalizeWs(stored);
+  const eng = normalizeWs(engineered);
+  if (!s || !eng) return false;
+  if (s === eng || s.toLowerCase() === eng.toLowerCase()) return false;
+  // Named studies / protocol IDs missing from the template — always denser.
+  if (
+    /\b(?:KEYNOTE|CHECKMATE|NCT\d{6,}|protocol\s+[A-Z0-9-]+)\b/i.test(s) &&
+    !/\b(?:KEYNOTE|CHECKMATE|NCT\d{6,}|protocol\s+[A-Z0-9-]+)\b/i.test(eng)
+  ) {
+    return true;
+  }
+  // Legacy family voices always yield — even when looksFactEnrichedTitle.
+  if (
+    looksLegacyFinancingFactTitle(s) ||
+    looksLegacyPartnershipFactTitle(s) ||
+    looksLegacyRegulatoryFactTitle(s) ||
+    looksLegacyClinicalFactTitle(s) ||
+    looksLegacyMaFactTitle(s)
+  ) {
+    return false;
+  }
+  if (!looksFactEnrichedTitle(s)) return false;
+  // Materially longer with concrete extra detail.
+  if (s.length > eng.length + 8 && hasUsefulDetail(s, eng)) {
+    return true;
+  }
+  return false;
+}
+
 function earningsTitle(
   input: SubjectTitleInput,
   map: Map<string, string>,
@@ -1357,6 +1455,12 @@ function hasUsefulDetail(candidate: string, fallback: string): boolean {
 /**
  * Upgrade legacy/chip/old fact sentences to case-engine templates on read,
  * but keep specific study/wire headlines that already name the study/drug detail.
+ *
+ * Root cause of stuck rows: looksFactEnrichedTitle treated many pre-case builder
+ * voices (licenses, credit facility, phase trials, CRL, partners with, …) as
+ * “already rich” and the old final gate refused to upgrade them. Default is now
+ * upgrade whenever the case engine produced a title; only denser specific
+ * headlines and already-canonical case shapes (with no new facts) are kept.
  */
 function shouldUpgradeStoredToCaseTitle(
   stored: string,
@@ -1365,6 +1469,10 @@ function shouldUpgradeStoredToCaseTitle(
   const s = normalizeWs(stored);
   const eng = normalizeWs(engineered);
   if (!s) return true;
+  // Identical → keep; case-only drift → canonicalize to engineered template.
+  if (s === eng) return false;
+  if (s.toLowerCase() === eng.toLowerCase()) return true;
+
   if (
     looksLegacyStiffTitle(s) ||
     looksTaxonomyChipTitle(s) ||
@@ -1372,86 +1480,66 @@ function shouldUpgradeStoredToCaseTitle(
   ) {
     return true;
   }
-  // Prior fact-sentence voices we replaced with case templates.
-  if (/\bfiles \$.+\bshelf registration\b/i.test(s)) {
-    // Already desk-shaped files voice — only upgrade when engineered adds more.
+
+  // Never replace a denser study/wire headline with a thinner template.
+  if (isDenserSpecificHeadline(s, eng)) {
+    return false;
+  }
+
+  // Never replace a fact-rich legacy M&A sentence with a thin chip.
+  if (looksProfessionalThinTitle(eng) && looksFactEnrichedTitle(s)) {
+    return false;
+  }
+
+  // Already on a case-engine template: only swap when engineered adds facts
+  // ($ / close verb / definitive phrasing / fuller party name) the stored line lacks.
+  if (looksCaseShapedEngineTitle(s)) {
     if (/\$/.test(eng) && !/\$/.test(s)) return true;
+    if (
+      /\bCompletes Acquisition\b/i.test(eng) &&
+      !/\bCompletes Acquisition\b/i.test(s)
+    ) {
+      return true;
+    }
+    if (
+      /\bAnnounces Acquisition of\b/i.test(s) &&
+      /\bAgrees to Acquire\b/i.test(eng) &&
+      /\$/.test(eng)
+    ) {
+      return true;
+    }
+    if (
+      /\bdefinitive agreement\b/i.test(s) &&
+      /\bEnters Definitive Agreement to Acquire\b/i.test(eng) &&
+      !/\bEnters Definitive Agreement to Acquire\b/i.test(s)
+    ) {
+      return true;
+    }
     if (
       /\bATM\b|at-the-market/i.test(eng) &&
       !/\bATM\b|at-the-market/i.test(s)
     ) {
       return true;
     }
-    // Legacy Title Case "Announces $XM Shelf" → files lowercase desk voice.
+    // Engineered adds a fuller party/asset name (Rival → Rival Inc) or tokens.
+    if (eng.length > s.length && hasUsefulDetail(eng, s)) {
+      return true;
+    }
+    // Same template family, no new material slots — keep stored casing/voice.
     return false;
   }
-  if (/\bAnnounces \$.+\bShelf Registration\b/i.test(s)) return true;
-  if (/\bAnnounces \$.+\b(?:At-The-Market|ATM)\b/i.test(s)) return true;
-  if (/\bAnnounces \$.+\bStock Offering\b/i.test(s)) return true;
-  if (/\bsets up \$.+\bat-the-market\b|\bATM\b/i.test(s)) return true;
-  if (/\bfiles \$.+\b(?:equity )?offering\b/i.test(s)) return true;
-  if (/\bwins FDA approval\b|\breceives FDA approval\b/i.test(s)) return true;
-  if (/\bAnnounces Strategic Partnership With\b/i.test(s)) return true;
-  if (/\bpartners with\b|\bannounces partnership with\b/i.test(s)) return true;
-  if (/\btrial meets primary endpoint\b/i.test(s) && /phase/i.test(s)) {
-    return true;
-  }
 
-  // Legacy M&A voices → M1–M20 case templates. looksFactEnrichedTitle treats
-  // "to acquire" / "Announces Acquisition" as rich, which previously blocked upgrades.
+  // Pre-case builder / legacy fact voices across all five subjects → upgrade.
   if (
-    /\bacquires\b.+\bfor\s*\$/i.test(s) &&
-    /\bAgrees to Acquire\b/i.test(eng) &&
-    !/\bAgrees to Acquire\b/i.test(s)
+    looksLegacyFinancingFactTitle(s) ||
+    looksLegacyPartnershipFactTitle(s) ||
+    looksLegacyRegulatoryFactTitle(s) ||
+    looksLegacyClinicalFactTitle(s) ||
+    looksLegacyMaFactTitle(s)
   ) {
     return true;
   }
-  if (looksLegacyMaFactTitle(s)) {
-    if (looksCaseShapedMaTitle(s)) {
-      // Already case-shaped: only swap when engineered adds material facts ($ / close).
-      if (/\$/.test(eng) && !/\$/.test(s)) return true;
-      if (
-        /\bCompletes Acquisition\b/i.test(eng) &&
-        !/\bCompletes Acquisition\b/i.test(s)
-      ) {
-        return true;
-      }
-      // Announces Acquisition of Target (no $) → Agrees to Acquire for $ when value known.
-      if (
-        /\bAnnounces Acquisition of\b/i.test(s) &&
-        /\bAgrees to Acquire\b/i.test(eng) &&
-        /\$/.test(eng)
-      ) {
-        return true;
-      }
-      // Legacy definitive agreement phrasing → Enters Definitive Agreement template.
-      if (
-        /\bdefinitive agreement\b/i.test(s) &&
-        /^[A-Z].*\bEnters Definitive Agreement to Acquire\b/.test(eng) &&
-        !/^[A-Z].*\bEnters Definitive Agreement to Acquire\b/.test(s)
-      ) {
-        return true;
-      }
-      return false;
-    }
-    // Legacy "acquires X for $Y" / "to acquire X for $Y" → Agrees to Acquire…
-    if (
-      /\b(?:acquires|to acquire)\b/i.test(s) &&
-      /\bAgrees to Acquire\b/i.test(eng)
-    ) {
-      return true;
-    }
-    // Never replace a fact-rich legacy M&A sentence with a thin chip.
-    if (looksProfessionalThinTitle(eng) && looksFactEnrichedTitle(s)) {
-      return false;
-    }
-    return true;
-  }
 
-  // Specific headlines (study names, long vendor copy): keep.
-  if (looksFactEnrichedTitle(s) && s.length >= eng.length) {
-    return false;
-  }
-  if (looksFactEnrichedTitle(s)) return false;
+  // Default: apply case-engine guidelines on read (chips already handled above).
   return true;
 }
