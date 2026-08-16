@@ -54,8 +54,9 @@ export function getTelegramWebhookOrigin(request: Request): string {
 
 /**
  * Allowlisted public app origin for OAuth redirects. Prefer configured
- * `NEXT_PUBLIC_APP_URL` / `NEXT_PUBLIC_AUTH_ORIGIN` only when the host is a
- * known auth host (blocks typos like www.marvel.com), then Vercel envs.
+ * `NEXT_PUBLIC_AUTH_ORIGIN` / `NEXT_PUBLIC_AUTH_URL` (alias) /
+ * `NEXT_PUBLIC_APP_URL` only when the host is a known auth host (blocks typos
+ * like www.marvel.com), then Vercel envs.
  */
 export function getTrustedAppOrigin(
   request: Request,
@@ -63,6 +64,7 @@ export function getTrustedAppOrigin(
 ): string {
   for (const key of [
     "NEXT_PUBLIC_AUTH_ORIGIN",
+    "NEXT_PUBLIC_AUTH_URL",
     "NEXT_PUBLIC_APP_URL",
   ] as const) {
     const configured = env[key]?.trim();

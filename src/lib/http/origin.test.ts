@@ -44,6 +44,25 @@ describe("getTrustedAppOrigin", () => {
     ).toBe("https://www.marveel.com");
   });
 
+  it("accepts NEXT_PUBLIC_AUTH_URL as AUTH_ORIGIN alias", () => {
+    const request = new Request("https://ignored.example/auth/callback");
+    expect(
+      getTrustedAppOrigin(request, {
+        NEXT_PUBLIC_AUTH_URL: "https://www.marveel.com",
+      }),
+    ).toBe("https://www.marveel.com");
+  });
+
+  it("prefers AUTH_ORIGIN over AUTH_URL alias", () => {
+    const request = new Request("https://ignored.example/auth/callback");
+    expect(
+      getTrustedAppOrigin(request, {
+        NEXT_PUBLIC_AUTH_ORIGIN: "https://www.marveel.com",
+        NEXT_PUBLIC_AUTH_URL: "https://marveel.com",
+      }),
+    ).toBe("https://www.marveel.com");
+  });
+
   it("ignores mistyped APP_URL like www.marvel.com", () => {
     const request = new Request("https://www.marveel.com/auth/callback");
     expect(

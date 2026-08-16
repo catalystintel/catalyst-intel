@@ -11,7 +11,9 @@ Classify the catalyst into one of the 17 subjects first. Then write **title** an
 - **Vary voice by subject** so the tape does not read as cookie-cutter `{Company} - {Subject}` for every row.
 - **Keep feed taxonomy / chips as-is** (including Capital Markets on the feed). These rules are **titles only**.
 
-**Automation:** For **financing / M&A / partnership / regulatory / clinical**, titles go through the subject-case engine (`subject-case-titles.ts`): identify primary subject → select case (F1–F6, M1–M5, P1–P6, R1–R7, C1–C7) → fill only that template with verified facts. Other subjects keep builders in `subject-titles.ts`. Display path: `titleLine` in `feed-display.ts`. Never invent numbers.
+**Automation:** For **financing / M&A / partnership / regulatory / clinical**, titles go through the subject-case engine (`subject-case-titles.ts`): identify primary subject → select case (F1–F6, M1–M20, P1–P6, R1–R7, C1–C7) → fill only that template with verified facts. Other subjects keep builders in `subject-titles.ts`. Display path: `titleLine` in `feed-display.ts`. Never invent numbers.
+
+**Trader display hierarchy (tape):** (1) fact-rich case-engine sentence when a verified material slot exists ($, target, partner, phase, product, agency outcome); (2) already-rich vendor/stored headline only if denser; (3) professional thin ground-rule; (4) never taxonomy chips / AccNo as the title. Stake parentheses (`Deal in Play`, `Dilution Ahead`) are for thin rows only.
 
 **Primary vs secondary:** e.g. FDA approval after Phase 3 → **regulatory** title (clinical is secondary). Partnership to develop a drug → **partnership**, not clinical.
 
@@ -33,28 +35,43 @@ Subjects: `src/lib/catalysts/taxonomy.ts`.
 
 ### Preferred patterns (M&A)
 
-| Facts known                         | Pattern                                               |
-| ----------------------------------- | ----------------------------------------------------- |
-| Target + value                      | `{Company} to acquire {Target} for {Value}`           |
-| Closed + target + value             | `{Company} closes {Value} acquisition of {Target}`    |
-| Terminated + target                 | `{Company} terminates acquisition of {Target}`        |
-| Acquisition cue, thin               | `{Company} - Acquisition Announced (Deal in Play)`    |
-| Closed, thin                        | `{Company} - Acquisition Closed`                      |
-| Material agreement / contract, thin | `{Company} - Partnership or Major Contract Announced` |
+Titles use the subject-case engine (`M1`–`M20`). **Buyer** = acquirer (fact or listing company). **Target** = acquired company. **$X** / **$/Share** / **% premium** only when the source states them — never invent.
 
-**Good:** `Acme to acquire Rival for $2.0B` · `Acme closes $2.0B acquisition of Rival` · `Acme - Acquisition Announced (Deal in Play)`  
-**Bad:** `Acme - New Deal Announced.` · inventing a deal value · forcing acquisition wording onto a collab filing
+| Facts / cue                  | Pattern                                                             |
+| ---------------------------- | ------------------------------------------------------------------- |
+| Agrees + target + value      | `{Buyer} Agrees to Acquire {Target} for {Value}`                    |
+| Target + $/share             | `{Buyer} to Acquire {Target} for {$}/Share`                         |
+| Target + value (announce/to) | `{Buyer} to Acquire {Target} in {Value} Deal`                       |
+| Target only                  | `{Buyer} Announces Acquisition of {Target}`                         |
+| Agrees + target              | `{Buyer} Agrees to Acquire {Target}`                                |
+| Closed + target              | `{Buyer} Completes Acquisition of {Target}`                         |
+| Merger                       | `{Buyer} Agrees to Merge With {Target}`                             |
+| Proposal / LOI               | `{Buyer} Proposes Acquisition of {Target}`                          |
+| Exploring                    | `{Buyer} Explores Acquisition of {Target}`                          |
+| Takeover + $/share           | `{Buyer} Launches Takeover of {Target} for {$}/Share`               |
+| Asset + value                | `{Buyer} to Acquire {Asset} for {Value}` / `Acquires {Asset} for …` |
+| Definitive agreement         | `{Buyer} Enters Definitive Agreement to Acquire {Target}`           |
+| Agrees to buy + $/share      | `{Buyer} Agrees to Buy {Target} for {$}/Share`                      |
+| All-stock / cash-and-stock   | `{Buyer} to Acquire {Target} in All-Stock Deal` (or Cash-and-Stock) |
+| Premium %                    | `{Buyer} Agrees to Acquire {Target} at {X}% Premium`                |
+| Completes + value + target   | `{Buyer} Completes {Value} Acquisition of {Target}`                 |
+| Announces + value + target   | `{Buyer} Announces {Value} Acquisition of {Target}`                 |
+| Terminated                   | `{Buyer} Terminates Acquisition of {Target}`                        |
+| Thin                         | `{Buyer} - Acquisition Announced (Deal in Play)`                    |
+
+**Good:** `Acme Agrees to Acquire Rival for $2.0B` · `Acme Completes $2.0B Acquisition of Rival`  
+**Bad:** inventing a deal value · forcing acquisition wording onto a collab filing
 
 ### Partnership voice (still `deals` taxonomy)
 
 When facts or filing text say partnership / collaboration / license — not M&A — use a distinct partnership line.
 
-| Facts known                | Pattern                                          |
-| -------------------------- | ------------------------------------------------ |
-| Partner + nature           | `{Company} partners with {Partner} — {nature}`   |
-| License + asset + partner  | `{Company} licenses {Asset} to {Partner}`        |
-| Partner only               | `{Company} announces partnership with {Partner}` |
-| Thin / type-word “partner” | `{Company} - Strategic Partnership Announced`    |
+| Facts known                | Pattern                                        |
+| -------------------------- | ---------------------------------------------- |
+| Partner + nature           | `{Company} partners with {Partner} — {nature}` |
+| License + asset + partner  | `{Company} licenses {Asset} to {Partner}`      |
+| Partner only               | `{Company} partners with {Partner}`            |
+| Thin / type-word “partner” | `{Company} - Strategic Partnership Announced`  |
 
 Reject partner values that are type words (`partnership`, `collaboration`, `license`, etc.). Treat `strategic partnership` as a generic nature → thin fallback.
 

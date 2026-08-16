@@ -48,6 +48,8 @@ export function getAllowedAuthHosts(
 
   for (const key of [
     "NEXT_PUBLIC_AUTH_ORIGIN",
+    // Alias — some dashboards / docs still use AUTH_URL for the same value.
+    "NEXT_PUBLIC_AUTH_URL",
     "NEXT_PUBLIC_APP_URL",
     "VERCEL_PROJECT_PRODUCTION_URL",
   ] as const) {
@@ -67,6 +69,15 @@ export function getAllowedAuthHosts(
   return hosts;
 }
 
+function parseOrigin(value: string): string | null {
+  try {
+    const withProto = /^https?:\/\//i.test(value) ? value : `https://${value}`;
+    return new URL(withProto).origin;
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Preferred public origin for “please sign in here” links when the user is
  * on an unsafe preview host.
@@ -74,16 +85,15 @@ export function getAllowedAuthHosts(
 export function getPreferredAuthOrigin(
   env: Record<string, string | undefined> = process.env,
 ): string {
-  const authOrigin = env.NEXT_PUBLIC_AUTH_ORIGIN?.trim();
-  if (authOrigin) {
-    try {
-      const withProto = /^https?:\/\//i.test(authOrigin)
-        ? authOrigin
-        : `https://${authOrigin}`;
-      return new URL(withProto).origin;
-    } catch {
-      // fall through
-    }
+  // AUTH_ORIGIN first, then AUTH_URL alias, then APP_URL (known-host gated).
+  for (const key of [
+    "NEXT_PUBLIC_AUTH_ORIGIN",
+    "NEXT_PUBLIC_AUTH_URL",
+  ] as const) {
+    const raw = env[key]?.trim();
+    if (!raw) continue;
+    const origin = parseOrigin(raw);
+    if (origin) return origin;
   }
 
   const appUrl = env.NEXT_PUBLIC_APP_URL?.trim();

@@ -83,12 +83,18 @@ or omit `https://`. **Do not** allowlist only the site root (`https://www.marvee
 Google / Supabase must return to **`/auth/callback`**. A wrong Site URL / missing callback
 entry is the usual cause of landing on `/?code=…` still signed out.
 
-**Vercel Production env (custom domain):** set both to the public brand URL:
+**Vercel Production / Preview env (custom domain):** set these to the public
+brand URL (`marveel` with two e’s — **never** `www.marvel.com`):
 
 | Variable                  | Exact value               |
 | ------------------------- | ------------------------- |
 | `NEXT_PUBLIC_APP_URL`     | `https://www.marveel.com` |
 | `NEXT_PUBLIC_AUTH_ORIGIN` | `https://www.marveel.com` |
+| `NEXT_PUBLIC_AUTH_URL`    | `https://www.marveel.com` |
+
+`NEXT_PUBLIC_AUTH_URL` is an alias for `NEXT_PUBLIC_AUTH_ORIGIN` (either works;
+`AUTH_ORIGIN` wins if both are set). Set all three on Production and Preview so
+dashboards that still label the key `AUTH_URL` cannot leave OAuth misconfigured.
 
 **Vercel Deployment Protection (common “login sent me to vercel.com” cause):**
 If Preview (or Production) has **Vercel Authentication / Deployment Protection**

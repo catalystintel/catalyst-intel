@@ -555,7 +555,7 @@ describe("titleLine", () => {
           ],
         }),
       ),
-    ).toBe("Acme Corp Announces $500M Shelf Registration");
+    ).toBe("Acme Corp files $500M shelf registration");
 
     expect(
       titleLine(
@@ -701,7 +701,7 @@ describe("titleLine", () => {
           ],
         }),
       ),
-    ).toBe("Acme Corp Announces $500M Shelf Registration");
+    ).toBe("Acme Corp files $500M shelf registration");
   });
 
   it("prefers ground-rule Halt / FDA / Earnings titles over generic chips", () => {

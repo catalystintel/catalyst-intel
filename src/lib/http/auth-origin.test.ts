@@ -29,6 +29,13 @@ describe("getAllowedAuthHosts", () => {
     expect(hosts.has("prod-deploy.vercel.app")).toBe(true);
   });
 
+  it("adds NEXT_PUBLIC_AUTH_URL alias host", () => {
+    const hosts = getAllowedAuthHosts({
+      NEXT_PUBLIC_AUTH_URL: "https://alias.example",
+    });
+    expect(hosts.has("alias.example")).toBe(true);
+  });
+
   it("does not treat preview VERCEL_URL as auth-safe by default", () => {
     const hosts = getAllowedAuthHosts({
       VERCEL_ENV: "preview",
@@ -90,10 +97,37 @@ describe("authHostBounceUrl", () => {
       "https://app.example/login?message=use_production_login",
     );
   });
+
+  it("accepts NEXT_PUBLIC_AUTH_URL as AUTH_ORIGIN alias when bouncing", () => {
+    const bounced = authHostBounceUrl(
+      "https://catalyst-intel-rouge.vercel.app/auth/login",
+      { NEXT_PUBLIC_AUTH_URL: "https://www.marveel.com" },
+    );
+    expect(bounced).toBe(
+      "https://www.marveel.com/login?message=use_production_login",
+    );
+  });
 });
 
 describe("getPreferredAuthOrigin", () => {
   it("falls back to the known production origin", () => {
     expect(getPreferredAuthOrigin({})).toBe(DEFAULT_PRODUCTION_AUTH_ORIGIN);
+  });
+
+  it("prefers AUTH_ORIGIN over AUTH_URL alias", () => {
+    expect(
+      getPreferredAuthOrigin({
+        NEXT_PUBLIC_AUTH_ORIGIN: "https://www.marveel.com",
+        NEXT_PUBLIC_AUTH_URL: "https://other.example",
+      }),
+    ).toBe("https://www.marveel.com");
+  });
+
+  it("uses AUTH_URL when AUTH_ORIGIN is unset", () => {
+    expect(
+      getPreferredAuthOrigin({
+        NEXT_PUBLIC_AUTH_URL: "https://www.marveel.com",
+      }),
+    ).toBe("https://www.marveel.com");
   });
 });
