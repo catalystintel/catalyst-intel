@@ -584,6 +584,122 @@ describe("looksFactEnrichedTitle + preferSubjectTitle", () => {
     ).toBe("Acme Corp Agrees to Acquire Rival Inc for $2.0B");
   });
 
+  it("upgrades legacy financing / partnership / regulatory / clinical voices on read", () => {
+    expect(
+      buildSubjectTitle({
+        eventCategory: "capital",
+        companyName: "Acme Corp",
+        title: "Acme Corp closes $200M credit facility",
+        keyFacts: [{ label: "Amount", value: "$200M" }],
+        summary: "Acme closes a $200M credit facility.",
+      }),
+    ).toBe("Acme Corp Announces $200M Credit Facility");
+
+    expect(
+      buildSubjectTitle({
+        eventCategory: "capital",
+        companyName: "Acme Corp",
+        type: "S-3",
+        title: "Acme Corp - Shelf Registration (S-3)",
+        keyFacts: [],
+      }),
+    ).toBe("Acme Corp - Shelf Registration Filed (Capital Raise Window)");
+
+    expect(
+      buildSubjectTitle({
+        eventCategory: "deals",
+        companyName: "Acme Corp",
+        title: "Acme Corp licenses DrugX to BioCo",
+        keyFacts: [
+          { label: "Partner", value: "BioCo" },
+          { label: "Product", value: "DrugX" },
+        ],
+        summary: "Acme licenses DrugX to BioCo.",
+      }),
+    ).toBe("Acme Corp Signs Licensing Agreement With BioCo");
+
+    expect(
+      buildSubjectTitle({
+        eventCategory: "deals",
+        companyName: "Acme Corp",
+        title: "Acme Corp Announces Collaboration With BioCo",
+        keyFacts: [{ label: "Partner", value: "BioCo" }],
+        summary: "Acme announces collaboration with BioCo.",
+      }),
+    ).toMatch(/Enters Collaboration With BioCo|partners with BioCo/i);
+
+    expect(
+      buildSubjectTitle({
+        eventCategory: "regulatory",
+        companyName: "Acme Corp",
+        title: "Acme Corp receives FDA CRL for DrugX",
+        keyFacts: [
+          { label: "Agency", value: "FDA" },
+          { label: "Outcome", value: "CRL" },
+          { label: "Product", value: "DrugX" },
+        ],
+      }),
+    ).toBe("Acme Corp Receives FDA CRL for DrugX");
+
+    expect(
+      buildSubjectTitle({
+        eventCategory: "regulatory",
+        companyName: "Acme Corp",
+        title: "Acme Corp DrugX placed on clinical hold",
+        keyFacts: [
+          { label: "Agency", value: "FDA" },
+          { label: "Outcome", value: "clinical hold" },
+          { label: "Product", value: "DrugX" },
+        ],
+      }),
+    ).toBe("FDA Places Acme Corp's DrugX on Clinical Hold");
+
+    expect(
+      buildSubjectTitle({
+        eventCategory: "clinical",
+        companyName: "BioCo",
+        title: "BioCo Phase 2 clinical trial update",
+        keyFacts: [{ label: "Phase", value: "2" }],
+      }),
+    ).toBe("BioCo Reports Topline Phase 2 Results");
+
+    expect(
+      buildSubjectTitle({
+        eventCategory: "clinical",
+        companyName: "BioCo",
+        title: "BioCo Phase 2 trial misses primary endpoint",
+        keyFacts: [
+          { label: "Phase", value: "2" },
+          { label: "Status", value: "missed primary endpoint" },
+        ],
+      }),
+    ).toBe("BioCo Phase 2 Trial Misses Primary Endpoint");
+
+    expect(
+      buildSubjectTitle({
+        eventCategory: "clinical",
+        companyName: "BioCo",
+        title: "BioCo Phase 3 trial meets primary endpoint in NSCLC",
+        keyFacts: [
+          { label: "Phase", value: "3" },
+          { label: "Status", value: "met primary endpoint" },
+          { label: "Condition", value: "NSCLC" },
+        ],
+      }),
+    ).toBe("BioCo Phase 3 Trial Meets Primary Endpoint in NSCLC");
+
+    // Denser named-study wire copy stays.
+    expect(
+      buildSubjectTitle({
+        eventCategory: "clinical",
+        companyName: "BioCo",
+        title:
+          "BioCo reports positive topline data from Phase 3 KEYNOTE study in NSCLC",
+        keyFacts: [{ label: "Phase", value: "3" }],
+      }),
+    ).toMatch(/KEYNOTE/i);
+  });
+
   it("builds titles from fetch type/items/summary without keyFacts", () => {
     expect(
       buildSubjectTitle({
