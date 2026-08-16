@@ -31,8 +31,9 @@ type DemoRow = {
 };
 
 /**
- * Believable trader-oriented demo tape. Titles follow the product's
- * catalyst-title tone; categories match the real event taxonomy.
+ * Believable trader-oriented demo tape. Titles mirror live case-engine /
+ * ground-rule voices (see ARTICLE_BY_SUBJECT + FEED-TITLE-GUIDELINES) —
+ * not legacy taxonomy chips. Categories match the real event taxonomy.
  * Pool is larger than the visible window so approach A can stream inserts.
  */
 const DEMO_POOL: DemoRow[] = [
@@ -45,7 +46,7 @@ const DEMO_POOL: DemoRow[] = [
   },
   {
     symbol: "MRK",
-    title: "Merck & Co. Receives FDA Approval",
+    title: "FDA Approves Merck & Co. Keytruda for NSCLC",
     category: "FDA",
     highPriority: true,
     time: "9:36 AM · Jul 26, 2026",
@@ -53,7 +54,7 @@ const DEMO_POOL: DemoRow[] = [
   },
   {
     symbol: "AMD",
-    title: "AMD - Partnership or Major Contract Announced",
+    title: "AMD Agrees to Acquire ZT Systems for $4.9B",
     category: "M&A",
     time: "9:31 AM · Jul 26, 2026",
     timeShort: "9:31 AM",
@@ -82,14 +83,14 @@ const DEMO_POOL: DemoRow[] = [
   },
   {
     symbol: "TSLA",
-    title: "Tesla Inc - 8-K Item 2.02 Results of Operations",
+    title: "Tesla Inc - Earnings Report Q2",
     category: "Earnings",
     time: "9:48 AM · Jul 26, 2026",
     timeShort: "9:48 AM",
   },
   {
     symbol: "LLY",
-    title: "Eli Lilly - Phase 3 Trial Meets Primary Endpoint",
+    title: "Eli Lilly Phase 3 Trial Meets Primary Endpoint",
     category: "Clinical",
     highPriority: true,
     time: "9:51 AM · Jul 26, 2026",
@@ -97,21 +98,21 @@ const DEMO_POOL: DemoRow[] = [
   },
   {
     symbol: "AAPL",
-    title: "Apple Inc - Form 4 Insider Sale (10b5-1)",
+    title: "Apple Inc - Form 4 Insider Sell",
     category: "Insider",
     time: "9:55 AM · Jul 26, 2026",
     timeShort: "9:55 AM",
   },
   {
     symbol: "BA",
-    title: "Boeing Co - Analyst Upgrade (Overweight)",
+    title: "Boeing Co - Analyst Rating",
     category: "Analyst",
     time: "10:02 AM · Jul 26, 2026",
     timeShort: "10:02 AM",
   },
   {
     symbol: "SMCI",
-    title: "Super Micro Computer - Offering / Dilution Filed",
+    title: "Super Micro Computer files $2.0B shelf registration",
     category: "Capital",
     highPriority: true,
     time: "10:08 AM · Jul 26, 2026",
@@ -119,14 +120,14 @@ const DEMO_POOL: DemoRow[] = [
   },
   {
     symbol: "XOM",
-    title: "Exxon Mobil - Asset Sale / Divestiture Announced",
+    title: "Exxon Mobil Completes Acquisition of Pioneer",
     category: "M&A",
     time: "10:14 AM · Jul 26, 2026",
     timeShort: "10:14 AM",
   },
   {
     symbol: "PFE",
-    title: "Pfizer Inc - FDA CRL / Complete Response Letter",
+    title: "FDA Issues CRL to Pfizer Inc",
     category: "FDA",
     highPriority: true,
     time: "10:19 AM · Jul 26, 2026",
@@ -134,10 +135,17 @@ const DEMO_POOL: DemoRow[] = [
   },
   {
     symbol: "META",
-    title: "Meta Platforms - Guidance Raised (FY)",
+    title: "Meta Platforms - Earnings Report Q2",
     category: "Earnings",
     time: "10:25 AM · Jul 26, 2026",
     timeShort: "10:25 AM",
+  },
+  {
+    symbol: "CRSP",
+    title: "CRISPR Therapeutics partners with Vertex — gene editing",
+    category: "M&A",
+    time: "10:28 AM · Jul 26, 2026",
+    timeShort: "10:28 AM",
   },
   {
     symbol: "GME",
@@ -149,7 +157,7 @@ const DEMO_POOL: DemoRow[] = [
   },
   {
     symbol: "—",
-    title: "FOMC Rate Decision — July 2026",
+    title: "FOMC Rate Decision",
     category: "Macro",
     time: "2:00 PM · Jul 26, 2026",
     timeShort: "2:00 PM",
