@@ -662,19 +662,20 @@ function fillFinancing(
         : `${company} Announces Debt Financing`;
     case "F5":
     default:
+      // Desk voice: files / sets up (not "Announces") — matches ARTICLE_BY_SUBJECT.
       if (/\bat-the-market\b|\bATM\b/i.test(cue)) {
         return amount
-          ? `${company} Announces ${amount} At-The-Market (ATM) Program`
-          : `${company} Announces At-The-Market (ATM) Program`;
+          ? `${company} sets up ${amount} at-the-market (ATM) program`
+          : `${company} sets up at-the-market (ATM) equity program`;
       }
       if (/\bshelf\b|^S-3/i.test(cue)) {
         return amount
-          ? `${company} Announces ${amount} Shelf Registration`
+          ? `${company} files ${amount} shelf registration`
           : `${company} - Shelf Registration Filed (Capital Raise Window)`;
       }
-      if (/^424B|prospectus|stock offering/i.test(cue)) {
+      if (/\b424B\d*|prospectus|stock offering/i.test(cue)) {
         return amount
-          ? `${company} Announces ${amount} Stock Offering`
+          ? `${company} files ${amount} equity offering`
           : `${company} - Stock Offering Filed (Dilution Ahead)`;
       }
       return amount
@@ -796,41 +797,56 @@ function fillRegulatory(
   map: Map<string, string>,
 ): string {
   const regulator = extractRegulator(cue, map);
-  const product = extractProduct(map, cue) || "Product";
+  const product = extractProduct(map, cue);
   const designation =
     findLabeled(map, "designation") ||
     cue.match(
       /\b(Fast Track|Breakthrough Therapy|Orphan Drug|Priority Review)\b/i,
     )?.[1] ||
-    "Designation";
+    null;
   const application =
-    findLabeled(map, "application", "nda", "bla", "maa") || "Application";
-  const program = extractProduct(map, cue) || "Program";
+    findLabeled(map, "application", "nda", "bla", "maa") || null;
+  const thinApproval = /FDA/i.test(regulator)
+    ? `${company} Receives FDA Approval!`
+    : `${regulator} Approves ${company}`;
 
   switch (caseId) {
     case "R1":
-      return product !== "Product"
+      // Never invent a product name — bang / agency+company when product unknown.
+      return product
         ? `${regulator} Approves ${company}'s ${product}`
-        : `${regulator} Approves ${company}'s Product`;
+        : thinApproval;
     case "R2":
       if (/\bCRL|complete response/i.test(cue)) {
-        return product !== "Product"
+        return product
           ? `${company} Receives ${regulator} CRL for ${product}`
           : `${company} Receives ${regulator} CRL`;
       }
-      return product !== "Product"
+      return product
         ? `${regulator} Rejects ${company}'s ${product}`
         : `${regulator} Rejects ${company}'s Application`;
     case "R3":
-      return `${regulator} Accepts ${company}'s ${application} for Review`;
+      return application
+        ? `${regulator} Accepts ${company}'s ${application} for Review`
+        : `${regulator} Accepts ${company}'s Application for Review`;
     case "R4":
-      return `${regulator} Grants ${designation} to ${company}'s ${product}`;
+      if (designation && product) {
+        return `${regulator} Grants ${designation} to ${company}'s ${product}`;
+      }
+      if (designation) {
+        return `${regulator} Grants ${designation} to ${company}`;
+      }
+      return product
+        ? `${regulator} Grants Designation to ${company}'s ${product}`
+        : `${company} - Regulatory Action Update`;
     case "R5":
-      return `${regulator} Places ${company}'s ${program} on Clinical Hold`;
+      return product
+        ? `${regulator} Places ${company}'s ${product} on Clinical Hold`
+        : `${regulator} Places ${company}'s Program on Clinical Hold`;
     case "R6":
-      return product !== "Product"
+      return product
         ? `${regulator} Clears ${company}'s ${product}`
-        : `${regulator} Clears ${company}'s Product`;
+        : `${regulator} Clears ${company}`;
     case "R7":
     default:
       return `${company} - Regulatory Action Update`;
@@ -880,8 +896,9 @@ function fillPartnership(
         : `${company} Expands Partnership`;
     case "P2":
     default:
+      // Shorter desk scan: "partners with" beats long announce chip when partner known.
       return partner
-        ? `${company} Announces Strategic Partnership With ${partner}`
+        ? `${company} partners with ${partner}`
         : `${company} - Strategic Partnership Announced`;
   }
 }
@@ -939,7 +956,10 @@ function fillClinical(
           : `${company} Reports Mixed Clinical Results`;
     case "C7":
       if (phaseLabel && pct) {
-        return `${company} ${phaseLabel} Trial Shows ${pct} Improvement in ${endpoint}`;
+        const namedEndpoint = endpoint !== "Primary Endpoint" ? endpoint : null;
+        return namedEndpoint
+          ? `${company} ${phaseLabel} Trial Shows ${pct} Improvement in ${namedEndpoint}`
+          : `${company} ${phaseLabel} Trial Shows ${pct} Improvement`;
       }
       return fillClinical("C6", company, cue, map);
     case "C6":

@@ -141,7 +141,7 @@ describe("buildSubjectTitle", () => {
           { label: "Amount", value: "$500M" },
         ],
       }),
-    ).toBe("Acme Corp Announces $500M Shelf Registration");
+    ).toBe("Acme Corp files $500M shelf registration");
 
     expect(
       buildSubjectTitle({
@@ -153,7 +153,7 @@ describe("buildSubjectTitle", () => {
           { label: "Amount", value: "$100M" },
         ],
       }),
-    ).toMatch(/At-The-Market \(ATM\)/i);
+    ).toBe("Acme Corp sets up $100M at-the-market (ATM) program");
 
     expect(
       buildSubjectTitle({
@@ -166,7 +166,7 @@ describe("buildSubjectTitle", () => {
           { label: "Shares", value: "12.5M shares" },
         ],
       }),
-    ).toMatch(/Announces \$250M Stock Offering/i);
+    ).toBe("Acme Corp files $250M equity offering");
   });
 
   it("uses professional thin capital fallbacks without inventing size", () => {
@@ -464,14 +464,14 @@ describe("looksFactEnrichedTitle + preferSubjectTitle", () => {
         eventCategory: "capital",
         companyName: "Acme Corp",
         type: "S-3",
-        title: "Acme Corp files $500M shelf registration",
+        title: "Acme Corp Announces $500M Shelf Registration",
         keyFacts: [
           { label: "Form", value: "S-3" },
           { label: "Amount", value: "$500M" },
           { label: "Type", value: "Shelf registration" },
         ],
       }),
-    ).toBe("Acme Corp Announces $500M Shelf Registration");
+    ).toBe("Acme Corp files $500M shelf registration");
 
     expect(
       buildSubjectTitle({
@@ -603,7 +603,7 @@ describe("looksFactEnrichedTitle + preferSubjectTitle", () => {
           "The company filed a shelf registration for up to $500 million.",
         keyFacts: [],
       }),
-    ).toBe("Acme Corp Announces $500M Shelf Registration");
+    ).toBe("Acme Corp files $500M shelf registration");
 
     expect(
       buildSubjectTitle({
