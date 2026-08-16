@@ -14,7 +14,28 @@ export type EngineSubject =
   "financing" | "ma" | "regulatory" | "partnership" | "clinical";
 
 export type FinancingCase = "F1" | "F2" | "F3" | "F4" | "F5" | "F6";
-export type MaCase = "M1" | "M2" | "M3" | "M4" | "M5";
+/** M&A title scenarios — templates in fillMa; never invent Buyer/Target/$/premium. */
+export type MaCase =
+  | "M1" // Agrees to Acquire Target for $XM
+  | "M2" // to Acquire Target for $X/Share
+  | "M3" // to Acquire Target in $XM Deal
+  | "M4" // Announces Acquisition of Target
+  | "M5" // Agrees to Acquire Target
+  | "M6" // Completes Acquisition of Target
+  | "M7" // Agrees to Merge With Target
+  | "M8" // Proposes Acquisition of Target
+  | "M9" // Explores Acquisition of Target
+  | "M10" // Launches Takeover of Target for $X/Share
+  | "M11" // to Acquire Business/Asset for $XM
+  | "M12" // Acquires Business/Asset for $XM
+  | "M13" // Enters Definitive Agreement to Acquire Target
+  | "M14" // Agrees to Buy Target for $X/Share
+  | "M15" // to Acquire Target in All-Stock Deal
+  | "M16" // to Acquire Target in Cash-and-Stock Deal
+  | "M17" // Agrees to Acquire Target at X% Premium
+  | "M18" // Completes $XM Acquisition of Target
+  | "M19" // Announces $XM Acquisition of Target
+  | "M20"; // Terminates Acquisition of Target (status)
 export type RegulatoryCase = "R1" | "R2" | "R3" | "R4" | "R5" | "R6" | "R7";
 export type PartnershipCase = "P1" | "P2" | "P3" | "P4" | "P5" | "P6";
 export type ClinicalCase = "C1" | "C2" | "C3" | "C4" | "C5" | "C6" | "C7";
@@ -190,11 +211,58 @@ function extractPartner(map: Map<string, string>): string | null {
 }
 
 function extractTarget(map: Map<string, string>): string | null {
-  return findLabeled(map, "target", "seller");
+  return findLabeled(map, "target", "seller", "acquired company");
 }
 
 function extractBuyer(map: Map<string, string>, company: string): string {
-  return findLabeled(map, "buyer", "acquirer") || company;
+  return findLabeled(map, "buyer", "acquirer", "acquiring company") || company;
+}
+
+/** Division / asset / business line (not a whole-company Target). */
+function extractAsset(map: Map<string, string>, cue: string): string | null {
+  const fromFact = findLabeled(
+    map,
+    "asset",
+    "business",
+    "division",
+    "unit",
+    "brand",
+  );
+  if (fromFact) return fromFact;
+  const m = cue.match(
+    /\b(?:acquire|acquires|acquiring|acquisition of)\s+(?:the\s+)?([A-Z][^.]{2,60}?)\s+(?:business|division|assets?|unit|brand)\b/i,
+  );
+  return m ? normalizeWs(m[1]!) : null;
+}
+
+function extractPremiumPct(
+  cue: string,
+  map: Map<string, string>,
+): string | null {
+  const fromFact = findLabeled(map, "premium");
+  if (fromFact) {
+    const m = fromFact.match(/(\d+(?:\.\d+)?)\s*%/);
+    if (m) return `${m[1]}%`;
+  }
+  const m = cue.match(
+    /(\d+(?:\.\d+)?)\s*%\s*premium\b|\bpremium\s+of\s+(\d+(?:\.\d+)?)\s*%/i,
+  );
+  if (!m) return null;
+  return `${m[1] || m[2]}%`;
+}
+
+function isAllStock(cue: string, map: Map<string, string>): boolean {
+  const consideration =
+    findLabeled(map, "consideration", "structure", "deal type") ?? "";
+  return /\ball[-\s]?stock\b/i.test(`${consideration} ${cue}`);
+}
+
+function isCashAndStock(cue: string, map: Map<string, string>): boolean {
+  const consideration =
+    findLabeled(map, "consideration", "structure", "deal type") ?? "";
+  return /\bcash[-\s]?and[-\s]?stock\b|\bcash\s+and\s+stock\b/i.test(
+    `${consideration} ${cue}`,
+  );
 }
 
 function extractRegulator(cue: string, map: Map<string, string>): string {
@@ -255,7 +323,7 @@ function scoreMa(cue: string, input: SubjectTitleInput): number {
   if (/^425/i.test(input.type ?? "")) s += 5;
   if ((input.items ?? []).some((i) => i.code === "2.01")) s += 4;
   if (
-    /\b(?:acqui(?:re|res|red|sition)|merger|takeover|buyout|definitive agreement to acquire)\b/i.test(
+    /\b(?:acqui(?:re|res|red|sition)|merg(?:e|es|ed|ing|er)|takeover|buyout|definitive agreement to acquire)\b/i.test(
       cue,
     )
   ) {
@@ -263,7 +331,7 @@ function scoreMa(cue: string, input: SubjectTitleInput): number {
   }
   // Ownership transfer language beats partnership when both appear.
   if (
-    /\b(?:acquire|acquisition|merger)\b/i.test(cue) &&
+    /\b(?:acquire|acquisition|merg(?:e|er)|takeover)\b/i.test(cue) &&
     !/\blicen/i.test(cue)
   ) {
     s += 2;
@@ -406,23 +474,79 @@ function selectFinancingCase(
 }
 
 function selectMaCase(cue: string, map: Map<string, string>): MaCase {
+  const status = findLabeled(map, "status") ?? "";
+  const blob = `${status} ${cue}`;
   const terminated =
     /\b(?:terminat(?:e|es|ed|ing)?|abandon(?:s|ed)?|withdrawn|broken)\b/i.test(
-      cue,
-    ) || /terminat/i.test(findLabeled(map, "status") ?? "");
-  if (terminated) return "M3"; // fill uses terminate wording when status says so
+      blob,
+    );
+  if (terminated) return "M20";
+
   const closed =
-    /\b(?:clos(?:e|ed|ing)|completes?|completed|consummat)\b/i.test(cue) ||
-    /closed/i.test(findLabeled(map, "status") ?? "");
-  if (closed) return "M5";
-  if (/\bmerg(?:e|er|es|ing)\b/i.test(cue) && !/\bacqui/i.test(cue))
-    return "M4";
+    /\b(?:clos(?:e|ed|ing)|completes?|completed|consummat)\b/i.test(blob);
+  const explores =
+    /\b(?:explor(?:e|es|ing)|evaluat(?:e|es|ing)|consider(?:s|ing)?)\b.{0,40}\b(?:acqui|merger|takeover)\b/i.test(
+      blob,
+    ) || /\bexploratory\b.{0,20}\b(?:bid|offer|acquisition)\b/i.test(blob);
+  const proposes =
+    /\b(?:propos(?:e|es|ed|al)|non[-\s]?binding|letter of intent|\bLOI\b)\b/i.test(
+      blob,
+    );
+  const takeover = /\b(?:takeover|tender offer)\b/i.test(blob);
+  const definitive =
+    /\bdefinitive agreement\b|\benters?\s+into\s+(?:a\s+)?definitive\b/i.test(
+      blob,
+    );
+  const mergerOnly =
+    /\bmerg(?:e|er|es|ing)\b/i.test(blob) && !/\bacqui/i.test(blob);
+  const agrees = /\bagrees?\b|\bentered into (?:an? )?agreement\b/i.test(blob);
+  const announces = /\bannounc(?:e|es|ed|ing)\b/i.test(blob);
+  const buys = /\bagrees?\s+to\s+buy\b|\bto\s+buy\b/i.test(blob);
+
   const perShare = extractSharePrice(cue, map);
   const money = extractMoney(cue, map);
   const target = extractTarget(map);
-  if (perShare && target) return "M2";
-  if (money && target) return "M1";
-  return "M3";
+  const asset = extractAsset(map, cue);
+  const premium = extractPremiumPct(cue, map);
+
+  // Most specific scenarios first.
+  if (explores && (target || asset)) return "M9";
+  if (proposes && target) return "M8";
+  if (takeover && target && perShare) return "M10";
+  if (definitive && target) return "M13";
+  if (mergerOnly) return "M7";
+
+  if (closed && money && target) return "M18";
+  if (closed && target) return "M6";
+  if (closed && money && asset) return "M12";
+
+  if (target && isAllStock(cue, map)) return "M15";
+  if (target && isCashAndStock(cue, map)) return "M16";
+  if (target && premium && (agrees || announces)) return "M17";
+
+  if (asset && money && closed) return "M12";
+  if (asset && money) return "M11";
+
+  if (target && perShare && buys) return "M14";
+  if (target && perShare) return "M2";
+
+  // Default valued company deal → Agrees to Acquire for $X (primary template).
+  // "Announces $XM Acquisition of Target" only for that exact announce+$ order.
+  if (
+    target &&
+    money &&
+    /\bannounc(?:e|es|ed|ing)\s+\$[\d.,]+[MB]?\s+Acquisition\b/i.test(blob) &&
+    !agrees
+  ) {
+    return "M19";
+  }
+  if (target && money) return "M1";
+
+  if (target && agrees) return "M5";
+  if (target) return "M4";
+
+  // Thin deal cue — announce line without inventing a target.
+  return "M4";
 }
 
 function selectRegulatoryCase(
@@ -538,19 +662,20 @@ function fillFinancing(
         : `${company} Announces Debt Financing`;
     case "F5":
     default:
+      // Desk voice: files / sets up (not "Announces") — matches ARTICLE_BY_SUBJECT.
       if (/\bat-the-market\b|\bATM\b/i.test(cue)) {
         return amount
-          ? `${company} Announces ${amount} At-The-Market (ATM) Program`
-          : `${company} Announces At-The-Market (ATM) Program`;
+          ? `${company} sets up ${amount} at-the-market (ATM) program`
+          : `${company} sets up at-the-market (ATM) equity program`;
       }
       if (/\bshelf\b|^S-3/i.test(cue)) {
         return amount
-          ? `${company} Announces ${amount} Shelf Registration`
+          ? `${company} files ${amount} shelf registration`
           : `${company} - Shelf Registration Filed (Capital Raise Window)`;
       }
-      if (/^424B|prospectus|stock offering/i.test(cue)) {
+      if (/\b424B\d*|prospectus|stock offering/i.test(cue)) {
         return amount
-          ? `${company} Announces ${amount} Stock Offering`
+          ? `${company} files ${amount} equity offering`
           : `${company} - Stock Offering Filed (Dilution Ahead)`;
       }
       return amount
@@ -567,44 +692,101 @@ function fillMa(
 ): string {
   const buyer = extractBuyer(map, company);
   const target = extractTarget(map);
+  const asset = extractAsset(map, cue);
   const amount = extractMoney(cue, map);
   const perShare = extractSharePrice(cue, map);
+  const premium = extractPremiumPct(cue, map);
+  const thin = `${buyer} - Acquisition Announced (Deal in Play)`;
 
   switch (caseId) {
     case "M1":
       if (target && amount)
         return `${buyer} Agrees to Acquire ${target} for ${amount}`;
-      if (target) return `${buyer} Announces Acquisition of ${target}`;
-      return amount
-        ? `${buyer} Announces ${amount} Acquisition`
-        : `${buyer} - Acquisition Announced (Deal in Play)`;
+      if (target) return `${buyer} Agrees to Acquire ${target}`;
+      return thin;
     case "M2":
-      if (target && perShare) {
+      if (target && perShare)
         return `${buyer} to Acquire ${target} for ${perShare}`;
-      }
-      return fillMa("M3", company, cue, map);
-    case "M4": {
+      return fillMa("M4", company, cue, map);
+    case "M3":
+      if (target && amount)
+        return `${buyer} to Acquire ${target} in ${amount} Deal`;
+      if (target) return `${buyer} to Acquire ${target}`;
+      return thin;
+    case "M4":
+      if (target && amount)
+        return `${buyer} Announces ${amount} Acquisition of ${target}`;
+      return target
+        ? `${buyer} Announces Acquisition of ${target}`
+        : amount
+          ? `${buyer} Announces ${amount} Acquisition`
+          : thin;
+    case "M5":
+      return target ? `${buyer} Agrees to Acquire ${target}` : thin;
+    case "M6":
+      return target
+        ? `${buyer} Completes Acquisition of ${target}`
+        : `${buyer} - Acquisition Closed`;
+    case "M7": {
       const other = target || findLabeled(map, "partner", "counterparty");
       return other
         ? `${buyer} Agrees to Merge With ${other}`
         : `${buyer} Announces Merger`;
     }
-    case "M5":
+    case "M8":
+      return target ? `${buyer} Proposes Acquisition of ${target}` : thin;
+    case "M9":
       return target
-        ? `${buyer} Completes Acquisition of ${target}`
-        : `${buyer} - Acquisition Closed`;
-    case "M3":
-    default: {
-      const terminated =
-        /\b(?:terminat(?:e|es|ed|ing)?|abandon|withdrawn)\b/i.test(cue) ||
-        /terminat/i.test(findLabeled(map, "status") ?? "");
-      if (terminated && target) {
-        return `${buyer} Terminates Acquisition of ${target}`;
-      }
+        ? `${buyer} Explores Acquisition of ${target}`
+        : asset
+          ? `${buyer} Explores Acquisition of ${asset}`
+          : thin;
+    case "M10":
+      if (target && perShare)
+        return `${buyer} Launches Takeover of ${target} for ${perShare}`;
+      return target ? `${buyer} Launches Takeover of ${target}` : thin;
+    case "M11":
+      if (asset && amount) return `${buyer} to Acquire ${asset} for ${amount}`;
+      return asset
+        ? `${buyer} to Acquire ${asset}`
+        : fillMa("M3", company, cue, map);
+    case "M12":
+      if (asset && amount) return `${buyer} Acquires ${asset} for ${amount}`;
+      return asset
+        ? `${buyer} Acquires ${asset}`
+        : fillMa("M6", company, cue, map);
+    case "M13":
       return target
-        ? `${buyer} Announces Acquisition of ${target}`
-        : `${buyer} - Acquisition Announced (Deal in Play)`;
-    }
+        ? `${buyer} Enters Definitive Agreement to Acquire ${target}`
+        : thin;
+    case "M14":
+      if (target && perShare)
+        return `${buyer} Agrees to Buy ${target} for ${perShare}`;
+      return target ? `${buyer} Agrees to Buy ${target}` : thin;
+    case "M15":
+      return target ? `${buyer} to Acquire ${target} in All-Stock Deal` : thin;
+    case "M16":
+      return target
+        ? `${buyer} to Acquire ${target} in Cash-and-Stock Deal`
+        : thin;
+    case "M17":
+      if (target && premium)
+        return `${buyer} Agrees to Acquire ${target} at ${premium} Premium`;
+      return fillMa("M5", company, cue, map);
+    case "M18":
+      if (target && amount)
+        return `${buyer} Completes ${amount} Acquisition of ${target}`;
+      return fillMa("M6", company, cue, map);
+    case "M19":
+      if (target && amount)
+        return `${buyer} Announces ${amount} Acquisition of ${target}`;
+      return fillMa("M4", company, cue, map);
+    case "M20":
+      return target
+        ? `${buyer} Terminates Acquisition of ${target}`
+        : `${buyer} Terminates Acquisition`;
+    default:
+      return thin;
   }
 }
 
@@ -615,41 +797,56 @@ function fillRegulatory(
   map: Map<string, string>,
 ): string {
   const regulator = extractRegulator(cue, map);
-  const product = extractProduct(map, cue) || "Product";
+  const product = extractProduct(map, cue);
   const designation =
     findLabeled(map, "designation") ||
     cue.match(
       /\b(Fast Track|Breakthrough Therapy|Orphan Drug|Priority Review)\b/i,
     )?.[1] ||
-    "Designation";
+    null;
   const application =
-    findLabeled(map, "application", "nda", "bla", "maa") || "Application";
-  const program = extractProduct(map, cue) || "Program";
+    findLabeled(map, "application", "nda", "bla", "maa") || null;
+  const thinApproval = /FDA/i.test(regulator)
+    ? `${company} Receives FDA Approval!`
+    : `${regulator} Approves ${company}`;
 
   switch (caseId) {
     case "R1":
-      return product !== "Product"
+      // Never invent a product name — bang / agency+company when product unknown.
+      return product
         ? `${regulator} Approves ${company}'s ${product}`
-        : `${regulator} Approves ${company}'s Product`;
+        : thinApproval;
     case "R2":
       if (/\bCRL|complete response/i.test(cue)) {
-        return product !== "Product"
+        return product
           ? `${company} Receives ${regulator} CRL for ${product}`
           : `${company} Receives ${regulator} CRL`;
       }
-      return product !== "Product"
+      return product
         ? `${regulator} Rejects ${company}'s ${product}`
         : `${regulator} Rejects ${company}'s Application`;
     case "R3":
-      return `${regulator} Accepts ${company}'s ${application} for Review`;
+      return application
+        ? `${regulator} Accepts ${company}'s ${application} for Review`
+        : `${regulator} Accepts ${company}'s Application for Review`;
     case "R4":
-      return `${regulator} Grants ${designation} to ${company}'s ${product}`;
+      if (designation && product) {
+        return `${regulator} Grants ${designation} to ${company}'s ${product}`;
+      }
+      if (designation) {
+        return `${regulator} Grants ${designation} to ${company}`;
+      }
+      return product
+        ? `${regulator} Grants Designation to ${company}'s ${product}`
+        : `${company} - Regulatory Action Update`;
     case "R5":
-      return `${regulator} Places ${company}'s ${program} on Clinical Hold`;
+      return product
+        ? `${regulator} Places ${company}'s ${product} on Clinical Hold`
+        : `${regulator} Places ${company}'s Program on Clinical Hold`;
     case "R6":
-      return product !== "Product"
+      return product
         ? `${regulator} Clears ${company}'s ${product}`
-        : `${regulator} Clears ${company}'s Product`;
+        : `${regulator} Clears ${company}`;
     case "R7":
     default:
       return `${company} - Regulatory Action Update`;
@@ -699,8 +896,9 @@ function fillPartnership(
         : `${company} Expands Partnership`;
     case "P2":
     default:
+      // Shorter desk scan: "partners with" beats long announce chip when partner known.
       return partner
-        ? `${company} Announces Strategic Partnership With ${partner}`
+        ? `${company} partners with ${partner}`
         : `${company} - Strategic Partnership Announced`;
   }
 }
@@ -758,7 +956,10 @@ function fillClinical(
           : `${company} Reports Mixed Clinical Results`;
     case "C7":
       if (phaseLabel && pct) {
-        return `${company} ${phaseLabel} Trial Shows ${pct} Improvement in ${endpoint}`;
+        const namedEndpoint = endpoint !== "Primary Endpoint" ? endpoint : null;
+        return namedEndpoint
+          ? `${company} ${phaseLabel} Trial Shows ${pct} Improvement in ${namedEndpoint}`
+          : `${company} ${phaseLabel} Trial Shows ${pct} Improvement`;
       }
       return fillClinical("C6", company, cue, map);
     case "C6":
