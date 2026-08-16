@@ -336,6 +336,35 @@ describe("subject-case-titles engine", () => {
     ).toBe("ABC - Stock Offering Filed (Dilution Ahead)");
   });
 
+  it("F5 thin unknown instrument uses Stock Offering ground-rule (not Announces Financing)", () => {
+    expect(
+      buildCaseEngineTitle(
+        {
+          eventCategory: "capital",
+          companyName: "AGPU",
+          symbol: "AGPU",
+          title: "AGPU Announces Financing",
+        },
+        [],
+      ),
+    ).toBe("AGPU - Stock Offering Filed (Dilution Ahead)");
+  });
+
+  it("M&A taxonomy chip upgrades to Acquisition Announced thin", () => {
+    expect(
+      buildCaseEngineTitle(
+        {
+          eventCategory: "deals",
+          companyName: null,
+          symbol: "SDOT",
+          title: "M&A / acquisition",
+          headline: "M&A / acquisition",
+        },
+        [],
+      ),
+    ).toBe("SDOT - Acquisition Announced (Deal in Play)");
+  });
+
   it("R1 prefers agency+product; bang only when product unknown", () => {
     expect(
       buildCaseEngineTitle(

@@ -387,6 +387,8 @@ describe("looksFactEnrichedTitle + preferSubjectTitle", () => {
     ).toBe(true);
     expect(looksTaxonomyChipTitle("Shelf registration (S-3)")).toBe(true);
     expect(looksTaxonomyChipTitle("8-K filing")).toBe(true);
+    expect(looksTaxonomyChipTitle("M&A / acquisition")).toBe(true);
+    expect(looksProfessionalThinTitle("AGPU Announces Financing")).toBe(false);
   });
 
   it("prefers enriched subject title over ground-rule chip", () => {
