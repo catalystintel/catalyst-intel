@@ -480,9 +480,9 @@ function extractAcquisitionTargetFromCue(cue: string): string | null {
   return target;
 }
 
-/** Case-engine M1–M5 shaped titles (already on guidelines). */
+/** Case-engine M&A shaped titles (already on guidelines). */
 function looksCaseShapedMaTitle(title: string): boolean {
-  return /\b(?:Agrees to Acquire|Completes Acquisition(?:\s+of)?|Announces Acquisition of|Terminates Acquisition(?:\s+of)?|Agrees to Merge With)\b/i.test(
+  return /\b(?:Agrees to Acquire|Agrees to Buy|to Acquire .+ in \$[\d.]+[MB]? Deal|to Acquire .+ for \$[\d.]+\/Share|to Acquire .+ in (?:All-Stock|Cash-and-Stock) Deal|Completes (?:\$[\d.]+[MB]?\s+)?Acquisition(?:\s+of)?|Announces (?:\$[\d.]+[MB]?\s+)?Acquisition(?:\s+of)?|Terminates Acquisition(?:\s+of)?|Agrees to Merge With|Proposes Acquisition of|Explores Acquisition of|Launches Takeover of|Enters Definitive Agreement to Acquire)\b/i.test(
     title,
   );
 }
@@ -1382,8 +1382,15 @@ function shouldUpgradeStoredToCaseTitle(
     return true;
   }
 
-  // Legacy M&A voices → M1–M5 case templates. looksFactEnrichedTitle treats
+  // Legacy M&A voices → M1–M20 case templates. looksFactEnrichedTitle treats
   // "to acquire" / "Announces Acquisition" as rich, which previously blocked upgrades.
+  if (
+    /\bacquires\b.+\bfor\s*\$/i.test(s) &&
+    /\bAgrees to Acquire\b/i.test(eng) &&
+    !/\bAgrees to Acquire\b/i.test(s)
+  ) {
+    return true;
+  }
   if (looksLegacyMaFactTitle(s)) {
     if (looksCaseShapedMaTitle(s)) {
       // Already case-shaped: only swap when engineered adds material facts ($ / close).
@@ -1394,7 +1401,30 @@ function shouldUpgradeStoredToCaseTitle(
       ) {
         return true;
       }
+      // Announces Acquisition of Target (no $) → Agrees to Acquire for $ when value known.
+      if (
+        /\bAnnounces Acquisition of\b/i.test(s) &&
+        /\bAgrees to Acquire\b/i.test(eng) &&
+        /\$/.test(eng)
+      ) {
+        return true;
+      }
+      // Legacy definitive agreement phrasing → Enters Definitive Agreement template.
+      if (
+        /\bdefinitive agreement\b/i.test(s) &&
+        /^[A-Z].*\bEnters Definitive Agreement to Acquire\b/.test(eng) &&
+        !/^[A-Z].*\bEnters Definitive Agreement to Acquire\b/.test(s)
+      ) {
+        return true;
+      }
       return false;
+    }
+    // Legacy "acquires X for $Y" / "to acquire X for $Y" → Agrees to Acquire…
+    if (
+      /\b(?:acquires|to acquire)\b/i.test(s) &&
+      /\bAgrees to Acquire\b/i.test(eng)
+    ) {
+      return true;
     }
     // Never replace a fact-rich legacy M&A sentence with a thin chip.
     if (looksProfessionalThinTitle(eng) && looksFactEnrichedTitle(s)) {

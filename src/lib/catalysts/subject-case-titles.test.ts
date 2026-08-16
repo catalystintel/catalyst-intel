@@ -85,6 +85,146 @@ describe("subject-case-titles engine", () => {
     ).toBe("ABC Agrees to Acquire XYZ for $400M");
   });
 
+  it("M2 per-share acquisition", () => {
+    expect(
+      buildCaseEngineTitle(
+        {
+          eventCategory: "deals",
+          companyName: "ABC",
+          summary: "ABC to acquire XYZ for $12.50 per share.",
+        },
+        [
+          { label: "Target", value: "XYZ" },
+          { label: "Price", value: "$12.50/share" },
+        ],
+      ),
+    ).toBe("ABC to Acquire XYZ for $12.50/Share");
+  });
+
+  it("M6 completes acquisition", () => {
+    expect(
+      buildCaseEngineTitle(
+        {
+          eventCategory: "deals",
+          companyName: "ABC",
+          summary: "ABC completes acquisition of XYZ.",
+        },
+        [
+          { label: "Target", value: "XYZ" },
+          { label: "Status", value: "closed" },
+        ],
+      ),
+    ).toBe("ABC Completes Acquisition of XYZ");
+  });
+
+  it("M7 merger", () => {
+    expect(
+      buildCaseEngineTitle(
+        {
+          eventCategory: "deals",
+          companyName: "ABC",
+          summary: "ABC agrees to merge with XYZ.",
+        },
+        [{ label: "Target", value: "XYZ" }],
+      ),
+    ).toBe("ABC Agrees to Merge With XYZ");
+  });
+
+  it("M13 definitive agreement", () => {
+    expect(
+      buildCaseEngineTitle(
+        {
+          eventCategory: "deals",
+          companyName: "ABC",
+          summary: "ABC enters definitive agreement to acquire XYZ.",
+        },
+        [{ label: "Target", value: "XYZ" }],
+      ),
+    ).toBe("ABC Enters Definitive Agreement to Acquire XYZ");
+  });
+
+  it("M15 all-stock deal", () => {
+    expect(
+      buildCaseEngineTitle(
+        {
+          eventCategory: "deals",
+          companyName: "ABC",
+          summary: "ABC to acquire XYZ in an all-stock deal.",
+        },
+        [
+          { label: "Target", value: "XYZ" },
+          { label: "Consideration", value: "all-stock" },
+        ],
+      ),
+    ).toBe("ABC to Acquire XYZ in All-Stock Deal");
+  });
+
+  it("M17 premium", () => {
+    expect(
+      buildCaseEngineTitle(
+        {
+          eventCategory: "deals",
+          companyName: "ABC",
+          summary: "ABC agrees to acquire XYZ at a 28% premium.",
+        },
+        [
+          { label: "Target", value: "XYZ" },
+          { label: "Premium", value: "28%" },
+        ],
+      ),
+    ).toBe("ABC Agrees to Acquire XYZ at 28% Premium");
+  });
+
+  it("M18 completes valued acquisition", () => {
+    expect(
+      buildCaseEngineTitle(
+        {
+          eventCategory: "deals",
+          companyName: "ABC",
+          summary: "ABC completes $400M acquisition of XYZ.",
+        },
+        [
+          { label: "Target", value: "XYZ" },
+          { label: "Deal value", value: "$400M" },
+          { label: "Status", value: "closed" },
+        ],
+      ),
+    ).toBe("ABC Completes $400M Acquisition of XYZ");
+  });
+
+  it("M11 asset purchase", () => {
+    expect(
+      buildCaseEngineTitle(
+        {
+          eventCategory: "deals",
+          companyName: "ABC",
+          summary: "ABC to acquire the Widgets division for $90M.",
+        },
+        [
+          { label: "Asset", value: "Widgets division" },
+          { label: "Deal value", value: "$90M" },
+        ],
+      ),
+    ).toBe("ABC to Acquire Widgets division for $90M");
+  });
+
+  it("uses Buyer fact when distinct from listing company", () => {
+    expect(
+      buildCaseEngineTitle(
+        {
+          eventCategory: "deals",
+          companyName: "TargetCo",
+          summary: "BigBuyer agrees to acquire TargetCo for $1.2B.",
+        },
+        [
+          { label: "Buyer", value: "BigBuyer" },
+          { label: "Target", value: "TargetCo" },
+          { label: "Deal value", value: "$1.2B" },
+        ],
+      ),
+    ).toBe("BigBuyer Agrees to Acquire TargetCo for $1.2B");
+  });
+
   it("R1 FDA approval (not clinical title)", () => {
     expect(
       buildCaseEngineTitle(

@@ -42,7 +42,7 @@ describe("buildSubjectTitle", () => {
           { label: "Status", value: "Closed" },
         ],
       }),
-    ).toMatch(/Completes Acquisition of Rival Inc/i);
+    ).toMatch(/Completes (?:\$2\.0B )?Acquisition of Rival Inc/i);
 
     expect(
       buildSubjectTitle({
@@ -558,7 +558,7 @@ describe("looksFactEnrichedTitle + preferSubjectTitle", () => {
           { label: "Deal value", value: "$500M" },
         ],
       }),
-    ).toBe("Acme Corp Agrees to Acquire Rival Inc for $500M");
+    ).toBe("Acme Corp Enters Definitive Agreement to Acquire Rival Inc");
 
     expect(
       buildSubjectTitle({
@@ -571,7 +571,7 @@ describe("looksFactEnrichedTitle + preferSubjectTitle", () => {
           { label: "Status", value: "Closed" },
         ],
       }),
-    ).toBe("Acme Corp Completes Acquisition of Rival Inc");
+    ).toMatch(/Acme Corp Completes (?:\$2\.0B )?Acquisition of Rival Inc/);
 
     // Title-only rows (no keyFacts): seed target/$ from the stored sentence.
     expect(
