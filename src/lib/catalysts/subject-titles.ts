@@ -1373,10 +1373,25 @@ function shouldUpgradeStoredToCaseTitle(
     return true;
   }
   // Prior fact-sentence voices we replaced with case templates.
-  if (/\bfiles \$.+\bshelf registration\b/i.test(s)) return true;
+  if (/\bfiles \$.+\bshelf registration\b/i.test(s)) {
+    // Already desk-shaped files voice — only upgrade when engineered adds more.
+    if (/\$/.test(eng) && !/\$/.test(s)) return true;
+    if (
+      /\bATM\b|at-the-market/i.test(eng) &&
+      !/\bATM\b|at-the-market/i.test(s)
+    ) {
+      return true;
+    }
+    // Legacy Title Case "Announces $XM Shelf" → files lowercase desk voice.
+    return false;
+  }
+  if (/\bAnnounces \$.+\bShelf Registration\b/i.test(s)) return true;
+  if (/\bAnnounces \$.+\b(?:At-The-Market|ATM)\b/i.test(s)) return true;
+  if (/\bAnnounces \$.+\bStock Offering\b/i.test(s)) return true;
   if (/\bsets up \$.+\bat-the-market\b|\bATM\b/i.test(s)) return true;
   if (/\bfiles \$.+\b(?:equity )?offering\b/i.test(s)) return true;
   if (/\bwins FDA approval\b|\breceives FDA approval\b/i.test(s)) return true;
+  if (/\bAnnounces Strategic Partnership With\b/i.test(s)) return true;
   if (/\bpartners with\b|\bannounces partnership with\b/i.test(s)) return true;
   if (/\btrial meets primary endpoint\b/i.test(s) && /phase/i.test(s)) {
     return true;

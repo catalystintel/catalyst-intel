@@ -13,6 +13,8 @@ Classify the catalyst into one of the 17 subjects first. Then write **title** an
 
 **Automation:** For **financing / M&A / partnership / regulatory / clinical**, titles go through the subject-case engine (`subject-case-titles.ts`): identify primary subject → select case (F1–F6, M1–M20, P1–P6, R1–R7, C1–C7) → fill only that template with verified facts. Other subjects keep builders in `subject-titles.ts`. Display path: `titleLine` in `feed-display.ts`. Never invent numbers.
 
+**Trader display hierarchy (tape):** (1) fact-rich case-engine sentence when a verified material slot exists ($, target, partner, phase, product, agency outcome); (2) already-rich vendor/stored headline only if denser; (3) professional thin ground-rule; (4) never taxonomy chips / AccNo as the title. Stake parentheses (`Deal in Play`, `Dilution Ahead`) are for thin rows only.
+
 **Primary vs secondary:** e.g. FDA approval after Phase 3 → **regulatory** title (clinical is secondary). Partnership to develop a drug → **partnership**, not clinical.
 
 **Content:** **3–6 short lines** of grounded detail from the real article/filing only — never invent numbers or facts. Lead with why it matters, then the subject’s fact slots below (omit a slot when the source does not state it).
@@ -64,12 +66,12 @@ Titles use the subject-case engine (`M1`–`M20`). **Buyer** = acquirer (fact or
 
 When facts or filing text say partnership / collaboration / license — not M&A — use a distinct partnership line.
 
-| Facts known                | Pattern                                          |
-| -------------------------- | ------------------------------------------------ |
-| Partner + nature           | `{Company} partners with {Partner} — {nature}`   |
-| License + asset + partner  | `{Company} licenses {Asset} to {Partner}`        |
-| Partner only               | `{Company} announces partnership with {Partner}` |
-| Thin / type-word “partner” | `{Company} - Strategic Partnership Announced`    |
+| Facts known                | Pattern                                        |
+| -------------------------- | ---------------------------------------------- |
+| Partner + nature           | `{Company} partners with {Partner} — {nature}` |
+| License + asset + partner  | `{Company} licenses {Asset} to {Partner}`      |
+| Partner only               | `{Company} partners with {Partner}`            |
+| Thin / type-word “partner” | `{Company} - Strategic Partnership Announced`  |
 
 Reject partner values that are type words (`partnership`, `collaboration`, `license`, etc.). Treat `strategic partnership` as a generic nature → thin fallback.
 

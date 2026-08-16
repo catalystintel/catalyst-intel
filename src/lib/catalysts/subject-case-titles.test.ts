@@ -277,6 +277,123 @@ describe("subject-case-titles engine", () => {
     ).toBe("ABC Phase 3 Trial Meets Primary Endpoint With 42% Improvement");
   });
 
+  it("F2 prices offering when priced with size", () => {
+    expect(
+      buildCaseEngineTitle(
+        {
+          eventCategory: "capital",
+          companyName: "ABC",
+          summary: "ABC priced a $200M public offering at $18.00 per share.",
+        },
+        [
+          { label: "Amount", value: "$200M" },
+          { label: "Price", value: "$18.00/share" },
+        ],
+      ),
+    ).toBe("ABC Prices $200M Offering at $18.00/Share");
+  });
+
+  it("F5 shelf/ATM/424B use files/sets-up voice; stake parens only when thin", () => {
+    expect(
+      buildCaseEngineTitle(
+        {
+          eventCategory: "capital",
+          companyName: "ABC",
+          type: "S-3",
+          summary: "Shelf registration for up to $500 million.",
+        },
+        [
+          { label: "Form", value: "S-3" },
+          { label: "Amount", value: "$500M" },
+          { label: "Type", value: "Shelf registration" },
+        ],
+      ),
+    ).toBe("ABC files $500M shelf registration");
+
+    expect(
+      buildCaseEngineTitle(
+        {
+          eventCategory: "capital",
+          companyName: "ABC",
+          type: "S-3",
+        },
+        [
+          { label: "Form", value: "S-3" },
+          { label: "Type", value: "Shelf registration" },
+        ],
+      ),
+    ).toBe("ABC - Shelf Registration Filed (Capital Raise Window)");
+
+    expect(
+      buildCaseEngineTitle(
+        {
+          eventCategory: "capital",
+          companyName: "ABC",
+          type: "424B5",
+        },
+        [{ label: "Form", value: "424B5" }],
+      ),
+    ).toBe("ABC - Stock Offering Filed (Dilution Ahead)");
+  });
+
+  it("R1 prefers agency+product; bang only when product unknown", () => {
+    expect(
+      buildCaseEngineTitle(
+        {
+          eventCategory: "regulatory",
+          companyName: "ABC",
+          summary: "FDA approves ABC's drug.",
+        },
+        [
+          { label: "Agency", value: "FDA" },
+          { label: "Outcome", value: "approval" },
+        ],
+      ),
+    ).toBe("ABC Receives FDA Approval!");
+
+    expect(
+      buildCaseEngineTitle(
+        {
+          eventCategory: "regulatory",
+          companyName: "ABC",
+          summary: "FDA approves ABC's DrugX.",
+        },
+        [
+          { label: "Agency", value: "FDA" },
+          { label: "Outcome", value: "approval" },
+          { label: "Product", value: "DrugX" },
+        ],
+      ),
+    ).toBe("FDA Approves ABC's DrugX");
+  });
+
+  it("P2 named partner over thin strategic partnership chip", () => {
+    expect(
+      buildCaseEngineTitle(
+        {
+          eventCategory: "deals",
+          companyName: "ABC",
+          summary: "ABC announces a strategic partnership with Microsoft.",
+        },
+        [
+          { label: "Partner", value: "Microsoft" },
+          { label: "Type", value: "Partnership" },
+        ],
+      ),
+    ).toBe("ABC partners with Microsoft");
+
+    expect(
+      buildCaseEngineTitle(
+        {
+          eventCategory: "deals",
+          companyName: "ABC",
+          summary: "ABC announces a strategic partnership.",
+        },
+        [{ label: "Type", value: "Partnership" }],
+      ),
+    ).toBe("ABC - Strategic Partnership Announced");
+  });
+
   it("does not apply engine to earnings / insider subjects", () => {
     expect(
       buildCaseEngineTitle(
