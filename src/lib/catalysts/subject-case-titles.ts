@@ -662,7 +662,8 @@ function fillFinancing(
         : `${company} Announces Debt Financing`;
     case "F5":
     default:
-      // Desk voice: files / sets up (not "Announces") — matches ARTICLE_BY_SUBJECT.
+      // Desk voice: files / sets up (not vague "Announces Financing") —
+      // matches ARTICLE_BY_SUBJECT + FEED-TITLE-GUIDELINES thin capital.
       if (/\bat-the-market\b|\bATM\b/i.test(cue)) {
         return amount
           ? `${company} sets up ${amount} at-the-market (ATM) program`
@@ -678,9 +679,12 @@ function fillFinancing(
           ? `${company} files ${amount} equity offering`
           : `${company} - Stock Offering Filed (Dilution Ahead)`;
       }
-      return amount
-        ? `${company} Announces ${amount} Financing`
-        : `${company} Announces Financing`;
+      // Generic capital raise with size — still never invent dollars.
+      if (amount) {
+        return `${company} files ${amount} equity offering`;
+      }
+      // Thin unknown instrument: professional ground-rule, not a chip.
+      return `${company} - Stock Offering Filed (Dilution Ahead)`;
   }
 }
 

@@ -150,10 +150,13 @@ export function looksFactEnrichedTitle(
   ) {
     return true;
   }
+  // Dollar-backed capital announce/price/secure sentences only — bare
+  // "Announces Financing" is legacy stiff, not fact-rich.
   if (
     /\b(?:Announces|Prices|Secures)\b.+\b(?:Offering|Financing|Private Placement|Credit Facility|Registered Direct)\b/i.test(
       t,
-    )
+    ) &&
+    /\$/.test(t)
   ) {
     return true;
   }
@@ -192,7 +195,7 @@ export function looksProfessionalThinTitle(
   const t = normalizeWs(title ?? "");
   if (!t) return false;
   if (
-    /\bShelf Registration Filed\b|\bStock Offering Filed\b|\bAcquisition Announced\b|\bAcquisition Closed\b|\bPartnership or Major Contract Announced\b|\bStrategic Partnership Announced\b|\bRegulatory Action Update\b|\bClinical Trial Results Update\b|\bClinical Trial Results Reported\b|\bAnnounces Public Offering\b|\bAnnounces Financing\b|\bAnnounces Private Placement\b|\bAnnounces Registered Direct Offering\b|\bAnnounces Debt Financing\b|\bAnnounces Merger\b/i.test(
+    /\bShelf Registration Filed\b|\bStock Offering Filed\b|\bAcquisition Announced\b|\bAcquisition Closed\b|\bPartnership or Major Contract Announced\b|\bStrategic Partnership Announced\b|\bRegulatory Action Update\b|\bClinical Trial Results Update\b|\bClinical Trial Results Reported\b|\bAnnounces Public Offering\b|\bAnnounces Private Placement\b|\bAnnounces Registered Direct Offering\b|\bAnnounces Debt Financing\b|\bAnnounces Merger\b/i.test(
       t,
     )
   ) {
@@ -210,16 +213,25 @@ export function looksTaxonomyChipTitle(
   const t = normalizeWs(title ?? "").toLowerCase();
   if (!t) return false;
   if (
-    /^(?:8-k filing|current report|filing|shelf registration \(s-3\)|prospectus \/ offering \(424b\)|merger \/ acquisition \(425\)|clinical trial(?: update)?|fda catalyst|capital markets|material agreement|new deal announced)$/i.test(
+    /^(?:8-k filing|current report|filing|shelf registration \(s-3\)|prospectus \/ offering \(424b\)|merger \/ acquisition \(425\)|m&a\s*\/\s*acquisition|m&a|acquisition|financing|announces financing|clinical trial(?: update)?|fda catalyst|capital markets|material agreement|new deal announced)$/i.test(
       t,
     )
   ) {
     return true;
   }
-  if (/^[a-z0-9 ./\-()]{3,40}$/i.test(t) && !/\s-\s/.test(t) && t.length < 48) {
+  // Allow & in chips like "M&A / acquisition". Do not treat company+verb
+  // sentences (e.g. "AGPU Announces Financing") as catalog chips.
+  if (
+    /^[a-z0-9 ./\-&()]{3,40}$/i.test(t) &&
+    !/\s-\s/.test(t) &&
+    t.length < 48 &&
+    !/\b(?:announces|files|sets up|prices|agrees|completes|partners|receives)\b/i.test(
+      t,
+    )
+  ) {
     // Short catalog-style chips without a company separator.
     if (
-      /\b(?:registration|offering|acquisition|partnership|clinical|regulatory|agreement|filing)\b/i.test(
+      /\b(?:registration|offering|acquisition|m&a|partnership|clinical|regulatory|agreement|filing|financing)\b/i.test(
         t,
       )
     ) {
@@ -238,6 +250,8 @@ function looksLegacyStiffTitle(title: string | null | undefined): boolean {
   if (/\bfiles stock offering \(dilution watch\)$/i.test(t)) return true;
   if (/\bAnnounces Acquisition\s*[—–-]\s*Deal in Play/i.test(t)) return true;
   if (/\bannounces strategic partnership$/i.test(t)) return true;
+  if (/\bAnnounces Financing\b/i.test(t)) return true;
+  if (/^M&A\s*\/\s*acquisition$/i.test(t)) return true;
   if (/\bclinical trial update$/i.test(t)) return true;
   if (/\bregulatory update$/i.test(t)) return true;
   if (/Shelf Registration \(S-3\)|Prospectus \/ Offering \(424B\)/i.test(t)) {

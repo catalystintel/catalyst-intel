@@ -761,6 +761,34 @@ describe("titleLine", () => {
       ),
     ).toBe("Apple Inc. Q1 earnings report");
   });
+
+  it("upgrades Announces Financing and M&A chips to guideline thin titles", () => {
+    expect(
+      titleLine(
+        base({
+          eventCategory: "capital",
+          type: "8-K",
+          title: "AGPU Announces Financing",
+          headline: "AGPU Announces Financing",
+          companyName: null,
+          symbol: "AGPU",
+        }),
+      ),
+    ).toBe("AGPU - Stock Offering Filed (Dilution Ahead)");
+
+    expect(
+      titleLine(
+        base({
+          eventCategory: "deals",
+          type: "8-K",
+          title: "M&A / acquisition",
+          headline: "M&A / acquisition",
+          companyName: null,
+          symbol: "SDOT",
+        }),
+      ),
+    ).toBe("SDOT - Acquisition Announced (Deal in Play)");
+  });
 });
 
 describe("stripSourceNames / looksLikeSourceLabel", () => {
